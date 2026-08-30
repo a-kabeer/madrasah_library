@@ -55,7 +55,7 @@
 
     <hr>
 
-    {% if active_loan_exists %}
+    {% if loan_history_exists %}
 
         <p>
             <strong>
@@ -64,8 +64,8 @@
         </p>
 
         <p>
-            The copy currently has an active loan.
-            Return the book before deleting this copy.
+            This copy has loan history (active or past) on record.
+            Deleting it would break that history, so it's blocked.
         </p>
 
         <p>

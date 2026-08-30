@@ -41,7 +41,7 @@
 
 <hr>
 
-{% if active_loan_exists %}
+{% if loan_history_exists %}
 
     <p>
         <strong>
@@ -50,8 +50,8 @@
     </p>
 
     <p>
-        The borrower currently has an active loan.
-        Return the borrowed book before deleting this borrower.
+        This borrower has loan history (active or past) on record.
+        Deleting them would break that history, so it's blocked.
     </p>
 
     <p>

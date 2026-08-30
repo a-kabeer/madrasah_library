@@ -10,9 +10,14 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import sys
 from pathlib import Path
 
 from decouple import Csv, config
+
+# Detect `manage.py test` so list-view caching doesn't leak state between
+# tests (LocMemCache isn't reset by TestCase's transaction rollback).
+TESTING = "test" in sys.argv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -91,12 +96,24 @@ DATABASES = {
         "PASSWORD": config("DB_PASSWORD"),
         "HOST": config("DB_HOST", default="localhost"),
         "PORT": config("DB_PORT", default="5432"),
+        # All app models are `managed = False` (existing schema), so Django's
+        # migrations can't create their tables in a fresh test database.
+        # The test DB below is a one-time schema-only clone of production
+        # (see docs/DATABASE.md) — always run tests with `--keepdb` so Django
+        # reuses it instead of trying to recreate it from scratch.
+        "TEST": {
+            "NAME": config("DB_TEST_NAME", default="madrasah_library_test"),
+        },
     }
 }
 
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "BACKEND": (
+            "django.core.cache.backends.dummy.DummyCache"
+            if TESTING
+            else "django.core.cache.backends.locmem.LocMemCache"
+        ),
         "LOCATION": "madrasah-library-cache",
     }
 }
