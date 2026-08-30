@@ -8,6 +8,7 @@ venv/
 
 # Django
 *.log
+staticfiles/
 
 # Database backups (contain real data — never commit)
 backups/*.dump

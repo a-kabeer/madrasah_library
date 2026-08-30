@@ -1,0 +1,42 @@
+databases:
+  - name: madrasah-library-db
+    plan: free
+    databaseName: madrasah_library
+    user: madrasah_library
+
+services:
+  - type: web
+    name: madrasah-library
+    env: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
+    startCommand: "gunicorn config.wsgi:application"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: DB_ENGINE
+        value: django.db.backends.postgresql
+      - key: DB_NAME
+        fromDatabase:
+          name: madrasah-library-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: madrasah-library-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: madrasah-library-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: madrasah-library-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: madrasah-library-db
+          property: port
