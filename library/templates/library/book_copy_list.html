@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>Book Copies</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+
+<p>
+    <a href="{% url 'library_home' %}">
+        ← Back to Home
+    </a>
+</p>
+
+<h1>Book Copies</h1>
+
+<form method="get">
+
+    <p>
+        <label for="copy_code">Copy Code:</label>
+
+        <input
+            type="text"
+            name="copy_code"
+            id="copy_code"
+            value="{{ copy_code }}"
+            placeholder="Search copy code..."
+        >
+    </p>
+
+    <p>
+        <label for="book">Book:</label>
+
+        <select name="book" id="book">
+
+            <option value="">
+                All Books
+            </option>
+
+            {% for book in books %}
+
+                <option
+                    value="{{ book.id }}"
+                    {% if book_id == book.id|stringformat:"s" %}selected{% endif %}
+                >
+                    {{ book.title }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+    </p>
+
+    <p>
+        <label for="volume">Volume:</label>
+
+        <select name="volume" id="volume">
+
+            <option value="">
+                All Volumes
+            </option>
+
+            {% for volume in volumes %}
+
+                <option
+                    value="{{ volume.id }}"
+                    {% if volume_id == volume.id|stringformat:"s" %}selected{% endif %}
+                >
+                    {{ volume.book.title }}
+                    - Volume {{ volume.volume_number }}
+                    - {{ volume.title }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+    </p>
+
+    <p>
+        <label for="status">Status:</label>
+
+        <select name="status" id="status">
+
+            <option value="">
+                All Statuses
+            </option>
+
+            {% for item in statuses %}
+
+                <option
+                    value="{{ item }}"
+                    {% if status == item %}selected{% endif %}
+                >
+                    {{ item }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+    </p>
+
+    <p>
+        <label for="location">Location:</label>
+
+        <select name="location" id="location">
+
+            <option value="">
+                All Locations
+            </option>
+
+            {% for location in locations %}
+
+                <option
+                    value="{{ location.id }}"
+                    {% if location_id == location.id|stringformat:"s" %}selected{% endif %}
+                >
+                    {{ location.name }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+    </p>
+
+    <p>
+        <label for="shelf">Shelf:</label>
+
+        <select name="shelf" id="shelf">
+
+            <option value="">
+                All Shelves
+            </option>
+
+            {% for shelf in shelves %}
+
+                <option
+                    value="{{ shelf.id }}"
+                    {% if shelf_id == shelf.id|stringformat:"s" %}selected{% endif %}
+                >
+                    {{ shelf.location.name }}
+                    - {{ shelf.shelf_code }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+    </p>
+
+    <button type="submit">
+        Apply Filters
+    </button>
+
+    {% if copy_code or book_id or volume_id or status or location_id or shelf_id %}
+
+        <a href="{% url 'book_copy_list' %}">
+            Clear Filters
+        </a>
+
+    {% endif %}
+
+</form>
+
+<br>
+
+<p>
+    Found {{ copies.paginator.count }} copy/copies.
+</p>
+
+<p>
+    <a href="{% url 'book_copy_add' %}">
+        Add Book Copy
+    </a>
+</p>
+
+<ul>
+
+    {% for copy in copies %}
+
+        <li>
+
+    <strong>ID:</strong>
+    {{ copy.id }}
+
+    -
+
+    <strong>Copy:</strong>
+    {{ copy.copy_code }}
+
+    -
+
+    <strong>Book:</strong>
+    {{ copy.volume.book.title }}
+
+    -
+
+    <strong>Volume:</strong>
+    {{ copy.volume.volume_number }}
+
+    {% if copy.shelf %}
+
+        -
+
+        <strong>Shelf:</strong>
+        {{ copy.shelf.shelf_code }}
+
+        -
+
+        <strong>Location:</strong>
+        {{ copy.shelf.location.name }}
+
+    {% else %}
+
+        -
+
+        <strong>Shelf:</strong>
+        N/A
+
+        -
+
+        <strong>Location:</strong>
+        N/A
+
+    {% endif %}
+
+    -
+
+    <strong>Status:</strong>
+    {{ copy.status }}
+
+    {% if copy.active_loan %}
+
+        <hr>
+
+        <strong>Currently Issued To:</strong>
+        {{ copy.active_loan.borrower.name }}
+
+        <br>
+
+        <strong>Phone:</strong>
+
+        {% if copy.active_loan.borrower.phone %}
+            {{ copy.active_loan.borrower.phone }}
+        {% else %}
+            N/A
+        {% endif %}
+
+        <br>
+
+        <strong>Issue Date:</strong>
+        {{ copy.active_loan.issue_date }}
+
+        <br>
+
+        <strong>Due Date:</strong>
+        {{ copy.active_loan.due_date }}
+
+        <br>
+
+        {% if copy.days_overdue > 0 %}
+
+            <strong>Status:</strong>
+            Overdue by {{ copy.days_overdue }} day(s)
+
+        {% else %}
+
+            <strong>Loan Status:</strong>
+            Active
+
+        {% endif %}
+
+    {% endif %}
+
+    <br><br>
+   <a href="{% url 'book_copy_detail' copy.id %}?from=list">
+    View Details
+</a>
+|
+    <a href="{% url 'book_copy_edit' copy.id %}?from=list">
+        Edit
+    </a>
+
+    |
+
+    {% if copy.active_loan %}
+
+        <a href="{% url 'loan_return' copy.active_loan.id %}?next={{ request.path|urlencode }}">
+            Return Book
+        </a>
+
+        |
+
+    {% endif %}
+
+    <a href="{% url 'book_copy_delete' copy.id %}?from=list">
+        Delete
+    </a>
+
+</li>
+
+<br>
+
+        <br>
+
+    {% empty %}
+
+        <li>
+            No book copies found.
+        </li>
+
+    {% endfor %}
+
+</ul>
+
+{% include "library/_pagination.html" with page_obj=copies %}
+
+</body>
+</html>

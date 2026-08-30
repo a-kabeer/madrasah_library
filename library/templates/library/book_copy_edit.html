@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>Edit Book Copy</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+
+<p>
+
+    {% if from_page == "shelf" %}
+
+        <a href="{% url 'shelf_detail' copy.shelf.id %}">
+            ← Back to Shelf {{ copy.shelf.shelf_code }}
+        </a>
+
+    {% elif from_page == "volume" %}
+
+        <a href="{% url 'book_volume_detail' copy.volume.id %}">
+            ← Back to Volume
+        </a>
+
+    {% else %}
+
+        <a href="{% url 'book_copy_list' %}">
+            ← Back to Book Copies
+        </a>
+
+    {% endif %}
+
+</p>
+
+<h1>Edit Book Copy</h1>
+
+{% if error_message %}
+
+    <p>
+        <strong>
+            {{ error_message }}
+        </strong>
+    </p>
+
+{% endif %}
+
+{% if is_issued %}
+
+    <p>
+        <strong>Status: Issued</strong>
+    </p>
+
+    <p>
+        This copy is currently issued and its status
+        cannot be changed manually.
+    </p>
+
+{% endif %}
+
+<form method="post">
+
+    {% csrf_token %}
+<input
+    type="hidden"
+    name="from"
+    value="{{ from_page }}"
+>
+    <p>
+
+        <label for="volume">
+            Volume:
+        </label>
+
+        <select
+            name="volume"
+            id="volume"
+            required
+        >
+
+            {% for volume in volumes %}
+
+                <option
+                    value="{{ volume.id }}"
+
+                    {% if volume.id == form_data.volume_id %}
+                        selected
+                    {% endif %}
+
+                >
+
+                    {{ volume.book.title }}
+                    - Volume {{ volume.volume_number }}
+                    - {{ volume.title }}
+
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+    </p>
+
+    <p>
+
+        <label for="shelf">
+            Shelf:
+        </label>
+
+        <select
+            name="shelf"
+            id="shelf"
+            required
+        >
+
+            {% for shelf in shelves %}
+
+                <option
+                    value="{{ shelf.id }}"
+
+                    {% if shelf.id == form_data.shelf_id %}
+                        selected
+                    {% endif %}
+
+                >
+
+                    {{ shelf.location.name }}
+                    - {{ shelf.shelf_code }}
+
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+    </p>
+
+    <p>
+
+        <label for="copy_code">
+            Copy Code:
+        </label>
+
+        <input
+            type="text"
+            name="copy_code"
+            id="copy_code"
+            value="{{ form_data.copy_code }}"
+            required
+        >
+
+    </p>
+
+    <p>
+
+        <label for="status">
+            Status:
+        </label>
+
+        {% if is_issued %}
+
+            <input
+                type="text"
+                value="Issued"
+                readonly
+            >
+
+        {% else %}
+
+            <select
+                name="status"
+                id="status"
+            >
+
+                {% for status_item in statuses %}
+
+                    <option
+                        value="{{ status_item }}"
+
+                        {% if status_item == form_data.status %}
+                            selected
+                        {% endif %}
+
+                    >
+
+                        {{ status_item }}
+
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+        {% endif %}
+
+    </p>
+
+    <p>
+
+        <label for="acquisition_date">
+            Acquisition Date:
+        </label>
+
+        <input
+            type="date"
+            name="acquisition_date"
+            id="acquisition_date"
+            value="{{ form_data.acquisition_date }}"
+        >
+
+    </p>
+
+    <p>
+
+        <label for="notes">
+            Notes:
+        </label>
+
+        <br>
+
+        <textarea
+            name="notes"
+            id="notes"
+            rows="5"
+            cols="50"
+        >{{ form_data.notes }}</textarea>
+
+    </p>
+
+    <button type="submit">
+        Update Book Copy
+    </button>
+
+</form>
+
+
+</body>
+
+</html>

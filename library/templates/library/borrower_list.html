@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>Borrowers</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+
+<p>
+    <a href="{% url 'library_home' %}">
+        ← Back to Home
+    </a>
+</p>
+
+<h1>Borrowers</h1>
+
+<form method="get">
+
+    <p>
+        <label for="search">
+            Search:
+        </label>
+
+        <input
+            type="text"
+            name="search"
+            id="search"
+            value="{{ search }}"
+            placeholder="Search borrowers..."
+        >
+    </p>
+
+    <p>
+        <label for="borrower_type">
+            Borrower Type:
+        </label>
+
+        <select
+            name="borrower_type"
+            id="borrower_type"
+        >
+            <option value="">
+                All Types
+            </option>
+
+            {% for type in borrower_types %}
+
+                <option
+                    value="{{ type }}"
+                    {% if borrower_type == type %}
+                        selected
+                    {% endif %}
+                >
+                    {{ type }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+    </p>
+
+    <p>
+        <label for="status">
+            Status:
+        </label>
+
+        <select
+            name="status"
+            id="status"
+        >
+            <option value="">
+                All Borrowers
+            </option>
+
+            <option
+                value="active"
+                {% if active_status == "active" %}
+                    selected
+                {% endif %}
+            >
+                Active
+            </option>
+
+            <option
+                value="inactive"
+                {% if active_status == "inactive" %}
+                    selected
+                {% endif %}
+            >
+                Inactive
+            </option>
+
+        </select>
+    </p>
+
+    <button type="submit">
+        Apply Filters
+    </button>
+
+    {% if search or borrower_type or active_status %}
+
+        <a href="{% url 'borrower_list' %}">
+            Clear Filters
+        </a>
+
+    {% endif %}
+
+</form>
+
+<br>
+
+<p>
+    Found {{ borrowers.paginator.count }} borrower(s).
+</p>
+
+<p>
+    <a href="{% url 'borrower_add' %}">
+        Add Borrower
+    </a>
+</p>
+
+<ul>
+
+    {% for borrower in borrowers %}
+
+        <li>
+
+            <strong>ID:</strong>
+            {{ borrower.id }}
+
+            -
+
+            <strong>Name:</strong>
+            {{ borrower.name }}
+
+            <br>
+
+            <strong>Phone:</strong>
+            {{ borrower.phone|default:"N/A" }}
+
+            -
+
+            <strong>Type:</strong>
+            {{ borrower.borrower_type|default:"N/A" }}
+
+            <br>
+
+            <strong>Registration:</strong>
+            {{ borrower.registration_no|default:"N/A" }}
+
+            -
+
+            <strong>Department:</strong>
+            {{ borrower.department|default:"N/A" }}
+
+            <br>
+
+            <strong>Status:</strong>
+
+            {% if borrower.is_active %}
+                Active
+            {% else %}
+                Inactive
+            {% endif %}
+
+            <br><br>
+<a href="{% url 'borrower_detail' borrower.id %}">
+    View Details
+</a>
+
+|
+
+
+            <a href="{% url 'borrower_edit' borrower.id %}">
+                Edit
+            </a>
+
+            |
+
+            <a href="{% url 'borrower_delete' borrower.id %}">
+                Delete
+            </a>
+
+        </li>
+
+        <br>
+
+    {% empty %}
+
+        <li>
+            No borrowers found.
+        </li>
+
+    {% endfor %}
+
+</ul>
+
+{% include "library/_pagination.html" with page_obj=borrowers %}
+
+</body>
+</html>

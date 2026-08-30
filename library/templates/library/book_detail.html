@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>{{ book.title }}</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+    <p>
+        <a href="{% url 'book_list' %}">
+            ← Back to Books
+        </a>
+    </p>
+
+    <h1>{{ book.title }}</h1>
+
+    <hr>
+
+    <h2>Book Information</h2>
+
+    <p>
+        <strong>Author:</strong>
+        {{ book.author.name }}
+    </p>
+
+    <p>
+        <strong>Category:</strong>
+
+        {% if book.category %}
+            {{ book.category.name }}
+        {% else %}
+            N/A
+        {% endif %}
+    </p>
+
+    <p>
+        <strong>Publisher:</strong>
+
+        {% if book.publisher %}
+            {{ book.publisher.name }}
+        {% else %}
+            N/A
+        {% endif %}
+    </p>
+
+    <hr>
+
+    <h2>Volumes</h2>
+
+    <p>
+        <a href="{% url 'book_volume_add' %}?book={{ book.id }}">
+    + Add Volume
+</a>
+    </p>
+
+    <ul>
+
+        {% for volume in volumes %}
+
+            <li>
+
+               <a href="{% url 'book_volume_detail' volume.id %}">
+
+    <strong>
+        Volume {{ volume.volume_number }}
+    </strong>
+
+    - {{ volume.title }}
+
+</a>
+
+            </li>
+
+        {% empty %}
+
+            <li>
+                No volumes have been added yet.
+            </li>
+
+        {% endfor %}
+
+    </ul>
+
+    <hr>
+
+    <h2>Actions</h2>
+
+    <p>
+        <a href="{% url 'book_edit' book.id %}?from=detail">
+            Edit Book
+        </a>
+    </p>
+
+    <p>
+        <a href="{% url 'book_delete' book.id %}?from=detail">
+            Delete Book
+        </a>
+    </p>
+
+</body>
+
+</html>

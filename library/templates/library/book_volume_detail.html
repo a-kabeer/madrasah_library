@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>{{ volume.book.title }} - Volume {{ volume.volume_number }}</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+    <p>
+        <a href="{% url 'book_detail' volume.book.id %}">
+            ← Back to {{ volume.book.title }}
+        </a>
+    </p>
+
+    <h1>
+        {{ volume.book.title }}
+    </h1>
+
+    <h2>
+        Volume {{ volume.volume_number }}
+        - {{ volume.title }}
+    </h2>
+
+    <hr>
+
+    <h2>Book Information</h2>
+
+    <p>
+        <strong>Author:</strong>
+        {{ volume.book.author.name }}
+    </p>
+
+    <p>
+        <strong>Category:</strong>
+        {{ volume.book.category.name|default:"N/A" }}
+    </p>
+
+    <p>
+        <strong>Publisher:</strong>
+        {{ volume.book.publisher.name|default:"N/A" }}
+    </p>
+
+    <hr>
+
+    <h2>Table of Contents</h2>
+
+{% if contents %}
+
+    <ul>
+
+        {% for content in contents %}
+
+    <li>
+
+        <strong>
+            {{ content.title }}
+        </strong>
+
+        {% if content.page_number %}
+            — Page {{ content.page_number }}
+        {% endif %}
+
+        |
+
+        <a href="{% url 'book_content_edit' content.id %}?from=volume">
+    Edit
+</a>
+
+        |
+
+        <a href="{% url 'book_content_delete' content.id %}?from=volume">
+    Delete
+</a>
+
+    </li>
+
+{% endfor %}
+    </ul>
+
+{% else %}
+
+    <p>
+        No contents have been added yet.
+    </p>
+
+{% endif %}
+
+<p>
+    <a href="{% url 'book_content_add' %}?volume={{ volume.id }}">
+        + Add Book Content
+    </a>
+</p>
+
+    <hr>
+
+    <h2>Physical Copies</h2>
+
+    <p>
+        Total Copies: {{ copies|length }}
+    </p>
+
+    <ul>
+
+        {% for copy in copies %}
+
+            <li>
+
+                <strong>
+                    {{ copy.copy_code }}
+                </strong>
+
+                — Status: {{ copy.status }}
+
+                {% if copy.shelf %}
+
+                    — Location:
+                    {{ copy.shelf.location.name }}
+
+                    — Shelf:
+                    {{ copy.shelf.shelf_code }}
+
+                {% else %}
+
+                    — Not assigned to a shelf
+
+                {% endif %}
+
+                |
+
+                <a href="{% url 'book_copy_detail' copy.id %}?from=volume">
+                    View Details
+                </a>
+
+            </li>
+
+        {% empty %}
+
+            <li>
+                No physical copies have been added yet.
+            </li>
+
+        {% endfor %}
+
+    </ul>
+
+    <p>
+        <a href="{% url 'book_copy_add' %}?volume={{ volume.id }}">
+            + Add Physical Copy
+        </a>
+    </p>
+
+    <hr>
+
+<h2>Actions</h2>
+
+<p>
+    <a href="{% url 'book_volume_edit' volume.id %}?from=detail">
+        Edit Volume
+    </a>
+</p>
+
+<p>
+    <a href="{% url 'book_volume_delete' volume.id %}?from=detail">
+        Delete Volume
+    </a>
+</p>
+</body>
+
+</html>

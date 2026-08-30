@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Books</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+<p>
+    <a href="{% url 'library_home' %}">
+        ← Back to Home
+    </a>
+</p>
+
+<h1>Books</h1>
+
+<form method="get">
+
+    <label>Book Title:</label>
+
+    <input
+        type="text"
+        name="title"
+        value="{{ title }}"
+        placeholder="Search by book title..."
+    >
+
+    <br><br>
+
+    <label>Author:</label>
+
+    <select name="author">
+        <option value="">All Authors</option>
+
+        {% for author in authors %}
+            <option value="{{ author.id }}"
+                {% if author_id == author.id|stringformat:"s" %}
+                    selected
+                {% endif %}
+            >
+                {{ author.name }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <br><br>
+
+    <label>Category:</label>
+
+    <select name="category">
+        <option value="">All Categories</option>
+
+        {% for category in categories %}
+            <option value="{{ category.id }}"
+                {% if category_id == category.id|stringformat:"s" %}
+                    selected
+                {% endif %}
+            >
+                {{ category.name }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <br><br>
+
+    <label>Publisher:</label>
+
+    <select name="publisher">
+        <option value="">All Publishers</option>
+
+        {% for publisher in publishers %}
+            <option value="{{ publisher.id }}"
+                {% if publisher_id == publisher.id|stringformat:"s" %}
+                    selected
+                {% endif %}
+            >
+                {{ publisher.name }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <br><br>
+
+    <button type="submit">Search</button>
+
+    <a href="{% url 'book_list' %}">
+        Clear Filters
+    </a>
+
+</form>
+
+<br>
+
+<p>
+    Found {{ books.paginator.count }} book(s).
+</p>
+
+<p>
+    <a href="{% url 'book_add' %}">
+        Add Book
+    </a>
+</p>
+
+<ul>
+
+    {% for book in books %}
+
+        <li>
+
+            ID: {{ book.id }}
+
+            - {{ book.title }}
+
+            - Author: {{ book.author.name }}
+
+            - Category:
+            {{ book.category.name|default:"N/A" }}
+
+            - Publisher:
+            {{ book.publisher.name|default:"N/A" }}
+
+            <a href="{% url 'book_detail' book.id %}">
+    View Details
+</a>
+
+|
+
+<a href="{% url 'book_edit' book.id %}">
+    Edit
+</a>
+
+|
+
+<a href="{% url 'book_delete' book.id %}">
+    Delete
+</a>
+
+        </li>
+
+    {% empty %}
+
+        <li>No books found.</li>
+
+    {% endfor %}
+
+</ul>
+
+{% include "library/_pagination.html" with page_obj=books %}
+
+</body>
+</html>

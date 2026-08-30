@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shelves</title>
+</head>
+<body>
+
+{% include "library/_account_bar.html" %}
+    <p>
+    <a href="{% url 'library_home' %}">← Back to Home</a>
+</p>
+
+<h1>Shelves</h1>
+
+<form method="get">
+
+    <input
+        type="text"
+        name="search"
+        value="{{ search }}"
+        placeholder="Search shelves..."
+    >
+
+    <label for="location">Location:</label>
+
+    <select name="location" id="location">
+        <option value="">All Locations</option>
+
+        {% for location in locations %}
+            <option
+                value="{{ location.id }}"
+                {% if location_id == location.id|stringformat:"s" %}selected{% endif %}
+            >
+                {{ location.name }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <button type="submit">Search</button>
+
+    {% if search or location_id %}
+        <a href="{% url 'shelf_list' %}">
+            Clear
+        </a>
+    {% endif %}
+
+</form>
+
+{% if search or location_id %}
+    <p>
+        Found {{ shelves.paginator.count }} shelf(s).
+    </p>
+{% endif %}
+
+<a href="{% url 'shelf_add' %}">
+    Add Shelf
+</a>
+
+<ul>
+    {% for shelf in shelves %}
+        <li>
+            ID: {{ shelf.id }}
+            - Location: {{ shelf.location.name }}
+            - Shelf: {{ shelf.shelf_code }}
+
+            {% if shelf.description %}
+                - {{ shelf.description }}
+            {% endif %}
+
+            <a href="{% url 'shelf_detail' shelf.id %}">
+                View Details
+            </a>
+
+            |
+
+            <a href="{% url 'shelf_edit' shelf.id %}">
+                Edit
+            </a>
+
+            |
+
+            <a href="{% url 'shelf_delete' shelf.id %}">
+                Delete
+            </a>
+        </li>
+    {% empty %}
+        <li>No shelves found.</li>
+    {% endfor %}
+</ul>
+
+{% include "library/_pagination.html" with page_obj=shelves %}
+
+</body>
+</html>

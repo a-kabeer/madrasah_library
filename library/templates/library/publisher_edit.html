@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Publisher</title>
+</head>
+<body>
+
+{% include "library/_account_bar.html" %}
+
+<p>
+    <a href="{% url 'publisher_list' %}">
+        ← Back to Publishers
+    </a>
+</p>
+
+<h1>Edit Publisher</h1>
+
+{% if error %}
+
+    <p>
+        <strong>
+            {{ error }}
+        </strong>
+    </p>
+
+{% endif %}
+
+<form method="post">
+
+    {% csrf_token %}
+
+    <label>Name:</label>
+
+    <input
+        type="text"
+        name="name"
+        value="{{ form_data.name }}"
+        required
+    >
+
+    <br><br>
+
+    <label>City:</label>
+
+    <input
+        type="text"
+        name="city"
+        value="{{ form_data.city }}"
+    >
+
+    <br><br>
+
+    <button type="submit">
+        Update Publisher
+    </button>
+
+</form>
+
+</body>
+</html>

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Book Volume</title>
+</head>
+<body>
+
+{% include "library/_account_bar.html" %}
+
+<h1>Edit Book Volume</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="from" value="{{ from_page }}">
+
+    <label>Book:</label>
+
+    <select name="book" required>
+
+        {% for book in books %}
+            <option
+                value="{{ book.id }}"
+                {% if book.id == volume.book_id %}
+                    selected
+                {% endif %}
+            >
+                {{ book.title }}
+            </option>
+        {% endfor %}
+
+    </select>
+
+    <br><br>
+
+    <label>Volume Number:</label>
+
+    <input
+        type="number"
+        name="volume_number"
+        min="1"
+        value="{{ volume.volume_number }}"
+        required
+    >
+
+    <br><br>
+
+    <label>Title:</label>
+
+    <input
+        type="text"
+        name="title"
+        value="{{ volume.title }}"
+        required
+    >
+
+    <br><br>
+
+    <button type="submit">
+        Update Volume
+    </button>
+</form>
+
+<br>
+
+{% if from_page == "detail" %}
+    <a href="{% url 'book_volume_detail' volume.id %}">
+        Back to Volume
+    </a>
+{% else %}
+    <a href="{% url 'book_volume_list' %}">
+        Back to Volumes
+    </a>
+{% endif %}
+
+</body>
+</html>

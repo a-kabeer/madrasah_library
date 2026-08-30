@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>Delete Borrower</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+
+<p>
+    {% if next_url %}
+        <a href="{{ next_url }}">
+            ← Back
+        </a>
+    {% else %}
+        <a href="{% url 'borrower_list' %}">
+            ← Back to Borrowers
+        </a>
+    {% endif %}
+</p>
+
+<h1>Delete Borrower</h1>
+
+<p>
+    <strong>Name:</strong>
+    {{ borrower.name }}
+</p>
+
+<p>
+    <strong>Phone:</strong>
+    {{ borrower.phone }}
+</p>
+
+<p>
+    <strong>Borrower Type:</strong>
+    {{ borrower.borrower_type }}
+</p>
+
+<hr>
+
+{% if active_loan_exists %}
+
+    <p>
+        <strong>
+            This borrower cannot be deleted.
+        </strong>
+    </p>
+
+    <p>
+        The borrower currently has an active loan.
+        Return the borrowed book before deleting this borrower.
+    </p>
+
+    <p>
+        {% if next_url %}
+            <a href="{{ next_url }}">
+                Back
+            </a>
+        {% else %}
+            <a href="{% url 'borrower_list' %}">
+                Back to Borrowers
+            </a>
+        {% endif %}
+    </p>
+
+{% else %}
+
+    <p>
+        Are you sure you want to permanently delete
+        this borrower?
+    </p>
+
+    <form method="post">
+
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next_url }}">
+
+        <button type="submit">
+            Yes, Delete
+        </button>
+
+    </form>
+
+    <br>
+
+    {% if next_url %}
+        <a href="{{ next_url }}">
+            Cancel
+        </a>
+    {% else %}
+        <a href="{% url 'borrower_list' %}">
+            Cancel
+        </a>
+    {% endif %}
+
+{% endif %}
+
+
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Add Loan</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+    <p>
+        <a href="{% url 'loan_list' %}">
+            ← Back to Loans
+        </a>
+    </p>
+
+    <h1>Add Loan</h1>
+
+    {% if error_message %}
+
+        <p>
+            <strong>
+                {{ error_message }}
+            </strong>
+        </p>
+
+    {% endif %}
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        <label for="copy">
+            Book Copy:
+        </label>
+
+        <select
+            name="copy"
+            id="copy"
+            required
+        >
+
+            <option value="">
+                Select Copy
+            </option>
+
+            {% for copy in copies %}
+
+                <option
+                    value="{{ copy.id }}"
+                    {% if request.POST.copy == copy.id|stringformat:"s" %}
+                        selected
+                    {% endif %}
+                >
+
+                    {{ copy.copy_code }}
+                    -
+                    {{ copy.volume.book.title }}
+                    -
+                    Volume {{ copy.volume.volume_number }}
+                    -
+                    {{ copy.volume.title }}
+
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+        <br><br>
+
+        <label for="borrower">
+            Borrower:
+        </label>
+
+        <select
+            name="borrower"
+            id="borrower"
+            required
+        >
+
+            <option value="">
+                Select Borrower
+            </option>
+
+            {% for borrower in borrowers %}
+
+                <option
+                    value="{{ borrower.id }}"
+                    {% if request.POST.borrower == borrower.id|stringformat:"s" %}
+                        selected
+                    {% endif %}
+                >
+
+                    {{ borrower.name }}
+
+                    {% if borrower.phone %}
+                        - {{ borrower.phone }}
+                    {% endif %}
+
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+        <br><br>
+
+        <label for="issue_date">
+            Issue Date:
+        </label>
+
+        <input
+    type="date"
+    name="issue_date"
+    id="issue_date"
+    value="{% if request.POST.issue_date %}{{ request.POST.issue_date }}{% else %}{% now 'Y-m-d' %}{% endif %}"
+    required
+>
+
+        <br><br>
+
+        <label for="due_date">
+            Due Date:
+        </label>
+
+        <input
+            type="date"
+            name="due_date"
+            id="due_date"
+            value="{% if request.POST.due_date %}{{ request.POST.due_date }}{% else %}{{ default_due_date }}{% endif %}"
+            required
+        >
+
+        <br><br>
+
+        <label for="issued_by">
+            Issued By:
+        </label>
+
+        <select
+            name="issued_by"
+            id="issued_by"
+        >
+
+            <option value="">
+                Select User
+            </option>
+
+            {% for user in users %}
+
+                <option
+                    value="{{ user.id }}"
+                    {% if request.POST.issued_by == user.id|stringformat:"s" %}
+                        selected
+                    {% endif %}
+                >
+
+                    {{ user.full_name }}
+
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+        <br><br>
+
+        <label for="notes">
+            Notes:
+        </label>
+
+        <br>
+
+        <textarea
+            name="notes"
+            id="notes"
+            rows="5"
+            cols="50"
+        >{{ request.POST.notes }}</textarea>
+
+        <br><br>
+
+        <button type="submit">
+            Issue Book
+        </button>
+
+    </form>
+
+</body>
+
+</html>

@@ -1,0 +1,17 @@
+# Environment / secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Django
+*.log
+
+# Database backups (contain real data — never commit)
+backups/*.dump
+backups/*.sql
+
+# Editor
+.vscode/

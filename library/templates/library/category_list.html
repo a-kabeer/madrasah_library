@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Categories</title>
+</head>
+<body>
+
+{% include "library/_account_bar.html" %}
+<p>
+    <a href="{% url 'library_home' %}">← Back to Home</a>
+</p>
+<h1>Categories</h1>
+<form method="get">
+
+    <input
+        type="text"
+        name="search"
+        value="{{ search }}"
+        placeholder="Search categories..."
+    >
+
+    <button type="submit">Search</button>
+
+    {% if search %}
+        <a href="{% url 'category_list' %}">
+            Clear
+        </a>
+    {% endif %}
+
+</form>
+
+{% if search %}
+    <p>
+        Search results for:
+        <strong>{{ search }}</strong>
+    </p>
+
+    <p>
+        Found {{ categories|length }} categor(y/ies).
+    </p>
+{% endif %}
+
+<a href="{% url 'category_add' %}">
+    Add Category
+</a>
+
+<br><br>
+
+<ul>
+    {% for category in categories %}
+        <li>
+            {{ category.name }}
+
+            <a href="{% url 'category_detail' category.id %}">
+                View Details
+            </a>
+
+            <a href="{% url 'category_edit' category.id %}">
+                Edit
+            </a>
+
+            <a href="{% url 'category_delete' category.id %}">
+                Delete
+            </a>
+        </li>
+    {% empty %}
+        <li>No categories found.</li>
+    {% endfor %}
+</ul>
+
+{% include "library/_pagination.html" with page_obj=categories %}
+
+</body>
+</html>

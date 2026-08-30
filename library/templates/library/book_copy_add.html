@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Add Book Copy</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+    <!-- Back Link -->
+
+    <p>
+
+        {% if selected_volume %}
+
+            <a href="{% url 'book_volume_detail' selected_volume.id %}">
+                ← Back to Volume
+            </a>
+
+        {% else %}
+
+            <a href="{% url 'book_copy_list' %}">
+                ← Back to Book Copies
+            </a>
+
+        {% endif %}
+
+    </p>
+
+
+    <h1>Add Book Copy</h1>
+
+
+    <!-- Error Message -->
+
+    {% if error_message %}
+
+        <p>
+            <strong>
+                {{ error_message }}
+            </strong>
+        </p>
+
+    {% endif %}
+
+
+    <form method="post">
+
+        {% csrf_token %}
+
+
+        <!-- Volume -->
+
+        <p>
+
+            {% if selected_volume %}
+
+                <strong>Volume:</strong>
+
+                {{ selected_volume.book.title }}
+
+                - Volume {{ selected_volume.volume_number }}
+
+                - {{ selected_volume.title }}
+
+
+                <input
+                    type="hidden"
+                    name="volume"
+                    value="{{ selected_volume.id }}"
+                >
+
+            {% else %}
+
+                <label for="volume">
+                    Volume:
+                </label>
+
+
+                <select
+                    name="volume"
+                    id="volume"
+                    required
+                >
+
+                    <option value="">
+                        Select Volume
+                    </option>
+
+
+                    {% for volume in volumes %}
+
+                        <option
+                            value="{{ volume.id }}"
+
+                            {% if volume.id == form_data.volume_id %}
+                                selected
+                            {% endif %}
+                        >
+
+                            {{ volume.book.title }}
+
+                            - Volume {{ volume.volume_number }}
+
+                            - {{ volume.title }}
+
+                        </option>
+
+                    {% endfor %}
+
+                </select>
+
+            {% endif %}
+
+        </p>
+
+
+        <!-- Shelf -->
+
+        <p>
+
+            <label for="shelf">
+                Shelf:
+            </label>
+
+
+            <select
+                name="shelf"
+                id="shelf"
+                required
+            >
+
+                <option value="">
+                    Select Shelf
+                </option>
+
+
+                {% for shelf in shelves %}
+
+                    <option
+                        value="{{ shelf.id }}"
+
+                        {% if shelf.id == form_data.shelf_id %}
+                            selected
+                        {% endif %}
+                    >
+
+                        {{ shelf.location.name }}
+
+                        - {{ shelf.shelf_code }}
+
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+        </p>
+
+
+        <!-- Copy Code -->
+
+        <p>
+
+            <label for="copy_code">
+                Copy Code:
+            </label>
+
+
+            <input
+                type="text"
+                name="copy_code"
+                id="copy_code"
+                value="{{ form_data.copy_code }}"
+                required
+            >
+
+        </p>
+
+
+        <!-- Status -->
+
+        <p>
+
+            <label for="status">
+                Status:
+            </label>
+
+
+            <select
+                name="status"
+                id="status"
+            >
+
+                {% for status_item in statuses %}
+
+                    <option
+                        value="{{ status_item }}"
+
+                        {% if status_item == form_data.status %}
+                            selected
+                        {% endif %}
+                    >
+
+                        {{ status_item }}
+
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+        </p>
+
+
+        <!-- Acquisition Date -->
+
+        <p>
+
+            <label for="acquisition_date">
+                Acquisition Date:
+            </label>
+
+
+            <input
+                type="date"
+                name="acquisition_date"
+                id="acquisition_date"
+                value="{% if form_data.acquisition_date %}{{ form_data.acquisition_date }}{% else %}{% now 'Y-m-d' %}{% endif %}"
+            >
+
+        </p>
+
+
+        <!-- Notes -->
+
+        <p>
+
+            <label for="notes">
+                Notes:
+            </label>
+
+            <br>
+
+
+            <textarea
+                name="notes"
+                id="notes"
+                rows="5"
+                cols="50"
+            >{{ form_data.notes }}</textarea>
+
+        </p>
+
+
+        <!-- Submit -->
+
+        <button type="submit">
+            Add Book Copy
+        </button>
+
+    </form>
+
+</body>
+
+</html>

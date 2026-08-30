@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Activity Logs</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+<p>
+    <a href="{% url 'library_home' %}">
+        ← Back to Home
+    </a>
+</p>
+
+<h1>Activity Logs</h1>
+
+<form method="get">
+
+    <label>Search:</label>
+
+    <input
+        type="text"
+        name="search"
+        value="{{ search }}"
+        placeholder="Search activity logs..."
+    >
+
+    <br><br>
+
+    <label>User:</label>
+
+    <select name="user">
+
+        <option value="">
+            All Users
+        </option>
+
+        {% for user in users %}
+
+            <option
+                value="{{ user.id }}"
+                {% if user_id == user.id|stringformat:"s" %}
+                    selected
+                {% endif %}
+            >
+                {{ user.full_name }}
+            </option>
+
+        {% endfor %}
+
+    </select>
+
+    <br><br>
+
+    <label>Action:</label>
+
+    <select name="action">
+
+        <option value="">
+            All Actions
+        </option>
+
+        {% for item in actions %}
+
+            <option
+                value="{{ item }}"
+                {% if action == item %}
+                    selected
+                {% endif %}
+            >
+                {{ item }}
+            </option>
+
+        {% endfor %}
+
+    </select>
+
+    <br><br>
+
+    <label>Entity Type:</label>
+
+    <select name="entity_type">
+
+        <option value="">
+            All Entity Types
+        </option>
+
+        {% for item in entity_types %}
+
+            <option
+                value="{{ item }}"
+                {% if entity_type == item %}
+                    selected
+                {% endif %}
+            >
+                {{ item }}
+            </option>
+
+        {% endfor %}
+
+    </select>
+
+    <br><br>
+
+    <label>Date:</label>
+
+    <input
+        type="date"
+        name="date"
+        value="{{ date }}"
+    >
+
+    <br><br>
+
+    <button type="submit">
+        Search / Filter
+    </button>
+
+    <a href="{% url 'activity_log_list' %}">
+        Clear Filters
+    </a>
+
+</form>
+
+<br>
+
+<p>
+    Found {{ logs.paginator.count }} log(s).
+</p>
+
+<ul>
+
+    {% for log in logs %}
+
+        <li>
+
+            ID: {{ log.id }}
+
+            - User:
+
+            {% if log.user %}
+                {{ log.user.full_name }}
+            {% else %}
+                System
+            {% endif %}
+
+            - Action: {{ log.action }}
+
+            {% if log.entity_type %}
+                - Entity: {{ log.entity_type }}
+            {% endif %}
+
+            {% if log.entity_id %}
+                - ID: {{ log.entity_id }}
+            {% endif %}
+
+            {% if log.description %}
+                - {{ log.description }}
+            {% endif %}
+
+            - {{ log.created_at }}
+
+        </li>
+
+    {% empty %}
+
+        <li>No activity logs found.</li>
+
+    {% endfor %}
+
+</ul>
+
+{% include "library/_pagination.html" with page_obj=logs %}
+
+</body>
+</html>

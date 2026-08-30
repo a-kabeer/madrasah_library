@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Loan</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+    <p>
+        {% if next_url %}
+            <a href="{{ next_url }}">
+                ← Back
+            </a>
+        {% else %}
+            <a href="{% url 'loan_list' %}">
+                ← Back to Loans
+            </a>
+        {% endif %}
+    </p>
+
+    <h1>Edit Loan</h1>
+    {% if error_message %}
+
+    <p>
+        <strong>
+            {{ error_message }}
+        </strong>
+    </p>
+
+{% endif %}
+    {% if loan.return_date %}
+
+        <p>
+            <strong>Status: Returned</strong>
+        </p>
+
+        <p>
+            This loan has already been returned.
+        </p>
+
+    {% else %}
+
+        <p>
+            <strong>Status: Active</strong>
+        </p>
+
+    {% endif %}
+
+
+    <form method="post">
+
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next_url }}">
+
+
+        <label for="copy">
+            Book Copy:
+        </label>
+
+        {% if loan.return_date %}
+
+            <p>
+                {{ loan.copy.copy_code }}
+                -
+                {{ loan.copy.volume.book.title }}
+                -
+                {{ loan.copy.volume.title }}
+            </p>
+
+        {% else %}
+
+            <select
+                name="copy"
+                id="copy"
+                required
+            >
+
+                {% for copy in copies %}
+
+                    <option
+                        value="{{ copy.id }}"
+                        {% if copy.id == loan.copy_id %}selected{% endif %}
+                    >
+                        {{ copy.copy_code }}
+                        -
+                        {{ copy.volume.book.title }}
+                        -
+                        {{ copy.volume.title }}
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+        {% endif %}
+
+
+        <br><br>
+
+
+        <label for="borrower">
+            Borrower:
+        </label>
+
+        <select
+            name="borrower"
+            id="borrower"
+            required
+        >
+
+            {% for borrower in borrowers %}
+
+                <option
+                    value="{{ borrower.id }}"
+                    {% if borrower.id == loan.borrower_id %}selected{% endif %}
+                >
+                    {{ borrower.name }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+
+        <br><br>
+
+
+        <label for="issue_date">
+            Issue Date:
+        </label>
+
+        <input
+            type="date"
+            name="issue_date"
+            id="issue_date"
+            value="{{ loan.issue_date|date:'Y-m-d' }}"
+            required
+        >
+
+
+        <br><br>
+
+
+        <label for="due_date">
+            Due Date:
+        </label>
+
+        <input
+            type="date"
+            name="due_date"
+            id="due_date"
+            value="{{ loan.due_date|date:'Y-m-d' }}"
+            required
+        >
+
+
+        <br><br>
+
+
+        {% if loan.return_date %}
+
+            <hr>
+
+            <h3>Return Information</h3>
+
+            <p>
+                <strong>Return Date:</strong>
+                {{ loan.return_date }}
+            </p>
+
+            <p>
+                <strong>Returned To:</strong>
+
+                {% if loan.returned_to %}
+
+                    {% if loan.returned_to.full_name %}
+                        {{ loan.returned_to.full_name }}
+                    {% else %}
+                        {{ loan.returned_to.username }}
+                    {% endif %}
+
+                {% else %}
+
+                    N/A
+
+                {% endif %}
+
+            </p>
+
+        {% endif %}
+
+
+        <label for="notes">
+            Notes:
+        </label>
+
+        <br>
+
+        <textarea
+            name="notes"
+            id="notes"
+            rows="5"
+            cols="50"
+        >{{ loan.notes|default:"" }}</textarea>
+
+
+        <br><br>
+
+
+        <button type="submit">
+            Update Loan
+        </button>
+
+    </form>
+
+</body>
+</html>

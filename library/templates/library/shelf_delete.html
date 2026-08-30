@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Delete Shelf</title>
+</head>
+<body>
+
+{% include "library/_account_bar.html" %}
+
+<h1>Delete Shelf</h1>
+
+{% if copies_exist %}
+
+    <p>
+        <strong>
+            This shelf cannot be deleted.
+        </strong>
+    </p>
+
+    <p>
+        One or more book copies are currently placed on this shelf.
+        Move or remove those copies before deleting the shelf.
+    </p>
+
+    <p>
+        <a href="{% url 'shelf_list' %}">
+            Back to Shelves
+        </a>
+    </p>
+
+{% else %}
+
+    <p>
+        Are you sure you want to delete:
+    </p>
+
+    <p>
+        <strong>
+            {{ shelf.location.name }} - {{ shelf.shelf_code }}
+        </strong>
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <button type="submit">
+            Yes, Delete
+        </button>
+    </form>
+
+    <br>
+
+    <a href="{% url 'shelf_list' %}">
+        Cancel
+    </a>
+
+{% endif %}
+
+</body>
+</html>

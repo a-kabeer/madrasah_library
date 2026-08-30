@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ category.name }}</title>
+</head>
+<body>
+
+{% include "library/_account_bar.html" %}
+
+<p>
+    <a href="{% url 'category_list' %}">
+        ← Back to Categories
+    </a>
+</p>
+
+<h1>{{ category.name }}</h1>
+
+<hr>
+
+<h2>Books in this Category</h2>
+
+<p>
+    Total Books: {{ books|length }}
+</p>
+
+<ul>
+    {% for book in books %}
+        <li>
+            <a href="{% url 'book_detail' book.id %}">
+                {{ book.title }}
+            </a>
+            — {{ book.author.name }}
+        </li>
+    {% empty %}
+        <li>No books found in this category.</li>
+    {% endfor %}
+</ul>
+
+<hr>
+
+<h2>Actions</h2>
+
+<p>
+    <a href="{% url 'category_edit' category.id %}">
+        Edit Category
+    </a>
+</p>
+
+<p>
+    <a href="{% url 'category_delete' category.id %}">
+        Delete Category
+    </a>
+</p>
+
+</body>
+</html>

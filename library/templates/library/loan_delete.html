@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Delete Loan</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+    <p>
+        {% if next_url %}
+            <a href="{{ next_url }}">
+                ← Back
+            </a>
+        {% else %}
+            <a href="{% url 'loan_list' %}">
+                ← Back to Loans
+            </a>
+        {% endif %}
+    </p>
+
+    <h1>Delete Loan</h1>
+
+    <p>
+        Are you sure you want to permanently delete
+        Loan #{{ loan.id }}?
+    </p>
+
+    <p>
+        <strong>Book Copy:</strong>
+        {{ loan.copy.copy_code }}
+    </p>
+
+    <p>
+        <strong>Borrower:</strong>
+        {{ loan.borrower.name }}
+    </p>
+
+    <p>
+        <strong>Status:</strong>
+
+        {% if loan.return_date %}
+            Returned
+        {% else %}
+            Active
+        {% endif %}
+    </p>
+
+    {% if not loan.return_date %}
+
+        <p>
+            <strong>Note:</strong>
+            This is an active loan. Deleting it will make
+            the book copy available again.
+        </p>
+
+    {% endif %}
+
+    <hr>
+
+    <form method="post">
+
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next_url }}">
+
+        <button type="submit">
+            Yes, Delete
+        </button>
+
+        {% if next_url %}
+            <a href="{{ next_url }}">
+                Cancel
+            </a>
+        {% else %}
+            <a href="{% url 'loan_list' %}">
+                Cancel
+            </a>
+        {% endif %}
+
+    </form>
+
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Book Volumes</title>
+</head>
+<body>
+
+{% include "library/_account_bar.html" %}
+<p>
+    <a href="{% url 'library_home' %}">← Back to Home</a>
+</p>
+<h1>Book Volumes</h1>
+
+<form method="get">
+
+    <input
+        type="text"
+        name="search"
+        value="{{ search }}"
+        placeholder="Search book volumes..."
+    >
+
+    <label for="book">Book:</label>
+
+    <select name="book" id="book">
+        <option value="">All Books</option>
+
+        {% for book in books %}
+            <option
+                value="{{ book.id }}"
+                {% if book_id == book.id|stringformat:"s" %}selected{% endif %}
+            >
+                {{ book.title }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <button type="submit">Search</button>
+
+    {% if search or book_id %}
+        <a href="{% url 'book_volume_list' %}">
+            Clear
+        </a>
+    {% endif %}
+
+</form>
+
+{% if search or book_id %}
+    <p>
+        Found {{ volumes.paginator.count }} volume(s).
+    </p>
+{% endif %}
+
+<a href="{% url 'book_volume_add' %}">
+    Add Volume
+</a>
+
+<ul>
+    {% for volume in volumes %}
+        <li>
+            ID: {{ volume.id }}
+            - Book: {{ volume.book.title }}
+            - Volume {{ volume.volume_number }}
+            - {{ volume.title }}
+
+            <a href="{% url 'book_volume_detail' volume.id %}">
+    View Details
+</a>
+
+|
+
+<a href="{% url 'book_volume_edit' volume.id %}">
+    Edit
+</a>
+
+|
+
+<a href="{% url 'book_volume_delete' volume.id %}">
+    Delete
+</a>
+        </li>
+    {% empty %}
+        <li>No volumes found.</li>
+    {% endfor %}
+</ul>
+
+{% include "library/_pagination.html" with page_obj=volumes %}
+
+</body>
+</html>

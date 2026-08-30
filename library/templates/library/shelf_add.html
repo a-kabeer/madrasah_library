@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Shelf</title>
+</head>
+<body>
+
+{% include "library/_account_bar.html" %}
+
+<h1>Add Shelf</h1>
+
+<form method="post">
+    {% csrf_token %}
+
+    <label>Location:</label>
+
+    <select name="location" required>
+        <option value="">Select Location</option>
+
+        {% for location in locations %}
+            <option value="{{ location.id }}">
+                {{ location.name }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <br><br>
+
+    <label>Shelf Code:</label>
+
+    <input
+        type="text"
+        name="shelf_code"
+        required
+    >
+
+    <br><br>
+
+    <label>Description:</label>
+
+    <textarea name="description"></textarea>
+
+    <br><br>
+
+    <button type="submit">
+        Add Shelf
+    </button>
+</form>
+
+<br>
+
+{% if request.GET.next %}
+    <a href="{{ request.GET.next }}">
+        ← Cancel and Go Back
+    </a>
+{% else %}
+    <a href="{% url 'shelf_list' %}">
+        ← Back to Shelves
+    </a>
+{% endif %}
+
+</body>
+</html>

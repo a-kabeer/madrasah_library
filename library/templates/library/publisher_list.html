@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Publishers</title>
+</head>
+<body>
+
+{% include "library/_account_bar.html" %}
+<a href="{% url 'library_home' %}">
+    ← Back to Home
+</a>
+<h1>Publishers</h1>
+<form method="get">
+
+    <input
+        type="text"
+        name="search"
+        value="{{ search }}"
+        placeholder="Search publishers..."
+    >
+
+    <button type="submit">Search</button>
+
+    {% if search %}
+        <a href="{% url 'publisher_list' %}">
+            Clear
+        </a>
+    {% endif %}
+
+</form>
+
+{% if search %}
+    <p>
+        Search results for:
+        <strong>{{ search }}</strong>
+    </p>
+
+    <p>
+        Found {{ publishers|length }} publisher(s).
+    </p>
+{% endif %}
+
+<a href="{% url 'publisher_add' %}">
+    Add Publisher
+</a>
+
+<ul>
+    {% for publisher in publishers %}
+        <li>
+            ID: {{ publisher.id }}
+            - {{ publisher.name }}
+            {% if publisher.city %}
+                - {{ publisher.city }}
+            {% endif %}
+
+            <a href="{% url 'publisher_detail' publisher.id %}">
+                View Details
+            </a>
+
+            <a href="{% url 'publisher_edit' publisher.id %}">
+                Edit
+            </a>
+
+            <a href="{% url 'publisher_delete' publisher.id %}">
+                Delete
+            </a>
+        </li>
+    {% empty %}
+        <li>No publishers found.</li>
+    {% endfor %}
+</ul>
+
+{% include "library/_pagination.html" with page_obj=publishers %}
+
+</body>
+</html>

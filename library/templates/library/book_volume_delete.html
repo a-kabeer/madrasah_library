@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Delete Book Volume</title>
+</head>
+<body>
+
+{% include "library/_account_bar.html" %}
+
+<h1>Delete Book Volume</h1>
+
+<p>
+    Are you sure you want to delete:
+</p>
+
+<p>
+    <strong>
+        {{ volume.book.title }} -
+        Volume {{ volume.volume_number }} -
+        {{ volume.title }}
+    </strong>
+</p>
+
+<form method="post">
+    {% csrf_token %}
+
+    <button type="submit">
+        Yes, Delete
+    </button>
+</form>
+
+<br>
+
+{% if from_page == "detail" %}
+    <a href="{% url 'book_volume_detail' volume.id %}">
+        Cancel
+    </a>
+{% else %}
+    <a href="{% url 'book_volume_list' %}">
+        Cancel
+    </a>
+{% endif %}
+
+</body>
+</html>

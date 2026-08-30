@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Return Book</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+    <p>
+        {% if next_url %}
+            <a href="{{ next_url }}">
+                ← Back
+            </a>
+        {% else %}
+            <a href="{% url 'loan_list' %}">
+                ← Back to Loans
+            </a>
+        {% endif %}
+    </p>
+
+    <h1>Return Book</h1>
+
+    <p>
+        <strong>Book Copy:</strong>
+        {{ loan.copy.copy_code }}
+    </p>
+
+    <p>
+        <strong>Book:</strong>
+        {{ loan.copy.volume.book.title }}
+    </p>
+
+    <p>
+        <strong>Borrower:</strong>
+        {{ loan.borrower.name }}
+    </p>
+
+    <p>
+        <strong>Issue Date:</strong>
+        {{ loan.issue_date }}
+    </p>
+
+    <p>
+        <strong>Due Date:</strong>
+        {{ loan.due_date }}
+    </p>
+
+    <hr>
+
+    {% if loan.return_date %}
+
+    <p>
+        <strong>
+            This book has already been returned.
+        </strong>
+    </p>
+
+    <p>
+        <strong>Return Date:</strong>
+        {{ loan.return_date }}
+    </p>
+
+    <p>
+        <strong>Returned To:</strong>
+
+        {% if loan.returned_to %}
+
+        {% if loan.returned_to.full_name %}
+        {{ loan.returned_to.full_name }}
+        {% else %}
+        {{ loan.returned_to.username }}
+        {% endif %}
+
+        {% else %}
+        N/A
+        {% endif %}
+    </p>
+
+    <p>
+        {% if next_url %}
+            <a href="{{ next_url }}">
+                ← Back
+            </a>
+        {% else %}
+            <a href="{% url 'loan_list' %}">
+                ← Back to Loans
+            </a>
+        {% endif %}
+    </p>
+
+    {% else %}
+
+    {% if error_message %}
+    <p style="color: red;">
+        <strong>{{ error_message }}</strong>
+    </p>
+    {% endif %}
+
+    <form method="post">
+
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next_url }}">
+
+        <label for="return_date">
+            Return Date:
+        </label>
+
+        <input type="date" name="return_date" id="return_date" value="{% now 'Y-m-d' %}" required>
+
+        <br><br>
+
+        <label for="returned_to">
+            Returned To:
+        </label>
+
+        <select name="returned_to" id="returned_to">
+
+            <option value="">
+                Select User
+            </option>
+
+            {% for user in users %}
+
+            <option value="{{ user.id }}">
+
+                {% if user.full_name %}
+                {{ user.full_name }}
+                {% else %}
+                {{ user.username }}
+                {% endif %}
+
+            </option>
+
+            {% endfor %}
+
+        </select>
+
+        <br><br>
+
+        <label for="notes">
+            Notes:
+        </label>
+
+        <br>
+
+        <textarea name="notes" id="notes" rows="5" cols="50"></textarea>
+
+        <br><br>
+
+        <button type="submit">
+            Confirm Return
+        </button>
+
+        {% if next_url %}
+            <a href="{{ next_url }}">
+                Cancel
+            </a>
+        {% else %}
+            <a href="{% url 'loan_list' %}">
+                Cancel
+            </a>
+        {% endif %}
+
+    </form>
+
+    {% endif %}
+
+</body>
+
+</html>

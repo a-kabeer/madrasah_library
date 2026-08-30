@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Users</title>
+</head>
+<body>
+
+{% include "library/_account_bar.html" %}
+    <p>
+    <a href="{% url 'library_home' %}">← Back to Home</a>
+</p>
+
+<h1>Users</h1>
+<form method="get">
+
+    <input
+        type="text"
+        name="search"
+        value="{{ search }}"
+        placeholder="Search users..."
+    >
+
+    <label for="role">Role:</label>
+
+    <select name="role" id="role">
+        <option value="">All Roles</option>
+
+        {% for value, label in roles %}
+            <option value="{{ value }}" {% if role == value %}selected{% endif %}>
+                {{ label }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <label for="status">Status:</label>
+
+    <select name="status" id="status">
+        <option value="">All</option>
+        <option value="active" {% if active_status == "active" %}selected{% endif %}>Active</option>
+        <option value="inactive" {% if active_status == "inactive" %}selected{% endif %}>Inactive</option>
+    </select>
+
+    <button type="submit">Search</button>
+
+    {% if search or role or active_status %}
+        <a href="{% url 'user_list' %}">
+            Clear
+        </a>
+    {% endif %}
+
+</form>
+
+{% if search or role or active_status %}
+    <p>
+        Found {{ users.paginator.count }} user(s).
+    </p>
+{% endif %}
+<a href="{% url 'user_add' %}">
+    Add User
+</a>
+
+<ul>
+    {% for user in users %}
+        <li>
+            ID: {{ user.id }}
+            - Username: {{ user.username }}
+            - Name: {{ user.full_name|default:"N/A" }}
+            - Role: {{ user.role|default:"N/A" }}
+
+            {% if user.is_active %}
+                - Active
+            {% else %}
+                - Inactive
+            {% endif %}
+
+            <a href="{% url 'user_edit' user.id %}">
+                Edit
+            </a>
+
+            <a href="{% url 'user_delete' user.id %}">
+                Delete
+            </a>
+
+            <form method="post" action="{% url 'user_toggle_active' user.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit">
+                    {% if user.is_active %}Deactivate{% else %}Activate{% endif %}
+                </button>
+            </form>
+        </li>
+    {% empty %}
+        <li>No users found.</li>
+    {% endfor %}
+</ul>
+
+{% include "library/_pagination.html" with page_obj=users %}
+
+</body>
+</html>

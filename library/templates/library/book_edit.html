@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Book</title>
+</head>
+<body>
+
+{% include "library/_account_bar.html" %}
+
+<h1>Edit Book</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="from" value="{{ from_page }}">
+
+    <label>Title:</label>
+
+    <input
+        type="text"
+        name="title"
+        value="{{ book.title }}"
+        required
+    >
+
+    <br><br>
+
+    <label>Author:</label>
+
+    <select name="author" required>
+
+        {% for author in authors %}
+            <option
+                value="{{ author.id }}"
+                {% if author.id == book.author_id %}
+                    selected
+                {% endif %}
+            >
+                {{ author.name }}
+            </option>
+        {% endfor %}
+
+    </select>
+
+    <br><br>
+
+    <label>Category:</label>
+
+    <select name="category">
+
+        <option value="">Select Category</option>
+
+        {% for category in categories %}
+            <option
+                value="{{ category.id }}"
+                {% if category.id == book.category_id %}
+                    selected
+                {% endif %}
+            >
+                {{ category.name }}
+            </option>
+        {% endfor %}
+
+    </select>
+
+    <br><br>
+
+    <label>Publisher:</label>
+
+    <select name="publisher">
+
+        <option value="">Select Publisher</option>
+
+        {% for publisher in publishers %}
+            <option
+                value="{{ publisher.id }}"
+                {% if publisher.id == book.publisher_id %}
+                    selected
+                {% endif %}
+            >
+                {{ publisher.name }}
+            </option>
+        {% endfor %}
+
+    </select>
+
+    <br><br>
+
+    <button type="submit">
+        Update Book
+    </button>
+</form>
+
+<br>
+
+{% if from_page == "detail" %}
+    <a href="{% url 'book_detail' book.id %}">
+        Back to {{ book.title }}
+    </a>
+{% else %}
+    <a href="{% url 'book_list' %}">
+        Back to Books
+    </a>
+{% endif %}
+
+</body>
+</html>

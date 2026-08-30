@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Delete Author</title>
+</head>
+<body>
+
+{% include "library/_account_bar.html" %}
+
+<h1>Delete Author</h1>
+
+{% if books_exist %}
+
+    <p>
+        <strong>
+            This author cannot be deleted.
+        </strong>
+    </p>
+
+    <p>
+        One or more books are currently associated with this author.
+        Remove or change those book records before deleting the author.
+    </p>
+
+    <p>
+        <a href="{% url 'author_list' %}">
+            Back to Authors
+        </a>
+    </p>
+
+{% else %}
+
+    <p>
+        Are you sure you want to delete:
+        <strong>{{ author.name }}</strong>?
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <button type="submit">Yes, Delete</button>
+    </form>
+
+    <br>
+
+    <a href="{% url 'author_list' %}">
+        Cancel
+    </a>
+
+{% endif %}
+
+</body>
+</html>

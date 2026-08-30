@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Authors</title>
+</head>
+<body>
+
+{% include "library/_account_bar.html" %}
+
+    <p>
+    <a href="{% url 'library_home' %}">← Back to Home</a>
+</p>
+
+<h1>Authors</h1>
+<form method="get">
+
+    <input
+        type="text"
+        name="search"
+        value="{{ search }}"
+        placeholder="Search authors..."
+    >
+
+    <button type="submit">Search</button>
+
+    {% if search %}
+        <a href="{% url 'author_list' %}">
+            Clear
+        </a>
+    {% endif %}
+
+</form>
+
+{% if search %}
+    <p>
+        Search results for:
+        <strong>{{ search }}</strong>
+    </p>
+
+    <p>
+        Found {{ authors|length }} author(s).
+    </p>
+{% endif %}
+<a href="{% url 'author_add' %}">
+    Add Author
+</a>
+
+<br><br>
+
+<ul>
+    {% for author in authors %}
+        <li>
+            ID: {{ author.id }} - {{ author.name }}
+
+            <a href="{% url 'author_detail' author.id %}">
+                View Details
+            </a>
+
+            <a href="{% url 'author_edit' author.id %}">
+                Edit
+            </a>
+
+            <a href="{% url 'author_delete' author.id %}">
+                Delete
+            </a>
+        </li>
+    {% empty %}
+        <li>No authors found.</li>
+    {% endfor %}
+</ul>
+
+{% include "library/_pagination.html" with page_obj=authors %}
+
+
+</body>
+</html>

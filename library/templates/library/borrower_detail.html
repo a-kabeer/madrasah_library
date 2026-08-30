@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+    <title>{{ borrower.name }}</title>
+
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+<p>
+
+    <a href="{% url 'borrower_list' %}">
+        ← Back to Borrowers
+    </a>
+
+</p>
+
+
+<h1>
+    Borrower: {{ borrower.name }}
+</h1>
+
+<hr>
+
+
+<h2>Borrower Information</h2>
+
+<p>
+
+    <strong>Name:</strong>
+
+    {{ borrower.name }}
+
+</p>
+
+<p>
+
+    <strong>Phone:</strong>
+
+    {{ borrower.phone|default:"N/A" }}
+
+</p>
+
+<p>
+
+    <strong>Borrower Type:</strong>
+
+    {{ borrower.borrower_type|default:"N/A" }}
+
+</p>
+
+<p>
+
+    <strong>Registration No:</strong>
+
+    {{ borrower.registration_no|default:"N/A" }}
+
+</p>
+
+<p>
+
+    <strong>Department:</strong>
+
+    {{ borrower.department|default:"N/A" }}
+
+</p>
+
+<p>
+
+    <strong>Status:</strong>
+
+    {% if borrower.is_active %}
+
+        Active
+
+    {% else %}
+
+        Inactive
+
+    {% endif %}
+
+</p>
+
+<hr>
+
+
+<h2>
+    Current Loans
+</h2>
+
+{% if active_loans %}
+
+    <ul>
+
+        {% for loan in active_loans %}
+
+            <li>
+
+                <strong>
+                    {{ loan.copy.copy_code }}
+                </strong>
+
+                —
+
+                {{ loan.copy.volume.book.title }}
+
+                —
+
+                Volume:
+                {{ loan.copy.volume.title }}
+
+                <br>
+
+                Issued:
+                {{ loan.issue_date }}
+
+                |
+
+                Due:
+                {{ loan.due_date }}
+
+                |
+
+                <a href="{% url 'loan_detail' loan.id %}?next={{ request.path|urlencode }}">
+                    View Loan Details
+                </a>
+
+            </li>
+
+            <br>
+
+        {% endfor %}
+
+    </ul>
+
+{% else %}
+
+    <p>
+        This borrower has no currently issued books.
+    </p>
+
+{% endif %}
+
+<hr>
+
+
+<h2>
+    Loan History
+</h2>
+
+{% if loans %}
+
+    <ul>
+
+        {% for loan in loans %}
+
+            <li>
+
+                <strong>
+                    {{ loan.copy.copy_code }}
+                </strong>
+
+                —
+
+                {{ loan.copy.volume.book.title }}
+
+                <br>
+
+                Issued:
+                {{ loan.issue_date }}
+
+                |
+
+                Due:
+                {{ loan.due_date }}
+
+                |
+
+                {% if loan.return_date %}
+
+                    Returned:
+                    {{ loan.return_date }}
+
+                {% else %}
+
+                    Currently Issued
+
+                {% endif %}
+
+                |
+
+                <a href="{% url 'loan_detail' loan.id %}?next={{ request.path|urlencode }}">
+                    View Details
+                </a>
+
+            </li>
+
+            <br>
+
+        {% endfor %}
+
+    </ul>
+
+{% else %}
+
+    <p>
+        No loan history found.
+    </p>
+
+{% endif %}
+
+<hr>
+
+
+<h2>
+    Actions
+</h2>
+
+<p>
+
+    <a href="{% url 'borrower_edit' borrower.id %}?next={{ request.path|urlencode }}">
+        Edit Borrower
+    </a>
+
+</p>
+
+<p>
+
+    <a href="{% url 'borrower_delete' borrower.id %}?next={{ request.path|urlencode }}">
+        Delete Borrower
+    </a>
+
+</p>
+
+<form method="post" action="{% url 'borrower_toggle_active' borrower.id %}">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.path }}">
+    <button type="submit">
+        {% if borrower.is_active %}Deactivate{% else %}Activate{% endif %} Borrower
+    </button>
+</form>
+
+</body>
+
+</html>

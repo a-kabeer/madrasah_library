@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>Book Content Details</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+    <p>
+
+        {% if from_page == "volume" %}
+
+            <a href="{% url 'book_volume_detail' content.volume.id %}">
+                ← Back to Volume
+            </a>
+
+        {% else %}
+
+            <a href="{% url 'book_content_list' %}">
+                ← Back to Contents
+            </a>
+
+        {% endif %}
+
+    </p>
+
+    <h1>Book Content Details</h1>
+
+    <p>
+        <strong>Title:</strong>
+        {{ content.title }}
+    </p>
+
+    <p>
+        <strong>Book:</strong>
+        {{ content.volume.book.title }}
+    </p>
+
+    <p>
+        <strong>Volume:</strong>
+        Volume {{ content.volume.volume_number }}
+        - {{ content.volume.title }}
+    </p>
+
+    <p>
+        <strong>Parent:</strong>
+
+        {% if content.parent %}
+            {{ content.parent.title }}
+        {% else %}
+            No Parent
+        {% endif %}
+
+    </p>
+
+    <p>
+        <strong>Content Type:</strong>
+        {{ content.content_type|default:"N/A" }}
+    </p>
+
+    <p>
+        <strong>Page Number:</strong>
+        {{ content.page_number|default:"N/A" }}
+    </p>
+
+    <p>
+        <strong>Sort Order:</strong>
+        {{ content.sort_order }}
+    </p>
+
+    <hr>
+
+    <h2>Actions</h2>
+
+    <p>
+        <a href="{% url 'book_content_edit' content.id %}?from={{ from_page }}">
+            Edit Content
+        </a>
+    </p>
+
+    <p>
+        <a href="{% url 'book_content_delete' content.id %}?from={{ from_page }}">
+            Delete Content
+        </a>
+    </p>
+
+</body>
+
+</html>

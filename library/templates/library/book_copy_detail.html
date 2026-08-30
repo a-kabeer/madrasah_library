@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>{{ copy.copy_code }}</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+<!-- Back Navigation -->
+
+<p>
+
+    {% if from_page == "list" %}
+
+        <a href="{% url 'book_copy_list' %}">
+            ← Back to Book Copies
+        </a>
+
+    {% elif from_page == "volume" %}
+
+        <a href="{% url 'book_volume_detail' copy.volume.id %}">
+            ← Back to Volume
+        </a>
+
+    {% elif copy.shelf %}
+
+        <a href="{% url 'shelf_detail' copy.shelf.id %}">
+            ← Back to Shelf {{ copy.shelf.shelf_code }}
+        </a>
+
+    {% else %}
+
+        <a href="{% url 'book_copy_list' %}">
+            ← Back to Book Copies
+        </a>
+
+    {% endif %}
+
+</p>
+
+
+<h1>
+    Book Copy: {{ copy.copy_code }}
+</h1>
+
+<hr>
+
+
+<h2>Book Information</h2>
+
+<p>
+    <strong>Book:</strong>
+    {{ copy.volume.book.title }}
+</p>
+
+<p>
+    <strong>Volume:</strong>
+    {{ copy.volume.title }}
+</p>
+
+<hr>
+
+
+<h2>Location Information</h2>
+
+{% if copy.shelf %}
+
+    <p>
+        <strong>Location:</strong>
+
+        {% if copy.shelf.location %}
+            {{ copy.shelf.location.name }}
+        {% else %}
+            N/A
+        {% endif %}
+    </p>
+
+    <p>
+        <strong>Shelf:</strong>
+        {{ copy.shelf.shelf_code }}
+    </p>
+
+{% else %}
+
+    <p>
+        <strong>Location:</strong>
+        Not assigned
+    </p>
+
+    <p>
+        <strong>Shelf:</strong>
+        Not assigned
+    </p>
+
+{% endif %}
+
+<hr>
+
+
+<h2>Copy Information</h2>
+
+<p>
+    <strong>Status:</strong>
+    {{ copy.status }}
+</p>
+
+<p>
+    <strong>Acquisition Date:</strong>
+    {{ copy.acquisition_date|default:"N/A" }}
+</p>
+
+<p>
+    <strong>Notes:</strong>
+    {{ copy.notes|default:"N/A" }}
+</p>
+
+<hr>
+
+
+<h2>Current Loan</h2>
+
+{% if active_loan %}
+
+    <p>
+        <strong>Borrower:</strong>
+        {{ active_loan.borrower.name }}
+    </p>
+
+    <p>
+        <strong>Phone:</strong>
+        {{ active_loan.borrower.phone }}
+    </p>
+
+    <p>
+        <strong>Issue Date:</strong>
+        {{ active_loan.issue_date }}
+    </p>
+
+    <p>
+        <strong>Due Date:</strong>
+        {{ active_loan.due_date }}
+    </p>
+
+    <p>
+        <a href="{% url 'loan_detail' active_loan.id %}?next={{ request.path|urlencode }}">
+            View Loan Details
+        </a>
+    </p>
+
+{% else %}
+
+    <p>
+        This copy is not currently issued.
+    </p>
+
+{% endif %}
+
+<hr>
+
+
+<h2>Loan History</h2>
+
+<ul>
+
+    {% for loan in loan_history %}
+
+        <li>
+
+            <strong>
+                {{ loan.borrower.name }}
+            </strong>
+
+            |
+
+            Issued:
+            {{ loan.issue_date }}
+
+            |
+
+            Due:
+            {{ loan.due_date }}
+
+            |
+
+            {% if loan.return_date %}
+
+                Returned:
+                {{ loan.return_date }}
+
+            {% else %}
+
+                Currently Issued
+
+            {% endif %}
+
+            |
+
+            <a href="{% url 'loan_detail' loan.id %}?next={{ request.path|urlencode }}">
+                View Details
+            </a>
+
+        </li>
+
+        <br>
+
+    {% empty %}
+
+        <li>
+            No loan history found for this copy.
+        </li>
+
+    {% endfor %}
+
+</ul>
+
+<hr>
+
+<h2>Actions</h2>
+
+<p>
+
+    <a href="{% url 'book_copy_edit' copy.id %}?from={{ from_page }}">
+    Edit Book Copy
+</a>
+
+|
+
+<a href="{% url 'book_copy_move' copy.id %}?from={{ from_page }}">
+    Move to Shelf
+</a>
+
+|
+
+<a href="{% url 'book_copy_delete' copy.id %}?from={{ from_page }}">
+    Delete Book Copy
+</a>
+
+</p>
+
+</body>
+
+</html>

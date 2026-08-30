@@ -1,0 +1,9 @@
+{% if user.is_authenticated %}
+<p style="text-align:right;">
+    Logged in as <strong>{{ user.full_name }}</strong> ({{ user.role }})
+    |
+    <a href="{% url 'profile' %}">My Profile</a>
+    |
+    <a href="{% url 'logout' %}">Log Out</a>
+</p>
+{% endif %}

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>Edit Borrower</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+
+<p>
+    {% if next_url %}
+        <a href="{{ next_url }}">
+            ← Back
+        </a>
+    {% else %}
+        <a href="{% url 'borrower_list' %}">
+            ← Back to Borrowers
+        </a>
+    {% endif %}
+</p>
+
+<h1>Edit Borrower</h1>
+
+{% if error %}
+
+    <p>
+        <strong>
+            {{ error }}
+        </strong>
+    </p>
+
+{% endif %}
+
+<form method="post">
+
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next_url }}">
+
+    <p>
+        <label for="name">
+            Name:
+        </label>
+
+        <input
+            type="text"
+            name="name"
+            id="name"
+            value="{{ form_data.name }}"
+            required
+        >
+    </p>
+
+    <p>
+        <label for="phone">
+            Phone:
+        </label>
+
+        <input
+            type="text"
+            name="phone"
+            id="phone"
+            value="{{ form_data.phone }}"
+            required
+        >
+    </p>
+
+    <p>
+        <label for="borrower_type">
+            Borrower Type:
+        </label>
+
+        <select
+            name="borrower_type"
+            id="borrower_type"
+            required
+        >
+
+            <option value="">
+                Select Borrower Type
+            </option>
+
+            {% for type in borrower_types %}
+
+                <option
+                    value="{{ type }}"
+                    {% if form_data.borrower_type == type %}
+                        selected
+                    {% endif %}
+                >
+                    {{ type }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+    </p>
+
+    <p>
+        <label for="registration_no">
+            Registration No:
+        </label>
+
+        <input
+            type="text"
+            name="registration_no"
+            id="registration_no"
+            value="{{ form_data.registration_no }}"
+        >
+    </p>
+
+    <p>
+        <label for="department">
+            Department:
+        </label>
+
+        <input
+            type="text"
+            name="department"
+            id="department"
+            value="{{ form_data.department }}"
+        >
+    </p>
+
+    <p>
+        <label for="address">
+            Address:
+        </label>
+
+        <br>
+
+        <textarea
+            name="address"
+            id="address"
+            rows="4"
+            cols="50"
+        >{{ form_data.address }}</textarea>
+    </p>
+
+    <p>
+        <label for="notes">
+            Notes:
+        </label>
+
+        <br>
+
+        <textarea
+            name="notes"
+            id="notes"
+            rows="4"
+            cols="50"
+        >{{ form_data.notes }}</textarea>
+    </p>
+
+    <p>
+        <label for="is_active">
+            Status:
+        </label>
+
+        <select
+            name="is_active"
+            id="is_active"
+        >
+
+            <option
+                value="True"
+                {% if form_data.is_active %}
+                    selected
+                {% endif %}
+            >
+                Active
+            </option>
+
+            <option
+                value="False"
+                {% if not form_data.is_active %}
+                    selected
+                {% endif %}
+            >
+                Inactive
+            </option>
+
+        </select>
+    </p>
+
+    <button type="submit">
+        Update Borrower
+    </button>
+
+</form>
+
+
+</body>
+</html>

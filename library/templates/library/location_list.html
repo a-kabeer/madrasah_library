@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Locations</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+<p>
+    <a href="{% url 'library_home' %}">
+        ← Back to Home
+    </a>
+</p>
+
+<h1>Locations</h1>
+
+<form method="get">
+
+    <input
+        type="text"
+        name="search"
+        value="{{ search }}"
+        placeholder="Search locations..."
+    >
+
+    <button type="submit">
+        Search
+    </button>
+
+    {% if search %}
+        <a href="{% url 'location_list' %}">
+            Clear
+        </a>
+    {% endif %}
+
+</form>
+
+{% if search %}
+
+    <p>
+        Search results for:
+        <strong>{{ search }}</strong>
+    </p>
+
+{% endif %}
+
+<p>
+    Found {{ locations.paginator.count }} location(s).
+</p>
+
+<p>
+    <a href="{% url 'location_add' %}">
+        Add Location
+    </a>
+</p>
+
+<ul>
+
+    {% for location in locations %}
+
+        <li>
+
+           <strong>
+    <a href="{% url 'location_detail' location.id %}">
+        {{ location.name }}
+    </a>
+</strong>
+
+            {% if location.description %}
+                <br>
+                Description:
+                {{ location.description }}
+            {% endif %}
+
+            <br>
+
+            Shelves:
+            {{ location.shelf_count }}
+
+            |
+
+            Book Copies:
+            {{ location.copy_count }}
+
+            <br><br>
+
+            <a href="{% url 'location_edit' location.id %}">
+                Edit
+            </a>
+
+            |
+
+            <a href="{% url 'location_delete' location.id %}">
+                Delete
+            </a>
+
+        </li>
+
+        <br>
+
+    {% empty %}
+
+        <li>
+            No locations found.
+        </li>
+
+    {% endfor %}
+
+</ul>
+
+{% include "library/_pagination.html" with page_obj=locations %}
+
+</body>
+</html>

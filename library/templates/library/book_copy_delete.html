@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Delete Book Copy</title>
+</head>
+<body>
+
+{% include "library/_account_bar.html" %}
+
+   <p>
+
+    {% if from_page == "shelf" %}
+
+        <a href="{% url 'shelf_detail' copy.shelf.id %}">
+            ← Back to Shelf {{ copy.shelf.shelf_code }}
+        </a>
+
+    {% elif from_page == "volume" %}
+
+        <a href="{% url 'book_volume_detail' copy.volume.id %}">
+            ← Back to Volume
+        </a>
+
+    {% else %}
+
+        <a href="{% url 'book_copy_list' %}">
+            ← Back to Book Copies
+        </a>
+
+    {% endif %}
+
+</p>
+
+    <h1>Delete Book Copy</h1>
+
+    <p>
+        <strong>Copy Code:</strong>
+        {{ copy.copy_code }}
+    </p>
+
+    <p>
+        <strong>Book:</strong>
+        {{ copy.volume.book.title }}
+    </p>
+
+    <p>
+        <strong>Volume:</strong>
+        {{ copy.volume.title }}
+    </p>
+
+    <p>
+        <strong>Current Status:</strong>
+        {{ copy.status }}
+    </p>
+
+    <hr>
+
+    {% if active_loan_exists %}
+
+        <p>
+            <strong>
+                This book copy cannot be deleted.
+            </strong>
+        </p>
+
+        <p>
+            The copy currently has an active loan.
+            Return the book before deleting this copy.
+        </p>
+
+        <p>
+            {% if from_page == "shelf" %}
+
+    <a href="{% url 'shelf_detail' copy.shelf.id %}">
+        ← Back to Shelf {{ copy.shelf.shelf_code }}
+    </a>
+
+{% elif from_page == "volume" %}
+
+    <a href="{% url 'book_volume_detail' copy.volume.id %}">
+        ← Back to Volume
+    </a>
+
+{% else %}
+
+    <a href="{% url 'book_copy_list' %}">
+        ← Back to Book Copies
+    </a>
+
+{% endif %}
+        </p>
+
+    {% else %}
+
+        <p>
+            Are you sure you want to permanently delete
+            this book copy?
+        </p>
+
+        <form method="post">
+
+            {% csrf_token %}
+
+            <button type="submit">
+                Yes, Delete
+            </button>
+
+        </form>
+
+        <br>
+
+        {% if from_page == "shelf" %}
+
+    <a href="{% url 'shelf_detail' copy.shelf.id %}">
+        Cancel
+    </a>
+
+{% elif from_page == "volume" %}
+
+    <a href="{% url 'book_volume_detail' copy.volume.id %}">
+        Cancel
+    </a>
+
+{% else %}
+
+    <a href="{% url 'book_copy_list' %}">
+        Cancel
+    </a>
+
+{% endif %}
+
+    {% endif %}
+
+</body>
+</html>

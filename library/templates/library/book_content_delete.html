@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+    <title>Delete Book Content</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+    <p>
+
+    {% if from_page == "volume" %}
+
+        <a href="{% url 'book_volume_detail' volume_id %}">
+            ← Back to Volume
+        </a>
+
+    {% else %}
+
+        <a href="{% url 'book_content_list' %}">
+            ← Back to Contents
+        </a>
+
+    {% endif %}
+
+</p>
+
+    <h1>Delete Book Content</h1>
+
+    <p>
+        Are you sure you want to delete:
+    </p>
+
+    <h2>
+        {{ content.title }}
+    </h2>
+
+    <p>
+
+        <strong>Volume:</strong>
+
+        {{ content.volume.book.title }}
+
+        - Volume {{ content.volume.volume_number }}
+
+        - {{ content.volume.title }}
+
+    </p>
+
+    <hr>
+
+    <form method="post">
+
+        {% csrf_token %}
+
+        <button type="submit">
+            Yes, Delete Content
+        </button>
+
+    </form>
+
+    <br>
+
+    {% if from_page == "volume" %}
+
+        <a href="{% url 'book_volume_detail' volume_id %}">
+            Cancel
+        </a>
+
+    {% else %}
+
+        <a href="{% url 'book_content_list' %}">
+            Cancel
+        </a>
+
+    {% endif %}
+
+</body>
+
+</html>

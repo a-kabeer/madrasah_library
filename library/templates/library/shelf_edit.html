@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Shelf</title>
+</head>
+<body>
+
+{% include "library/_account_bar.html" %}
+
+<h1>Edit Shelf</h1>
+
+<form method="post">
+    {% csrf_token %}
+
+    <label>Location:</label>
+
+    <select name="location" required>
+
+        {% for location in locations %}
+            <option
+                value="{{ location.id }}"
+                {% if location.id == shelf.location_id %}
+                    selected
+                {% endif %}
+            >
+                {{ location.name }}
+            </option>
+        {% endfor %}
+
+    </select>
+
+    <br><br>
+
+    <label>Shelf Code:</label>
+
+    <input
+        type="text"
+        name="shelf_code"
+        value="{{ shelf.shelf_code }}"
+        required
+    >
+
+    <br><br>
+
+    <label>Description:</label>
+
+    <textarea name="description">{{ shelf.description|default:'' }}</textarea>
+
+    <br><br>
+
+    <button type="submit">
+        Update Shelf
+    </button>
+</form>
+
+<br>
+
+<a href="{% url 'shelf_detail' shelf.id %}">
+    Back to Shelf {{ shelf.shelf_code }}
+</a>
+
+</body>
+</html>

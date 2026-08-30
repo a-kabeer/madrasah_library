@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Loan Details</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+   <p>
+    {% if request.GET.next %}
+        <a href="{{ request.GET.next }}">
+            ← Back to Book Copy
+        </a>
+    {% else %}
+        <a href="{% url 'loan_list' %}">
+            ← Back to Loans
+        </a>
+    {% endif %}
+</p>
+
+    <h1>Loan Details</h1>
+
+    <h2>Book Information</h2>
+
+    <p>
+        <strong>Book Copy:</strong>
+        {{ loan.copy.copy_code }}
+    </p>
+
+    <p>
+        <strong>Book:</strong>
+        {{ loan.copy.volume.book.title }}
+    </p>
+
+    <p>
+        <strong>Volume:</strong>
+        Volume {{ loan.copy.volume.volume_number }}
+        - {{ loan.copy.volume.title }}
+    </p>
+
+    <hr>
+
+    <h2>Borrower Information</h2>
+
+    <p>
+        <strong>Name:</strong>
+        {{ loan.borrower.name }}
+    </p>
+
+    <p>
+        <strong>Phone:</strong>
+        {{ loan.borrower.phone|default:"N/A" }}
+    </p>
+
+    <p>
+        <strong>Type:</strong>
+        {{ loan.borrower.borrower_type|default:"N/A" }}
+    </p>
+
+    {% if loan.borrower.registration_no %}
+        <p>
+            <strong>Registration No:</strong>
+            {{ loan.borrower.registration_no }}
+        </p>
+    {% endif %}
+
+    {% if loan.borrower.department %}
+        <p>
+            <strong>Department:</strong>
+            {{ loan.borrower.department }}
+        </p>
+    {% endif %}
+
+    <hr>
+
+    <h2>Loan Information</h2>
+
+    <p>
+        <strong>Issue Date:</strong>
+        {{ loan.issue_date }}
+    </p>
+
+    <p>
+        <strong>Due Date:</strong>
+        {{ loan.due_date }}
+    </p>
+
+    <p>
+        <strong>Issued By:</strong>
+
+        {% if loan.issued_by %}
+            {{ loan.issued_by.full_name }}
+        {% else %}
+            N/A
+        {% endif %}
+    </p>
+
+    <p>
+        <strong>Status:</strong>
+
+        {% if loan.return_date %}
+
+            Returned
+
+        {% elif loan.days_overdue > 0 %}
+
+            Overdue by
+            {{ loan.days_overdue }}
+            day(s)
+
+        {% else %}
+
+            Active
+
+        {% endif %}
+    </p>
+
+    <p>
+        <strong>Notes:</strong>
+        {{ loan.notes|default:"N/A" }}
+    </p>
+
+    <hr>
+
+    <h2>Return Information</h2>
+
+    {% if loan.return_date %}
+
+        <p>
+            <strong>Return Date:</strong>
+            {{ loan.return_date }}
+        </p>
+
+        <p>
+            <strong>Returned To:</strong>
+
+            {% if loan.returned_to %}
+                {{ loan.returned_to.full_name }}
+            {% else %}
+                N/A
+            {% endif %}
+        </p>
+
+    {% else %}
+
+        <p>
+            This book has not been returned yet.
+        </p>
+
+    {% endif %}
+
+    <hr>
+
+    <h2>Actions</h2>
+
+    {% if not loan.return_date %}
+
+        <p>
+            <a href="{% url 'loan_return' loan.id %}?next={{ request.GET.next|default:request.path|urlencode }}">
+                Return Book
+            </a>
+        </p>
+
+    {% endif %}
+
+    <p>
+        <a href="{% url 'loan_edit' loan.id %}?next={{ request.GET.next|default:request.path|urlencode }}">
+            Edit Loan
+        </a>
+    </p>
+
+    <p>
+        <a href="{% url 'loan_delete' loan.id %}?next={{ request.GET.next|default:request.path|urlencode }}">
+            Delete Loan
+        </a>
+    </p>
+
+</body>
+
+</html>

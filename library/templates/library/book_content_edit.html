@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Book Content</title>
+</head>
+<body>
+
+{% include "library/_account_bar.html" %}
+<p>
+
+    {% if from_page == "volume" %}
+
+        <a href="{% url 'book_volume_detail' volume_id %}">
+            ← Back to Volume
+        </a>
+
+    {% else %}
+
+        <a href="{% url 'book_content_list' %}">
+            ← Back to Contents
+        </a>
+
+    {% endif %}
+
+</p>
+<h1>Edit Book Content</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <label>Volume:</label>
+
+<select name="volume" required>
+
+    {% for volume in volumes %}
+
+        <option
+            value="{{ volume.id }}"
+            {% if volume.id == content.volume.id %}
+                selected
+            {% endif %}
+        >
+            {{ volume.book.title }}
+            - Volume {{ volume.volume_number }}
+            - {{ volume.title }}
+        </option>
+
+    {% endfor %}
+
+</select>
+
+    <br><br>
+
+    <label>Parent:</label>
+
+    <select name="parent">
+
+        <option value="">No Parent</option>
+
+        {% for parent in parents %}
+            <option
+                value="{{ parent.id }}"
+                {% if parent.id == content.parent_id %}
+                    selected
+                {% endif %}
+            >
+                {{ parent.title }}
+            </option>
+        {% endfor %}
+
+    </select>
+
+    <br><br>
+
+    <label>Title:</label>
+
+    <input
+        type="text"
+        name="title"
+        value="{{ content.title }}"
+        required
+    >
+
+    <br><br>
+
+    <label>Content Type:</label>
+
+    <input
+        type="text"
+        name="content_type"
+        value="{{ content.content_type|default:'' }}"
+    >
+
+    <br><br>
+
+    <label>Page Number:</label>
+
+    <input
+        type="number"
+        name="page_number"
+        value="{{ content.page_number|default:'' }}"
+    >
+
+    <br><br>
+
+    <label>Sort Order:</label>
+
+    <input
+        type="number"
+        name="sort_order"
+        value="{{ content.sort_order }}"
+    >
+
+    <br><br>
+
+    <button type="submit">
+        Update Content
+    </button>
+</form>
+
+
+
+</body>
+</html>

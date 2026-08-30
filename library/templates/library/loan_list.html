@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Loans</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+    <p>
+        <a href="{% url 'library_home' %}">
+            ← Back to Home
+        </a>
+    </p>
+
+    <h1>Loans</h1>
+
+    <form method="get">
+
+        <p>
+            <label>Search:</label>
+
+            <input
+                type="text"
+                name="search"
+                value="{{ search }}"
+                placeholder="Search borrower, book, copy..."
+            >
+        </p>
+
+        <p>
+            <label>Status:</label>
+
+            <select name="status">
+
+                <option value="">
+                    All Loans
+                </option>
+
+                <option
+                    value="active"
+                    {% if status == "active" %}
+                        selected
+                    {% endif %}
+                >
+                    Active
+                </option>
+
+                <option
+                    value="overdue"
+                    {% if status == "overdue" %}
+                        selected
+                    {% endif %}
+                >
+                    Overdue
+                </option>
+
+                <option
+                    value="returned"
+                    {% if status == "returned" %}
+                        selected
+                    {% endif %}
+                >
+                    Returned
+                </option>
+
+            </select>
+        </p>
+
+        <p>
+            <label>Borrower:</label>
+
+            <select name="borrower">
+
+                <option value="">
+                    All Borrowers
+                </option>
+
+                {% for borrower in borrowers %}
+
+                    <option
+                        value="{{ borrower.id }}"
+                        {% if borrower_id == borrower.id|stringformat:"s" %}
+                            selected
+                        {% endif %}
+                    >
+                        {{ borrower.name }}
+                    </option>
+
+                {% endfor %}
+
+            </select>
+        </p>
+
+        <p>
+            <label>Issue Date:</label>
+
+            <input
+                type="date"
+                name="issue_date"
+                value="{{ issue_date }}"
+            >
+        </p>
+
+        <p>
+            <label>Due Date:</label>
+
+            <input
+                type="date"
+                name="due_date"
+                value="{{ due_date }}"
+            >
+        </p>
+
+        <button type="submit">
+            Apply Filters
+        </button>
+
+        {% if search or status or borrower_id or issue_date or due_date %}
+
+            <a href="{% url 'loan_list' %}">
+                Clear Filters
+            </a>
+
+        {% endif %}
+
+    </form>
+
+    <br>
+
+    <p>
+        Found {{ loans.paginator.count }} loan(s).
+    </p>
+
+    <p>
+        <a href="{% url 'loan_add' %}">
+            Add Loan
+        </a>
+    </p>
+
+    <ul>
+
+        {% for loan in loans %}
+
+            <li>
+
+                ID: {{ loan.id }}
+
+                - Copy: {{ loan.copy.copy_code }}
+
+                - Book: {{ loan.copy.volume.book.title }}
+
+                - Borrower: {{ loan.borrower.name }}
+
+                - Phone:
+
+                {% if loan.borrower.phone %}
+
+                    {{ loan.borrower.phone }}
+
+                {% else %}
+
+                    N/A
+
+                {% endif %}
+
+                - Issue Date: {{ loan.issue_date }}
+
+                - Due Date: {{ loan.due_date }}
+
+                - Status:
+
+                {% if loan.return_date %}
+
+                    Returned
+
+                {% elif loan.days_overdue > 0 %}
+
+                    Overdue
+
+                    - Overdue by:
+                    {{ loan.days_overdue }} day(s)
+
+                {% else %}
+
+                    Active
+
+                {% endif %}
+
+                <br><br>
+
+                <a href="{% url 'loan_detail' loan.id %}">
+                    Details
+                </a>
+
+                |
+
+                <a href="{% url 'loan_edit' loan.id %}">
+                    Edit
+                </a>
+
+                {% if not loan.return_date %}
+
+                    |
+
+                    <a href="{% url 'loan_return' loan.id %}">
+                        Return
+                    </a>
+
+                {% endif %}
+
+                |
+
+                <a href="{% url 'loan_delete' loan.id %}">
+                    Delete
+                </a>
+
+            </li>
+
+            <br>
+
+        {% empty %}
+
+            <li>
+                No loans found.
+            </li>
+
+        {% endfor %}
+
+    </ul>
+
+    {% include "library/_pagination.html" with page_obj=loans %}
+
+</body>
+</html>

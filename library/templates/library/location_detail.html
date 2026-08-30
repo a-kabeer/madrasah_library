@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ location.name }}</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+<p>
+    <a href="{% url 'location_list' %}">
+        ← Back to Locations
+    </a>
+</p>
+
+<h1>{{ location.name }}</h1>
+
+{% if location.description %}
+    <p>
+        {{ location.description }}
+    </p>
+{% endif %}
+
+<hr>
+
+<h2>Shelves</h2>
+
+<p>
+    <a href="{% url 'shelf_add' %}?next={{ request.path|urlencode }}">
+    Add Shelf
+</a>
+</p>
+
+<ul>
+
+    {% for shelf in shelves %}
+
+        <li>
+
+            <strong>
+    <a href="{% url 'shelf_detail' shelf.id %}">
+        {{ shelf.shelf_code }}
+    </a>
+</strong>
+
+            |
+
+            Book Copies:
+            {{ shelf.copy_count }}
+
+        </li>
+
+    {% empty %}
+
+        <li>
+            No shelves found in this location.
+        </li>
+
+    {% endfor %}
+
+</ul>
+
+<hr>
+
+<h2>Actions</h2>
+
+<p>
+    <a href="{% url 'location_edit' location.id %}">
+        Edit Location
+    </a>
+</p>
+
+<p>
+    <a href="{% url 'location_delete' location.id %}">
+        Delete Location
+    </a>
+</p>
+
+</body>
+</html>

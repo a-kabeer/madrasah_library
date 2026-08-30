@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>Dashboard</title>
+</head>
+
+<body>
+
+{% include "library/_account_bar.html" %}
+
+
+<p>
+    <a href="{% url 'library_home' %}">
+        ← Back to Home
+    </a>
+</p>
+
+<h1>Library Dashboard</h1>
+
+<h2>Library Statistics</h2>
+
+<ul>
+
+    <li>
+        <a href="{% url 'book_list' %}">
+            Total Books: {{ total_books }}
+        </a>
+    </li>
+
+    <li>
+        <a href="{% url 'author_list' %}">
+            Total Authors: {{ total_authors }}
+        </a>
+    </li>
+
+    <li>
+        <a href="{% url 'category_list' %}">
+            Total Categories: {{ total_categories }}
+        </a>
+    </li>
+
+    <li>
+        <a href="{% url 'publisher_list' %}">
+            Total Publishers: {{ total_publishers }}
+        </a>
+    </li>
+
+    <li>
+        <a href="{% url 'book_copy_list' %}">
+            Total Book Copies: {{ total_book_copies }}
+        </a>
+    </li>
+
+    <li>
+        <a href="{% url 'book_copy_list' %}?status=Available">
+            Available Copies: {{ available_copies }}
+        </a>
+    </li>
+
+    <li>
+        <a href="{% url 'book_copy_list' %}?status=Issued">
+            Issued Copies: {{ issued_copies }}
+        </a>
+    </li>
+
+    <li>
+        <a href="{% url 'borrower_list' %}">
+            Total Borrowers: {{ total_borrowers }}
+        </a>
+    </li>
+
+    <li>
+        <a href="{% url 'borrower_list' %}?status=active">
+            Active Borrowers: {{ active_borrowers }}
+        </a>
+    </li>
+
+    <li>
+        <a href="{% url 'loan_list' %}?status=active">
+            Active Loans: {{ active_loans }}
+        </a>
+    </li>
+
+    <li>
+        <a href="{% url 'loan_list' %}?status=overdue">
+            Overdue Loans: {{ overdue_loans }}
+        </a>
+    </li>
+
+</ul>
+
+<hr>
+
+<h2>Recent Loans</h2>
+
+<ul>
+
+    {% for loan in recent_loans %}
+
+        <li>
+
+            <strong>Book:</strong>
+            {{ loan.copy.volume.book.title }}
+
+            -
+
+            <strong>Copy:</strong>
+            {{ loan.copy.copy_code }}
+
+            -
+
+            <strong>Borrower:</strong>
+            {{ loan.borrower.name }}
+
+            -
+
+            <strong>Issued By:</strong>
+
+            {% if loan.issued_by %}
+
+                {% if loan.issued_by.full_name %}
+                    {{ loan.issued_by.full_name }}
+                {% else %}
+                    {{ loan.issued_by.username }}
+                {% endif %}
+
+            {% else %}
+
+                N/A
+
+            {% endif %}
+
+            -
+
+            <strong>Issue Date:</strong>
+            {{ loan.issue_date }}
+
+            <br>
+
+            <a href="{% url 'loan_detail' loan.id %}">
+                View Loan
+            </a>
+
+        </li>
+
+        <br>
+
+    {% empty %}
+
+        <li>
+            No recent loans found.
+        </li>
+
+    {% endfor %}
+
+</ul>
+
+<hr>
+
+<h2>Recent Activity</h2>
+
+<ul>
+
+    {% for log in recent_logs %}
+
+        <li>
+
+            <strong>Date:</strong>
+            {{ log.created_at }}
+
+            -
+
+            <strong>User:</strong>
+
+            {% if log.user %}
+
+                {% if log.user.full_name %}
+                    {{ log.user.full_name }}
+                {% else %}
+                    {{ log.user.username }}
+                {% endif %}
+
+            {% else %}
+
+                System
+
+            {% endif %}
+
+            -
+
+            <strong>Action:</strong>
+            {{ log.action }}
+
+            {% if log.entity_type %}
+
+                -
+
+                <strong>Entity:</strong>
+
+                {% if log.entity_type == "Loan" %}
+                    <a href="{% url 'loan_detail' log.entity_id %}">{{ log.entity_type }}</a>
+                {% elif log.entity_type == "Book" %}
+                    <a href="{% url 'book_detail' log.entity_id %}">{{ log.entity_type }}</a>
+                {% elif log.entity_type == "BookVolume" %}
+                    <a href="{% url 'book_volume_detail' log.entity_id %}">{{ log.entity_type }}</a>
+                {% elif log.entity_type == "BookContent" %}
+                    <a href="{% url 'book_content_detail' log.entity_id %}">{{ log.entity_type }}</a>
+                {% elif log.entity_type == "BookCopy" %}
+                    <a href="{% url 'book_copy_detail' log.entity_id %}">{{ log.entity_type }}</a>
+                {% elif log.entity_type == "Location" %}
+                    <a href="{% url 'location_detail' log.entity_id %}">{{ log.entity_type }}</a>
+                {% elif log.entity_type == "Shelf" %}
+                    <a href="{% url 'shelf_detail' log.entity_id %}">{{ log.entity_type }}</a>
+                {% elif log.entity_type == "Borrower" %}
+                    <a href="{% url 'borrower_detail' log.entity_id %}">{{ log.entity_type }}</a>
+                {% else %}
+                    {{ log.entity_type }}
+                {% endif %}
+
+            {% endif %}
+
+            {% if log.description %}
+
+                <br>
+
+                {{ log.description }}
+
+            {% endif %}
+
+        </li>
+
+        <br>
+
+    {% empty %}
+
+        <li>
+            No recent activity found.
+        </li>
+
+    {% endfor %}
+
+</ul>
+
+<p>
+
+    <a href="{% url 'activity_log_list' %}">
+        View All Activity Logs
+    </a>
+
+</p>
+
+</body>
+</html>

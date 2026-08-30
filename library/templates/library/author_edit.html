@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Author</title>
+</head>
+<body>
+
+{% include "library/_account_bar.html" %}
+
+<h1>Edit Author</h1>
+
+<form method="post">
+    {% csrf_token %}
+
+    <label for="name">Author Name:</label>
+
+    <input
+        type="text"
+        id="name"
+        name="name"
+        value="{{ author.name }}"
+        required
+    >
+
+    <button type="submit">Update Author</button>
+</form>
+
+<br>
+
+<a href="{% url 'author_list' %}">
+    Back to Authors
+</a>
+
+</body>
+</html>
