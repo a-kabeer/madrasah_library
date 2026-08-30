@@ -2782,21 +2782,23 @@ def book_copy_delete(request, copy_id):
     request.POST.get("from", "")
 )
 
-    active_loan_exists = Loan.objects.filter(
-        copy_id=copy.id,
-        return_date__isnull=True
+    # The real FK (loans.copy_id -> book_copies.id) is NO ACTION, so ANY
+    # loan record referencing this copy — active or already returned —
+    # blocks the delete at the database level, not just active ones.
+    loan_history_exists = Loan.objects.filter(
+        copy_id=copy.id
     ).exists()
 
     if request.method == "POST":
 
-        if active_loan_exists:
+        if loan_history_exists:
 
             return render(
                 request,
                 "library/book_copy_delete.html",
                 {
                     "copy": copy,
-                    "active_loan_exists": True,
+                    "loan_history_exists": True,
                     "from_page": from_page,
                 }
             )
@@ -2843,7 +2845,7 @@ def book_copy_delete(request, copy_id):
         "library/book_copy_delete.html",
         {
             "copy": copy,
-            "active_loan_exists": active_loan_exists,
+            "loan_history_exists": loan_history_exists,
             "from_page": from_page,
         }
     )
@@ -3990,21 +3992,23 @@ def borrower_delete(request, borrower_id):
 
     next_url = request.GET.get("next") or request.POST.get("next") or ""
 
-    active_loan_exists = Loan.objects.filter(
-        borrower_id=borrower.id,
-        return_date__isnull=True
+    # The real FK (loans.borrower_id -> borrowers.id) is NO ACTION, so ANY
+    # loan record referencing this borrower — active or already returned —
+    # blocks the delete at the database level, not just active ones.
+    loan_history_exists = Loan.objects.filter(
+        borrower_id=borrower.id
     ).exists()
 
     if request.method == "POST":
 
-        if active_loan_exists:
+        if loan_history_exists:
 
             return render(
                 request,
                 "library/borrower_delete.html",
                 {
                     "borrower": borrower,
-                    "active_loan_exists": True,
+                    "loan_history_exists": True,
                     "next_url": next_url,
                 }
             )
@@ -4041,7 +4045,7 @@ def borrower_delete(request, borrower_id):
         "library/borrower_delete.html",
         {
             "borrower": borrower,
-            "active_loan_exists": active_loan_exists,
+            "loan_history_exists": loan_history_exists,
             "next_url": next_url,
         }
     )
@@ -4173,10 +4177,12 @@ def user_toggle_active(request, user_id):
 @role_required("Admin")
 def user_edit(request, user_id):
 
-    user = get_object_or_404(
+    target_user = get_object_or_404(
         User,
         id=user_id
     )
+
+    error = None
 
     if request.method == "POST":
 
@@ -4190,8 +4196,8 @@ def user_edit(request, user_id):
             ""
         ).strip()
 
-        password_hash = request.POST.get(
-            "password_hash",
+        new_password = request.POST.get(
+            "new_password",
             ""
         ).strip()
 
@@ -4200,23 +4206,31 @@ def user_edit(request, user_id):
             ""
         ).strip()
 
-        if username and full_name and role in USER_ROLES:
+        if not (username and full_name and role in USER_ROLES):
 
-            user.username = username
-            user.full_name = full_name
+            error = "Please fill in all required fields."
 
-            if password_hash:
+        elif new_password and len(new_password) < 8:
 
-                user.password_hash = password_hash
+            error = "New password must be at least 8 characters."
 
-            user.role = role
+        else:
 
-            user.is_active = (
+            target_user.username = username
+            target_user.full_name = full_name
+
+            if new_password:
+
+                target_user.set_password(new_password)
+
+            target_user.role = role
+
+            target_user.is_active = (
                 request.POST.get("is_active")
                 == "on"
             )
 
-            user.save()
+            target_user.save()
 
             cache.delete(
                 USER_CACHE_KEY
@@ -4230,8 +4244,8 @@ def user_edit(request, user_id):
                 user=None,
                 action="UPDATE",
                 entity_type="User",
-                entity_id=user.id,
-                description=f"{user.username} updated",
+                entity_id=target_user.id,
+                description=f"{target_user.username} updated",
             )
 
             return redirect(
@@ -4242,7 +4256,8 @@ def user_edit(request, user_id):
         request,
         "library/user_edit.html",
         {
-            "user": user
+            "target_user": target_user,
+            "error": error,
         }
     )
 
@@ -4250,13 +4265,37 @@ def user_edit(request, user_id):
 @role_required("Admin")
 def user_delete(request, user_id):
 
-    user = get_object_or_404(User, id=user_id)
+    target_user = get_object_or_404(User, id=user_id)
+
+    # users.id is referenced by loans.issued_by/returned_to and
+    # activity_logs.user_id, all NO ACTION FKs — deleting a user who has
+    # ever issued/returned a loan (or been logged doing something) would
+    # otherwise crash with an unhandled IntegrityError.
+    has_related_records = (
+        Loan.objects.filter(
+            models.Q(issued_by_id=target_user.id)
+            | models.Q(returned_to_id=target_user.id)
+        ).exists()
+        or ActivityLog.objects.filter(user_id=target_user.id).exists()
+    )
 
     if request.method == "POST":
-        deleted_user_id = user.id
-        deleted_username = user.username
 
-        user.delete()
+        if has_related_records:
+
+            return render(
+                request,
+                "library/user_delete.html",
+                {
+                    "target_user": target_user,
+                    "has_related_records": True,
+                }
+            )
+
+        deleted_user_id = target_user.id
+        deleted_username = target_user.username
+
+        target_user.delete()
 
         cache.delete(USER_CACHE_KEY)
         cache.delete(DASHBOARD_CACHE_KEY)
@@ -4275,7 +4314,8 @@ def user_delete(request, user_id):
         request,
         "library/user_delete.html",
         {
-            "user": user
+            "target_user": target_user,
+            "has_related_records": has_related_records,
         }
     )
 

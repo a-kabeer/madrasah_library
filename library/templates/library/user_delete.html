@@ -9,24 +9,48 @@
 
 <h1>Delete User</h1>
 
-<p>
-    Are you sure you want to delete:
-    <strong>{{ user.username }}</strong>?
-</p>
+{% if has_related_records %}
 
-<form method="post">
-    {% csrf_token %}
+    <p>
+        <strong>
+            This user cannot be deleted.
+        </strong>
+    </p>
 
-    <button type="submit">
-        Yes, Delete
-    </button>
-</form>
+    <p>
+        This user has issued/returned loans or other activity on record.
+        Deleting them would break that history, so it's blocked.
+        Consider deactivating the account instead.
+    </p>
 
-<br>
+    <p>
+        <a href="{% url 'user_list' %}">
+            Back to Users
+        </a>
+    </p>
 
-<a href="{% url 'user_list' %}">
-    Cancel
-</a>
+{% else %}
+
+    <p>
+        Are you sure you want to delete:
+        <strong>{{ target_user.username }}</strong>?
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <button type="submit">
+            Yes, Delete
+        </button>
+    </form>
+
+    <br>
+
+    <a href="{% url 'user_list' %}">
+        Cancel
+    </a>
+
+{% endif %}
 
 </body>
 </html>
