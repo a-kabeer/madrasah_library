@@ -513,101 +513,28 @@
 
                             {% for log in recent_logs %}
 
-                                <div class="list-group-item px-0">
+                                {% comment %}
+                                  Whole row clickable, matching Recent Loans.
+                                  Entries with nothing to open (deletions,
+                                  entities without a detail page) stay a
+                                  plain row rather than a dead link.
+                                {% endcomment %}
+                                {% if log.target_url %}
 
-                                    <div class="d-flex justify-content-between gap-3">
+                                    <a
+                                        href="{{ log.target_url }}"
+                                        class="list-group-item list-group-item-action px-0"
+                                    >
+                                        {% include "library/partials/activity_log_row.html" with log=log %}
+                                    </a>
 
-                                        <div>
+                                {% else %}
 
-                                            <div class="fw-semibold">
-
-                                                {{ log.action }}
-
-                                                {% if log.entity_type %}
-
-                                                    —
-
-                                                    {% if log.entity_type == "Loan" %}
-
-                                                        <a href="{% url 'loan_detail' log.entity_id %}">
-                                                            {{ log.entity_type }}
-                                                        </a>
-
-                                                    {% elif log.entity_type == "Book" %}
-
-                                                        <a href="{% url 'book_detail' log.entity_id %}">
-                                                            {{ log.entity_type }}
-                                                        </a>
-
-                                                    {% elif log.entity_type == "BookVolume" %}
-
-                                                        <a href="{% url 'book_volume_detail' log.entity_id %}">
-                                                            {{ log.entity_type }}
-                                                        </a>
-
-                                                    {% elif log.entity_type == "BookContent" %}
-
-                                                        <a href="{% url 'book_content_detail' log.entity_id %}">
-                                                            {{ log.entity_type }}
-                                                        </a>
-
-                                                    {% elif log.entity_type == "BookCopy" %}
-
-                                                        <a href="{% url 'book_copy_detail' log.entity_id %}">
-                                                            {{ log.entity_type }}
-                                                        </a>
-
-                                                    {% elif log.entity_type == "Location" %}
-
-                                                        <a href="{% url 'location_detail' log.entity_id %}">
-                                                            {{ log.entity_type }}
-                                                        </a>
-
-                                                    {% elif log.entity_type == "Shelf" %}
-
-                                                        <a href="{% url 'shelf_detail' log.entity_id %}">
-                                                            {{ log.entity_type }}
-                                                        </a>
-
-                                                    {% elif log.entity_type == "Borrower" %}
-
-                                                        <a href="{% url 'borrower_detail' log.entity_id %}">
-                                                            {{ log.entity_type }}
-                                                        </a>
-
-                                                    {% else %}
-
-                                                        {{ log.entity_type }}
-
-                                                    {% endif %}
-
-                                                {% endif %}
-
-                                            </div>
-
-
-                                            {% if log.description %}
-
-                                                <div class="small text-body-secondary">
-
-                                                    {{ log.description }}
-
-                                                </div>
-
-                                            {% endif %}
-
-                                        </div>
-
-
-                                        <div class="small text-body-secondary text-nowrap">
-
-                                            {{ log.created_at }}
-
-                                        </div>
-
+                                    <div class="list-group-item px-0">
+                                        {% include "library/partials/activity_log_row.html" with log=log %}
                                     </div>
 
-                                </div>
+                                {% endif %}
 
                             {% endfor %}
 

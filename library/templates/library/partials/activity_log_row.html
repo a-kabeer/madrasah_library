@@ -1,0 +1,42 @@
+{% comment %}
+Body of one Recent Activity row.
+
+Shared by the linked and unlinked variants in dashboard.html so the markup
+exists once. It contains no <a> of its own — the caller wraps the whole row
+in one when `log.target_url` is set, which is what makes the entire row
+clickable rather than just the entity name.
+{% endcomment %}
+
+<div class="d-flex justify-content-between gap-3">
+
+    <div>
+
+        <div class="fw-semibold">
+
+            {{ log.action }}
+
+            {% if log.entity_type %}
+                — {{ log.entity_type }}
+            {% endif %}
+
+        </div>
+
+        {% if log.description %}
+
+            <div class="small text-body-secondary">
+
+                {{ log.description }}
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+    <div class="small text-body-secondary text-nowrap">
+
+        {{ log.created_at }}
+
+    </div>
+
+</div>

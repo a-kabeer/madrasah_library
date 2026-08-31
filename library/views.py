@@ -87,6 +87,47 @@ def is_combobox_request(request):
     )
 
 
+# Where an activity-log entry points, by the entity_type recorded with it.
+# `User` is absent deliberately: it has no detail page. So is
+# OrganizationSettings, whose page is Admin-only — linking it would hand
+# other roles a 403.
+ACTIVITY_LOG_DETAIL_ROUTES = {
+    "Author": "author_detail",
+    "Book": "book_detail",
+    "BookContent": "book_content_detail",
+    "BookCopy": "book_copy_detail",
+    "BookVolume": "book_volume_detail",
+    "Borrower": "borrower_detail",
+    "Category": "category_detail",
+    "Loan": "loan_detail",
+    "Location": "location_detail",
+    "Publisher": "publisher_detail",
+    "Shelf": "shelf_detail",
+}
+
+
+def activity_log_target(log):
+    """URL of the record a log entry refers to, or "" if there isn't one.
+
+    Returning "" is what tells the template to render a plain row rather
+    than a link. DELETE entries always land here: the record they describe
+    is gone, so its detail page would only 404.
+    """
+
+    if not log.entity_type or not log.entity_id:
+        return ""
+
+    if log.action == "DELETE":
+        return ""
+
+    route = ACTIVITY_LOG_DETAIL_ROUTES.get(log.entity_type)
+
+    if not route:
+        return ""
+
+    return reverse(route, args=[log.entity_id])
+
+
 def selected_name(model, pk):
     """Display name for an id submitted by a combobox, or "" if unusable.
 
@@ -4986,11 +5027,16 @@ def library_home(request):
         "-issue_date"
     )[:5]
 
-    recent_logs = ActivityLog.objects.select_related(
-        "user"
-    ).order_by(
-        "-created_at"
-    )[:5]
+    recent_logs = list(
+        ActivityLog.objects.select_related(
+            "user"
+        ).order_by(
+            "-created_at"
+        )[:5]
+    )
+
+    for log in recent_logs:
+        log.target_url = activity_log_target(log)
 
     dashboard_stats["recent_loans"] = recent_loans
     dashboard_stats["recent_logs"] = recent_logs
