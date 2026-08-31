@@ -42,6 +42,26 @@ from .permissions import can_edit_library, role_required
 PAGE_SIZE = 25
 DEFAULT_LOAN_PERIOD_DAYS = 14
 
+# Rows-per-page options offered by the book list's "Show" control.
+PAGE_SIZE_CHOICES = (10, 25, 50, 100, 200)
+
+# Sortable book-list columns: the `sort` parameter value -> the field to
+# order by. Whitelisted deliberately — handing the raw parameter to
+# order_by() would let a visitor traverse relations or trigger a FieldError.
+#
+# `id` doubles as the book number; the schema has no separate accession
+# column (accession codes live per-copy on book_copies.copy_code) and no
+# created-at column, so neither is offered here.
+BOOK_SORT_FIELDS = {
+    "id": "id",
+    "title": "title",
+    "author": "author__name",
+    "category": "category__name",
+    "publisher": "publisher__name",
+}
+
+BOOK_SORT_DEFAULT = "title"
+
 # How many suggestions the searchable dropdowns (comboboxes) show at once.
 COMBOBOX_LIMIT = 20
 
@@ -126,6 +146,143 @@ def activity_log_target(log):
         return ""
 
     return reverse(route, args=[log.entity_id])
+
+
+def query_with(request, **overrides):
+    """The current query string with parameters replaced, or dropped on None.
+
+    Used to build sort, paging and rows-per-page links that carry the rest
+    of the table's state along, so any view of the list stays shareable as
+    a URL.
+    """
+
+    params = request.GET.copy()
+
+    for key, value in overrides.items():
+
+        if value is None:
+            params.pop(key, None)
+
+        else:
+            params[key] = value
+
+    return params.urlencode()
+
+
+def resolve_page_size(request, default=PAGE_SIZE):
+    """The requested rows-per-page, if it is one of the offered options."""
+
+    try:
+        requested = int(request.GET.get("page_size", ""))
+
+    except ValueError:
+        return default
+
+    return requested if requested in PAGE_SIZE_CHOICES else default
+
+
+def resolve_sort(request, allowed, default):
+    """Validated (sort key, direction) for a list table."""
+
+    sort = request.GET.get("sort", "")
+
+    if sort not in allowed:
+        sort = default
+
+    direction = request.GET.get("direction", "")
+
+    if direction not in ("asc", "desc"):
+        direction = "asc"
+
+    return sort, direction
+
+
+def sort_ordering(allowed, sort, direction):
+    """order_by() arguments for an already-validated sort key and direction.
+
+    Two details matter for a paginated table:
+
+    * Nullable columns (category, publisher) keep their blank rows at the
+      end whichever way the sort runs, rather than flipping to the top.
+    * `id` is appended as a tiebreaker. Rows that compare equal otherwise
+      have no guaranteed order, which lets the same book appear on two
+      pages while another is skipped entirely.
+    """
+
+    field = models.F(allowed[sort])
+
+    if direction == "desc":
+        primary = field.desc(nulls_last=True)
+
+    else:
+        primary = field.asc(nulls_last=True)
+
+    if allowed[sort] == "id":
+        return [primary]
+
+    return [primary, "id"]
+
+
+def sortable_columns(request, columns, allowed, sort, direction):
+    """Header definitions with a sort link and the current state on each.
+
+    `columns` is a list of (key, label) pairs; a key of None marks a column
+    that cannot be sorted (the cover thumbnail).
+    """
+
+    prepared = []
+
+    for key, label in columns:
+
+        column = {
+            "key": key,
+            "label": label,
+            "active": False,
+            "direction": "",
+            "url": "",
+        }
+
+        if key in allowed:
+
+            active = key == sort
+
+            # Clicking the active column flips it; a new column starts
+            # ascending, which is the least surprising default.
+            next_direction = (
+                "desc"
+                if active and direction == "asc"
+                else "asc"
+            )
+
+            column["active"] = active
+            column["direction"] = direction if active else ""
+            column["url"] = "?" + query_with(
+                request,
+                sort=key,
+                direction=next_direction,
+                page=None,
+            )
+
+        prepared.append(column)
+
+    return prepared
+
+
+def page_size_options(request, current):
+    """Rows-per-page choices, each as a link that resets to page 1."""
+
+    return [
+        {
+            "value": size,
+            "active": size == current,
+            "url": "?" + query_with(
+                request,
+                page_size=size,
+                page=None,
+            ),
+        }
+        for size in PAGE_SIZE_CHOICES
+    ]
 
 
 def selected_name(model, pk):
@@ -1669,7 +1826,14 @@ def shelf_delete(request, shelf_id):
 
 def book_list(request):
 
-    title = request.GET.get("title", "").strip()
+    # `search` is the documented parameter; `title` is still honoured so
+    # links made before the rename keep working.
+    search = (
+        request.GET.get("search")
+        or request.GET.get("title")
+        or ""
+    ).strip()
+
     author_id = request.GET.get("author", "").strip()
     category_id = request.GET.get("category", "").strip()
     publisher_id = request.GET.get("publisher", "").strip()
@@ -1680,8 +1844,8 @@ def book_list(request):
         "publisher",
     )
 
-    if title:
-        books = books.filter(title__icontains=title)
+    if search:
+        books = books.filter(title__icontains=search)
 
     if author_id:
         books = books.filter(author_id=author_id)
@@ -1692,17 +1856,45 @@ def book_list(request):
     if publisher_id:
         books = books.filter(publisher_id=publisher_id)
 
-    books = books.order_by("title")
+    # Sorting and paging both happen in SQL — only one page of rows is ever
+    # fetched, however large the catalogue grows.
+    sort, direction = resolve_sort(
+        request,
+        BOOK_SORT_FIELDS,
+        BOOK_SORT_DEFAULT,
+    )
 
-    paginator = Paginator(books, PAGE_SIZE)
-    books = paginator.get_page(request.GET.get("page"))
+    books = books.order_by(
+        *sort_ordering(BOOK_SORT_FIELDS, sort, direction)
+    )
+
+    page_size = resolve_page_size(request)
+
+    paginator = Paginator(books, page_size)
+    page = paginator.get_page(request.GET.get("page"))
+
+    columns = sortable_columns(
+        request,
+        [
+            ("id", "ID"),
+            (None, "Cover"),
+            ("title", "Title"),
+            ("author", "Author"),
+            ("category", "Category"),
+            ("publisher", "Publisher"),
+        ],
+        BOOK_SORT_FIELDS,
+        sort,
+        direction,
+    )
 
     return render(
         request,
         "library/book_list.html",
         {
-            "books": books,
-            "title": title,
+            "books": page,
+            "paginator": paginator,
+            "search": search,
             "author_id": author_id,
             "category_id": category_id,
             "publisher_id": publisher_id,
@@ -1711,6 +1903,25 @@ def book_list(request):
             "author_name": selected_name(Author, author_id),
             "category_name": selected_name(Category, category_id),
             "publisher_name": selected_name(Publisher, publisher_id),
+            "has_filters": bool(
+                search or author_id or category_id or publisher_id
+            ),
+            "columns": columns,
+            "sort": sort,
+            "direction": direction,
+            "page_size": page_size,
+            "page_size_options": page_size_options(request, page_size),
+            # Everything except `page`, so paging links keep the rest of the
+            # table's state.
+            "pagination_query": query_with(request, page=None),
+            "elided_page_range": list(
+                paginator.get_elided_page_range(
+                    page.number,
+                    on_each_side=1,
+                    on_ends=1,
+                )
+            ),
+            "page_ellipsis": Paginator.ELLIPSIS,
         }
     )
 

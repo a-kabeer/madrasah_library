@@ -272,6 +272,32 @@ document.addEventListener(
 
 
         /* =========================
+           NAVIGATE-ON-CHANGE SELECTS
+
+           Used by the book list's rows-per-page control. Each option's
+           value is a complete URL carrying the current search, filters and
+           sorting, so the state survives the jump and the server does the
+           work — nothing is re-sorted or re-paged in the browser.
+           ========================= */
+
+        (function () {
+
+            var selects = document.querySelectorAll("[data-navigate-on-change]");
+
+            selects.forEach(function (select) {
+                select.addEventListener("change", function () {
+
+                    if (select.value) {
+                        window.location.assign(select.value);
+                    }
+
+                });
+            });
+
+        })();
+
+
+        /* =========================
            BRANDING COLOUR FIELDS
 
            Keeps the native colour picker and its hex text field in step.

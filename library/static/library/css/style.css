@@ -569,6 +569,39 @@ body {
 
 
 /* =========================
+   SORTABLE TABLE HEADERS
+   ========================= */
+
+.table-sort {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 0.35rem;
+
+    color: inherit;
+
+    text-decoration: none;
+
+    white-space: nowrap;
+}
+
+.table-sort:hover {
+    color: var(--brand-primary);
+}
+
+/* The neutral up/down glyph on unsorted columns: visible enough to signal
+   the column is sortable, quiet enough not to compete with the active one. */
+.table-sort-idle {
+    opacity: 0.35;
+}
+
+.table-sort:hover .table-sort-idle {
+    opacity: 0.75;
+}
+
+
+/* =========================
    ERROR PAGES (403 / 404 / 500)
    ========================= */
 

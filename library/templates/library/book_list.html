@@ -31,15 +31,26 @@
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body">
             <form method="get">
+
+                {% comment %}
+                  Carry the table state through a filter submit, so changing
+                  a filter doesn't silently reset the sort or page size.
+                  `page` is deliberately absent — a new filter should start
+                  from page 1.
+                {% endcomment %}
+                <input type="hidden" name="sort" value="{{ sort }}">
+                <input type="hidden" name="direction" value="{{ direction }}">
+                <input type="hidden" name="page_size" value="{{ page_size }}">
+
                 <div class="row g-3 align-items-end">
                     <div class="col-12 col-md-6 col-lg-3">
-                        <label for="filterTitle" class="form-label fw-semibold">Book Title</label>
+                        <label for="filterSearch" class="form-label fw-semibold">Book Title</label>
                         <input
                             type="text"
                             class="form-control"
-                            id="filterTitle"
-                            name="title"
-                            value="{{ title }}"
+                            id="filterSearch"
+                            name="search"
+                            value="{{ search }}"
                             placeholder="Search by book title..."
                         >
                     </div>
@@ -57,7 +68,7 @@
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-search me-1"></i> Search
                     </button>
-                    {% if title or author_id or category_id or publisher_id %}
+                    {% if has_filters %}
                         <a href="{% url 'book_list' %}" class="btn btn-outline-secondary">
                             <i class="bi bi-x-lg me-1"></i> Clear Filters
                         </a>
@@ -67,10 +78,46 @@
         </div>
     </div>
 
-    <!-- Results Count -->
-    <p class="text-body-secondary mb-3">
-        Found <strong>{{ books.paginator.count }}</strong> book(s).
-    </p>
+    <!-- Result count and rows-per-page -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+
+        <p class="text-body-secondary mb-0">
+            Found <strong>{{ paginator.count }}</strong> book(s).
+        </p>
+
+        <div class="d-flex align-items-center gap-2">
+
+            <label for="pageSize" class="text-body-secondary small mb-0">
+                Show
+            </label>
+
+            {% comment %}
+              Each option's value is a full URL carrying the current search,
+              filters and sorting, so switching size preserves them and
+              returns to page 1. A small handler in app.js navigates on
+              change.
+            {% endcomment %}
+            <select
+                class="form-select form-select-sm w-auto"
+                id="pageSize"
+                data-navigate-on-change
+                aria-label="Rows per page"
+            >
+                {% for option in page_size_options %}
+                    <option
+                        value="{{ option.url }}"
+                        {% if option.active %}selected{% endif %}
+                    >
+                        {{ option.value }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <span class="text-body-secondary small">per page</span>
+
+        </div>
+
+    </div>
 
     <!-- Results Table Card -->
     <div class="card shadow-sm border-0">
@@ -78,13 +125,38 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-secondary">
                     <tr>
-                        <th>ID</th>
-                        <th><span class="visually-hidden">Cover</span></th>
-                        <th>Title</th>
-                        <th>Author</th>
-                        <th>Category</th>
-                        <th>Publisher</th>
+
+                        {% for column in columns %}
+
+                            {% if column.url %}
+
+                                <th
+                                    {% if column.active %}
+                                        aria-sort="{% if column.direction == 'asc' %}ascending{% else %}descending{% endif %}"
+                                    {% endif %}
+                                >
+                                    <a href="{{ column.url }}" class="table-sort">
+                                        {{ column.label }}
+                                        {% if column.active %}
+                                            <i class="bi {% if column.direction == 'asc' %}bi-sort-up{% else %}bi-sort-down{% endif %}" aria-hidden="true"></i>
+                                        {% else %}
+                                            <i class="bi bi-arrow-down-up table-sort-idle" aria-hidden="true"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+
+                            {% else %}
+
+                                <th>
+                                    <span class="visually-hidden">{{ column.label }}</span>
+                                </th>
+
+                            {% endif %}
+
+                        {% endfor %}
+
                         <th class="text-end">Actions</th>
+
                     </tr>
                 </thead>
                 <tbody>
@@ -154,7 +226,7 @@
     </div>
 
     <!-- Pagination -->
-    {% include "library/_pagination.html" with page_obj=books %}
+    {% include "library/partials/pagination.html" with page_obj=books %}
 
 </div>
 
