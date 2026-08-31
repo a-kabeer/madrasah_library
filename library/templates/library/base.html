@@ -2,7 +2,7 @@
 
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-bs-theme="light">
 
 <head>
 
@@ -17,6 +17,25 @@
         name="description"
         content="Madrasah Library Management System"
     >
+
+    <!--
+      Theme initialization (inline, runs before paint).
+      Prevents a flash of the wrong theme on page load.
+    -->
+    <script>
+        (function () {
+            try {
+                var stored = localStorage.getItem("madrasah_theme");
+                if (stored === "light" || stored === "dark") {
+                    document.documentElement.setAttribute("data-bs-theme", stored);
+                } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+                    document.documentElement.setAttribute("data-bs-theme", "dark");
+                }
+            } catch (e) {
+                /* localStorage unavailable: fall back to default */
+            }
+        })();
+    </script>
 
     <title>
 
@@ -71,6 +90,7 @@
     <aside
         class="sidebar"
         id="sidebar"
+        aria-label="Main navigation"
     >
 
         <!-- Logo -->
@@ -79,7 +99,7 @@
 
             <a href="{% url 'library_home' %}">
 
-                <i class="bi bi-book-half"></i>
+                <i class="bi bi-book-half" aria-hidden="true"></i>
 
                 <span>
                     Madrasah Library
@@ -92,7 +112,7 @@
 
         <!-- Navigation -->
 
-        <nav class="sidebar-nav">
+        <nav class="sidebar-nav" aria-label="Primary">
 
             <a
                 href="{% url 'library_home' %}"
@@ -262,40 +282,68 @@
 
         <header class="topbar">
 
+            <!-- Left: menu toggle + page title -->
 
-            <!-- Mobile Menu Button -->
+            <div class="topbar-left">
 
-            <button
-                type="button"
-                class="btn menu-button"
-                id="menuToggle"
-            >
+                <button
+                    type="button"
+                    class="btn menu-button"
+                    id="menuToggle"
+                    aria-label="Toggle navigation menu"
+                    aria-expanded="false"
+                    aria-controls="sidebar"
+                >
 
-                <i class="bi bi-list"></i>
+                    <i class="bi bi-list" aria-hidden="true"></i>
 
-            </button>
+                </button>
 
+                <div class="page-heading">
 
-            <!-- Page Title -->
+                    <h1>
 
-            <div class="page-heading">
+                        {% block page_title %}
 
-                <h1>
+                            Madrasah Library
 
-                    {% block page_title %}
+                        {% endblock %}
 
-                        Madrasah Library
+                    </h1>
 
-                    {% endblock %}
-
-                </h1>
+                </div>
 
             </div>
 
 
-            <!-- User Area -->
+            <!-- Center: breadcrumbs (optional, overridable) -->
 
-            <div class="topbar-user">
+            <div class="topbar-center">
+
+                {% block breadcrumbs %}{% endblock %}
+
+            </div>
+
+
+            <!-- Right: theme toggle + user menu -->
+
+            <div class="topbar-right">
+
+                <button
+                    type="button"
+                    class="btn theme-toggle"
+                    id="themeToggle"
+                    aria-label="Toggle light or dark mode"
+                    title="Toggle theme"
+                >
+
+                    <i class="bi bi-moon-stars-fill" id="themeIcon" aria-hidden="true"></i>
+
+                </button>
+
+                <!-- User Area -->
+
+                <div class="topbar-user">
 
                 {% if request.user.is_authenticated %}
 
@@ -305,9 +353,10 @@
                             class="btn dropdown-toggle user-menu-button"
                             type="button"
                             data-bs-toggle="dropdown"
+                            aria-expanded="false"
                         >
 
-                            <i class="bi bi-person-circle"></i>
+                            <i class="bi bi-person-circle" aria-hidden="true"></i>
 
                             {{ request.user.username }}
 
@@ -345,7 +394,7 @@
                                     href="{% url 'logout' %}"
                                 >
 
-                                    <i class="bi bi-box-arrow-right"></i>
+                                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
 
                                     Logout
 
@@ -374,7 +423,7 @@
                 {% for message in messages %}
 
                     <div
-                        class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show"
+                        class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show"
                         role="alert"
                     >
 
@@ -384,6 +433,7 @@
                             type="button"
                             class="btn-close"
                             data-bs-dismiss="alert"
+                            aria-label="Close"
                         ></button>
 
                     </div>
@@ -401,6 +451,60 @@
 
     </div>
 
+
+</div>
+
+
+<!-- Global Reusable Modal -->
+
+<div
+    class="modal fade"
+    id="globalModal"
+    tabindex="-1"
+    aria-labelledby="globalModalLabel"
+    aria-hidden="true"
+>
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <h5 class="modal-title" id="globalModalLabel">
+                    Modal title
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <!-- Content is injected here via HTMX or JS -->
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                >
+                    Close
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
 
 </div>
 

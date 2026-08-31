@@ -1,106 +1,116 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Edit Book</title>
-</head>
-<body>
+{% extends "library/base.html" %}
 
-{% include "library/_account_bar.html" %}
+{% block title %}
+    Edit Book | Madrasah Library
+{% endblock %}
 
-<h1>Edit Book</h1>
+{% block page_title %}
+    Edit Book
+{% endblock %}
 
-<form method="post">
-    {% csrf_token %}
-    <input type="hidden" name="from" value="{{ from_page }}">
+{% block content %}
 
-    <label>Title:</label>
+<div class="container-fluid px-0">
 
-    <input
-        type="text"
-        name="title"
-        value="{{ book.title }}"
-        required
-    >
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
 
-    <br><br>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-pencil me-2"></i>Edit Book
+                    </h5>
+                </div>
+                <div class="card-body">
 
-    <label>Author:</label>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="from" value="{{ from_page }}">
 
-    <select name="author" required>
+                        <div class="mb-3">
+                            <label for="formTitle" class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="formTitle"
+                                name="title"
+                                value="{{ book.title }}"
+                                required
+                            >
+                        </div>
 
-        {% for author in authors %}
-            <option
-                value="{{ author.id }}"
-                {% if author.id == book.author_id %}
-                    selected
-                {% endif %}
-            >
-                {{ author.name }}
-            </option>
-        {% endfor %}
+                        <div class="mb-3">
+                            <label for="formAuthor" class="form-label fw-semibold">Author <span class="text-danger">*</span></label>
+                            <select class="form-select" id="formAuthor" name="author" required>
+                                {% for author in authors %}
+                                    <option
+                                        value="{{ author.id }}"
+                                        {% if author.id == book.author_id %}
+                                            selected
+                                        {% endif %}
+                                    >
+                                        {{ author.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
 
-    </select>
+                        <div class="mb-3">
+                            <label for="formCategory" class="form-label fw-semibold">Category</label>
+                            <select class="form-select" id="formCategory" name="category">
+                                <option value="">Select Category</option>
+                                {% for category in categories %}
+                                    <option
+                                        value="{{ category.id }}"
+                                        {% if category.id == book.category_id %}
+                                            selected
+                                        {% endif %}
+                                    >
+                                        {{ category.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
 
-    <br><br>
+                        <div class="mb-3">
+                            <label for="formPublisher" class="form-label fw-semibold">Publisher</label>
+                            <select class="form-select" id="formPublisher" name="publisher">
+                                <option value="">Select Publisher</option>
+                                {% for publisher in publishers %}
+                                    <option
+                                        value="{{ publisher.id }}"
+                                        {% if publisher.id == book.publisher_id %}
+                                            selected
+                                        {% endif %}
+                                    >
+                                        {{ publisher.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
 
-    <label>Category:</label>
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Update Book
+                            </button>
+                            {% if from_page == "detail" %}
+                                <a href="{% url 'book_detail' book.id %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-lg me-1"></i> Cancel
+                                </a>
+                            {% else %}
+                                <a href="{% url 'book_list' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-lg me-1"></i> Cancel
+                                </a>
+                            {% endif %}
+                        </div>
+                    </form>
 
-    <select name="category">
+                </div>
+            </div>
 
-        <option value="">Select Category</option>
+        </div>
+    </div>
 
-        {% for category in categories %}
-            <option
-                value="{{ category.id }}"
-                {% if category.id == book.category_id %}
-                    selected
-                {% endif %}
-            >
-                {{ category.name }}
-            </option>
-        {% endfor %}
+</div>
 
-    </select>
-
-    <br><br>
-
-    <label>Publisher:</label>
-
-    <select name="publisher">
-
-        <option value="">Select Publisher</option>
-
-        {% for publisher in publishers %}
-            <option
-                value="{{ publisher.id }}"
-                {% if publisher.id == book.publisher_id %}
-                    selected
-                {% endif %}
-            >
-                {{ publisher.name }}
-            </option>
-        {% endfor %}
-
-    </select>
-
-    <br><br>
-
-    <button type="submit">
-        Update Book
-    </button>
-</form>
-
-<br>
-
-{% if from_page == "detail" %}
-    <a href="{% url 'book_detail' book.id %}">
-        Back to {{ book.title }}
-    </a>
-{% else %}
-    <a href="{% url 'book_list' %}">
-        Back to Books
-    </a>
-{% endif %}
-
-</body>
-</html>
+{% endblock %}

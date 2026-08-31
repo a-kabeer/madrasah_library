@@ -1,153 +1,173 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Books</title>
-</head>
+{% extends "library/base.html" %}
 
-<body>
+{% block title %}
+    Books | Madrasah Library
+{% endblock %}
 
-{% include "library/_account_bar.html" %}
+{% block page_title %}
+    Books
+{% endblock %}
 
-<p>
-    <a href="{% url 'library_home' %}">
-        ← Back to Home
-    </a>
-</p>
+{% block content %}
 
-<h1>Books</h1>
+<div class="container-fluid px-0">
 
-<form method="get">
+    <!-- Page Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Books</h2>
+            <p class="text-muted mb-0">Manage your library's book collection.</p>
+        </div>
+        <a href="{% url 'book_add' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Add Book
+        </a>
+    </div>
 
-    <label>Book Title:</label>
+    <!-- Filters Card -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get">
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <label for="filterTitle" class="form-label fw-semibold">Book Title</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="filterTitle"
+                            name="title"
+                            value="{{ title }}"
+                            placeholder="Search by book title..."
+                        >
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <label for="filterAuthor" class="form-label fw-semibold">Author</label>
+                        <select class="form-select" id="filterAuthor" name="author">
+                            <option value="">All Authors</option>
+                            {% for author in authors %}
+                                <option value="{{ author.id }}"
+                                    {% if author_id == author.id|stringformat:"s" %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ author.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <label for="filterCategory" class="form-label fw-semibold">Category</label>
+                        <select class="form-select" id="filterCategory" name="category">
+                            <option value="">All Categories</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}"
+                                    {% if category_id == category.id|stringformat:"s" %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ category.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <label for="filterPublisher" class="form-label fw-semibold">Publisher</label>
+                        <select class="form-select" id="filterPublisher" name="publisher">
+                            <option value="">All Publishers</option>
+                            {% for publisher in publishers %}
+                                <option value="{{ publisher.id }}"
+                                    {% if publisher_id == publisher.id|stringformat:"s" %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ publisher.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1"></i> Search
+                    </button>
+                    {% if title or author_id or category_id or publisher_id %}
+                        <a href="{% url 'book_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg me-1"></i> Clear Filters
+                        </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
 
-    <input
-        type="text"
-        name="title"
-        value="{{ title }}"
-        placeholder="Search by book title..."
-    >
+    <!-- Results Count -->
+    <p class="text-muted mb-3">
+        Found <strong>{{ books.paginator.count }}</strong> book(s).
+    </p>
 
-    <br><br>
+    <!-- Results Table Card -->
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Title</th>
+                        <th>Author</th>
+                        <th>Category</th>
+                        <th>Publisher</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for book in books %}
+                        <tr>
+                            <td>{{ book.id }}</td>
+                            <td class="fw-semibold">{{ book.title }}</td>
+                            <td>{{ book.author.name }}</td>
+                            <td>
+                                {% if book.category %}
+                                    <span class="badge bg-secondary">{{ book.category.name }}</span>
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if book.publisher %}
+                                    {{ book.publisher.name }}
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1">
+                                    <a href="{% url 'book_detail' book.id %}" class="btn btn-sm btn-outline-info" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'book_edit' book.id %}" class="btn btn-sm btn-outline-warning" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'book_delete' book.id %}" class="btn btn-sm btn-outline-danger" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                No books found.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-    <label>Author:</label>
+    <!-- Pagination -->
+    {% include "library/_pagination.html" with page_obj=books %}
 
-    <select name="author">
-        <option value="">All Authors</option>
+</div>
 
-        {% for author in authors %}
-            <option value="{{ author.id }}"
-                {% if author_id == author.id|stringformat:"s" %}
-                    selected
-                {% endif %}
-            >
-                {{ author.name }}
-            </option>
-        {% endfor %}
-    </select>
+{% endblock %}
 
-    <br><br>
-
-    <label>Category:</label>
-
-    <select name="category">
-        <option value="">All Categories</option>
-
-        {% for category in categories %}
-            <option value="{{ category.id }}"
-                {% if category_id == category.id|stringformat:"s" %}
-                    selected
-                {% endif %}
-            >
-                {{ category.name }}
-            </option>
-        {% endfor %}
-    </select>
-
-    <br><br>
-
-    <label>Publisher:</label>
-
-    <select name="publisher">
-        <option value="">All Publishers</option>
-
-        {% for publisher in publishers %}
-            <option value="{{ publisher.id }}"
-                {% if publisher_id == publisher.id|stringformat:"s" %}
-                    selected
-                {% endif %}
-            >
-                {{ publisher.name }}
-            </option>
-        {% endfor %}
-    </select>
-
-    <br><br>
-
-    <button type="submit">Search</button>
-
-    <a href="{% url 'book_list' %}">
-        Clear Filters
-    </a>
-
-</form>
-
-<br>
-
-<p>
-    Found {{ books.paginator.count }} book(s).
-</p>
-
-<p>
-    <a href="{% url 'book_add' %}">
-        Add Book
-    </a>
-</p>
-
-<ul>
-
-    {% for book in books %}
-
-        <li>
-
-            ID: {{ book.id }}
-
-            - {{ book.title }}
-
-            - Author: {{ book.author.name }}
-
-            - Category:
-            {{ book.category.name|default:"N/A" }}
-
-            - Publisher:
-            {{ book.publisher.name|default:"N/A" }}
-
-            <a href="{% url 'book_detail' book.id %}">
-    View Details
-</a>
-
-|
-
-<a href="{% url 'book_edit' book.id %}">
-    Edit
-</a>
-
-|
-
-<a href="{% url 'book_delete' book.id %}">
-    Delete
-</a>
-
-        </li>
-
-    {% empty %}
-
-        <li>No books found.</li>
-
-    {% endfor %}
-
-</ul>
-
-{% include "library/_pagination.html" with page_obj=books %}
-
-</body>
-</html>

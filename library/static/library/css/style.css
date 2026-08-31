@@ -14,6 +14,21 @@
     --border-color: #e5e7eb;
 }
 
+/*
+  Dark mode variable overrides.
+  Bootstrap handles component colors via data-bs-theme.
+  These custom variables adapt our custom chrome (sidebar, etc).
+*/
+[data-bs-theme="dark"] {
+    --sidebar-bg: #1a1d21;
+    --sidebar-hover: #2d3238;
+
+    --page-bg: #15171c;
+    --border-color: #2d3238;
+    --primary: #6ea8fe;
+}
+
+
 
 /* =========================
    GLOBAL
@@ -25,8 +40,8 @@
 
 body {
     margin: 0;
-    background: var(--page-bg);
-    color: #212529;
+    background: var(--bs-tertiary-bg);
+    color: var(--bs-body-color);
 }
 
 
@@ -146,6 +161,15 @@ body {
     color: white;
 }
 
+/* Active sidebar link */
+.nav-link-custom.active {
+    background: var(--primary);
+
+    color: #fff;
+
+    font-weight: 600;
+}
+
 .nav-link-custom i {
     width: 20px;
 
@@ -168,23 +192,25 @@ body {
 
 /* =========================
    TOPBAR
-========================= */
+   ========================= */
 
 .topbar {
     height: var(--topbar-height);
 
-    background: white;
+    background: var(--bs-body-bg);
 
     border-bottom:
 
         1px solid
-        var(--border-color);
+        var(--bs-border-color);
 
     display: flex;
 
     align-items: center;
 
     justify-content: space-between;
+
+    gap: 1rem;
 
     padding: 0 1.5rem;
 
@@ -195,10 +221,37 @@ body {
     z-index: 1030;
 }
 
+/* Left: menu toggle + title */
+.topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+/* Center: breadcrumbs */
+.topbar-center {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.topbar-center:empty {
+    display: none;
+}
+
+/* Right: theme toggle + user */
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
 
 /* =========================
    MENU BUTTON
-========================= */
+   ========================= */
 
 .menu-button {
     display: none;
@@ -206,12 +259,14 @@ body {
     font-size: 1.5rem;
 
     padding: 0;
+
+    color: var(--bs-body-color);
 }
 
 
 /* =========================
    PAGE HEADING
-========================= */
+   ========================= */
 
 .page-heading h1 {
     margin: 0;
@@ -223,8 +278,35 @@ body {
 
 
 /* =========================
+   THEME TOGGLE
+   ========================= */
+
+.theme-toggle {
+    color: var(--bs-body-color);
+
+    font-size: 1.1rem;
+
+    padding: 0.375rem 0.5rem;
+
+    border-radius: 0.375rem;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    line-height: 1;
+}
+
+.theme-toggle:hover {
+    background: var(--bs-tertiary-bg);
+
+    color: var(--bs-primary);
+}
+
+
+/* =========================
    USER MENU
-========================= */
+   ========================= */
 
 .user-menu-button {
     border: none;
@@ -238,6 +320,37 @@ body {
 
 .user-menu-button i {
     font-size: 1.3rem;
+}
+
+
+/* =========================
+   BREADCRUMBS
+   ========================= */
+
+.topbar .breadcrumb {
+    margin-bottom: 0;
+
+    font-size: 0.875rem;
+
+    flex-wrap: nowrap;
+
+    overflow: hidden;
+}
+
+.topbar .breadcrumb-item a {
+    color: var(--bs-secondary-color);
+
+    text-decoration: none;
+}
+
+.topbar .breadcrumb-item a:hover {
+    color: var(--bs-primary);
+
+    text-decoration: underline;
+}
+
+.topbar .breadcrumb-item.active {
+    color: var(--bs-body-color);
 }
 
 
@@ -273,6 +386,19 @@ body {
 }
 
 
+
+/* =========================
+   FOCUS / ACCESSIBILITY
+   ========================= */
+
+.menu-button:focus-visible,
+.theme-toggle:focus-visible {
+    outline: 2px solid var(--bs-primary);
+
+    outline-offset: 2px;
+}
+
+
 /* =========================
    RESPONSIVE DESIGN
 ========================= */
@@ -292,7 +418,7 @@ body {
     }
 
     .menu-button {
-        display: block;
+        display: flex;
     }
 
 }

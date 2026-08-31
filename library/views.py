@@ -1,8 +1,10 @@
 from datetime import date, timedelta
+import json
 
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_not_required
 from django.core.paginator import Paginator
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.core.cache import cache
@@ -209,6 +211,7 @@ def category_add(request):
 
     error = None
     name = ""
+    is_htmx = request.headers.get("HX-Request") == "true"
 
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
@@ -216,6 +219,10 @@ def category_add(request):
         if not name:
 
             error = "Category name is required."
+
+        elif Category.objects.filter(name__iexact=name).exists():
+
+            error = "A category with this name already exists."
 
         else:
             category = Category.objects.create(name=name)
@@ -231,7 +238,28 @@ def category_add(request):
                 description=f"{category.name} شامل کی گئی",
             )
 
+            if is_htmx:
+                response = HttpResponse(status=204)
+                response["HX-Trigger"] = json.dumps({
+                    "quickAddSuccess": {
+                        "type": "category",
+                        "id": category.id,
+                        "name": category.name,
+                    }
+                })
+                return response
+
             return redirect("category_list")
+
+    if is_htmx:
+        return render(
+            request,
+            "library/partials/quick_add_category.html",
+            {
+                "error": error,
+                "name": name,
+            }
+        )
 
     return render(
         request,
@@ -390,6 +418,7 @@ def author_add(request):
 
     error = None
     name = ""
+    is_htmx = request.headers.get("HX-Request") == "true"
 
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
@@ -397,6 +426,10 @@ def author_add(request):
         if not name:
 
             error = "Author name is required."
+
+        elif Author.objects.filter(name__iexact=name).exists():
+
+            error = "An author with this name already exists."
 
         else:
             author = Author.objects.create(name=name)
@@ -412,7 +445,28 @@ def author_add(request):
                 description=f"{author.name} شامل کیے گئے",
             )
 
+            if is_htmx:
+                response = HttpResponse(status=204)
+                response["HX-Trigger"] = json.dumps({
+                    "quickAddSuccess": {
+                        "type": "author",
+                        "id": author.id,
+                        "name": author.name,
+                    }
+                })
+                return response
+
             return redirect("author_list")
+
+    if is_htmx:
+        return render(
+            request,
+            "library/partials/quick_add_author.html",
+            {
+                "error": error,
+                "name": name,
+            }
+        )
 
     return render(
         request,
@@ -571,6 +625,27 @@ def publisher_detail(request, publisher_id):
 def publisher_add(request):
 
     form_data = {}
+    is_htmx = request.headers.get("HX-Request") == "true"
+
+    def render_form(error, form_data):
+        if is_htmx:
+            return render(
+                request,
+                "library/partials/quick_add_publisher.html",
+                {
+                    "error": error,
+                    "form_data": form_data,
+                }
+            )
+
+        return render(
+            request,
+            "library/publisher_add.html",
+            {
+                "error": error,
+                "form_data": form_data,
+            }
+        )
 
     if request.method == "POST":
 
@@ -591,13 +666,9 @@ def publisher_add(request):
 
         if not name:
 
-            return render(
-                request,
-                "library/publisher_add.html",
-                {
-                    "error": "Publisher name is required.",
-                    "form_data": form_data,
-                }
+            return render_form(
+                "Publisher name is required.",
+                form_data,
             )
 
         duplicate_exists = Publisher.objects.filter(
@@ -606,16 +677,12 @@ def publisher_add(request):
 
         if duplicate_exists:
 
-            return render(
-                request,
-                "library/publisher_add.html",
-                {
-                    "error": (
-                        "A publisher with this name "
-                        "already exists."
-                    ),
-                    "form_data": form_data,
-                }
+            return render_form(
+                (
+                    "A publisher with this name "
+                    "already exists."
+                ),
+                form_data,
             )
 
         publisher = Publisher.objects.create(
@@ -641,17 +708,22 @@ def publisher_add(request):
             ),
         )
 
+        if is_htmx:
+            response = HttpResponse(status=204)
+            response["HX-Trigger"] = json.dumps({
+                "quickAddSuccess": {
+                    "type": "publisher",
+                    "id": publisher.id,
+                    "name": publisher.name,
+                }
+            })
+            return response
+
         return redirect(
             "publisher_list"
         )
 
-    return render(
-        request,
-        "library/publisher_add.html",
-        {
-            "form_data": form_data,
-        }
-    )
+    return render_form(None, form_data)
 
 #Publisher Edit
 @role_required("Admin", "Librarian")
