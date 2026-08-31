@@ -10,6 +10,10 @@
 
 {% block content %}
 
+{% url 'author_list' as author_search_url %}
+{% url 'category_list' as category_search_url %}
+{% url 'publisher_list' as publisher_search_url %}
+
 <div class="container-fluid px-0">
 
     <div class="row justify-content-center">
@@ -45,101 +49,11 @@
                             >
                         </div>
 
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <label for="formAuthor" class="form-label fw-semibold mb-0">Author <span class="text-danger">*</span></label>
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-outline-primary quick-add-btn"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#globalModal"
-                                    data-select="#formAuthor"
-                                    data-title="Add New Author"
-                                    hx-get="{% url 'author_add' %}"
-                                    hx-target="#globalModal .modal-body"
-                                    hx-swap="innerHTML"
-                                >
-                                    <i class="bi bi-plus-lg me-1"></i>Add New
-                                </button>
-                            </div>
-                            <select class="form-select mt-2" id="formAuthor" name="author" required>
-                                <option value="">Select Author</option>
-                                {% for author in authors %}
-                                    <option
-                                        value="{{ author.id }}"
-                                        {% if form_data.author == author.id|stringformat:"s" %}
-                                            selected
-                                        {% endif %}
-                                    >
-                                        {{ author.name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                        {% include "library/partials/combobox_field.html" with label="Author" field_name="author" input_id="formAuthor" entity_label="author" search_url=author_search_url selected_id=form_data.author selected_name=form_data.author_name required=True %}
 
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <label for="formCategory" class="form-label fw-semibold mb-0">Category</label>
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-outline-primary quick-add-btn"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#globalModal"
-                                    data-select="#formCategory"
-                                    data-title="Add New Category"
-                                    hx-get="{% url 'category_add' %}"
-                                    hx-target="#globalModal .modal-body"
-                                    hx-swap="innerHTML"
-                                >
-                                    <i class="bi bi-plus-lg me-1"></i>Add New
-                                </button>
-                            </div>
-                            <select class="form-select mt-2" id="formCategory" name="category">
-                                <option value="">Select Category</option>
-                                {% for category in categories %}
-                                    <option
-                                        value="{{ category.id }}"
-                                        {% if form_data.category == category.id|stringformat:"s" %}
-                                            selected
-                                        {% endif %}
-                                    >
-                                        {{ category.name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                        {% include "library/partials/combobox_field.html" with label="Category" field_name="category" input_id="formCategory" entity_label="category" search_url=category_search_url selected_id=form_data.category selected_name=form_data.category_name required=False %}
 
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <label for="formPublisher" class="form-label fw-semibold mb-0">Publisher</label>
-                                <button
-                                    type="button"
-                                    class="btn btn-sm btn-outline-primary quick-add-btn"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#globalModal"
-                                    data-select="#formPublisher"
-                                    data-title="Add New Publisher"
-                                    hx-get="{% url 'publisher_add' %}"
-                                    hx-target="#globalModal .modal-body"
-                                    hx-swap="innerHTML"
-                                >
-                                    <i class="bi bi-plus-lg me-1"></i>Add New
-                                </button>
-                            </div>
-                            <select class="form-select mt-2" id="formPublisher" name="publisher">
-                                <option value="">Select Publisher</option>
-                                {% for publisher in publishers %}
-                                    <option
-                                        value="{{ publisher.id }}"
-                                        {% if form_data.publisher == publisher.id|stringformat:"s" %}
-                                            selected
-                                        {% endif %}
-                                    >
-                                        {{ publisher.name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                        {% include "library/partials/combobox_field.html" with label="Publisher" field_name="publisher" input_id="formPublisher" entity_label="publisher" search_url=publisher_search_url selected_id=form_data.publisher selected_name=form_data.publisher_name required=False %}
 
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary">

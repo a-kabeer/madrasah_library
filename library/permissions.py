@@ -3,6 +3,23 @@ from functools import wraps
 from django.core.exceptions import PermissionDenied
 
 
+# Roles allowed to create/modify library catalogue data (books, authors,
+# categories, publishers, ...). Kept here so templates and views can ask the
+# same question the `role_required` decorators enforce.
+LIBRARY_EDITOR_ROLES = ("Admin", "Librarian")
+
+
+def can_edit_library(user):
+    """True if `user` may create catalogue records.
+
+    Used for UI gating only (e.g. whether to offer an inline "add new"
+    option). The actual enforcement stays on the views themselves via
+    `role_required`, so hiding the control is never the security boundary.
+    """
+
+    return getattr(user, "role", None) in LIBRARY_EDITOR_ROLES
+
+
 def role_required(*allowed_roles):
     """Restrict a view to users whose `role` is one of `allowed_roles`.
 

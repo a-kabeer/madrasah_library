@@ -10,6 +10,10 @@
 
 {% block content %}
 
+{% url 'author_list' as author_search_url %}
+{% url 'category_list' as category_search_url %}
+{% url 'publisher_list' as publisher_search_url %}
+
 <div class="container-fluid px-0">
 
     <div class="row justify-content-center">
@@ -23,6 +27,13 @@
                 </div>
                 <div class="card-body">
 
+                    {% if error %}
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <div>{{ error }}</div>
+                        </div>
+                    {% endif %}
+
                     <form method="post">
                         {% csrf_token %}
                         <input type="hidden" name="from" value="{{ from_page }}">
@@ -34,60 +45,16 @@
                                 class="form-control"
                                 id="formTitle"
                                 name="title"
-                                value="{{ book.title }}"
+                                value="{{ form_data.title }}"
                                 required
                             >
                         </div>
 
-                        <div class="mb-3">
-                            <label for="formAuthor" class="form-label fw-semibold">Author <span class="text-danger">*</span></label>
-                            <select class="form-select" id="formAuthor" name="author" required>
-                                {% for author in authors %}
-                                    <option
-                                        value="{{ author.id }}"
-                                        {% if author.id == book.author_id %}
-                                            selected
-                                        {% endif %}
-                                    >
-                                        {{ author.name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                        {% include "library/partials/combobox_field.html" with label="Author" field_name="author" input_id="formAuthor" entity_label="author" search_url=author_search_url selected_id=form_data.author selected_name=form_data.author_name required=True %}
 
-                        <div class="mb-3">
-                            <label for="formCategory" class="form-label fw-semibold">Category</label>
-                            <select class="form-select" id="formCategory" name="category">
-                                <option value="">Select Category</option>
-                                {% for category in categories %}
-                                    <option
-                                        value="{{ category.id }}"
-                                        {% if category.id == book.category_id %}
-                                            selected
-                                        {% endif %}
-                                    >
-                                        {{ category.name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                        {% include "library/partials/combobox_field.html" with label="Category" field_name="category" input_id="formCategory" entity_label="category" search_url=category_search_url selected_id=form_data.category selected_name=form_data.category_name required=False %}
 
-                        <div class="mb-3">
-                            <label for="formPublisher" class="form-label fw-semibold">Publisher</label>
-                            <select class="form-select" id="formPublisher" name="publisher">
-                                <option value="">Select Publisher</option>
-                                {% for publisher in publishers %}
-                                    <option
-                                        value="{{ publisher.id }}"
-                                        {% if publisher.id == book.publisher_id %}
-                                            selected
-                                        {% endif %}
-                                    >
-                                        {{ publisher.name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                        {% include "library/partials/combobox_field.html" with label="Publisher" field_name="publisher" input_id="formPublisher" entity_label="publisher" search_url=publisher_search_url selected_id=form_data.publisher selected_name=form_data.publisher_name required=False %}
 
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary">

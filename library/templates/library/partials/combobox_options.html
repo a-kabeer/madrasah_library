@@ -1,0 +1,78 @@
+{% comment %}
+Suggestion list for a combobox field, served by the Author / Category /
+Publisher list views when they receive a combobox request.
+
+Every option carries its id and name as data attributes; the page's
+JavaScript copies those into the combobox on selection. The "add new"
+option posts the typed name straight to the normal add view, which
+answers with an HX-Trigger event naming the record it created (or the
+existing one it matched, so nothing is ever duplicated).
+{% endcomment %}
+
+{% for item in items %}
+
+    <button
+        type="button"
+        class="combobox-option"
+        role="option"
+        aria-selected="false"
+        data-combobox-option
+        data-id="{{ item.id }}"
+        data-name="{{ item.name }}"
+    >
+        <span class="combobox-option-name">{{ item.name }}</span>
+
+        {% if item.city %}
+            <small class="text-body-secondary">{{ item.city }}</small>
+        {% endif %}
+    </button>
+
+{% endfor %}
+
+{% if total_count > limit %}
+
+    <div class="combobox-note">
+        Showing first {{ limit }} of {{ total_count }}. Keep typing to narrow it down.
+    </div>
+
+{% endif %}
+
+{% if search and not exact_match %}
+
+    {% if can_create %}
+
+        <button
+            type="button"
+            class="combobox-create"
+            role="option"
+            aria-selected="false"
+            data-combobox-option
+            data-combobox-create
+            hx-post="{{ add_url }}"
+            hx-vals='{"name": "{{ search|escapejs }}", "combobox": "1"}'
+            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+            hx-swap="none"
+            hx-disabled-elt="this"
+        >
+            <i class="bi bi-plus-circle" aria-hidden="true"></i>
+
+            <span>
+                Add "<strong>{{ search }}</strong>" as a new {{ entity_label }}
+            </span>
+        </button>
+
+    {% elif not items %}
+
+        <div class="combobox-note">
+            No {{ entity_label }} found matching "{{ search }}".
+        </div>
+
+    {% endif %}
+
+{% elif not items %}
+
+    <div class="combobox-note">
+        No {{ entity_label }} records yet.
+    </div>
+
+{% endif %}

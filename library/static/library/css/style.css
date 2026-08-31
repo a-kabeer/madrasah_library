@@ -388,6 +388,180 @@ body {
 
 
 /* =========================
+   SEARCHABLE DROPDOWN (COMBOBOX)
+   ========================= */
+
+.combobox {
+    position: relative;
+}
+
+
+.combobox-control {
+    position: relative;
+}
+
+
+/* Room for the spinner and clear button sitting inside the field. */
+.combobox-input {
+    padding-right: 4.5rem;
+}
+
+
+.combobox-spinner {
+    position: absolute;
+
+    top: 50%;
+    right: 2.25rem;
+
+    transform: translateY(-50%);
+
+    display: none;
+
+    color: var(--bs-secondary-color);
+
+    line-height: 0;
+}
+
+/* HTMX puts `htmx-request` on the indicator while a search is in flight. */
+.combobox-spinner.htmx-request {
+    display: block;
+}
+
+
+.combobox-clear {
+    position: absolute;
+
+    top: 50%;
+    right: 0.5rem;
+
+    transform: translateY(-50%);
+
+    display: none;
+
+    padding: 0.25rem;
+
+    border: 0;
+    background: none;
+
+    color: var(--bs-secondary-color);
+
+    line-height: 0;
+
+    cursor: pointer;
+}
+
+/* Only offer "clear" when there is something to clear (class set by JS). */
+.combobox-filled .combobox-clear {
+    display: block;
+}
+
+.combobox-clear:hover {
+    color: var(--bs-danger);
+}
+
+
+.combobox-menu {
+    position: absolute;
+
+    top: calc(100% + 0.25rem);
+    left: 0;
+    right: 0;
+
+    z-index: 1050;
+
+    display: none;
+
+    max-height: 16rem;
+    overflow-y: auto;
+
+    padding: 0.25rem;
+
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+
+    background: var(--bs-body-bg);
+
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* Nothing to show yet: keep the panel hidden rather than blank. */
+.combobox-open .combobox-menu:not(:empty) {
+    display: block;
+}
+
+
+.combobox-option,
+.combobox-create {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+
+    width: 100%;
+
+    padding: 0.5rem 0.75rem;
+
+    border: 0;
+    border-radius: 0.25rem;
+
+    background: none;
+
+    color: var(--bs-body-color);
+
+    text-align: left;
+
+    cursor: pointer;
+}
+
+
+.combobox-option:hover,
+.combobox-create:hover,
+.combobox-active {
+    background: var(--bs-tertiary-bg);
+}
+
+
+.combobox-option-name {
+    overflow-wrap: anywhere;
+}
+
+
+.combobox-create {
+    justify-content: flex-start;
+
+    margin-top: 0.25rem;
+
+    border-top: 1px solid var(--bs-border-color);
+    border-radius: 0;
+
+    color: var(--bs-primary);
+}
+
+
+.combobox-create[disabled] {
+    opacity: 0.65;
+
+    cursor: progress;
+}
+
+
+.combobox-note {
+    padding: 0.5rem 0.75rem;
+
+    color: var(--bs-secondary-color);
+
+    font-size: 0.875rem;
+}
+
+
+/* Mandatory field left empty on submit. */
+.combobox-invalid .combobox-input {
+    border-color: var(--bs-danger);
+}
+
+
+/* =========================
    FOCUS / ACCESSIBILITY
    ========================= */
 

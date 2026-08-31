@@ -28,10 +28,13 @@ from .models import (
     User,
     ActivityLog,
 )
-from .permissions import role_required
+from .permissions import can_edit_library, role_required
 
 PAGE_SIZE = 25
 DEFAULT_LOAN_PERIOD_DAYS = 14
+
+# How many suggestions the searchable dropdowns (comboboxes) show at once.
+COMBOBOX_LIMIT = 20
 
 CATEGORY_CACHE_KEY = "categories"
 AUTHOR_CACHE_KEY = "authors"
@@ -50,6 +53,70 @@ DASHBOARD_CACHE_KEY = "dashboard_stats"
 
 BORROWER_TYPES = ("Student", "Teacher", "Staff", "Other")
 USER_ROLES = ("Admin", "Librarian", "Assistant")
+
+
+def is_combobox_request(request):
+    """True for the searchable-dropdown (combobox) traffic on Add/Edit Book.
+
+    The combobox reuses the ordinary list and add views; this flag is what
+    tells them to answer with a small partial / trigger event instead of a
+    full page or a redirect.
+    """
+
+    return (
+        request.headers.get("HX-Request") == "true"
+        and (
+            request.GET.get("combobox")
+            or request.POST.get("combobox")
+        )
+    )
+
+
+def combobox_options_response(request, items, search, entity_label, add_url):
+    """Render the suggestion list for a combobox search."""
+
+    folded = search.casefold()
+
+    exact_match = any(
+        item.name.casefold() == folded
+        for item in items
+    )
+
+    return render(
+        request,
+        "library/partials/combobox_options.html",
+        {
+            "items": items[:COMBOBOX_LIMIT],
+            "total_count": len(items),
+            "limit": COMBOBOX_LIMIT,
+            "search": search,
+            "exact_match": exact_match,
+            "entity_label": entity_label,
+            "add_url": add_url,
+            "can_create": can_edit_library(request.user),
+        }
+    )
+
+
+def combobox_created_response(entity_type, obj):
+    """Tell the page a combobox created (or matched) `obj`, so it can select it.
+
+    Returns "no content" plus an HX-Trigger event; there is nothing to swap
+    because the only thing that should change is the dropdown's selection,
+    which the page's own JavaScript applies from the event payload.
+    """
+
+    response = HttpResponse(status=204)
+
+    response["HX-Trigger"] = json.dumps({
+        "comboboxItemCreated": {
+            "type": entity_type,
+            "id": obj.id,
+            "name": obj.name,
+        }
+    })
+
+    return response
 
 
 def safe_redirect_target(request, fallback):
@@ -173,6 +240,16 @@ def category_list(request):
                 timeout=300
             )
 
+    if is_combobox_request(request):
+
+        return combobox_options_response(
+            request,
+            items=categories,
+            search=search,
+            entity_label="category",
+            add_url=reverse("category_add"),
+        )
+
     paginator = Paginator(categories, PAGE_SIZE)
     categories = paginator.get_page(request.GET.get("page"))
 
@@ -211,16 +288,31 @@ def category_add(request):
 
     error = None
     name = ""
-    is_htmx = request.headers.get("HX-Request") == "true"
+    from_combobox = is_combobox_request(request)
 
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
+
+        duplicate = None
+
+        if name:
+            duplicate = Category.objects.filter(
+                name__iexact=name
+            ).first()
 
         if not name:
 
             error = "Category name is required."
 
-        elif Category.objects.filter(name__iexact=name).exists():
+        elif duplicate is not None:
+
+            # The searchable dropdown asks for a name, not an id, so an
+            # already-taken name means "use that one" rather than being an
+            # error. Keeps a race with another user from dead-ending the
+            # book form, and can't create a duplicate either way.
+            if from_combobox:
+
+                return combobox_created_response("category", duplicate)
 
             error = "A category with this name already exists."
 
@@ -238,28 +330,11 @@ def category_add(request):
                 description=f"{category.name} شامل کی گئی",
             )
 
-            if is_htmx:
-                response = HttpResponse(status=204)
-                response["HX-Trigger"] = json.dumps({
-                    "quickAddSuccess": {
-                        "type": "category",
-                        "id": category.id,
-                        "name": category.name,
-                    }
-                })
-                return response
+            if from_combobox:
+
+                return combobox_created_response("category", category)
 
             return redirect("category_list")
-
-    if is_htmx:
-        return render(
-            request,
-            "library/partials/quick_add_category.html",
-            {
-                "error": error,
-                "name": name,
-            }
-        )
 
     return render(
         request,
@@ -380,6 +455,16 @@ def author_list(request):
                 timeout=300
             )
 
+    if is_combobox_request(request):
+
+        return combobox_options_response(
+            request,
+            items=authors,
+            search=search,
+            entity_label="author",
+            add_url=reverse("author_add"),
+        )
+
     paginator = Paginator(authors, PAGE_SIZE)
     authors = paginator.get_page(request.GET.get("page"))
 
@@ -418,16 +503,27 @@ def author_add(request):
 
     error = None
     name = ""
-    is_htmx = request.headers.get("HX-Request") == "true"
+    from_combobox = is_combobox_request(request)
 
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
+
+        duplicate = None
+
+        if name:
+            duplicate = Author.objects.filter(
+                name__iexact=name
+            ).first()
 
         if not name:
 
             error = "Author name is required."
 
-        elif Author.objects.filter(name__iexact=name).exists():
+        elif duplicate is not None:
+
+            if from_combobox:
+
+                return combobox_created_response("author", duplicate)
 
             error = "An author with this name already exists."
 
@@ -445,28 +541,11 @@ def author_add(request):
                 description=f"{author.name} شامل کیے گئے",
             )
 
-            if is_htmx:
-                response = HttpResponse(status=204)
-                response["HX-Trigger"] = json.dumps({
-                    "quickAddSuccess": {
-                        "type": "author",
-                        "id": author.id,
-                        "name": author.name,
-                    }
-                })
-                return response
+            if from_combobox:
+
+                return combobox_created_response("author", author)
 
             return redirect("author_list")
-
-    if is_htmx:
-        return render(
-            request,
-            "library/partials/quick_add_author.html",
-            {
-                "error": error,
-                "name": name,
-            }
-        )
 
     return render(
         request,
@@ -588,6 +667,16 @@ def publisher_list(request):
                 timeout=300
             )
 
+    if is_combobox_request(request):
+
+        return combobox_options_response(
+            request,
+            items=publishers,
+            search=search,
+            entity_label="publisher",
+            add_url=reverse("publisher_add"),
+        )
+
     paginator = Paginator(publishers, PAGE_SIZE)
     publishers = paginator.get_page(request.GET.get("page"))
 
@@ -625,19 +714,9 @@ def publisher_detail(request, publisher_id):
 def publisher_add(request):
 
     form_data = {}
-    is_htmx = request.headers.get("HX-Request") == "true"
+    from_combobox = is_combobox_request(request)
 
     def render_form(error, form_data):
-        if is_htmx:
-            return render(
-                request,
-                "library/partials/quick_add_publisher.html",
-                {
-                    "error": error,
-                    "form_data": form_data,
-                }
-            )
-
         return render(
             request,
             "library/publisher_add.html",
@@ -671,11 +750,18 @@ def publisher_add(request):
                 form_data,
             )
 
-        duplicate_exists = Publisher.objects.filter(
+        duplicate = Publisher.objects.filter(
             name__iexact=name
-        ).exists()
+        ).first()
 
-        if duplicate_exists:
+        if duplicate is not None:
+
+            if from_combobox:
+
+                return combobox_created_response(
+                    "publisher",
+                    duplicate,
+                )
 
             return render_form(
                 (
@@ -708,16 +794,12 @@ def publisher_add(request):
             ),
         )
 
-        if is_htmx:
-            response = HttpResponse(status=204)
-            response["HX-Trigger"] = json.dumps({
-                "quickAddSuccess": {
-                    "type": "publisher",
-                    "id": publisher.id,
-                    "name": publisher.name,
-                }
-            })
-            return response
+        if from_combobox:
+
+            return combobox_created_response(
+                "publisher",
+                publisher,
+            )
 
         return redirect(
             "publisher_list"
@@ -1319,20 +1401,34 @@ def book_list(request):
     )
 
 
+def selected_name(model, pk):
+    """Display name for an id submitted by a combobox, or "" if unusable.
+
+    The searchable dropdowns post an id but show a name, so a form that
+    bounces on validation needs the name back to stay filled in.
+    """
+
+    if not pk:
+        return ""
+
+    obj = model.objects.filter(id=pk).first()
+
+    return obj.name if obj else ""
+
+
 @role_required("Admin", "Librarian")
 def book_add(request):
-
-    authors = Author.objects.all()
-    categories = Category.objects.all()
-    publishers = Publisher.objects.all()
 
     error = None
 
     form_data = {
         "title": "",
         "author": "",
+        "author_name": "",
         "category": "",
+        "category_name": "",
         "publisher": "",
+        "publisher_name": "",
     }
 
     if request.method == "POST":
@@ -1344,8 +1440,11 @@ def book_add(request):
         form_data = {
             "title": title,
             "author": author_id or "",
+            "author_name": selected_name(Author, author_id),
             "category": category_id or "",
+            "category_name": selected_name(Category, category_id),
             "publisher": publisher_id or "",
+            "publisher_name": selected_name(Publisher, publisher_id),
         }
 
         if not title or not author_id:
@@ -1377,9 +1476,6 @@ def book_add(request):
         request,
         "library/book_add.html",
         {
-            "authors": authors,
-            "categories": categories,
-            "publishers": publishers,
             "error": error,
             "form_data": form_data,
         }
@@ -1391,14 +1487,22 @@ def book_edit(request, book_id):
 
     book = get_object_or_404(Book, id=book_id)
 
-    authors = Author.objects.all()
-    categories = Category.objects.all()
-    publishers = Publisher.objects.all()
-
     from_page = request.GET.get(
         "from",
         request.POST.get("from", "")
     )
+
+    error = None
+
+    form_data = {
+        "title": book.title,
+        "author": book.author_id or "",
+        "author_name": book.author.name if book.author_id else "",
+        "category": book.category_id or "",
+        "category_name": book.category.name if book.category_id else "",
+        "publisher": book.publisher_id or "",
+        "publisher_name": book.publisher.name if book.publisher_id else "",
+    }
 
     if request.method == "POST":
         title = request.POST.get("title", "").strip()
@@ -1406,7 +1510,21 @@ def book_edit(request, book_id):
         category_id = request.POST.get("category")
         publisher_id = request.POST.get("publisher")
 
-        if title and author_id:
+        form_data = {
+            "title": title,
+            "author": author_id or "",
+            "author_name": selected_name(Author, author_id),
+            "category": category_id or "",
+            "category_name": selected_name(Category, category_id),
+            "publisher": publisher_id or "",
+            "publisher_name": selected_name(Publisher, publisher_id),
+        }
+
+        if not title or not author_id:
+
+            error = "Title and Author are required."
+
+        else:
             book.title = title
             book.author_id = author_id
             book.category_id = category_id or None
@@ -1436,9 +1554,8 @@ def book_edit(request, book_id):
         "library/book_edit.html",
         {
             "book": book,
-            "authors": authors,
-            "categories": categories,
-            "publishers": publishers,
+            "error": error,
+            "form_data": form_data,
             "from_page": from_page,
         }
     )
