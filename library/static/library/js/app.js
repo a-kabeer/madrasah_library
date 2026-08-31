@@ -504,5 +504,107 @@ document.addEventListener(
 
         })();
 
+
+        /* =========================
+           BOOK COVER HOVER PREVIEW
+
+           The book table lives inside a `.table-responsive` wrapper, whose
+           `overflow-x: auto` would clip any popover positioned inside a row.
+           The preview is therefore a single `position: fixed` element on
+           <body>, moved to follow the pointer.
+           ========================= */
+
+        (function () {
+
+            var rows = document.querySelectorAll("[data-book-row]");
+
+            if (!rows.length) {
+                return;
+            }
+
+            /* Skip entirely for touch and narrow screens: there is no hover
+               to speak of, and the row thumbnails already show the cover. */
+            var canHover = window.matchMedia(
+                "(hover: hover) and (min-width: 768px)"
+            );
+
+            if (!canHover.matches) {
+                return;
+            }
+
+            var preview = document.createElement("div");
+            preview.className = "cover-preview";
+            preview.setAttribute("aria-hidden", "true");
+
+            var image = document.createElement("img");
+            preview.appendChild(image);
+
+            document.body.appendChild(preview);
+
+            var GAP = 16;
+
+
+            function position(e) {
+
+                var width = preview.offsetWidth;
+                var height = preview.offsetHeight;
+
+                var left = e.clientX + GAP;
+                var top = e.clientY + GAP;
+
+                /* Flip to the other side of the pointer rather than letting
+                   the preview run off screen. */
+                if (left + width > window.innerWidth) {
+                    left = e.clientX - width - GAP;
+                }
+
+                if (top + height > window.innerHeight) {
+                    top = e.clientY - height - GAP;
+                }
+
+                preview.style.left = Math.max(GAP, left) + "px";
+                preview.style.top = Math.max(GAP, top) + "px";
+            }
+
+
+            function hide() {
+                preview.classList.remove("show");
+            }
+
+
+            rows.forEach(function (row) {
+
+                var url = row.getAttribute("data-cover-url");
+
+                /* No cover: no preview at all, which is the graceful case. */
+                if (!url) {
+                    return;
+                }
+
+                row.addEventListener("mouseenter", function (e) {
+
+                    if (image.getAttribute("src") !== url) {
+                        image.setAttribute("src", url);
+                        image.setAttribute(
+                            "alt",
+                            "Cover of " + (row.getAttribute("data-cover-title") || "")
+                        );
+                    }
+
+                    position(e);
+                    preview.classList.add("show");
+                });
+
+                row.addEventListener("mousemove", position);
+                row.addEventListener("mouseleave", hide);
+            });
+
+
+            /* Any scroll or resize invalidates a pointer-anchored position. */
+            window.addEventListener("scroll", hide, true);
+            window.addEventListener("resize", hide);
+
+        })();
+
     }
 );

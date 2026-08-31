@@ -1,6 +1,10 @@
 from datetime import date, timedelta
 import json
+import os
 
+from PIL import Image, UnidentifiedImageError
+
+from django.conf import settings
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_not_required
 from django.core.paginator import Paginator
@@ -35,6 +39,9 @@ DEFAULT_LOAN_PERIOD_DAYS = 14
 
 # How many suggestions the searchable dropdowns (comboboxes) show at once.
 COMBOBOX_LIMIT = 20
+
+# Accepted book cover uploads.
+COVER_IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".gif")
 
 CATEGORY_CACHE_KEY = "categories"
 AUTHOR_CACHE_KEY = "authors"
@@ -72,7 +79,69 @@ def is_combobox_request(request):
     )
 
 
-def combobox_options_response(request, items, search, entity_label, add_url):
+def selected_name(model, pk):
+    """Display name for an id submitted by a combobox, or "" if unusable.
+
+    The searchable dropdowns submit an id but display a name, so any page
+    that redisplays a combobox needs the name back — whether it is a form
+    bouncing on a validation error or a list showing its active filters.
+    """
+
+    if not pk:
+        return ""
+
+    obj = model.objects.filter(id=pk).first()
+
+    return obj.name if obj else ""
+
+
+def validate_cover_image(upload):
+    """Check an uploaded book cover, returning an error message or None.
+
+    Both the file name and the browser-supplied content type are chosen by
+    the client, so neither is trusted on its own: the bytes have to decode
+    as an image before the file is stored.
+    """
+
+    limit = settings.COVER_IMAGE_MAX_BYTES
+
+    if upload.size > limit:
+
+        return (
+            f"Cover image must be "
+            f"{limit // (1024 * 1024)} MB or smaller."
+        )
+
+    extension = os.path.splitext(upload.name)[1].lower()
+
+    if extension not in COVER_IMAGE_EXTENSIONS:
+
+        return (
+            "Cover image must be a JPG, PNG, WEBP or GIF file."
+        )
+
+    try:
+        upload.seek(0)
+        Image.open(upload).verify()
+
+    except (UnidentifiedImageError, OSError, ValueError):
+
+        return "That file could not be read as an image."
+
+    finally:
+        # verify() consumes the stream; rewind so the file can be saved.
+        upload.seek(0)
+
+    return None
+
+
+def combobox_options_response(
+    request,
+    items,
+    search,
+    entity_label,
+    add_url,
+):
     """Render the suggestion list for a combobox search."""
 
     folded = search.casefold()
@@ -81,6 +150,10 @@ def combobox_options_response(request, items, search, entity_label, add_url):
         item.name.casefold() == folded
         for item in items
     )
+
+    # Comboboxes used as list filters opt out of creation: picking something
+    # to filter by should never add a record.
+    creation_offered = request.GET.get("allow_create") != "0"
 
     return render(
         request,
@@ -93,7 +166,10 @@ def combobox_options_response(request, items, search, entity_label, add_url):
             "exact_match": exact_match,
             "entity_label": entity_label,
             "add_url": add_url,
-            "can_create": can_edit_library(request.user),
+            "can_create": (
+                creation_offered
+                and can_edit_library(request.user)
+            ),
         }
     )
 
@@ -1378,10 +1454,6 @@ def book_list(request):
 
     books = books.order_by("title")
 
-    authors = Author.objects.all()
-    categories = Category.objects.all()
-    publishers = Publisher.objects.all()
-
     paginator = Paginator(books, PAGE_SIZE)
     books = paginator.get_page(request.GET.get("page"))
 
@@ -1394,26 +1466,13 @@ def book_list(request):
             "author_id": author_id,
             "category_id": category_id,
             "publisher_id": publisher_id,
-            "authors": authors,
-            "categories": categories,
-            "publishers": publishers,
+            # The filter dropdowns submit an id but display a name, so each
+            # active filter needs its label to stay filled in on reload.
+            "author_name": selected_name(Author, author_id),
+            "category_name": selected_name(Category, category_id),
+            "publisher_name": selected_name(Publisher, publisher_id),
         }
     )
-
-
-def selected_name(model, pk):
-    """Display name for an id submitted by a combobox, or "" if unusable.
-
-    The searchable dropdowns post an id but show a name, so a form that
-    bounces on validation needs the name back to stay filled in.
-    """
-
-    if not pk:
-        return ""
-
-    obj = model.objects.filter(id=pk).first()
-
-    return obj.name if obj else ""
 
 
 @role_required("Admin", "Librarian")
@@ -1447,16 +1506,29 @@ def book_add(request):
             "publisher_name": selected_name(Publisher, publisher_id),
         }
 
+        cover_image = request.FILES.get("cover_image")
+
+        cover_error = (
+            validate_cover_image(cover_image)
+            if cover_image
+            else None
+        )
+
         if not title or not author_id:
 
             error = "Title and Author are required."
+
+        elif cover_error:
+
+            error = cover_error
 
         else:
             book = Book.objects.create(
                 title=title,
                 author_id=author_id,
                 category_id=category_id or None,
-                publisher_id=publisher_id or None
+                publisher_id=publisher_id or None,
+                cover_image=cover_image or None,
             )
 
             cache.delete(BOOK_CACHE_KEY)
@@ -1520,9 +1592,22 @@ def book_edit(request, book_id):
             "publisher_name": selected_name(Publisher, publisher_id),
         }
 
+        cover_image = request.FILES.get("cover_image")
+        remove_cover = request.POST.get("remove_cover") == "on"
+
+        cover_error = (
+            validate_cover_image(cover_image)
+            if cover_image
+            else None
+        )
+
         if not title or not author_id:
 
             error = "Title and Author are required."
+
+        elif cover_error:
+
+            error = cover_error
 
         else:
             book.title = title
@@ -1530,7 +1615,34 @@ def book_edit(request, book_id):
             book.category_id = category_id or None
             book.publisher_id = publisher_id or None
 
+            # Whatever the cover was before, so its file can be deleted once
+            # the new state is safely saved. An upload wins over the remove
+            # checkbox, since choosing a file is the more specific intent.
+            previous_cover = book.cover_image.name
+
+            if cover_image:
+                book.cover_image = cover_image
+
+            elif remove_cover:
+                book.cover_image = None
+
             book.save()
+
+            replaced = (
+                previous_cover
+                and book.cover_image.name != previous_cover
+            )
+
+            if replaced:
+                # Nothing references the old file now; leaving it behind
+                # would just accumulate orphans in MEDIA_ROOT.
+                book.cover_image.storage.delete(previous_cover)
+
+            if remove_cover and not book.cover_image:
+                # A cleared FileField saves as "" rather than NULL. Books
+                # that never had a cover are NULL, so write NULL here too
+                # and keep one representation of "no cover" in the column.
+                Book.objects.filter(pk=book.pk).update(cover_image=None)
 
             cache.delete(BOOK_CACHE_KEY)
             cache.delete(DASHBOARD_CACHE_KEY)

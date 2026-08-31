@@ -180,7 +180,8 @@ CREATE TABLE public.books (
     title character varying(500) NOT NULL,
     author_id integer NOT NULL,
     category_id integer,
-    publisher_id integer
+    publisher_id integer,
+    cover_image character varying(255)
 );
 
 

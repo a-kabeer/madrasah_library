@@ -34,7 +34,7 @@
                         </div>
                     {% endif %}
 
-                    <form method="post">
+                    <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
 
                         <div class="mb-3">
@@ -49,11 +49,25 @@
                             >
                         </div>
 
-                        {% include "library/partials/combobox_field.html" with label="Author" field_name="author" input_id="formAuthor" entity_label="author" search_url=author_search_url selected_id=form_data.author selected_name=form_data.author_name required=True %}
+                        {% include "library/partials/combobox_field.html" with label="Author" field_name="author" input_id="formAuthor" entity_label="author" search_url=author_search_url selected_id=form_data.author selected_name=form_data.author_name required=True allow_create=True compact=False %}
 
-                        {% include "library/partials/combobox_field.html" with label="Category" field_name="category" input_id="formCategory" entity_label="category" search_url=category_search_url selected_id=form_data.category selected_name=form_data.category_name required=False %}
+                        {% include "library/partials/combobox_field.html" with label="Category" field_name="category" input_id="formCategory" entity_label="category" search_url=category_search_url selected_id=form_data.category selected_name=form_data.category_name required=False allow_create=True compact=False %}
 
-                        {% include "library/partials/combobox_field.html" with label="Publisher" field_name="publisher" input_id="formPublisher" entity_label="publisher" search_url=publisher_search_url selected_id=form_data.publisher selected_name=form_data.publisher_name required=False %}
+                        {% include "library/partials/combobox_field.html" with label="Publisher" field_name="publisher" input_id="formPublisher" entity_label="publisher" search_url=publisher_search_url selected_id=form_data.publisher selected_name=form_data.publisher_name required=False allow_create=True compact=False %}
+
+                        <div class="mb-3">
+                            <label for="formCoverImage" class="form-label fw-semibold">Cover Image</label>
+                            <input
+                                type="file"
+                                class="form-control"
+                                id="formCoverImage"
+                                name="cover_image"
+                                accept="image/jpeg,image/png,image/webp,image/gif"
+                            >
+                            <div class="form-text">
+                                Optional. JPG, PNG, WEBP or GIF, up to 2&nbsp;MB.
+                            </div>
+                        </div>
 
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary">

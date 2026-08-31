@@ -1,6 +1,7 @@
 asgiref==3.12.1
 Django==6.1
 gunicorn==26.2.0
+Pillow==12.3.0
 psycopg==3.3.4
 psycopg-binary==3.3.4
 python-decouple==3.8

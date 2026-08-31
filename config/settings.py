@@ -194,6 +194,24 @@ STORAGES = {
 }
 
 
+# Media files (user uploads, e.g. book cover images)
+# https://docs.djangoproject.com/en/6.1/topics/files/
+#
+# NOTE: these are served by Django itself (see config/urls.py), which is fine
+# for local use and the demo deployment but is not how a busy site should
+# serve uploads. Two things to change before relying on this in production:
+# put a real web server or CDN in front of MEDIA_URL, and move MEDIA_ROOT to
+# durable storage — on a container host with an ephemeral filesystem (Render's
+# free tier included) uploaded covers are lost on every redeploy.
+
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+
+# Largest cover image a user may upload, in bytes.
+COVER_IMAGE_MAX_BYTES = 2 * 1024 * 1024
+
+
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 

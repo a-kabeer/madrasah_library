@@ -10,6 +10,10 @@
 
 {% block content %}
 
+{% url 'author_list' as author_search_url %}
+{% url 'category_list' as category_search_url %}
+{% url 'publisher_list' as publisher_search_url %}
+
 <div class="container-fluid px-0">
 
     <!-- Page Header -->
@@ -40,49 +44,13 @@
                         >
                     </div>
                     <div class="col-12 col-md-6 col-lg-3">
-                        <label for="filterAuthor" class="form-label fw-semibold">Author</label>
-                        <select class="form-select" id="filterAuthor" name="author">
-                            <option value="">All Authors</option>
-                            {% for author in authors %}
-                                <option value="{{ author.id }}"
-                                    {% if author_id == author.id|stringformat:"s" %}
-                                        selected
-                                    {% endif %}
-                                >
-                                    {{ author.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
+                        {% include "library/partials/combobox_field.html" with label="Author" field_name="author" input_id="filterAuthor" entity_label="author" search_url=author_search_url selected_id=author_id selected_name=author_name required=False allow_create=False compact=True %}
                     </div>
                     <div class="col-12 col-md-6 col-lg-3">
-                        <label for="filterCategory" class="form-label fw-semibold">Category</label>
-                        <select class="form-select" id="filterCategory" name="category">
-                            <option value="">All Categories</option>
-                            {% for category in categories %}
-                                <option value="{{ category.id }}"
-                                    {% if category_id == category.id|stringformat:"s" %}
-                                        selected
-                                    {% endif %}
-                                >
-                                    {{ category.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
+                        {% include "library/partials/combobox_field.html" with label="Category" field_name="category" input_id="filterCategory" entity_label="category" search_url=category_search_url selected_id=category_id selected_name=category_name required=False allow_create=False compact=True %}
                     </div>
                     <div class="col-12 col-md-6 col-lg-3">
-                        <label for="filterPublisher" class="form-label fw-semibold">Publisher</label>
-                        <select class="form-select" id="filterPublisher" name="publisher">
-                            <option value="">All Publishers</option>
-                            {% for publisher in publishers %}
-                                <option value="{{ publisher.id }}"
-                                    {% if publisher_id == publisher.id|stringformat:"s" %}
-                                        selected
-                                    {% endif %}
-                                >
-                                    {{ publisher.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
+                        {% include "library/partials/combobox_field.html" with label="Publisher" field_name="publisher" input_id="filterPublisher" entity_label="publisher" search_url=publisher_search_url selected_id=publisher_id selected_name=publisher_name required=False allow_create=False compact=True %}
                     </div>
                 </div>
                 <div class="d-flex flex-wrap gap-2 mt-3">
@@ -111,6 +79,7 @@
                 <thead class="table-light">
                     <tr>
                         <th>ID</th>
+                        <th><span class="visually-hidden">Cover</span></th>
                         <th>Title</th>
                         <th>Author</th>
                         <th>Category</th>
@@ -120,8 +89,28 @@
                 </thead>
                 <tbody>
                     {% for book in books %}
-                        <tr>
+                        <tr
+                            data-book-row
+                            {% if book.cover_image %}
+                                data-cover-url="{{ book.cover_image.url }}"
+                                data-cover-title="{{ book.title }}"
+                            {% endif %}
+                        >
                             <td>{{ book.id }}</td>
+                            <td>
+                                {% if book.cover_image %}
+                                    <img
+                                        src="{{ book.cover_image.url }}"
+                                        alt="Cover of {{ book.title }}"
+                                        class="cover-thumb"
+                                        loading="lazy"
+                                    >
+                                {% else %}
+                                    <span class="cover-thumb cover-thumb-empty" aria-hidden="true">
+                                        <i class="bi bi-book"></i>
+                                    </span>
+                                {% endif %}
+                            </td>
                             <td class="fw-semibold">{{ book.title }}</td>
                             <td>{{ book.author.name }}</td>
                             <td>
@@ -154,7 +143,7 @@
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
+                            <td colspan="7" class="text-center text-muted py-4">
                                 No books found.
                             </td>
                         </tr>

@@ -64,6 +64,16 @@ class Book(models.Model):
         db_column="publisher_id"
     )
 
+    # Optional: books added before this field existed have no cover, and
+    # templates must keep working without one. max_length matches the
+    # varchar(255) column added in migration 0002.
+    cover_image = models.ImageField(
+        upload_to="book_covers/",
+        max_length=255,
+        null=True,
+        blank=True,
+    )
+
     class Meta:
         managed = False
         db_table = "books"

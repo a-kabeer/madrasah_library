@@ -10,6 +10,9 @@ venv/
 *.log
 staticfiles/
 
+# User uploads (book covers) — belong in storage, not in the repo
+media/
+
 # Database backups (contain real data — never commit)
 backups/*.dump
 backups/*.sql

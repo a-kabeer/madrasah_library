@@ -562,6 +562,116 @@ body {
 
 
 /* =========================
+   BOOK COVERS
+   ========================= */
+
+/* Row thumbnail. Works on every screen size, including touch, where the
+   hover preview below is deliberately disabled. */
+.cover-thumb {
+    display: block;
+
+    width: 32px;
+    height: 44px;
+
+    border-radius: 0.25rem;
+
+    object-fit: cover;
+}
+
+
+/* Placeholder for a book with no cover. */
+.cover-thumb-empty {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border: 1px dashed var(--bs-border-color);
+
+    background: var(--bs-tertiary-bg);
+
+    color: var(--bs-secondary-color);
+
+    font-size: 0.875rem;
+}
+
+
+/* Cover shown on the Book Details page. */
+.cover-detail {
+    width: 160px;
+
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+
+    object-fit: cover;
+}
+
+
+/* Current cover shown on the Edit Book form. */
+.cover-edit-preview {
+    width: 90px;
+
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+
+    object-fit: cover;
+}
+
+
+/* Pointer-following preview. Fixed to the viewport so the book table's
+   horizontal scroll container cannot clip it. */
+.cover-preview {
+    position: fixed;
+
+    top: 0;
+    left: 0;
+
+    z-index: 1080;
+
+    display: none;
+
+    padding: 0.25rem;
+
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+
+    background: var(--bs-body-bg);
+
+    box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.25);
+
+    opacity: 0;
+
+    transition: opacity 0.15s ease-in-out;
+
+    pointer-events: none;
+}
+
+.cover-preview.show {
+    display: block;
+
+    opacity: 1;
+}
+
+.cover-preview img {
+    display: block;
+
+    width: 180px;
+
+    border-radius: 0.375rem;
+}
+
+
+/* Honour a reduced-motion preference: still appears, just not animated. */
+@media (prefers-reduced-motion: reduce) {
+
+    .cover-preview {
+        transition: none;
+    }
+
+}
+
+
+/* =========================
    FOCUS / ACCESSIBILITY
    ========================= */
 
