@@ -569,6 +569,33 @@ body {
 
 
 /* =========================
+   ERROR PAGES (403 / 404 / 500)
+   ========================= */
+
+.error-code {
+    font-size: 4rem;
+    font-weight: 700;
+
+    line-height: 1;
+
+    /* Large but recessive: the message matters more than the number. */
+    color: var(--bs-secondary-color);
+
+    opacity: 0.35;
+}
+
+.error-icon {
+    margin: -1.25rem 0 0.75rem;
+
+    font-size: 2.5rem;
+
+    color: var(--brand-primary);
+
+    line-height: 1;
+}
+
+
+/* =========================
    BRANDING SETTINGS
    ========================= */
 

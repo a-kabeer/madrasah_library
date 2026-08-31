@@ -1,17 +1,23 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Server Error</title>
-</head>
-<body>
+{% extends "library/error_base.html" %}
 
-<h1>500 — Something Went Wrong</h1>
+{% comment %}
+Django renders this one with `template.render()` — no request, so no context
+processors run and `branding` is undefined. Everything inherited from
+error_base.html is guarded for that, and nothing here queries the database,
+since an unreachable database is a likely cause of getting here at all.
+{% endcomment %}
 
-<p>An unexpected error occurred. Please try again, and let a librarian know if it keeps happening.</p>
+{% block title %}Server Error{% endblock %}
 
-<p>
-    <a href="/library/dashboard/">← Back to Dashboard</a>
-</p>
+{% block error_code %}500{% endblock %}
 
-</body>
-</html>
+{% block error_icon %}
+    <i class="bi bi-exclamation-octagon" aria-hidden="true"></i>
+{% endblock %}
+
+{% block error_title %}Something went wrong{% endblock %}
+
+{% block error_message %}
+    An unexpected error occurred on our side. Please try again, and let a
+    librarian know if it keeps happening.
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "library/base.html" %}
+
+{% comment %}
+Shared layout for 403 / 404 / 500.
+
+Overrides `body` rather than `content`, so error pages inherit the head
+(theme resolution, branding colours, assets) without the application
+chrome. That is deliberate: a sidebar full of nav links is misleading on an
+error page, and on a 500 those pages may be broken too.
+
+Everything here must render with NO context, because Django's handlers
+differ:
+
+  * 404 renders with `template.render(context, request)`
+  * 403 renders with `template.render(request=request, context=...)`
+  * 500 renders with `template.render()` — no request, so **no context
+    processors run** and `branding` does not exist
+
+So `branding` is guarded everywhere below, `{% block title %}` is static
+text rather than the organisation name, and nothing here touches the
+database — a 500 is often caused by the database being unreachable in the
+first place.
+
+Child templates fill: error_code, error_icon, error_title, error_message.
+{% endcomment %}
+
+{% block body %}
+
+<div class="auth-shell">
+
+    <div class="auth-card text-center">
+
+        <div class="error-code">
+            {% block error_code %}{% endblock %}
+        </div>
+
+        <div class="error-icon">
+            {% block error_icon %}
+                <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+            {% endblock %}
+        </div>
+
+        <h1 class="h4 fw-bold mb-2">
+            {% block error_title %}Something went wrong{% endblock %}
+        </h1>
+
+        <p class="text-body-secondary">
+            {% block error_message %}{% endblock %}
+        </p>
+
+        <div class="d-flex justify-content-center gap-2 mt-4">
+
+            <a href="{% url 'dashboard' %}" class="btn btn-primary">
+                <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+            </a>
+
+            {% block error_actions %}{% endblock %}
+
+        </div>
+
+        {% comment %}
+          Only shown when a request was available to build the context —
+          i.e. never on a 500.
+        {% endcomment %}
+        {% if branding.display_name %}
+            <p class="text-body-secondary small mt-4 mb-0">
+                {{ branding.display_name }}
+            </p>
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,17 +1,16 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>403 Forbidden</title>
-</head>
-<body>
+{% extends "library/error_base.html" %}
 
-<h1>403 — Permission Denied</h1>
+{% block title %}403 Forbidden{% endblock %}
 
-<p>Your account does not have permission to do that.</p>
+{% block error_code %}403{% endblock %}
 
-<p>
-    <a href="/library/dashboard/">← Back to Dashboard</a>
-</p>
+{% block error_icon %}
+    <i class="bi bi-shield-lock" aria-hidden="true"></i>
+{% endblock %}
 
-</body>
-</html>
+{% block error_title %}Permission denied{% endblock %}
+
+{% block error_message %}
+    Your account does not have permission to do that. If you think it should,
+    ask an administrator to check your role.
+{% endblock %}
