@@ -145,13 +145,6 @@ def profile_view(request):
     )
 
 
-def library_home(request):
-    return render(
-        request,
-        "library/home.html"
-    )
-
-
 #Category View
 def category_list(request):
 
@@ -4437,9 +4430,11 @@ def create_activity_log(
 
     cache.delete(ACTIVITY_LOG_CACHE_KEY)
 
-def dashboard(request):
+def library_home(request):
 
-    dashboard_stats = cache.get(DASHBOARD_CACHE_KEY)
+    dashboard_stats = cache.get(
+        DASHBOARD_CACHE_KEY
+    )
 
     if dashboard_stats is None:
 

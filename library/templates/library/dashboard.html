@@ -1,254 +1,638 @@
-<!DOCTYPE html>
-
-<html>
-<head>
-    <title>Dashboard</title>
-</head>
-
-<body>
-
-{% include "library/_account_bar.html" %}
+{% extends "library/base.html" %}
 
 
-<p>
-    <a href="{% url 'library_home' %}">
-        ← Back to Home
-    </a>
-</p>
+{% block title %}
 
-<h1>Library Dashboard</h1>
+    Dashboard | Madrasah Library
 
-<h2>Library Statistics</h2>
+{% endblock %}
 
-<ul>
 
-    <li>
-        <a href="{% url 'book_list' %}">
-            Total Books: {{ total_books }}
-        </a>
-    </li>
+{% block page_title %}
 
-    <li>
-        <a href="{% url 'author_list' %}">
-            Total Authors: {{ total_authors }}
-        </a>
-    </li>
+    Dashboard
 
-    <li>
-        <a href="{% url 'category_list' %}">
-            Total Categories: {{ total_categories }}
-        </a>
-    </li>
+{% endblock %}
 
-    <li>
-        <a href="{% url 'publisher_list' %}">
-            Total Publishers: {{ total_publishers }}
-        </a>
-    </li>
 
-    <li>
-        <a href="{% url 'book_copy_list' %}">
-            Total Book Copies: {{ total_book_copies }}
-        </a>
-    </li>
+{% block content %}
 
-    <li>
-        <a href="{% url 'book_copy_list' %}?status=Available">
-            Available Copies: {{ available_copies }}
-        </a>
-    </li>
+<div class="container-fluid px-0">
 
-    <li>
-        <a href="{% url 'book_copy_list' %}?status=Issued">
-            Issued Copies: {{ issued_copies }}
-        </a>
-    </li>
 
-    <li>
-        <a href="{% url 'borrower_list' %}">
-            Total Borrowers: {{ total_borrowers }}
-        </a>
-    </li>
+    <!-- Welcome -->
 
-    <li>
-        <a href="{% url 'borrower_list' %}?status=active">
-            Active Borrowers: {{ active_borrowers }}
-        </a>
-    </li>
+    <div class="mb-4">
 
-    <li>
-        <a href="{% url 'loan_list' %}?status=active">
-            Active Loans: {{ active_loans }}
-        </a>
-    </li>
+        <h2 class="fw-bold mb-1">
 
-    <li>
-        <a href="{% url 'loan_list' %}?status=overdue">
-            Overdue Loans: {{ overdue_loans }}
-        </a>
-    </li>
+            Library Dashboard
 
-</ul>
+        </h2>
 
-<hr>
+        <p class="text-muted mb-0">
 
-<h2>Recent Loans</h2>
+            Overview of your library, circulation, and recent activity.
 
-<ul>
+        </p>
 
-    {% for loan in recent_loans %}
+    </div>
 
-        <li>
 
-            <strong>Book:</strong>
-            {{ loan.copy.volume.book.title }}
 
-            -
+    <!-- Statistics -->
 
-            <strong>Copy:</strong>
-            {{ loan.copy.copy_code }}
+    <div class="row g-3 mb-4">
 
-            -
 
-            <strong>Borrower:</strong>
-            {{ loan.borrower.name }}
+        <div class="col-12 col-sm-6 col-xl-3">
 
-            -
+            <a
+                href="{% url 'book_list' %}"
+                class="text-decoration-none"
+            >
 
-            <strong>Issued By:</strong>
+                <div class="card shadow-sm border-0 h-100">
 
-            {% if loan.issued_by %}
+                    <div class="card-body">
 
-                {% if loan.issued_by.full_name %}
-                    {{ loan.issued_by.full_name }}
-                {% else %}
-                    {{ loan.issued_by.username }}
-                {% endif %}
+                        <p class="text-muted mb-2">
+                            Total Books
+                        </p>
 
-            {% else %}
+                        <h3 class="fw-bold mb-0">
+                            {{ total_books }}
+                        </h3>
 
-                N/A
+                    </div>
 
-            {% endif %}
+                </div>
 
-            -
-
-            <strong>Issue Date:</strong>
-            {{ loan.issue_date }}
-
-            <br>
-
-            <a href="{% url 'loan_detail' loan.id %}">
-                View Loan
             </a>
 
-        </li>
+        </div>
 
-        <br>
 
-    {% empty %}
 
-        <li>
-            No recent loans found.
-        </li>
+        <div class="col-12 col-sm-6 col-xl-3">
 
-    {% endfor %}
+            <a
+                href="{% url 'book_copy_list' %}"
+                class="text-decoration-none"
+            >
 
-</ul>
+                <div class="card shadow-sm border-0 h-100">
 
-<hr>
+                    <div class="card-body">
 
-<h2>Recent Activity</h2>
+                        <p class="text-muted mb-2">
+                            Total Copies
+                        </p>
 
-<ul>
+                        <h3 class="fw-bold mb-0">
+                            {{ total_book_copies }}
+                        </h3>
 
-    {% for log in recent_logs %}
+                    </div>
 
-        <li>
+                </div>
 
-            <strong>Date:</strong>
-            {{ log.created_at }}
+            </a>
 
-            -
+        </div>
 
-            <strong>User:</strong>
 
-            {% if log.user %}
 
-                {% if log.user.full_name %}
-                    {{ log.user.full_name }}
-                {% else %}
-                    {{ log.user.username }}
-                {% endif %}
+        <div class="col-12 col-sm-6 col-xl-3">
 
-            {% else %}
+            <a
+                href="{% url 'book_copy_list' %}?status=Available"
+                class="text-decoration-none"
+            >
 
-                System
+                <div class="card shadow-sm border-0 h-100">
 
-            {% endif %}
+                    <div class="card-body">
 
-            -
+                        <p class="text-muted mb-2">
+                            Available Copies
+                        </p>
 
-            <strong>Action:</strong>
-            {{ log.action }}
+                        <h3 class="fw-bold mb-0">
+                            {{ available_copies }}
+                        </h3>
 
-            {% if log.entity_type %}
+                    </div>
 
-                -
+                </div>
 
-                <strong>Entity:</strong>
+            </a>
 
-                {% if log.entity_type == "Loan" %}
-                    <a href="{% url 'loan_detail' log.entity_id %}">{{ log.entity_type }}</a>
-                {% elif log.entity_type == "Book" %}
-                    <a href="{% url 'book_detail' log.entity_id %}">{{ log.entity_type }}</a>
-                {% elif log.entity_type == "BookVolume" %}
-                    <a href="{% url 'book_volume_detail' log.entity_id %}">{{ log.entity_type }}</a>
-                {% elif log.entity_type == "BookContent" %}
-                    <a href="{% url 'book_content_detail' log.entity_id %}">{{ log.entity_type }}</a>
-                {% elif log.entity_type == "BookCopy" %}
-                    <a href="{% url 'book_copy_detail' log.entity_id %}">{{ log.entity_type }}</a>
-                {% elif log.entity_type == "Location" %}
-                    <a href="{% url 'location_detail' log.entity_id %}">{{ log.entity_type }}</a>
-                {% elif log.entity_type == "Shelf" %}
-                    <a href="{% url 'shelf_detail' log.entity_id %}">{{ log.entity_type }}</a>
-                {% elif log.entity_type == "Borrower" %}
-                    <a href="{% url 'borrower_detail' log.entity_id %}">{{ log.entity_type }}</a>
-                {% else %}
-                    {{ log.entity_type }}
-                {% endif %}
+        </div>
 
-            {% endif %}
 
-            {% if log.description %}
 
-                <br>
+        <div class="col-12 col-sm-6 col-xl-3">
 
-                {{ log.description }}
+            <a
+                href="{% url 'book_copy_list' %}?status=Issued"
+                class="text-decoration-none"
+            >
 
-            {% endif %}
+                <div class="card shadow-sm border-0 h-100">
 
-        </li>
+                    <div class="card-body">
 
-        <br>
+                        <p class="text-muted mb-2">
+                            Issued Copies
+                        </p>
 
-    {% empty %}
+                        <h3 class="fw-bold mb-0">
+                            {{ issued_copies }}
+                        </h3>
 
-        <li>
-            No recent activity found.
-        </li>
+                    </div>
 
-    {% endfor %}
+                </div>
 
-</ul>
+            </a>
 
-<p>
+        </div>
 
-    <a href="{% url 'activity_log_list' %}">
-        View All Activity Logs
-    </a>
 
-</p>
+        <div class="col-12 col-sm-6 col-xl-3">
 
-</body>
-</html>
+            <a
+                href="{% url 'borrower_list' %}"
+                class="text-decoration-none"
+            >
+
+                <div class="card shadow-sm border-0 h-100">
+
+                    <div class="card-body">
+
+                        <p class="text-muted mb-2">
+                            Total Borrowers
+                        </p>
+
+                        <h3 class="fw-bold mb-0">
+                            {{ total_borrowers }}
+                        </h3>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+
+
+        <div class="col-12 col-sm-6 col-xl-3">
+
+            <a
+                href="{% url 'borrower_list' %}?status=active"
+                class="text-decoration-none"
+            >
+
+                <div class="card shadow-sm border-0 h-100">
+
+                    <div class="card-body">
+
+                        <p class="text-muted mb-2">
+                            Active Borrowers
+                        </p>
+
+                        <h3 class="fw-bold mb-0">
+                            {{ active_borrowers }}
+                        </h3>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+
+
+        <div class="col-12 col-sm-6 col-xl-3">
+
+            <a
+                href="{% url 'loan_list' %}?status=active"
+                class="text-decoration-none"
+            >
+
+                <div class="card shadow-sm border-0 h-100">
+
+                    <div class="card-body">
+
+                        <p class="text-muted mb-2">
+                            Active Loans
+                        </p>
+
+                        <h3 class="fw-bold mb-0">
+                            {{ active_loans }}
+                        </h3>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+
+
+        <div class="col-12 col-sm-6 col-xl-3">
+
+            <a
+                href="{% url 'loan_list' %}?status=overdue"
+                class="text-decoration-none"
+            >
+
+                <div class="card shadow-sm border-0 h-100">
+
+                    <div class="card-body">
+
+                        <p class="text-muted mb-2">
+                            Overdue Loans
+                        </p>
+
+                        <h3 class="fw-bold mb-0">
+                            {{ overdue_loans }}
+                        </h3>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+
+    </div>
+
+
+
+    <!-- Secondary Statistics -->
+
+    <div class="row g-3 mb-4">
+
+
+        <div class="col-12 col-md-4">
+
+            <a
+                href="{% url 'author_list' %}"
+                class="text-decoration-none"
+            >
+
+                <div class="card shadow-sm border-0 h-100">
+
+                    <div class="card-body">
+
+                        <p class="text-muted mb-2">
+                            Authors
+                        </p>
+
+                        <h4 class="fw-bold mb-0">
+                            {{ total_authors }}
+                        </h4>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+
+
+        <div class="col-12 col-md-4">
+
+            <a
+                href="{% url 'category_list' %}"
+                class="text-decoration-none"
+            >
+
+                <div class="card shadow-sm border-0 h-100">
+
+                    <div class="card-body">
+
+                        <p class="text-muted mb-2">
+                            Categories
+                        </p>
+
+                        <h4 class="fw-bold mb-0">
+                            {{ total_categories }}
+                        </h4>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+
+
+        <div class="col-12 col-md-4">
+
+            <a
+                href="{% url 'publisher_list' %}"
+                class="text-decoration-none"
+            >
+
+                <div class="card shadow-sm border-0 h-100">
+
+                    <div class="card-body">
+
+                        <p class="text-muted mb-2">
+                            Publishers
+                        </p>
+
+                        <h4 class="fw-bold mb-0">
+                            {{ total_publishers }}
+                        </h4>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+
+    </div>
+
+
+
+    <!-- Recent Sections -->
+
+    <div class="row g-4">
+
+
+        <!-- Recent Loans -->
+
+        <div class="col-12 col-xl-6">
+
+            <div class="card shadow-sm border-0 h-100">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+
+                        <h5 class="mb-0">
+
+                            Recent Loans
+
+                        </h5>
+
+                        <a
+                            href="{% url 'loan_list' %}"
+                            class="btn btn-sm btn-outline-primary"
+                        >
+                            View All
+                        </a>
+
+                    </div>
+
+
+                    {% if recent_loans %}
+
+                        <div class="list-group list-group-flush">
+
+                            {% for loan in recent_loans %}
+
+                                <a
+                                    href="{% url 'loan_detail' loan.id %}"
+                                    class="list-group-item list-group-item-action px-0"
+                                >
+
+                                    <div class="fw-semibold">
+
+                                        {{ loan.copy.volume.book.title }}
+
+                                    </div>
+
+                                    <div class="small text-muted">
+
+                                        Copy:
+                                        {{ loan.copy.copy_code }}
+
+                                        ·
+
+                                        Borrower:
+                                        {{ loan.borrower.name }}
+
+                                    </div>
+
+                                    <div class="small text-muted mt-1">
+
+                                        Issued:
+                                        {{ loan.issue_date }}
+
+                                        {% if loan.issued_by %}
+
+                                            · By:
+
+                                            {% if loan.issued_by.full_name %}
+
+                                                {{ loan.issued_by.full_name }}
+
+                                            {% else %}
+
+                                                {{ loan.issued_by.username }}
+
+                                            {% endif %}
+
+                                        {% endif %}
+
+                                    </div>
+
+                                </a>
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% else %}
+
+                        <p class="text-muted mb-0">
+
+                            No recent loans found.
+
+                        </p>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- Recent Activity -->
+
+        <div class="col-12 col-xl-6">
+
+            <div class="card shadow-sm border-0 h-100">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+
+                        <h5 class="mb-0">
+
+                            Recent Activity
+
+                        </h5>
+
+                        <a
+                            href="{% url 'activity_log_list' %}"
+                            class="btn btn-sm btn-outline-primary"
+                        >
+                            View All
+                        </a>
+
+                    </div>
+
+
+                    {% if recent_logs %}
+
+                        <div class="list-group list-group-flush">
+
+                            {% for log in recent_logs %}
+
+                                <div class="list-group-item px-0">
+
+                                    <div class="d-flex justify-content-between gap-3">
+
+                                        <div>
+
+                                            <div class="fw-semibold">
+
+                                                {{ log.action }}
+
+                                                {% if log.entity_type %}
+
+                                                    —
+
+                                                    {% if log.entity_type == "Loan" %}
+
+                                                        <a href="{% url 'loan_detail' log.entity_id %}">
+                                                            {{ log.entity_type }}
+                                                        </a>
+
+                                                    {% elif log.entity_type == "Book" %}
+
+                                                        <a href="{% url 'book_detail' log.entity_id %}">
+                                                            {{ log.entity_type }}
+                                                        </a>
+
+                                                    {% elif log.entity_type == "BookVolume" %}
+
+                                                        <a href="{% url 'book_volume_detail' log.entity_id %}">
+                                                            {{ log.entity_type }}
+                                                        </a>
+
+                                                    {% elif log.entity_type == "BookContent" %}
+
+                                                        <a href="{% url 'book_content_detail' log.entity_id %}">
+                                                            {{ log.entity_type }}
+                                                        </a>
+
+                                                    {% elif log.entity_type == "BookCopy" %}
+
+                                                        <a href="{% url 'book_copy_detail' log.entity_id %}">
+                                                            {{ log.entity_type }}
+                                                        </a>
+
+                                                    {% elif log.entity_type == "Location" %}
+
+                                                        <a href="{% url 'location_detail' log.entity_id %}">
+                                                            {{ log.entity_type }}
+                                                        </a>
+
+                                                    {% elif log.entity_type == "Shelf" %}
+
+                                                        <a href="{% url 'shelf_detail' log.entity_id %}">
+                                                            {{ log.entity_type }}
+                                                        </a>
+
+                                                    {% elif log.entity_type == "Borrower" %}
+
+                                                        <a href="{% url 'borrower_detail' log.entity_id %}">
+                                                            {{ log.entity_type }}
+                                                        </a>
+
+                                                    {% else %}
+
+                                                        {{ log.entity_type }}
+
+                                                    {% endif %}
+
+                                                {% endif %}
+
+                                            </div>
+
+
+                                            {% if log.description %}
+
+                                                <div class="small text-muted">
+
+                                                    {{ log.description }}
+
+                                                </div>
+
+                                            {% endif %}
+
+                                        </div>
+
+
+                                        <div class="small text-muted text-nowrap">
+
+                                            {{ log.created_at }}
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% else %}
+
+                        <p class="text-muted mb-0">
+
+                            No recent activity found.
+
+                        </p>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+</div>
+
+{% endblock %}

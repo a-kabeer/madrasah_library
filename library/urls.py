@@ -375,7 +375,7 @@ path(
 
 path(
     "dashboard/",
-    views.dashboard,
+    views.library_home,
     name="dashboard",
 ),
 
