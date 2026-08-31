@@ -3,7 +3,7 @@
 
 {% block title %}
 
-    Dashboard | Madrasah Library
+    Dashboard | {{ branding.display_name }}
 
 {% endblock %}
 
@@ -30,7 +30,7 @@
 
         </h2>
 
-        <p class="text-muted mb-0">
+        <p class="text-body-secondary mb-0">
 
             Overview of your library, circulation, and recent activity.
 
@@ -56,7 +56,7 @@
 
                     <div class="card-body">
 
-                        <p class="text-muted mb-2">
+                        <p class="text-body-secondary mb-2">
                             Total Books
                         </p>
 
@@ -85,7 +85,7 @@
 
                     <div class="card-body">
 
-                        <p class="text-muted mb-2">
+                        <p class="text-body-secondary mb-2">
                             Total Copies
                         </p>
 
@@ -114,7 +114,7 @@
 
                     <div class="card-body">
 
-                        <p class="text-muted mb-2">
+                        <p class="text-body-secondary mb-2">
                             Available Copies
                         </p>
 
@@ -143,7 +143,7 @@
 
                     <div class="card-body">
 
-                        <p class="text-muted mb-2">
+                        <p class="text-body-secondary mb-2">
                             Issued Copies
                         </p>
 
@@ -171,7 +171,7 @@
 
                     <div class="card-body">
 
-                        <p class="text-muted mb-2">
+                        <p class="text-body-secondary mb-2">
                             Total Borrowers
                         </p>
 
@@ -200,7 +200,7 @@
 
                     <div class="card-body">
 
-                        <p class="text-muted mb-2">
+                        <p class="text-body-secondary mb-2">
                             Active Borrowers
                         </p>
 
@@ -229,7 +229,7 @@
 
                     <div class="card-body">
 
-                        <p class="text-muted mb-2">
+                        <p class="text-body-secondary mb-2">
                             Active Loans
                         </p>
 
@@ -258,7 +258,7 @@
 
                     <div class="card-body">
 
-                        <p class="text-muted mb-2">
+                        <p class="text-body-secondary mb-2">
                             Overdue Loans
                         </p>
 
@@ -295,7 +295,7 @@
 
                     <div class="card-body">
 
-                        <p class="text-muted mb-2">
+                        <p class="text-body-secondary mb-2">
                             Authors
                         </p>
 
@@ -324,7 +324,7 @@
 
                     <div class="card-body">
 
-                        <p class="text-muted mb-2">
+                        <p class="text-body-secondary mb-2">
                             Categories
                         </p>
 
@@ -353,7 +353,7 @@
 
                     <div class="card-body">
 
-                        <p class="text-muted mb-2">
+                        <p class="text-body-secondary mb-2">
                             Publishers
                         </p>
 
@@ -422,7 +422,7 @@
 
                                     </div>
 
-                                    <div class="small text-muted">
+                                    <div class="small text-body-secondary">
 
                                         Copy:
                                         {{ loan.copy.copy_code }}
@@ -434,7 +434,7 @@
 
                                     </div>
 
-                                    <div class="small text-muted mt-1">
+                                    <div class="small text-body-secondary mt-1">
 
                                         Issued:
                                         {{ loan.issue_date }}
@@ -465,7 +465,7 @@
 
                     {% else %}
 
-                        <p class="text-muted mb-0">
+                        <p class="text-body-secondary mb-0">
 
                             No recent loans found.
 
@@ -588,7 +588,7 @@
 
                                             {% if log.description %}
 
-                                                <div class="small text-muted">
+                                                <div class="small text-body-secondary">
 
                                                     {{ log.description }}
 
@@ -599,7 +599,7 @@
                                         </div>
 
 
-                                        <div class="small text-muted text-nowrap">
+                                        <div class="small text-body-secondary text-nowrap">
 
                                             {{ log.created_at }}
 
@@ -615,7 +615,7 @@
 
                     {% else %}
 
-                        <p class="text-muted mb-0">
+                        <p class="text-body-secondary mb-0">
 
                             No recent activity found.
 

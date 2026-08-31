@@ -7,6 +7,12 @@ urlpatterns = [
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),
     path("profile/", views.profile_view, name="profile"),
+    path("appearance/", views.theme_set, name="theme_set"),
+    path(
+        "settings/branding/",
+        views.branding_settings,
+        name="branding_settings",
+    ),
     path("", views.library_home, name="library_home"),
     path("categories/", views.category_list, name="category_list"),
     path("categories/add/", views.category_add, name="category_add"),

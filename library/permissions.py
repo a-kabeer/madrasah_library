@@ -8,6 +8,21 @@ from django.core.exceptions import PermissionDenied
 # same question the `role_required` decorators enforce.
 LIBRARY_EDITOR_ROLES = ("Admin", "Librarian")
 
+# Roles allowed to change the organisation's identity — name, logo, colours.
+# Deliberately narrower than LIBRARY_EDITOR_ROLES: Librarians manage the
+# catalogue, not the institution's branding.
+BRANDING_ADMIN_ROLES = ("Admin",)
+
+
+def can_manage_branding(user):
+    """True if `user` may edit organisation branding.
+
+    UI gating only, exactly like `can_edit_library` — the security boundary
+    is `@role_required("Admin")` on the view itself.
+    """
+
+    return getattr(user, "role", None) in BRANDING_ADMIN_ROLES
+
 
 def can_edit_library(user):
     """True if `user` may create catalogue records.

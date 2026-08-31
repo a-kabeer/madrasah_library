@@ -1,7 +1,7 @@
 {% extends "library/base.html" %}
 
 {% block title %}
-    Delete Book | Madrasah Library
+    Delete Book | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
@@ -24,9 +24,9 @@
 
                     <h4 class="fw-bold mb-3">Delete Book?</h4>
 
-                    <p class="text-muted mb-4">
+                    <p class="text-body-secondary mb-4">
                         Are you sure you want to delete:<br>
-                        <strong class="text-dark">{{ book.title }}</strong>?
+                        <strong class="text-body">{{ book.title }}</strong>?
                     </p>
 
                     <p class="text-danger small mb-4">

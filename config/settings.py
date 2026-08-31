@@ -107,6 +107,9 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                # Organisation branding (name, logo, colours). Must stay
+                # available for anonymous users too — the login page uses it.
+                "library.context_processors.branding",
             ],
         },
     },
@@ -210,6 +213,11 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 # Largest cover image a user may upload, in bytes.
 COVER_IMAGE_MAX_BYTES = 2 * 1024 * 1024
+
+# Branding uploads. A logo is displayed at ~180px wide and a favicon at
+# 32px, so both can be much smaller than a book cover.
+LOGO_MAX_BYTES = 1 * 1024 * 1024
+FAVICON_MAX_BYTES = 256 * 1024
 
 
 # Email

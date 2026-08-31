@@ -1,0 +1,530 @@
+import io
+
+from django.core.cache import cache
+from django.test import TestCase
+from django.urls import reverse
+
+from PIL import Image
+
+from library.context_processors import (
+    BRANDING_CACHE_KEY,
+    clear_branding_cache,
+    get_branding,
+)
+from library.models import (
+    OrganizationSettings,
+    hex_to_rgb_triplet,
+    readable_foreground,
+)
+
+from .helpers import make_branding, make_user
+
+
+def make_image_bytes(fmt="PNG", size=(40, 40), name="logo.png"):
+    """A real, decodable image file — not just bytes with the right suffix."""
+
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    buffer = io.BytesIO()
+    Image.new("RGB", size, (10, 80, 200)).save(buffer, format=fmt)
+
+    return SimpleUploadedFile(
+        name,
+        buffer.getvalue(),
+        content_type=f"image/{fmt.lower()}",
+    )
+
+
+class BrandingDefaultsTests(TestCase):
+    """The app has to work before any branding has been configured."""
+
+    def test_load_returns_defaults_when_no_row_exists(self):
+        self.assertEqual(OrganizationSettings.objects.count(), 0)
+
+        settings_obj = OrganizationSettings.load()
+
+        self.assertIsNone(settings_obj.pk)
+        self.assertEqual(settings_obj.display_name, "Madrasah Library")
+        self.assertEqual(settings_obj.display_primary_color, "#0d6efd")
+        self.assertFalse(settings_obj.has_custom_colors)
+
+    def test_pages_render_with_no_branding_row(self):
+        user = make_user(username="admin_u", password="pass12345", role="Admin")
+        self.client.login(username="admin_u", password="pass12345")
+
+        for name in ("dashboard", "book_list", "profile"):
+            with self.subTest(page=name):
+                response = self.client.get(reverse(name))
+
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, "Madrasah Library")
+
+    def test_login_page_renders_branding_for_anonymous_user(self):
+        # The context processor must not depend on request.user.
+        response = self.client.get(reverse("login"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Madrasah Library")
+
+    def test_blank_fields_fall_back_to_defaults(self):
+        settings_obj = make_branding(name="", primary_color="")
+
+        self.assertEqual(settings_obj.display_name, "Madrasah Library")
+        self.assertEqual(settings_obj.display_primary_color, "#0d6efd")
+
+
+class BrandingSingletonTests(TestCase):
+
+    def test_save_always_uses_the_same_row(self):
+        first = make_branding(name="One")
+        second = make_branding(name="Two")
+
+        self.assertEqual(first.pk, OrganizationSettings.SINGLETON_ID)
+        self.assertEqual(second.pk, OrganizationSettings.SINGLETON_ID)
+        self.assertEqual(OrganizationSettings.objects.count(), 1)
+        self.assertEqual(OrganizationSettings.load().name, "Two")
+
+    def test_explicit_id_is_overridden_on_save(self):
+        settings_obj = OrganizationSettings(id=99, name="Forced")
+        settings_obj.save()
+
+        self.assertEqual(settings_obj.pk, OrganizationSettings.SINGLETON_ID)
+        self.assertEqual(OrganizationSettings.objects.count(), 1)
+
+
+class BrandingContextProcessorTests(TestCase):
+
+    def setUp(self):
+        cache.clear()
+
+    def test_branding_is_available_in_template_context(self):
+        make_branding(name="Al Noor Library")
+
+        make_user(username="admin_u", password="pass12345", role="Admin")
+        self.client.login(username="admin_u", password="pass12345")
+
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertEqual(
+            response.context["branding"].display_name,
+            "Al Noor Library",
+        )
+        self.assertContains(response, "Al Noor Library")
+
+    def test_theme_preference_is_blank_for_anonymous_users(self):
+        response = self.client.get(reverse("login"))
+
+        self.assertEqual(response.context["theme_preference"], "")
+
+    def test_theme_preference_reflects_signed_in_user(self):
+        user = make_user(username="carol", password="pass12345", role="Admin")
+        user.theme_preference = "dark"
+        user.save()
+
+        self.client.login(username="carol", password="pass12345")
+
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertEqual(response.context["theme_preference"], "dark")
+
+    def test_custom_colors_are_injected_into_the_page(self):
+        make_branding(primary_color="#ff8800")
+
+        make_user(username="admin_u", password="pass12345", role="Admin")
+        self.client.login(username="admin_u", password="pass12345")
+
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertContains(response, "--brand-primary: #ff8800")
+        # Bootstrap needs the channels split out; CSS cannot do that.
+        self.assertContains(response, "--bs-primary-rgb: 255, 136, 0")
+
+    def test_no_inline_style_block_when_no_colors_configured(self):
+        make_user(username="admin_u", password="pass12345", role="Admin")
+        self.client.login(username="admin_u", password="pass12345")
+
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertNotContains(response, "--brand-primary:")
+
+
+class BrandingCacheTests(TestCase):
+    """Caching is a no-op under DummyCache during tests, so exercise the
+    helpers directly with a real backend."""
+
+    def setUp(self):
+        cache.clear()
+
+    def test_get_branding_caches_and_invalidation_clears_it(self):
+        locmem = "django.core.cache.backends.locmem.LocMemCache"
+
+        with self.settings(CACHES={"default": {"BACKEND": locmem}}):
+            cache.clear()
+
+            make_branding(name="First Name")
+
+            self.assertEqual(get_branding().display_name, "First Name")
+            self.assertIsNotNone(cache.get(BRANDING_CACHE_KEY))
+
+            # Writing straight to the DB leaves the cache stale on purpose,
+            # which is what makes the next assertion meaningful.
+            OrganizationSettings.objects.filter(
+                id=OrganizationSettings.SINGLETON_ID
+            ).update(name="Second Name")
+
+            self.assertEqual(get_branding().display_name, "First Name")
+
+            clear_branding_cache()
+
+            self.assertIsNone(cache.get(BRANDING_CACHE_KEY))
+            self.assertEqual(get_branding().display_name, "Second Name")
+
+
+class BrandingPermissionTests(TestCase):
+
+    def setUp(self):
+        self.url = reverse("branding_settings")
+
+        self.admin = make_user(
+            username="admin_u", password="pass12345", role="Admin"
+        )
+        self.librarian = make_user(
+            username="librarian_u", password="pass12345", role="Librarian"
+        )
+        self.assistant = make_user(
+            username="assistant_u", password="pass12345", role="Assistant"
+        )
+
+    def login(self, user):
+        self.client.login(username=user.username, password="pass12345")
+
+    def test_anonymous_user_is_redirected_to_login(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("login"), response["Location"])
+
+    def test_admin_can_open_branding_settings(self):
+        self.login(self.admin)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_librarian_cannot_open_branding_settings(self):
+        self.login(self.librarian)
+
+        self.assertEqual(self.client.get(self.url).status_code, 403)
+
+    def test_assistant_cannot_open_branding_settings(self):
+        self.login(self.assistant)
+
+        self.assertEqual(self.client.get(self.url).status_code, 403)
+
+    def test_librarian_post_is_denied_and_changes_nothing(self):
+        self.login(self.librarian)
+
+        response = self.client.post(self.url, {"name": "Hijacked"})
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(OrganizationSettings.objects.count(), 0)
+
+    def test_assistant_post_is_denied_and_changes_nothing(self):
+        self.login(self.assistant)
+
+        response = self.client.post(self.url, {"name": "Hijacked"})
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(OrganizationSettings.objects.count(), 0)
+
+    def test_branding_link_only_shown_to_admin(self):
+        self.login(self.admin)
+        self.assertContains(self.client.get(reverse("dashboard")), self.url)
+
+        self.client.logout()
+
+        self.login(self.librarian)
+        self.assertNotContains(
+            self.client.get(reverse("dashboard")), self.url
+        )
+
+
+class BrandingUpdateTests(TestCase):
+
+    def setUp(self):
+        self.url = reverse("branding_settings")
+        make_user(username="admin_u", password="pass12345", role="Admin")
+        self.client.login(username="admin_u", password="pass12345")
+
+    def payload(self, **overrides):
+        data = {
+            "name": "Al Noor Library",
+            "primary_color": "#ff8800",
+            "secondary_color": "",
+            "accent_color": "",
+            "contact_email": "info@alnoor.test",
+            "contact_phone": "0300-1234567",
+            "footer_text": "Serving since 1990",
+        }
+        data.update(overrides)
+
+        return data
+
+    def test_admin_can_save_branding(self):
+        response = self.client.post(self.url, self.payload())
+
+        self.assertRedirects(response, self.url)
+
+        settings_obj = OrganizationSettings.load()
+
+        self.assertEqual(settings_obj.name, "Al Noor Library")
+        self.assertEqual(settings_obj.primary_color, "#ff8800")
+        self.assertEqual(settings_obj.contact_email, "info@alnoor.test")
+        self.assertEqual(settings_obj.footer_text, "Serving since 1990")
+        self.assertIsNotNone(settings_obj.updated_at)
+
+    def test_saved_branding_appears_on_other_pages(self):
+        self.client.post(self.url, self.payload())
+
+        response = self.client.get(reverse("book_list"))
+
+        self.assertContains(response, "Al Noor Library")
+
+    def test_invalid_hex_color_is_rejected(self):
+        response = self.client.post(
+            self.url,
+            self.payload(primary_color="not-a-color"),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "hex code")
+        self.assertEqual(OrganizationSettings.objects.count(), 0)
+
+    def test_invalid_color_keeps_submitted_values_on_screen(self):
+        response = self.client.post(
+            self.url,
+            self.payload(name="Typed Name", primary_color="#zzz"),
+        )
+
+        self.assertContains(response, "Typed Name")
+
+    def test_shorthand_hex_is_accepted(self):
+        response = self.client.post(
+            self.url,
+            self.payload(primary_color="#f80"),
+        )
+
+        self.assertRedirects(response, self.url)
+        self.assertEqual(OrganizationSettings.load().primary_color, "#f80")
+
+    def test_blank_colors_are_allowed(self):
+        response = self.client.post(self.url, self.payload(primary_color=""))
+
+        self.assertRedirects(response, self.url)
+        self.assertEqual(
+            OrganizationSettings.load().display_primary_color,
+            "#0d6efd",
+        )
+
+
+class BrandingUploadTests(TestCase):
+
+    def setUp(self):
+        self.url = reverse("branding_settings")
+        make_user(username="admin_u", password="pass12345", role="Admin")
+        self.client.login(username="admin_u", password="pass12345")
+
+    def base_payload(self, **overrides):
+        data = {
+            "name": "Al Noor",
+            "primary_color": "",
+            "secondary_color": "",
+            "accent_color": "",
+            "contact_email": "",
+            "contact_phone": "",
+            "footer_text": "",
+        }
+        data.update(overrides)
+
+        return data
+
+    def tearDown(self):
+        # Uploads land in MEDIA_ROOT; don't leave files behind.
+        settings_obj = OrganizationSettings.objects.filter(
+            id=OrganizationSettings.SINGLETON_ID
+        ).first()
+
+        if settings_obj is None:
+            return
+
+        for field in (settings_obj.logo, settings_obj.favicon):
+            if field:
+                field.delete(save=False)
+
+    def test_valid_logo_upload_is_stored(self):
+        response = self.client.post(
+            self.url,
+            self.base_payload(logo=make_image_bytes()),
+        )
+
+        self.assertRedirects(response, self.url)
+
+        settings_obj = OrganizationSettings.load()
+
+        self.assertTrue(settings_obj.logo)
+        self.assertIn("branding/", settings_obj.logo.name)
+
+    def test_logo_appears_in_the_page_when_set(self):
+        self.client.post(
+            self.url,
+            self.base_payload(logo=make_image_bytes()),
+        )
+
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertContains(response, "brand-logo")
+
+    def test_disallowed_extension_is_rejected(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        bad = SimpleUploadedFile(
+            "logo.txt",
+            b"not an image",
+            content_type="image/png",
+        )
+
+        response = self.client.post(
+            self.url,
+            self.base_payload(logo=bad),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "must be a")
+        self.assertEqual(OrganizationSettings.objects.count(), 0)
+
+    def test_corrupt_image_with_valid_extension_is_rejected(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        # Right suffix, wrong bytes — only Pillow can catch this.
+        fake = SimpleUploadedFile(
+            "logo.png",
+            b"this is definitely not a PNG",
+            content_type="image/png",
+        )
+
+        response = self.client.post(
+            self.url,
+            self.base_payload(logo=fake),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "could not be read as an image")
+        self.assertEqual(OrganizationSettings.objects.count(), 0)
+
+    def test_oversized_logo_is_rejected(self):
+        with self.settings(LOGO_MAX_BYTES=10):
+            response = self.client.post(
+                self.url,
+                self.base_payload(logo=make_image_bytes()),
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "or smaller")
+        self.assertEqual(OrganizationSettings.objects.count(), 0)
+
+    def test_replacing_a_logo_deletes_the_previous_file(self):
+        self.client.post(
+            self.url,
+            self.base_payload(logo=make_image_bytes(name="first.png")),
+        )
+
+        settings_obj = OrganizationSettings.load()
+        first_name = settings_obj.logo.name
+        storage = settings_obj.logo.storage
+
+        self.assertTrue(storage.exists(first_name))
+
+        self.client.post(
+            self.url,
+            self.base_payload(logo=make_image_bytes(name="second.png")),
+        )
+
+        settings_obj = OrganizationSettings.load()
+
+        self.assertNotEqual(settings_obj.logo.name, first_name)
+        self.assertFalse(storage.exists(first_name))
+        self.assertTrue(storage.exists(settings_obj.logo.name))
+
+    def test_removing_a_logo_clears_it_and_deletes_the_file(self):
+        self.client.post(
+            self.url,
+            self.base_payload(logo=make_image_bytes()),
+        )
+
+        settings_obj = OrganizationSettings.load()
+        stored_name = settings_obj.logo.name
+        storage = settings_obj.logo.storage
+
+        self.client.post(
+            self.url,
+            self.base_payload(remove_logo="on"),
+        )
+
+        settings_obj = OrganizationSettings.load()
+
+        self.assertFalse(settings_obj.logo)
+        self.assertFalse(storage.exists(stored_name))
+
+    def test_upload_wins_over_the_remove_checkbox(self):
+        self.client.post(
+            self.url,
+            self.base_payload(logo=make_image_bytes(name="first.png")),
+        )
+
+        self.client.post(
+            self.url,
+            self.base_payload(
+                logo=make_image_bytes(name="second.png"),
+                remove_logo="on",
+            ),
+        )
+
+        self.assertTrue(OrganizationSettings.load().logo)
+
+    def test_favicon_is_linked_only_when_set(self):
+        response = self.client.get(reverse("dashboard"))
+        self.assertNotContains(response, 'rel="icon"')
+
+        self.client.post(
+            self.url,
+            self.base_payload(favicon=make_image_bytes(name="icon.png")),
+        )
+
+        response = self.client.get(reverse("dashboard"))
+        self.assertContains(response, 'rel="icon"')
+
+
+class ColorHelperTests(TestCase):
+
+    def test_hex_to_rgb_triplet(self):
+        self.assertEqual(hex_to_rgb_triplet("#0d6efd"), "13, 110, 253")
+        self.assertEqual(hex_to_rgb_triplet("#fff"), "255, 255, 255")
+        self.assertEqual(hex_to_rgb_triplet(""), "")
+        self.assertEqual(hex_to_rgb_triplet("nope"), "")
+
+    def test_readable_foreground_picks_a_contrasting_colour(self):
+        # Saturated/dark brand colours keep white text, matching both
+        # Bootstrap's convention and the static default in style.css.
+        for dark in ("#0d6efd", "#000000", "#198754", "#6c757d"):
+            with self.subTest(color=dark):
+                self.assertEqual(readable_foreground(dark), "#fff")
+
+        # Pale colours flip to black — this is the case that would otherwise
+        # be unreadable.
+        for pale in ("#ffff00", "#ffffff", "#e5e7eb", "#ffd6e7"):
+            with self.subTest(color=pale):
+                self.assertEqual(readable_foreground(pale), "#000")
+
+    def test_readable_foreground_handles_unusable_input(self):
+        self.assertEqual(readable_foreground(""), "#fff")
+        self.assertEqual(readable_foreground("nope"), "#fff")

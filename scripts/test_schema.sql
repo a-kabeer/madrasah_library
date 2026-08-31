@@ -392,11 +392,39 @@ CREATE TABLE public.users (
     is_active boolean DEFAULT true NOT NULL,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     last_login timestamp without time zone,
+    theme_preference character varying(10),
     CONSTRAINT check_user_role CHECK (((role)::text = ANY ((ARRAY['Admin'::character varying, 'Librarian'::character varying, 'Assistant'::character varying])::text[])))
 );
 
 
 ALTER TABLE public.users OWNER TO postgres;
+
+
+--
+-- Name: organization_settings; Type: TABLE; Schema: public; Owner: postgres
+--
+-- Single-row branding table (see library.models.OrganizationSettings).
+-- The CHECK on id enforces the singleton at the database level.
+--
+
+CREATE TABLE public.organization_settings (
+    id integer NOT NULL,
+    name character varying(255) DEFAULT ''::character varying NOT NULL,
+    logo character varying(255),
+    favicon character varying(255),
+    primary_color character varying(7) DEFAULT ''::character varying NOT NULL,
+    secondary_color character varying(7) DEFAULT ''::character varying NOT NULL,
+    accent_color character varying(7) DEFAULT ''::character varying NOT NULL,
+    contact_email character varying(255) DEFAULT ''::character varying NOT NULL,
+    contact_phone character varying(50) DEFAULT ''::character varying NOT NULL,
+    footer_text text DEFAULT ''::text NOT NULL,
+    updated_at timestamp with time zone,
+    CONSTRAINT organization_settings_pkey PRIMARY KEY (id),
+    CONSTRAINT organization_settings_singleton CHECK ((id = 1))
+);
+
+
+ALTER TABLE public.organization_settings OWNER TO postgres;
 
 --
 -- Name: users_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres

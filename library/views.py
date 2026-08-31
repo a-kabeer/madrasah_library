@@ -5,10 +5,12 @@ import os
 from PIL import Image, UnidentifiedImageError
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_not_required
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.core.cache import cache
@@ -31,7 +33,10 @@ from .models import (
     Borrower,
     User,
     ActivityLog,
+    OrganizationSettings,
+    validate_hex_color,
 )
+from .context_processors import clear_branding_cache
 from .permissions import can_edit_library, role_required
 
 PAGE_SIZE = 25
@@ -40,8 +45,11 @@ DEFAULT_LOAN_PERIOD_DAYS = 14
 # How many suggestions the searchable dropdowns (comboboxes) show at once.
 COMBOBOX_LIMIT = 20
 
-# Accepted book cover uploads.
-COVER_IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".gif")
+# Accepted image uploads (book covers, organisation logo).
+IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".webp", ".gif")
+
+# Favicons additionally allow .ico, which Pillow can read.
+FAVICON_EXTENSIONS = IMAGE_EXTENSIONS + (".ico",)
 
 CATEGORY_CACHE_KEY = "categories"
 AUTHOR_CACHE_KEY = "authors"
@@ -95,30 +103,45 @@ def selected_name(model, pk):
     return obj.name if obj else ""
 
 
-def validate_cover_image(upload):
-    """Check an uploaded book cover, returning an error message or None.
+def describe_size_limit(limit):
+    """"1 MB" / "256 KB" — whichever reads better for this limit."""
+
+    if limit >= 1024 * 1024:
+        return f"{limit // (1024 * 1024)} MB"
+
+    return f"{limit // 1024} KB"
+
+
+def validate_image_upload(
+    upload,
+    max_bytes,
+    extensions=IMAGE_EXTENSIONS,
+    label="Image",
+):
+    """Check an uploaded image, returning an error message or None.
 
     Both the file name and the browser-supplied content type are chosen by
     the client, so neither is trusted on its own: the bytes have to decode
     as an image before the file is stored.
     """
 
-    limit = settings.COVER_IMAGE_MAX_BYTES
-
-    if upload.size > limit:
+    if upload.size > max_bytes:
 
         return (
-            f"Cover image must be "
-            f"{limit // (1024 * 1024)} MB or smaller."
+            f"{label} must be "
+            f"{describe_size_limit(max_bytes)} or smaller."
         )
 
     extension = os.path.splitext(upload.name)[1].lower()
 
-    if extension not in COVER_IMAGE_EXTENSIONS:
+    if extension not in extensions:
 
-        return (
-            "Cover image must be a JPG, PNG, WEBP or GIF file."
+        allowed = ", ".join(
+            ext.lstrip(".").upper()
+            for ext in extensions
         )
+
+        return f"{label} must be a {allowed} file."
 
     try:
         upload.seek(0)
@@ -133,6 +156,16 @@ def validate_cover_image(upload):
         upload.seek(0)
 
     return None
+
+
+def validate_cover_image(upload):
+    """Check an uploaded book cover."""
+
+    return validate_image_upload(
+        upload,
+        max_bytes=settings.COVER_IMAGE_MAX_BYTES,
+        label="Cover image",
+    )
 
 
 def combobox_options_response(
@@ -286,6 +319,172 @@ def profile_view(request):
         {
             "error": error,
             "success": success,
+            "theme_choices": User.THEME_CHOICES,
+        }
+    )
+
+
+#Appearance (Light / Dark / System)
+def theme_set(request):
+    """Save the signed-in user's appearance choice.
+
+    Shared by the topbar selector (which posts with HTMX and wants nothing
+    swapped back) and the profile page (a plain form post that should land
+    back where it came from).
+    """
+
+    if request.method != "POST":
+
+        return HttpResponseBadRequest("POST required.")
+
+    theme = request.POST.get("theme", "").strip()
+
+    valid = {choice for choice, _ in User.THEME_CHOICES}
+
+    if theme not in valid:
+
+        return HttpResponseBadRequest("Unknown theme.")
+
+    request.user.theme_preference = theme
+    request.user.save(update_fields=["theme_preference"])
+
+    if request.headers.get("HX-Request") == "true":
+
+        # Nothing to swap: the page already applied the change locally.
+        return HttpResponse(status=204)
+
+    messages.success(request, "Appearance updated.")
+
+    return redirect(
+        safe_redirect_target(request, "profile")
+    )
+
+
+#Organization branding
+@role_required("Admin")
+def branding_settings(request):
+
+    branding = OrganizationSettings.load()
+
+    error = None
+
+    if request.method == "POST":
+
+        name = request.POST.get("name", "").strip()
+        primary_color = request.POST.get("primary_color", "").strip()
+        secondary_color = request.POST.get("secondary_color", "").strip()
+        accent_color = request.POST.get("accent_color", "").strip()
+        contact_email = request.POST.get("contact_email", "").strip()
+        contact_phone = request.POST.get("contact_phone", "").strip()
+        footer_text = request.POST.get("footer_text", "").strip()
+
+        logo = request.FILES.get("logo")
+        favicon = request.FILES.get("favicon")
+
+        remove_logo = request.POST.get("remove_logo") == "on"
+        remove_favicon = request.POST.get("remove_favicon") == "on"
+
+        # Colours first: cheapest to check, and a bad one shouldn't leave a
+        # freshly uploaded file behind.
+        for value in (primary_color, secondary_color, accent_color):
+
+            try:
+                validate_hex_color(value)
+
+            except ValidationError as exc:
+
+                error = exc.messages[0]
+                break
+
+        if error is None and logo:
+
+            error = validate_image_upload(
+                logo,
+                max_bytes=settings.LOGO_MAX_BYTES,
+                label="Logo",
+            )
+
+        if error is None and favicon:
+
+            error = validate_image_upload(
+                favicon,
+                max_bytes=settings.FAVICON_MAX_BYTES,
+                extensions=FAVICON_EXTENSIONS,
+                label="Favicon",
+            )
+
+        if error is None:
+
+            branding.name = name
+            branding.primary_color = primary_color
+            branding.secondary_color = secondary_color
+            branding.accent_color = accent_color
+            branding.contact_email = contact_email
+            branding.contact_phone = contact_phone
+            branding.footer_text = footer_text
+
+            # Remember the previous files so their storage can be cleaned up
+            # once the new state is safely saved. An upload wins over the
+            # remove checkbox, since choosing a file is the more specific
+            # intent — same rule as replacing a book cover.
+            previous_logo = branding.logo.name
+            previous_favicon = branding.favicon.name
+
+            if logo:
+                branding.logo = logo
+
+            elif remove_logo:
+                branding.logo = None
+
+            if favicon:
+                branding.favicon = favicon
+
+            elif remove_favicon:
+                branding.favicon = None
+
+            branding.save()
+
+            for previous, current in (
+                (previous_logo, branding.logo),
+                (previous_favicon, branding.favicon),
+            ):
+
+                if previous and current.name != previous:
+                    current.storage.delete(previous)
+
+            clear_branding_cache()
+
+            create_activity_log(
+                user=request.user,
+                action="UPDATE",
+                entity_type="OrganizationSettings",
+                entity_id=branding.id,
+                description="Organisation branding updated",
+            )
+
+            messages.success(
+                request,
+                "Branding updated.",
+            )
+
+            return redirect("branding_settings")
+
+        # Fell through with an error: show what was typed rather than
+        # silently discarding it.
+        branding.name = name
+        branding.primary_color = primary_color
+        branding.secondary_color = secondary_color
+        branding.accent_color = accent_color
+        branding.contact_email = contact_email
+        branding.contact_phone = contact_phone
+        branding.footer_text = footer_text
+
+    return render(
+        request,
+        "library/branding_settings.html",
+        {
+            "settings_obj": branding,
+            "error": error,
         }
     )
 

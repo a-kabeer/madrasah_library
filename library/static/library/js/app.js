@@ -98,47 +98,219 @@ document.addEventListener(
 
 
         /* =========================
-           THEME TOGGLE
+           APPEARANCE: LIGHT / DARK / SYSTEM
+
+           The pre-paint script in base.html has already resolved and applied
+           the theme by the time this runs. This section owns changes made
+           after load: it applies a new choice, mirrors it to localStorage,
+           persists it for signed-in users, and keeps "system" tracking the
+           OS while the page stays open.
+
+           Two attributes are in play, and the distinction matters:
+             data-bs-theme      the resolved value, only ever light|dark
+             data-theme-choice  what the user actually picked, incl. system
            ========================= */
 
-        var themeToggle = document.getElementById("themeToggle");
-        var themeIcon = document.getElementById("themeIcon");
+        (function () {
 
-        function getTheme() {
-            return document.documentElement.getAttribute("data-bs-theme") || "light";
-        }
+            var THEME_KEY = "madrasah_theme";
+            var VALID = ["light", "dark", "system"];
 
-        function setTheme(theme) {
-            document.documentElement.setAttribute("data-bs-theme", theme);
-            try {
-                localStorage.setItem("madrasah_theme", theme);
-            } catch (e) {
-                /* localStorage unavailable */
+            var root = document.documentElement;
+            var themeIcon = document.getElementById("themeIcon");
+            var options = document.querySelectorAll("[data-theme-value]");
+
+            var systemQuery = window.matchMedia
+                ? window.matchMedia("(prefers-color-scheme: dark)")
+                : null;
+
+
+            function getChoice() {
+                var choice = root.getAttribute("data-theme-choice");
+
+                return VALID.indexOf(choice) === -1 ? "system" : choice;
             }
-            updateIcon(theme);
-        }
 
-        function updateIcon(theme) {
-            if (!themeIcon) return;
-            if (theme === "dark") {
-                themeIcon.className = "bi bi-sun-fill";
-            } else {
-                themeIcon.className = "bi bi-moon-stars-fill";
-            }
-        }
 
-        /* Initialize icon on page load */
-        updateIcon(getTheme());
-
-        if (themeToggle) {
-            themeToggle.addEventListener(
-                "click",
-                function () {
-                    var current = getTheme();
-                    setTheme(current === "dark" ? "light" : "dark");
+            function resolve(choice) {
+                if (choice === "system") {
+                    return systemQuery && systemQuery.matches ? "dark" : "light";
                 }
-            );
-        }
+
+                return choice;
+            }
+
+
+            function updateIcon(choice) {
+                if (!themeIcon) {
+                    return;
+                }
+
+                var icon = "bi-circle-half";
+
+                if (choice === "light") {
+                    icon = "bi-sun-fill";
+                } else if (choice === "dark") {
+                    icon = "bi-moon-stars-fill";
+                }
+
+                /* Swap only the glyph class, so anything else on the element
+                   (sizing, colour utilities) survives. */
+                themeIcon.classList.remove(
+                    "bi-sun-fill",
+                    "bi-moon-stars-fill",
+                    "bi-circle-half"
+                );
+                themeIcon.classList.add(icon);
+            }
+
+
+            function updateOptions(choice) {
+                options.forEach(function (option) {
+                    var selected = option.getAttribute("data-theme-value") === choice;
+
+                    option.classList.toggle("active", selected);
+                    option.setAttribute("aria-checked", selected ? "true" : "false");
+                });
+            }
+
+
+            function apply(choice, resolved) {
+                root.setAttribute("data-bs-theme", resolved);
+                root.setAttribute("data-theme-choice", choice);
+
+                updateIcon(choice);
+                updateOptions(choice);
+
+                /* Let anything added later (charts, embeds) react. */
+                document.dispatchEvent(
+                    new CustomEvent("themechange", {
+                        detail: { choice: choice, theme: resolved }
+                    })
+                );
+            }
+
+
+            function persist(choice) {
+                var url = root.getAttribute("data-theme-save-url");
+
+                /* Absent for anonymous visitors — there is no user to save
+                   a preference for, so localStorage is the whole story. */
+                if (!url) {
+                    return;
+                }
+
+                var body = new FormData();
+                body.append("theme", choice);
+
+                fetch(url, {
+                    method: "POST",
+                    headers: { "X-CSRFToken": getCookie("csrftoken") },
+                    body: body,
+                    credentials: "same-origin"
+                }).catch(function () {
+                    /* Offline or server error: the choice still applies for
+                       this browser via localStorage. */
+                });
+            }
+
+
+            function getCookie(name) {
+                var match = document.cookie.match(
+                    new RegExp("(^|; )" + name + "=([^;]*)")
+                );
+
+                return match ? decodeURIComponent(match[2]) : "";
+            }
+
+
+            function choose(choice) {
+                if (VALID.indexOf(choice) === -1) {
+                    return;
+                }
+
+                try {
+                    localStorage.setItem(THEME_KEY, choice);
+                } catch (e) {
+                    /* localStorage unavailable; the attributes still apply */
+                }
+
+                apply(choice, resolve(choice));
+                persist(choice);
+            }
+
+
+            options.forEach(function (option) {
+                option.addEventListener("click", function () {
+                    choose(option.getAttribute("data-theme-value"));
+                });
+            });
+
+
+            /* Keep "system" honest: follow the OS while the page is open. */
+            if (systemQuery) {
+                var onSystemChange = function () {
+                    if (getChoice() === "system") {
+                        apply("system", resolve("system"));
+                    }
+                };
+
+                if (systemQuery.addEventListener) {
+                    systemQuery.addEventListener("change", onSystemChange);
+                } else if (systemQuery.addListener) {
+                    /* Safari < 14 */
+                    systemQuery.addListener(onSystemChange);
+                }
+            }
+
+
+            /* Sync the icon and menu with whatever the pre-paint script chose. */
+            updateIcon(getChoice());
+            updateOptions(getChoice());
+
+        })();
+
+
+        /* =========================
+           BRANDING COLOUR FIELDS
+
+           Keeps the native colour picker and its hex text field in step.
+           Only the text field is named, so it is the value that posts and
+           the field still works without JavaScript.
+           ========================= */
+
+        (function () {
+
+            var fields = document.querySelectorAll("[data-color-field]");
+
+            if (!fields.length) {
+                return;
+            }
+
+            var HEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+            fields.forEach(function (field) {
+
+                var picker = field.querySelector("[data-color-picker]");
+                var text = field.querySelector("[data-color-text]");
+
+                if (!picker || !text) {
+                    return;
+                }
+
+                picker.addEventListener("input", function () {
+                    text.value = picker.value;
+                });
+
+                text.addEventListener("input", function () {
+                    /* Ignore half-typed values; the picker cannot hold them. */
+                    if (HEX.test(text.value)) {
+                        picker.value = text.value;
+                    }
+                });
+            });
+
+        })();
 
 
         /* =========================
@@ -161,6 +333,36 @@ document.addEventListener(
                     /* Normalize: ensure trailing slash for comparison */
                     var normalizedHref = href.endsWith("/") ? href : href + "/";
                     var normalizedPath = currentPath.endsWith("/") ? currentPath : currentPath + "/";
+
+                    /* The dashboard link is a prefix of every other URL, so
+                       prefix-matching it would light it up on any page with
+                       no nav entry of its own (e.g. the profile page). Such
+                       links match exactly instead; the attribute may list
+                       extra paths that count as the same page, since the
+                       dashboard is routed at both / and /dashboard/. */
+                    if (link.hasAttribute("data-nav-exact")) {
+
+                        var accepted = [normalizedHref];
+
+                        (link.getAttribute("data-nav-exact") || "")
+                            .split(",")
+                            .forEach(function (alias) {
+                                var trimmed = alias.trim();
+
+                                if (trimmed) {
+                                    accepted.push(
+                                        trimmed.endsWith("/") ? trimmed : trimmed + "/"
+                                    );
+                                }
+                            });
+
+                        if (accepted.indexOf(normalizedPath) !== -1) {
+                            bestLink = link;
+                            bestLength = Infinity;
+                        }
+
+                        return;
+                    }
 
                     if (normalizedPath === normalizedHref || normalizedPath.startsWith(normalizedHref)) {
                         if (normalizedHref.length > bestLength) {

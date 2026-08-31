@@ -2,16 +2,63 @@
    ROOT
 ========================= */
 
+/*
+  Layout constants and the theme/branding tokens.
+
+  The --brand-* tokens are the single source of truth for the
+  organisation's colours. base.html re-declares them in an inline <style>
+  when branding has been configured, so the values here are the defaults
+  for an unbranded install. They must not be referenced anywhere before
+  being defined, hence this block coming first.
+
+  Bootstrap's own --bs-primary is pointed at --brand-primary so buttons,
+  links, badges and focus rings pick up the branding for free. The
+  project's older --primary is kept as an alias, so both it and --bs-primary
+  can never drift apart again.
+*/
 :root {
     --sidebar-width: 260px;
     --topbar-height: 70px;
 
-    --primary: #0d6efd;
+    --brand-primary: #0d6efd;
+    --brand-secondary: #6c757d;
+    --brand-accent: #198754;
+
+    /* Readable foreground for filled brand-coloured surfaces. Overridden
+       in the dark block only where the surface itself changes. */
+    --brand-on-primary: #fff;
+
     --sidebar-bg: #212529;
     --sidebar-hover: #343a40;
+    --sidebar-text: #ced4da;
+    --sidebar-text-strong: #fff;
+    --sidebar-section: #adb5bd;
+    --sidebar-border: rgba(255, 255, 255, 0.1);
 
-    --page-bg: #f5f7fa;
-    --border-color: #e5e7eb;
+    --scrim: rgba(0, 0, 0, 0.5);
+    --shadow-soft: rgba(0, 0, 0, 0.15);
+    --shadow-strong: rgba(0, 0, 0, 0.25);
+}
+
+/*
+  Bootstrap reads --bs-primary (and the -rgb form, used by utilities that
+  compose alpha) from :root, so aliasing them here is what makes branding
+  reach Bootstrap's own components.
+*/
+:root,
+[data-bs-theme="light"],
+[data-bs-theme="dark"] {
+    --bs-primary: var(--brand-primary);
+    --bs-link-color: var(--brand-primary);
+    --bs-link-hover-color: var(--brand-primary);
+
+    /* Channels for the default brand colour. base.html overrides this from
+       the configured colour, since CSS cannot split a hex into channels. */
+    --bs-primary-rgb: 13, 110, 253;
+
+    /* Kept as an alias of the brand token — it used to be a separate
+       hardcoded colour, which meant the sidebar and Bootstrap disagreed. */
+    --primary: var(--brand-primary);
 }
 
 /*
@@ -23,11 +70,92 @@
     --sidebar-bg: #1a1d21;
     --sidebar-hover: #2d3238;
 
-    --page-bg: #15171c;
-    --border-color: #2d3238;
-    --primary: #6ea8fe;
+    /* Shadows and the mobile scrim need more weight on a dark ground. */
+    --shadow-soft: rgba(0, 0, 0, 0.5);
+    --shadow-strong: rgba(0, 0, 0, 0.7);
 }
 
+
+
+/* =========================
+   BRAND-DRIVEN BOOTSTRAP COMPONENTS
+
+   Aliasing --bs-primary is not enough on its own. Bootstrap 5.3 compiles
+   per-component variables with literal colours baked in — .btn-primary sets
+   its own --bs-btn-bg: #0d6efd, and form focus rings hardcode an rgba() —
+   so those have to be pointed at the brand token explicitly. Utilities
+   built on --bs-primary-rgb (.text-primary, .bg-primary) already follow it.
+
+   Hover/active states use a brightness filter rather than a pre-darkened
+   colour, so they work for any brand colour without needing the
+   administrator to supply shade variants.
+   ========================= */
+
+.btn-primary {
+    --bs-btn-bg: var(--brand-primary);
+    --bs-btn-border-color: var(--brand-primary);
+    --bs-btn-color: var(--brand-on-primary);
+
+    --bs-btn-hover-bg: var(--brand-primary);
+    --bs-btn-hover-border-color: var(--brand-primary);
+    --bs-btn-hover-color: var(--brand-on-primary);
+
+    --bs-btn-active-bg: var(--brand-primary);
+    --bs-btn-active-border-color: var(--brand-primary);
+    --bs-btn-active-color: var(--brand-on-primary);
+
+    --bs-btn-disabled-bg: var(--brand-primary);
+    --bs-btn-disabled-border-color: var(--brand-primary);
+    --bs-btn-disabled-color: var(--brand-on-primary);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--brand-primary);
+    --bs-btn-border-color: var(--brand-primary);
+
+    --bs-btn-hover-bg: var(--brand-primary);
+    --bs-btn-hover-border-color: var(--brand-primary);
+    --bs-btn-hover-color: var(--brand-on-primary);
+
+    --bs-btn-active-bg: var(--brand-primary);
+    --bs-btn-active-border-color: var(--brand-primary);
+    --bs-btn-active-color: var(--brand-on-primary);
+
+    --bs-btn-disabled-color: var(--brand-primary);
+    --bs-btn-disabled-border-color: var(--brand-primary);
+}
+
+.btn-primary:hover,
+.btn-primary:focus-visible,
+.btn-outline-primary:hover,
+.btn-outline-primary:focus-visible {
+    filter: brightness(0.92);
+}
+
+.btn-primary:active,
+.btn-outline-primary:active {
+    filter: brightness(0.85);
+}
+
+
+/* Focus rings and checked controls: both hardcode Bootstrap's blue. */
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+    border-color: var(--brand-primary);
+
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+.form-check-input:checked {
+    background-color: var(--brand-primary);
+
+    border-color: var(--brand-primary);
+}
+
+.btn:focus-visible {
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
 
 
 /* =========================
@@ -89,11 +217,11 @@ body {
 
     padding: 0 1.5rem;
 
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--sidebar-border);
 }
 
 .sidebar-brand a {
-    color: white;
+    color: var(--sidebar-text-strong);
 
     text-decoration: none;
 
@@ -110,6 +238,17 @@ body {
     font-size: 1.5rem;
 }
 
+/* Uploaded organisation logo, shown in place of the fallback glyph.
+   Bounded so any aspect ratio fits the brand bar without pushing it. */
+.brand-logo {
+    max-height: 2.25rem;
+    max-width: 2.75rem;
+
+    object-fit: contain;
+
+    flex-shrink: 0;
+}
+
 
 /* =========================
    SIDEBAR NAVIGATION
@@ -120,7 +259,7 @@ body {
 }
 
 .nav-section-title {
-    color: #adb5bd;
+    color: var(--sidebar-section);
 
     font-size: 0.7rem;
     font-weight: 700;
@@ -141,7 +280,7 @@ body {
 
     gap: 0.9rem;
 
-    color: #ced4da;
+    color: var(--sidebar-text);
 
     text-decoration: none;
 
@@ -158,14 +297,14 @@ body {
 .nav-link-custom:hover {
     background: var(--sidebar-hover);
 
-    color: white;
+    color: var(--sidebar-text-strong);
 }
 
 /* Active sidebar link */
 .nav-link-custom.active {
     background: var(--primary);
 
-    color: #fff;
+    color: var(--brand-on-primary);
 
     font-weight: 600;
 }
@@ -305,6 +444,166 @@ body {
 
 
 /* =========================
+   APPEARANCE MENU
+   ========================= */
+
+.theme-option {
+    display: flex;
+
+    align-items: center;
+
+    gap: 0.6rem;
+}
+
+/* The tick marks the active choice; it also carries the meaning conveyed to
+   assistive tech via aria-checked on the same button. */
+.theme-option-check {
+    margin-left: auto;
+
+    visibility: hidden;
+}
+
+.theme-option.active .theme-option-check {
+    visibility: visible;
+}
+
+/* Bootstrap's .active dropdown-item fills with --bs-primary; keep the text
+   readable whatever brand colour that resolves to. */
+.theme-option.active {
+    background: var(--brand-primary);
+
+    color: var(--brand-on-primary);
+}
+
+
+/* =========================
+   FOOTER
+   ========================= */
+
+.app-footer {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    align-items: center;
+
+    gap: 0.25rem 1.5rem;
+
+    padding: 1rem 1.5rem;
+
+    border-top: 1px solid var(--bs-border-color);
+
+    color: var(--bs-secondary-color);
+
+    font-size: 0.875rem;
+}
+
+.app-footer a {
+    color: inherit;
+
+    text-decoration: none;
+}
+
+.app-footer a:hover {
+    color: var(--brand-primary);
+}
+
+
+/* =========================
+   AUTH PAGES (LOGIN)
+   ========================= */
+
+.auth-shell {
+    min-height: 100vh;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 1.5rem;
+
+    background: var(--bs-tertiary-bg);
+}
+
+.auth-card {
+    width: 100%;
+
+    max-width: 26rem;
+}
+
+.auth-brand {
+    display: flex;
+
+    flex-direction: column;
+    align-items: center;
+
+    gap: 0.75rem;
+
+    margin-bottom: 1.5rem;
+
+    text-align: center;
+}
+
+.auth-brand i {
+    font-size: 2.75rem;
+
+    color: var(--brand-primary);
+
+    line-height: 1;
+}
+
+.auth-brand img {
+    max-height: 4rem;
+    max-width: 12rem;
+
+    object-fit: contain;
+}
+
+.auth-brand h1 {
+    margin: 0;
+
+    font-size: 1.35rem;
+    font-weight: 600;
+}
+
+
+/* =========================
+   BRANDING SETTINGS
+   ========================= */
+
+/* Native colour input, sized to sit beside its hex text field. */
+.color-swatch-input {
+    width: 3rem;
+
+    padding: 0.25rem;
+
+    flex-shrink: 0;
+}
+
+.branding-preview-logo {
+    max-height: 5rem;
+    max-width: 12rem;
+
+    object-fit: contain;
+
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+
+    padding: 0.25rem;
+
+    background: var(--bs-body-bg);
+}
+
+.branding-preview-favicon {
+    width: 32px;
+    height: 32px;
+
+    object-fit: contain;
+}
+
+
+/* =========================
    USER MENU
    ========================= */
 
@@ -376,7 +675,7 @@ body {
 
     inset: 0;
 
-    background: rgba(0, 0, 0, 0.5);
+    background: var(--scrim);
 
     z-index: 1035;
 }
@@ -481,7 +780,7 @@ body {
 
     background: var(--bs-body-bg);
 
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    box-shadow: 0 0.5rem 1rem var(--shadow-soft);
 }
 
 /* Nothing to show yet: keep the panel hidden rather than blank. */
@@ -637,7 +936,7 @@ body {
 
     background: var(--bs-body-bg);
 
-    box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.25);
+    box-shadow: 0 0.75rem 1.5rem var(--shadow-strong);
 
     opacity: 0;
 

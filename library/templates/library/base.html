@@ -2,7 +2,13 @@
 
 <!DOCTYPE html>
 
-<html lang="en" data-bs-theme="light">
+{% comment %}
+  For a signed-in user with an explicit Light/Dark choice the attribute is
+  rendered server-side, so the right theme is in the markup itself — no
+  JavaScript needed and nothing to flash. "System" and anonymous visitors
+  fall through to the inline script below, which still runs before paint.
+{% endcomment %}
+<html lang="en" data-bs-theme="{% if theme_preference == 'light' or theme_preference == 'dark' %}{{ theme_preference }}{% else %}light{% endif %}"{% if request.user.is_authenticated %} data-theme-save-url="{% url 'theme_set' %}"{% endif %}>
 
 <head>
 
@@ -15,25 +21,61 @@
 
     <meta
         name="description"
-        content="Madrasah Library Management System"
+        content="{{ branding.display_name }} — library management"
     >
 
     <!--
-      Theme initialization (inline, runs before paint).
-      Prevents a flash of the wrong theme on page load.
+      Theme resolution (inline, runs before paint).
+
+      `theme_preference` is the signed-in user's stored choice, or "" for
+      anonymous visitors. A stored choice always wins and refreshes the
+      localStorage mirror; with no stored choice we fall back to that mirror
+      and then to the OS setting, which is the behaviour anonymous pages
+      (e.g. login) had before.
     -->
     <script>
         (function () {
-            try {
-                var stored = localStorage.getItem("madrasah_theme");
-                if (stored === "light" || stored === "dark") {
-                    document.documentElement.setAttribute("data-bs-theme", stored);
-                } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
-                    document.documentElement.setAttribute("data-bs-theme", "dark");
-                }
-            } catch (e) {
-                /* localStorage unavailable: fall back to default */
+            var root = document.documentElement;
+            var KEY = "madrasah_theme";
+            var serverChoice = "{{ theme_preference|escapejs }}";
+            var choice;
+
+            function prefersDark() {
+                return !!(
+                    window.matchMedia
+                    && window.matchMedia("(prefers-color-scheme: dark)").matches
+                );
             }
+
+            if (serverChoice) {
+                choice = serverChoice;
+                try {
+                    localStorage.setItem(KEY, serverChoice);
+                } catch (e) {
+                    /* localStorage unavailable; the attribute is enough */
+                }
+            } else {
+                choice = "system";
+                try {
+                    var stored = localStorage.getItem(KEY);
+                    if (stored === "light" || stored === "dark" || stored === "system") {
+                        choice = stored;
+                    }
+                } catch (e) {
+                    /* localStorage unavailable: fall back to the OS setting */
+                }
+            }
+
+            root.setAttribute(
+                "data-bs-theme",
+                choice === "system"
+                    ? (prefersDark() ? "dark" : "light")
+                    : choice
+            );
+
+            /* The choice itself, which "data-bs-theme" cannot express:
+               it only ever holds the resolved light/dark value. */
+            root.setAttribute("data-theme-choice", choice);
         })();
     </script>
 
@@ -41,11 +83,19 @@
 
         {% block title %}
 
-            Madrasah Library
+            {{ branding.display_name }}
 
         {% endblock %}
 
     </title>
+
+
+    <!-- Favicon: only emitted when one has been uploaded, so there is
+         never a link pointing at a missing file. -->
+
+    {% if branding.favicon %}
+        <link rel="icon" href="{{ branding.favicon.url }}">
+    {% endif %}
 
 
     <!-- Bootstrap CSS -->
@@ -71,8 +121,45 @@
         href="{% static 'library/css/style.css' %}"
     >
 
+
+    {% comment %}
+      Organisation colours, injected last so they override the defaults in
+      style.css. This has to be inline rather than a generated stylesheet:
+      static files are hashed and manifested by
+      CompressedManifestStaticFilesStorage at collectstatic time, so a file
+      written at runtime could not be served through {% static %}.
+
+      Only emitted when colours have actually been configured, so a default
+      install ships no inline CSS at all.
+    {% endcomment %}
+    {% if branding.has_custom_colors %}
+        <style>
+            :root {
+                --brand-primary: {{ branding.display_primary_color }};
+                --brand-secondary: {{ branding.display_secondary_color }};
+                --brand-accent: {{ branding.display_accent_color }};
+
+                /* Bootstrap composes alpha from the -rgb channels, which CSS
+                   cannot derive from a hex value. */
+                --bs-primary-rgb: {{ branding.display_primary_rgb }};
+
+                /* Chosen for contrast against the primary colour, so a pale
+                   brand colour does not leave white-on-white text. */
+                --brand-on-primary: {{ branding.display_on_primary }};
+            }
+        </style>
+    {% endif %}
+
 </head>
 <body>
+
+{% comment %}
+  Everything below is the signed-in application chrome. Auth pages (login)
+  override `body` to replace it, while still inheriting the head above —
+  branding, favicon, colours, theme resolution and assets — so there is no
+  need for a second layout template.
+{% endcomment %}
+{% block body %}
 
 <div class="app-wrapper">
 
@@ -99,10 +186,18 @@
 
             <a href="{% url 'library_home' %}">
 
-                <i class="bi bi-book-half" aria-hidden="true"></i>
+                {% if branding.logo %}
+                    <img
+                        src="{{ branding.logo.url }}"
+                        alt=""
+                        class="brand-logo"
+                    >
+                {% else %}
+                    <i class="bi bi-book-half" aria-hidden="true"></i>
+                {% endif %}
 
                 <span>
-                    Madrasah Library
+                    {{ branding.display_name }}
                 </span>
 
             </a>
@@ -117,6 +212,7 @@
             <a
                 href="{% url 'library_home' %}"
                 class="nav-link-custom"
+                data-nav-exact="{% url 'dashboard' %}"
             >
 
                 <i class="bi bi-grid-1x2"></i>
@@ -268,6 +364,28 @@
             </a>
 
 
+            {% comment %}
+              Branding is Admin-only. Hiding the link is convenience, not
+              security — the view enforces it with @role_required("Admin").
+            {% endcomment %}
+            {% if request.user.role == "Admin" %}
+
+                <a
+                    href="{% url 'branding_settings' %}"
+                    class="nav-link-custom"
+                >
+
+                    <i class="bi bi-palette"></i>
+
+                    <span>
+                        Branding
+                    </span>
+
+                </a>
+
+            {% endif %}
+
+
         </nav>
 
     </aside>
@@ -305,7 +423,7 @@
 
                         {% block page_title %}
 
-                            Madrasah Library
+                            {{ branding.display_name }}
 
                         {% endblock %}
 
@@ -329,17 +447,7 @@
 
             <div class="topbar-right">
 
-                <button
-                    type="button"
-                    class="btn theme-toggle"
-                    id="themeToggle"
-                    aria-label="Toggle light or dark mode"
-                    title="Toggle theme"
-                >
-
-                    <i class="bi bi-moon-stars-fill" id="themeIcon" aria-hidden="true"></i>
-
-                </button>
+                {% include "library/partials/theme_selector.html" %}
 
                 <!-- User Area -->
 
@@ -375,7 +483,34 @@
                                         {{ request.user.username }}
                                     </strong>
 
+                                    <span class="d-block small text-body-secondary">
+                                        {{ request.user.role }}
+                                    </span>
+
                                 </span>
+
+                            </li>
+
+
+                            <li>
+
+                                <hr class="dropdown-divider">
+
+                            </li>
+
+
+                            <li>
+
+                                <a
+                                    class="dropdown-item"
+                                    href="{% url 'profile' %}"
+                                >
+
+                                    <i class="bi bi-person" aria-hidden="true"></i>
+
+                                    My Profile
+
+                                </a>
 
                             </li>
 
@@ -449,10 +584,39 @@
         </main>
 
 
+        {% if branding.footer_text or branding.contact_email or branding.contact_phone %}
+
+            <footer class="app-footer">
+
+                {% if branding.footer_text %}
+                    <span>{{ branding.footer_text }}</span>
+                {% endif %}
+
+                {% if branding.contact_email %}
+                    <a href="mailto:{{ branding.contact_email }}">
+                        <i class="bi bi-envelope" aria-hidden="true"></i>
+                        {{ branding.contact_email }}
+                    </a>
+                {% endif %}
+
+                {% if branding.contact_phone %}
+                    <span>
+                        <i class="bi bi-telephone" aria-hidden="true"></i>
+                        {{ branding.contact_phone }}
+                    </span>
+                {% endif %}
+
+            </footer>
+
+        {% endif %}
+
+
     </div>
 
 
 </div>
+
+{% endblock %}
 
 
 <!-- Global Reusable Modal -->
