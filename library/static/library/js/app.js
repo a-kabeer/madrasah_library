@@ -440,6 +440,14 @@ document.addEventListener(
                    if the user types a partial search and then walks away. */
                 var committedText = textInput.value;
 
+                /* Opt-in: when set, choosing an option submits the enclosing
+                   form, which is how the book list filters without an Apply
+                   button. Absent on the Add/Edit Book forms, so those only
+                   fill the input. Submitting the real form (rather than a
+                   URL assembled here) means the filter also serialises
+                   whatever else the user has changed on the form. */
+                var submitOnSelect = root.hasAttribute("data-combobox-submit");
+
 
                 function isOpen() {
                     return root.classList.contains("combobox-open");
@@ -536,6 +544,31 @@ document.addEventListener(
 
                     syncFilled();
                     close();
+
+                    submitForm();
+                }
+
+
+                /* Hand the selection to the server. requestSubmit() rather
+                   than submit(), so the required-field guard below still
+                   runs — submit() would bypass it. */
+                function submitForm() {
+
+                    if (!submitOnSelect) {
+                        return;
+                    }
+
+                    var form = root.closest("form");
+
+                    if (!form) {
+                        return;
+                    }
+
+                    if (form.requestSubmit) {
+                        form.requestSubmit();
+                    } else {
+                        form.submit();
+                    }
                 }
 
 
@@ -548,6 +581,13 @@ document.addEventListener(
 
                     syncFilled();
                     close();
+
+                    /* Clearing is a filter change too: submit so the list
+                       goes back to showing everything. */
+                    if (submitOnSelect) {
+                        submitForm();
+                        return;
+                    }
 
                     if (focus) {
                         textInput.focus();
@@ -725,6 +765,20 @@ document.addEventListener(
 
                 syncFilled();
 
+                /* Selection now submits on its own, so the manual Apply
+                   button is redundant. It is only there for the case where
+                   this script never ran. */
+                if (submitOnSelect) {
+
+                    var owningForm = root.closest("form");
+                    var apply = owningForm
+                        && owningForm.querySelector("[data-filter-apply]");
+
+                    if (apply) {
+                        apply.hidden = true;
+                    }
+                }
+
             }
 
 
@@ -744,14 +798,19 @@ document.addEventListener(
 
         (function () {
 
-            var rows = document.querySelectorAll("[data-book-row]");
+            /* Bound to whatever carries a cover URL — on the book list that
+               is the row itself, so the whole row previews its own cover.
+               Rows without a cover have no attribute and never match, which
+               is how "no image" is handled. */
+            var rows = document.querySelectorAll("[data-cover-url]");
 
             if (!rows.length) {
                 return;
             }
 
             /* Skip entirely for touch and narrow screens: there is no hover
-               to speak of, and the row thumbnails already show the cover. */
+               to speak of. The cover is still reachable there by tapping the
+               book name, which opens the details modal. */
             var canHover = window.matchMedia(
                 "(hover: hover) and (min-width: 768px)"
             );
@@ -831,6 +890,151 @@ document.addEventListener(
             /* Any scroll or resize invalidates a pointer-anchored position. */
             window.addEventListener("scroll", hide, true);
             window.addEventListener("resize", hide);
+
+            /* Clicking the book name opens a dialog without the pointer
+               moving, so `mouseleave` may never fire and the preview would
+               hang around over the page. Hide it explicitly. */
+            document.addEventListener("click", hide, true);
+
+            var sharedModal = document.getElementById("globalModal");
+
+            if (sharedModal) {
+                sharedModal.addEventListener("show.bs.modal", hide);
+            }
+
+        })();
+
+
+        /* =========================
+           CLICKABLE BOOK ROWS
+
+           The whole row opens that book's details, so a click on the title,
+           the author, or empty space all do the same thing. Delegated from
+           <tbody>, which means one listener however many rows there are, and
+           it keeps working if the table is ever re-rendered.
+
+           The Edit and Delete buttons are excluded: they sit inside
+           [data-row-actions] and must keep doing their own job.
+           ========================= */
+
+        (function () {
+
+            var rows = document.querySelectorAll("[data-book-row][data-book-url]");
+
+            if (!rows.length) {
+                return;
+            }
+
+            var modalEl = document.getElementById("globalModal");
+
+            if (!modalEl || !window.bootstrap || !window.htmx) {
+                return;
+            }
+
+            var body = modalEl.querySelector(".modal-body");
+
+
+            function open(row) {
+
+                var url = row.getAttribute("data-book-url");
+
+                if (!url) {
+                    return;
+                }
+
+                /* Fetch first, then show — Bootstrap's own data-api would
+                   open the dialog before the request landed. */
+                window.htmx.ajax("GET", url, { target: body, swap: "innerHTML" });
+
+                window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            }
+
+
+            function handled(target) {
+                /* Anything that is its own control keeps its own behaviour. */
+                return target.closest("[data-row-actions]")
+                    || target.closest("a")
+                    || target.closest("button");
+            }
+
+
+            rows.forEach(function (row) {
+
+                row.addEventListener("click", function (e) {
+
+                    if (handled(e.target)) {
+                        return;
+                    }
+
+                    open(row);
+                });
+
+                /* Rows carry role="button" and tabindex, so honour the keys
+                   a button would. */
+                row.addEventListener("keydown", function (e) {
+
+                    if (e.key !== "Enter" && e.key !== " ") {
+                        return;
+                    }
+
+                    if (handled(e.target)) {
+                        return;
+                    }
+
+                    e.preventDefault();
+                    open(row);
+                });
+            });
+
+        })();
+
+
+        /* =========================
+           SHARED MODAL
+
+           #globalModal is filled by HTMX (currently the book list's details
+           popup). Reset it on close so opening a different record never
+           flashes the previous one while the new fetch is in flight.
+           ========================= */
+
+        (function () {
+
+            var modal = document.getElementById("globalModal");
+
+            if (!modal) {
+                return;
+            }
+
+            var body = modal.querySelector(".modal-body");
+
+            if (!body) {
+                return;
+            }
+
+            var placeholder =
+                '<div class="text-center text-body-secondary py-4">' +
+                '<span class="spinner-border spinner-border-sm" role="status"></span>' +
+                '<span class="visually-hidden">Loading</span>' +
+                "</div>";
+
+            /* The title is swapped in by the response, so it has to be
+               cleared too — otherwise opening a second record briefly shows
+               the first one's name above a loading spinner. */
+            function reset() {
+                body.innerHTML = placeholder;
+
+                var label = document.getElementById("globalModalLabel");
+
+                if (label) {
+                    label.textContent = "Loading…";
+                }
+            }
+
+            modal.addEventListener("hidden.bs.modal", reset);
+
+            /* Also before the first fetch lands, so the dialog never opens
+               showing stale content. */
+            modal.addEventListener("show.bs.modal", reset);
 
         })();
 

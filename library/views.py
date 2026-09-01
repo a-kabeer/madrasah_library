@@ -62,6 +62,11 @@ BOOK_SORT_FIELDS = {
 
 BOOK_SORT_DEFAULT = "title"
 
+# Book-list browsing modes. Each one decides which filter control is shown;
+# the queryset itself applies whatever filter parameters are present.
+BOOK_LIST_MODES = ("all", "author", "category")
+BOOK_LIST_MODE_DEFAULT = "all"
+
 # How many suggestions the searchable dropdowns (comboboxes) show at once.
 COMBOBOX_LIMIT = 20
 
@@ -363,6 +368,33 @@ def validate_cover_image(upload):
         upload,
         max_bytes=settings.COVER_IMAGE_MAX_BYTES,
         label="Cover image",
+    )
+
+
+def numeric_param(request, name):
+    """A GET parameter, kept only if it is a plain positive integer.
+
+    Filtering an integer column on a non-numeric string raises ValueError
+    and surfaces as a 500, so anything else is discarded and read as "no
+    filter" instead.
+    """
+
+    value = request.GET.get(name, "").strip()
+
+    return value if value.isdigit() else ""
+
+
+def is_modal_request(request):
+    """True for the fragment traffic behind a details modal.
+
+    Same belt-and-braces shape as `is_combobox_request`: the header alone
+    would make one URL return two different bodies, which a cache could then
+    mix up.
+    """
+
+    return (
+        request.headers.get("HX-Request") == "true"
+        and request.GET.get("modal")
     )
 
 
@@ -1834,9 +1866,20 @@ def book_list(request):
         or ""
     ).strip()
 
-    author_id = request.GET.get("author", "").strip()
-    category_id = request.GET.get("category", "").strip()
-    publisher_id = request.GET.get("publisher", "").strip()
+    # Only digits are kept: these go straight into a filter on an integer
+    # column, where a value like "abc" raises ValueError and returns a 500
+    # rather than an empty list. Anything else is treated as no filter.
+    author_id = numeric_param(request, "author")
+    category_id = numeric_param(request, "category")
+    publisher_id = numeric_param(request, "publisher")
+
+    # Which browsing control to show. Only a UI concern: the filters below
+    # are applied whenever their parameter is present, whatever the mode, so
+    # `?publisher=` keeps working even though it no longer has a control.
+    mode = request.GET.get("mode", "")
+
+    if mode not in BOOK_LIST_MODES:
+        mode = BOOK_LIST_MODE_DEFAULT
 
     books = Book.objects.select_related(
         "author",
@@ -1845,6 +1888,9 @@ def book_list(request):
     )
 
     if search:
+        # Title only. Author and category are filtered through their own
+        # modes, so folding them in here would make one control quietly
+        # overlap the other two.
         books = books.filter(title__icontains=search)
 
     if author_id:
@@ -1873,20 +1919,67 @@ def book_list(request):
     paginator = Paginator(books, page_size)
     page = paginator.get_page(request.GET.get("page"))
 
+    # Only these two columns are shown now, but BOOK_SORT_FIELDS still
+    # accepts the others so older ?sort= links keep working.
     columns = sortable_columns(
         request,
         [
-            ("id", "ID"),
-            (None, "Cover"),
-            ("title", "Title"),
-            ("author", "Author"),
-            ("category", "Category"),
-            ("publisher", "Publisher"),
+            ("title", "Book Name"),
+            ("author", "Author Name"),
         ],
         BOOK_SORT_FIELDS,
         sort,
         direction,
     )
+
+    # Switching mode drops the other modes' filters, so each mode starts
+    # clean rather than inheriting a filter its control cannot show.
+    mode_links = [
+        {
+            "key": key,
+            "label": label,
+            "icon": icon,
+            "active": key == mode,
+            "url": "?" + query_with(
+                request,
+                mode=key,
+                search=None,
+                author=None,
+                category=None,
+                page=None,
+            ),
+        }
+        for key, label, icon in (
+            ("all", "All Books", "bi-list-ul"),
+            ("author", "By Author", "bi-person"),
+            ("category", "By Category", "bi-tags"),
+        )
+    ]
+
+    # One chip per active filter. Each mode shows only its own control, so
+    # without these a filter set in another mode — or `?publisher=`, which
+    # has no control at all — would narrow the results with nothing on
+    # screen to explain it and no way to lift it.
+    active_filters = [
+        {
+            "label": label,
+            "value": value,
+            "url": "?" + query_with(
+                request,
+                page=None,
+                # `search` clears its legacy `title` alias too, or removing
+                # the chip would appear to do nothing.
+                **{param: None for param in params}
+            ),
+        }
+        for label, params, value in (
+            ("Search", ("search", "title"), search),
+            ("Author", ("author",), selected_name(Author, author_id)),
+            ("Category", ("category",), selected_name(Category, category_id)),
+            ("Publisher", ("publisher",), selected_name(Publisher, publisher_id)),
+        )
+        if value
+    ]
 
     return render(
         request,
@@ -1895,6 +1988,9 @@ def book_list(request):
             "books": page,
             "paginator": paginator,
             "search": search,
+            "mode": mode,
+            "mode_links": mode_links,
+            "active_filters": active_filters,
             "author_id": author_id,
             "category_id": category_id,
             "publisher_id": publisher_id,
@@ -2178,6 +2274,39 @@ def book_detail(request, book_id):
     ).order_by(
         "volume_number"
     )
+
+    # The book list opens this in a modal rather than navigating, so serve a
+    # fragment for that case — same view, same permissions.
+    #
+    # Gated on an explicit `modal` parameter as well as the header, matching
+    # is_combobox_request(). Branching on the header alone would return two
+    # different bodies for one URL with no Vary header, so a cache could
+    # serve the bare fragment to a full-page navigation; the parameter makes
+    # the two responses distinct URLs instead.
+    if is_modal_request(request):
+
+        # Every copy of every volume in one query: without the
+        # select_related, rendering each copy's volume, shelf and location
+        # would be three more queries per row.
+        copies = BookCopy.objects.filter(
+            volume__book=book
+        ).select_related(
+            "volume",
+            "shelf__location",
+        ).order_by(
+            "volume__volume_number",
+            "copy_code",
+        )
+
+        return render(
+            request,
+            "library/partials/book_detail_modal.html",
+            {
+                "book": book,
+                "volumes": volumes,
+                "copies": copies,
+            }
+        )
 
     return render(
         request,

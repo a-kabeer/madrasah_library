@@ -12,12 +12,11 @@
 
 {% url 'author_list' as author_search_url %}
 {% url 'category_list' as category_search_url %}
-{% url 'publisher_list' as publisher_search_url %}
 
 <div class="container-fluid px-0">
 
     <!-- Page Header -->
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
             <h2 class="fw-bold mb-1">Books</h2>
             <p class="text-body-secondary mb-0">Manage your library's book collection.</p>
@@ -27,56 +26,182 @@
         </a>
     </div>
 
-    <!-- Filters Card -->
+    {% comment %}
+      Browsing mode. Each link drops the other modes' filters, so switching
+      never leaves a filter active that the current control cannot show.
+    {% endcomment %}
+    <ul class="nav nav-pills mb-3" aria-label="Browse books by">
+        {% for link in mode_links %}
+            <li class="nav-item">
+                <a
+                    class="nav-link {% if link.active %}active{% endif %}"
+                    href="{{ link.url }}"
+                    {% if link.active %}aria-current="page"{% endif %}
+                >
+                    <i class="bi {{ link.icon }} me-1" aria-hidden="true"></i>
+                    {{ link.label }}
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <!-- Mode control -->
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body">
-            <form method="get">
+
+            {% if mode == "all" %}
 
                 {% comment %}
-                  Carry the table state through a filter submit, so changing
-                  a filter doesn't silently reset the sort or page size.
-                  `page` is deliberately absent — a new filter should start
-                  from page 1.
+                  A plain GET form, so pressing Enter in the box submits it —
+                  the Search button is a convenience, not a requirement. The
+                  hidden fields carry the table state; `page` is deliberately
+                  absent so a new search starts from page 1.
                 {% endcomment %}
-                <input type="hidden" name="sort" value="{{ sort }}">
-                <input type="hidden" name="direction" value="{{ direction }}">
-                <input type="hidden" name="page_size" value="{{ page_size }}">
+                <form method="get">
+                    <input type="hidden" name="mode" value="all">
+                    <input type="hidden" name="sort" value="{{ sort }}">
+                    <input type="hidden" name="direction" value="{{ direction }}">
+                    <input type="hidden" name="page_size" value="{{ page_size }}">
 
-                <div class="row g-3 align-items-end">
-                    <div class="col-12 col-md-6 col-lg-3">
-                        <label for="filterSearch" class="form-label fw-semibold">Book Title</label>
+                    <label for="filterSearch" class="form-label fw-semibold">
+                        Search
+                    </label>
+
+                    <div class="d-flex flex-wrap gap-2">
                         <input
-                            type="text"
+                            type="search"
                             class="form-control"
                             id="filterSearch"
                             name="search"
                             value="{{ search }}"
-                            placeholder="Search by book title..."
+                            placeholder="Search by book name..."
+                            style="max-width: 26rem;"
                         >
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search me-1"></i> Search
+                        </button>
+                        {% if has_filters %}
+                            <a href="{% url 'book_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i> Clear
+                            </a>
+                        {% endif %}
                     </div>
-                    <div class="col-12 col-md-6 col-lg-3">
-                        {% include "library/partials/combobox_field.html" with label="Author" field_name="author" input_id="filterAuthor" entity_label="author" search_url=author_search_url selected_id=author_id selected_name=author_name required=False allow_create=False compact=True %}
+
+                    <div class="form-text">
+                        Matches part of a book name. Press Enter to search.
+                        Use <strong>By Author</strong> or <strong>By Category</strong> to filter by those.
                     </div>
-                    <div class="col-12 col-md-6 col-lg-3">
-                        {% include "library/partials/combobox_field.html" with label="Category" field_name="category" input_id="filterCategory" entity_label="category" search_url=category_search_url selected_id=category_id selected_name=category_name required=False allow_create=False compact=True %}
+                </form>
+
+            {% elif mode == "author" %}
+
+                {% comment %}
+                  A real GET form. Picking an option submits it from JS, so
+                  no button is needed in normal use — but because it is a
+                  genuine form, the filter still works if that script is
+                  stale or blocked, which a URL built in JavaScript did not.
+                {% endcomment %}
+                <form method="get" data-filter-form>
+                    <input type="hidden" name="mode" value="author">
+                    <input type="hidden" name="sort" value="{{ sort }}">
+                    <input type="hidden" name="direction" value="{{ direction }}">
+                    <input type="hidden" name="page_size" value="{{ page_size }}">
+
+                    <div style="max-width: 26rem;">
+                        {% include "library/partials/combobox_field.html" with label="Author" field_name="author" input_id="filterAuthor" entity_label="author" search_url=author_search_url selected_id=author_id selected_name=author_name required=False allow_create=False compact=True submit_on_select=True %}
                     </div>
-                    <div class="col-12 col-md-6 col-lg-3">
-                        {% include "library/partials/combobox_field.html" with label="Publisher" field_name="publisher" input_id="filterPublisher" entity_label="publisher" search_url=publisher_search_url selected_id=publisher_id selected_name=publisher_name required=False allow_create=False compact=True %}
+
+                    <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                        {% comment %}
+                          Hidden by app.js once the auto-submit hook is
+                          active, so picking an option is enough. It stays
+                          in the markup — and visible — if that script is
+                          missing or stale, which is the only way to filter
+                          then.
+                        {% endcomment %}
+                        <button type="submit" class="btn btn-primary btn-sm" data-filter-apply>
+                            <i class="bi bi-funnel me-1"></i> Apply
+                        </button>
+
+                        {% if has_filters %}
+                            <a href="?mode=author" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-x-lg me-1"></i> Clear
+                            </a>
+                        {% endif %}
                     </div>
-                </div>
-                <div class="d-flex flex-wrap gap-2 mt-3">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-search me-1"></i> Search
-                    </button>
-                    {% if has_filters %}
-                        <a href="{% url 'book_list' %}" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-lg me-1"></i> Clear Filters
-                        </a>
-                    {% endif %}
-                </div>
-            </form>
+
+                    <div class="form-text mt-2">
+                        Start typing to find an author. Books update as soon as you pick one.
+                    </div>
+                </form>
+
+            {% else %}
+
+                <form method="get" data-filter-form>
+                    <input type="hidden" name="mode" value="category">
+                    <input type="hidden" name="sort" value="{{ sort }}">
+                    <input type="hidden" name="direction" value="{{ direction }}">
+                    <input type="hidden" name="page_size" value="{{ page_size }}">
+
+                    <div style="max-width: 26rem;">
+                        {% include "library/partials/combobox_field.html" with label="Category" field_name="category" input_id="filterCategory" entity_label="category" search_url=category_search_url selected_id=category_id selected_name=category_name required=False allow_create=False compact=True submit_on_select=True %}
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                        {% comment %}
+                          Hidden by app.js once the auto-submit hook is
+                          active, so picking an option is enough. It stays
+                          in the markup — and visible — if that script is
+                          missing or stale, which is the only way to filter
+                          then.
+                        {% endcomment %}
+                        <button type="submit" class="btn btn-primary btn-sm" data-filter-apply>
+                            <i class="bi bi-funnel me-1"></i> Apply
+                        </button>
+
+                        {% if has_filters %}
+                            <a href="?mode=category" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-x-lg me-1"></i> Clear
+                            </a>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-text mt-2">
+                        Start typing to find a category. Books update as soon as you pick one.
+                    </div>
+                </form>
+
+            {% endif %}
+
         </div>
     </div>
+
+    {% comment %}
+      Every active filter, whichever mode set it. Each mode shows only its
+      own control, so without these a filter carried in the URL — or
+      ?publisher=, which has no control at all — would narrow the results
+      with nothing on screen to explain it.
+    {% endcomment %}
+    {% if active_filters %}
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+
+            <span class="text-body-secondary small">Filtered by:</span>
+
+            {% for filter in active_filters %}
+                <a href="{{ filter.url }}" class="filter-chip">
+                    <span class="text-body-secondary">{{ filter.label }}:</span>
+                    <strong>{{ filter.value }}</strong>
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                    <span class="visually-hidden">Remove this filter</span>
+                </a>
+            {% endfor %}
+
+            <a href="{% url 'book_list' %}?mode={{ mode }}" class="small">
+                Clear all
+            </a>
+
+        </div>
+    {% endif %}
 
     <!-- Result count and rows-per-page -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
@@ -92,10 +217,9 @@
             </label>
 
             {% comment %}
-              Each option's value is a full URL carrying the current search,
-              filters and sorting, so switching size preserves them and
-              returns to page 1. A small handler in app.js navigates on
-              change.
+              Each option's value is a full URL carrying the current mode,
+              search, filters and sorting, so switching size preserves them
+              and returns to page 1. A handler in app.js navigates on change.
             {% endcomment %}
             <select
                 class="form-select form-select-sm w-auto"
@@ -127,32 +251,20 @@
                     <tr>
 
                         {% for column in columns %}
-
-                            {% if column.url %}
-
-                                <th
+                            <th
+                                {% if column.active %}
+                                    aria-sort="{% if column.direction == 'asc' %}ascending{% else %}descending{% endif %}"
+                                {% endif %}
+                            >
+                                <a href="{{ column.url }}" class="table-sort">
+                                    {{ column.label }}
                                     {% if column.active %}
-                                        aria-sort="{% if column.direction == 'asc' %}ascending{% else %}descending{% endif %}"
+                                        <i class="bi {% if column.direction == 'asc' %}bi-sort-up{% else %}bi-sort-down{% endif %}" aria-hidden="true"></i>
+                                    {% else %}
+                                        <i class="bi bi-arrow-down-up table-sort-idle" aria-hidden="true"></i>
                                     {% endif %}
-                                >
-                                    <a href="{{ column.url }}" class="table-sort">
-                                        {{ column.label }}
-                                        {% if column.active %}
-                                            <i class="bi {% if column.direction == 'asc' %}bi-sort-up{% else %}bi-sort-down{% endif %}" aria-hidden="true"></i>
-                                        {% else %}
-                                            <i class="bi bi-arrow-down-up table-sort-idle" aria-hidden="true"></i>
-                                        {% endif %}
-                                    </a>
-                                </th>
-
-                            {% else %}
-
-                                <th>
-                                    <span class="visually-hidden">{{ column.label }}</span>
-                                </th>
-
-                            {% endif %}
-
+                                </a>
+                            </th>
                         {% endfor %}
 
                         <th class="text-end">Actions</th>
@@ -161,49 +273,38 @@
                 </thead>
                 <tbody>
                     {% for book in books %}
+                        {% comment %}
+                          The whole row opens this book's details. The details
+                          URL, the modal wiring and the cover all live on the
+                          <tr>, so any click inside it — title, author, blank
+                          space — resolves to the same one action. The only
+                          exceptions are the Edit and Delete buttons, which
+                          keep their own behaviour (see app.js).
+                        {% endcomment %}
                         <tr
+                            class="book-row"
                             data-book-row
+                            data-book-url="{% url 'book_detail' book.id %}?modal=1"
+                            tabindex="0"
+                            role="button"
+                            aria-label="Show details for {{ book.title }}"
                             {% if book.cover_image %}
                                 data-cover-url="{{ book.cover_image.url }}"
                                 data-cover-title="{{ book.title }}"
                             {% endif %}
                         >
-                            <td>{{ book.id }}</td>
-                            <td>
-                                {% if book.cover_image %}
-                                    <img
-                                        src="{{ book.cover_image.url }}"
-                                        alt="Cover of {{ book.title }}"
-                                        class="cover-thumb"
-                                        loading="lazy"
-                                    >
-                                {% else %}
-                                    <span class="cover-thumb cover-thumb-empty" aria-hidden="true">
-                                        <i class="bi bi-book"></i>
-                                    </span>
-                                {% endif %}
-                            </td>
+
                             <td class="fw-semibold">{{ book.title }}</td>
+
                             <td>{{ book.author.name }}</td>
-                            <td>
-                                {% if book.category %}
-                                    <span class="badge bg-secondary">{{ book.category.name }}</span>
-                                {% else %}
-                                    <span class="text-body-secondary">N/A</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if book.publisher %}
-                                    {{ book.publisher.name }}
-                                {% else %}
-                                    <span class="text-body-secondary">N/A</span>
-                                {% endif %}
-                            </td>
+
                             <td class="text-end">
-                                <div class="d-inline-flex gap-1">
-                                    <a href="{% url 'book_detail' book.id %}" class="btn btn-sm btn-outline-info" title="View Details">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
+                                {% comment %}
+                                  Marked so the row handler ignores clicks in
+                                  here: Edit and Delete must still do their
+                                  own job rather than opening the details.
+                                {% endcomment %}
+                                <div class="d-inline-flex gap-1" data-row-actions>
                                     <a href="{% url 'book_edit' book.id %}" class="btn btn-sm btn-outline-warning" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </a>
@@ -212,10 +313,11 @@
                                     </a>
                                 </div>
                             </td>
+
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="7" class="text-center text-body-secondary py-4">
+                            <td colspan="3" class="text-center text-body-secondary py-4">
                                 No books found.
                             </td>
                         </tr>
@@ -231,4 +333,3 @@
 </div>
 
 {% endblock %}
-

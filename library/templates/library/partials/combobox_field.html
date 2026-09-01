@@ -20,6 +20,13 @@ Expected context:
                 (list filters), so filtering can never add data.
   compact       True to drop the hint line and bottom margin, so the field
                 lines up with plain inputs in a filter row.
+  submit_on_select
+                Optional. True makes picking an option submit the
+                surrounding form, which is how the book list filters
+                without an Apply button. Because it submits a real form
+                rather than a URL built in JavaScript, the field still
+                works when that script is stale or blocked. Omit it (as
+                Add/Edit Book do) and selecting only fills the input.
 
 All of these are passed explicitly at every call site: `{% include %}`
 inherits the parent context, so an omitted flag would silently pick up
@@ -40,6 +47,7 @@ whatever the surrounding page happens to have.
         data-combobox
         data-entity="{{ entity_label }}"
         {% if required %}data-combobox-required="true"{% endif %}
+        {% if submit_on_select %}data-combobox-submit{% endif %}
     >
 
         <input

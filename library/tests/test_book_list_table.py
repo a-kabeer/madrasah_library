@@ -134,16 +134,39 @@ class SortingTests(BookListTableTestCase):
                 with self.subTest(column=column["key"]):
                     self.assertNotIn("page=", column["url"])
 
-    def test_cover_column_is_not_sortable(self):
+    def test_only_book_name_and_author_are_sortable_columns(self):
         response = self.get()
 
-        cover = [
-            column for column in response.context["columns"]
-            if column["key"] is None
-        ]
+        keys = [column["key"] for column in response.context["columns"]]
 
-        self.assertEqual(len(cover), 1)
-        self.assertEqual(cover[0]["url"], "")
+        self.assertEqual(keys, ["title", "author"])
+
+        # Both must be real sort links.
+        for column in response.context["columns"]:
+            with self.subTest(column=column["key"]):
+                self.assertTrue(column["url"])
+
+    def test_sortable_columns_marks_a_none_key_as_unsortable(self):
+        # Exercised directly rather than through the book list, which no
+        # longer renders a non-sortable column. The branch stays because the
+        # helper is general-purpose.
+        from django.test import RequestFactory
+
+        from library.views import BOOK_SORT_FIELDS, sortable_columns
+
+        request = RequestFactory().get("/library/books/")
+
+        prepared = sortable_columns(
+            request,
+            [("title", "Title"), (None, "Cover")],
+            BOOK_SORT_FIELDS,
+            "title",
+            "asc",
+        )
+
+        self.assertTrue(prepared[0]["url"])
+        self.assertEqual(prepared[1]["url"], "")
+        self.assertFalse(prepared[1]["active"])
 
 
 class PageSizeTests(BookListTableTestCase):

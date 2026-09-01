@@ -138,6 +138,21 @@
 }
 
 
+/* Nav pills bake in their own literal too, the same way buttons do. */
+.nav-pills {
+    --bs-nav-pills-link-active-bg: var(--brand-primary);
+    --bs-nav-pills-link-active-color: var(--brand-on-primary);
+}
+
+.nav-pills .nav-link {
+    color: var(--bs-body-color);
+}
+
+.nav-pills .nav-link:hover:not(.active) {
+    background: var(--bs-tertiary-bg);
+}
+
+
 /* Focus rings and checked controls: both hardcode Bootstrap's blue. */
 .form-control:focus,
 .form-select:focus,
@@ -569,6 +584,105 @@ body {
 
 
 /* =========================
+   CLICKABLE BOOK ROWS
+
+   The whole row opens the book's details, so it has to read as one control
+   rather than a strip containing several.
+   ========================= */
+
+.book-row {
+    cursor: pointer;
+}
+
+.book-row:focus-visible {
+    outline: 2px solid var(--brand-primary);
+
+    outline-offset: -2px;
+}
+
+/* The action buttons are the one part of the row that is not the row. */
+.book-row [data-row-actions] {
+    cursor: default;
+}
+
+
+/* Dismissible active-filter chip. */
+.filter-chip {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 0.35rem;
+
+    padding: 0.15rem 0.6rem;
+
+    border: 1px solid var(--bs-border-color);
+    border-radius: 2rem;
+
+    background: var(--bs-tertiary-bg);
+
+    color: var(--bs-body-color);
+
+    text-decoration: none;
+
+    font-size: 0.875rem;
+}
+
+.filter-chip:hover {
+    border-color: var(--brand-primary);
+
+    color: var(--brand-primary);
+}
+
+
+/* =========================
+   BOOK DETAILS MODAL
+   ========================= */
+
+/*
+  Fixed box, not just a width. With only a width set the height follows the
+  image's aspect ratio, so a tall scan rendered far bigger than a square one
+  — which is why covers looked inconsistent. `contain` fits the whole image
+  inside the box without cropping or distorting it, and the leftover space
+  is the neutral panel colour.
+*/
+.cover-modal {
+    width: 120px;
+    height: 170px;
+
+    flex-shrink: 0;
+
+    padding: 0.25rem;
+
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+
+    background: var(--bs-tertiary-bg);
+
+    object-fit: contain;
+}
+
+/* Same box for books with no cover, so the layout does not shift. */
+.cover-modal-empty {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    color: var(--bs-secondary-color);
+
+    font-size: 1.75rem;
+}
+
+/* Keep a long volume/copy list from growing the dialog past the viewport. */
+.modal-volume-list {
+    max-height: 14rem;
+
+    overflow-y: auto;
+}
+
+
+/* =========================
    SORTABLE TABLE HEADERS
    ========================= */
 
@@ -985,7 +1099,10 @@ body {
     top: 0;
     left: 0;
 
-    z-index: 1080;
+    /* Below Bootstrap's modal backdrop (1050) and dialog (1055): the book
+       name both shows this preview and opens a dialog, and a pointer-
+       following thumbnail must never sit on top of that dialog. */
+    z-index: 1040;
 
     display: none;
 
@@ -1011,12 +1128,22 @@ body {
     opacity: 1;
 }
 
+/*
+  Fixed box for the same reason as .cover-modal: a width alone let the
+  preview's height track each image's aspect ratio, so it changed size from
+  row to row. `contain` keeps the whole cover visible and undistorted.
+*/
 .cover-preview img {
     display: block;
 
     width: 180px;
+    height: 250px;
 
     border-radius: 0.375rem;
+
+    background: var(--bs-tertiary-bg);
+
+    object-fit: contain;
 }
 
 
