@@ -114,11 +114,17 @@
     >
 
 
-    <!-- Custom CSS -->
+    {% comment %}
+      Custom CSS. `asset_version` is the files' modification time, and is
+      empty unless DEBUG: production filenames already carry a content hash,
+      but the dev server serves a stable URL with no Cache-Control, so
+      without this the browser keeps an old copy and edits appear not to
+      take effect.
+    {% endcomment %}
 
     <link
         rel="stylesheet"
-        href="{% static 'library/css/style.css' %}"
+        href="{% static 'library/css/style.css' %}{% if asset_version %}?v={{ asset_version }}{% endif %}"
     >
 
 
@@ -687,10 +693,10 @@
 ></script>
 
 
-<!-- Custom JavaScript -->
+<!-- Custom JavaScript (see the CSS link above for why ?v= is appended) -->
 
 <script
-    src="{% static 'library/js/app.js' %}"
+    src="{% static 'library/js/app.js' %}{% if asset_version %}?v={{ asset_version }}{% endif %}"
 ></script>
 
 

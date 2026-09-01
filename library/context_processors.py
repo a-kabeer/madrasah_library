@@ -7,6 +7,9 @@
 than None.
 """
 
+import os
+
+from django.conf import settings
 from django.core.cache import cache
 
 from .models import OrganizationSettings
@@ -44,6 +47,45 @@ def clear_branding_cache():
     cache.delete(BRANDING_CACHE_KEY)
 
 
+# The project's own CSS and JS, relative to the app's static directory.
+LOCAL_ASSETS = ("library/css/style.css", "library/js/app.js")
+
+_ASSET_DIR = os.path.join(os.path.dirname(__file__), "static")
+
+
+def get_asset_version():
+    """Cache-busting token for the project's own CSS and JS.
+
+    Only needed while DEBUG is on. In production
+    CompressedManifestStaticFilesStorage puts a content hash in the
+    filename, so the URL changes by itself. The development server serves
+    `/static/library/js/app.js` at a stable URL with no Cache-Control and
+    only a Last-Modified header, which lets browsers cache it heuristically
+    and skip revalidation — so templates appear to update while script and
+    style changes silently do not. Keying the URL on the files' modification
+    time makes each edit a new URL.
+    """
+
+    if not settings.DEBUG:
+        return ""
+
+    newest = 0
+
+    for path in LOCAL_ASSETS:
+
+        try:
+            newest = max(
+                newest,
+                int(os.path.getmtime(os.path.join(_ASSET_DIR, path))),
+            )
+
+        except OSError:
+            # Missing file: let {% static %} deal with it.
+            continue
+
+    return str(newest)
+
+
 def get_theme_preference(request):
     """The signed-in user's appearance choice, or "" for anonymous visitors.
 
@@ -65,4 +107,5 @@ def branding(request):
     return {
         "branding": get_branding(),
         "theme_preference": get_theme_preference(request),
+        "asset_version": get_asset_version(),
     }

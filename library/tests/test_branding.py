@@ -148,6 +148,64 @@ class BrandingContextProcessorTests(TestCase):
         self.assertNotContains(response, "--brand-primary:")
 
 
+class AssetVersionTests(TestCase):
+    """The dev server serves CSS/JS at a stable URL with no Cache-Control,
+    so without a version token the browser keeps a stale copy and script
+    changes silently fail to take effect."""
+
+    def setUp(self):
+        make_user(username="admin_u", password="pass12345", role="Admin")
+        self.client.login(username="admin_u", password="pass12345")
+
+    def test_assets_are_versioned_while_debugging(self):
+        from library.context_processors import get_asset_version
+
+        with self.settings(DEBUG=True):
+            version = get_asset_version()
+
+            self.assertTrue(version)
+            self.assertTrue(version.isdigit())
+
+    def test_no_version_needed_when_debug_is_off(self):
+        # Production filenames already carry a content hash.
+        from library.context_processors import get_asset_version
+
+        with self.settings(DEBUG=False):
+            self.assertEqual(get_asset_version(), "")
+
+    def test_version_tracks_the_files_modification_time(self):
+        import os
+
+        from library.context_processors import LOCAL_ASSETS, get_asset_version
+
+        with self.settings(DEBUG=True):
+            before = get_asset_version()
+
+            path = os.path.join(
+                os.path.dirname(
+                    __import__("library").__file__
+                ),
+                "static",
+                LOCAL_ASSETS[1],
+            )
+            stat = os.stat(path)
+
+            try:
+                os.utime(path, (stat.st_atime, stat.st_mtime + 60))
+                self.assertNotEqual(get_asset_version(), before)
+
+            finally:
+                os.utime(path, (stat.st_atime, stat.st_mtime))
+
+    def test_page_appends_the_version_to_local_assets(self):
+        with self.settings(DEBUG=True):
+            response = self.client.get(reverse("dashboard"))
+            html = response.content.decode()
+
+        self.assertIn("app.js?v=", html)
+        self.assertIn("style.css?v=", html)
+
+
 class BrandingCacheTests(TestCase):
     """Caching is a no-op under DummyCache during tests, so exercise the
     helpers directly with a real backend."""
