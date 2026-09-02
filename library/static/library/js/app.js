@@ -272,32 +272,6 @@ document.addEventListener(
 
 
         /* =========================
-           NAVIGATE-ON-CHANGE SELECTS
-
-           Used by the book list's rows-per-page control. Each option's
-           value is a complete URL carrying the current search, filters and
-           sorting, so the state survives the jump and the server does the
-           work — nothing is re-sorted or re-paged in the browser.
-           ========================= */
-
-        (function () {
-
-            var selects = document.querySelectorAll("[data-navigate-on-change]");
-
-            selects.forEach(function (select) {
-                select.addEventListener("change", function () {
-
-                    if (select.value) {
-                        window.location.assign(select.value);
-                    }
-
-                });
-            });
-
-        })();
-
-
-        /* =========================
            BRANDING COLOUR FIELDS
 
            Keeps the native colour picker and its hex text field in step.
@@ -407,7 +381,8 @@ document.addEventListener(
 
         /* =========================
            SEARCHABLE DROPDOWNS (COMBOBOX)
-           Author / Category / Publisher on the Add & Edit Book forms.
+           Author / Category / Publisher on the Add & Edit Book forms, and
+           the Author / Category filters on the book list.
 
            The visible text box only searches; the committed selection lives
            in the sibling hidden input, which is what the form posts. HTMX
@@ -418,14 +393,18 @@ document.addEventListener(
 
         (function () {
 
-            var comboboxes = document.querySelectorAll("[data-combobox]");
-
-            if (!comboboxes.length) {
-                return;
-            }
-
-
             function setup(root) {
+
+                /* Set up once per element. The book list re-renders its
+                   filter card when the browsing mode changes, so `setup`
+                   runs again over whatever HTMX brought in — without this
+                   marker the dropdowns already on the page would collect a
+                   second set of listeners each time. */
+                if (root.hasAttribute("data-combobox-ready")) {
+                    return;
+                }
+
+                root.setAttribute("data-combobox-ready", "");
 
                 var valueInput = root.querySelector("[data-combobox-value]");
                 var textInput = root.querySelector("[data-combobox-input]");
@@ -782,7 +761,29 @@ document.addEventListener(
             }
 
 
-            comboboxes.forEach(setup);
+            function setupAll(scope) {
+
+                if (scope.matches && scope.matches("[data-combobox]")) {
+                    setup(scope);
+                }
+
+                if (scope.querySelectorAll) {
+                    scope.querySelectorAll("[data-combobox]").forEach(setup);
+                }
+            }
+
+
+            setupAll(document);
+
+            /* Wires up a dropdown that arrived in a swap — the book list
+               re-renders its filter card whenever the browsing mode
+               changes. `htmx:afterSwap` rather than `htmx:load`, which does
+               not reach here in htmx 2.0.8; and the whole document rather
+               than the swapped node, because that is the same walk and
+               costs one attribute check per dropdown already set up. */
+            document.body.addEventListener("htmx:afterSwap", function () {
+                setupAll(document);
+            });
 
         })();
 
@@ -794,23 +795,25 @@ document.addEventListener(
            `overflow-x: auto` would clip any popover positioned inside a row.
            The preview is therefore a single `position: fixed` element on
            <body>, moved to follow the pointer.
+
+           Delegated from the document, like the row clicks above, because
+           the table is re-rendered in place whenever the search, a filter,
+           the sorting or the page changes.
            ========================= */
 
         (function () {
 
-            /* Bound to whatever carries a cover URL — on the book list that
-               is the row itself, so the whole row previews its own cover.
-               Rows without a cover have no attribute and never match, which
-               is how "no image" is handled. */
-            var rows = document.querySelectorAll("[data-cover-url]");
-
-            if (!rows.length) {
+            /* Nothing to preview here: no cover on the page and no results
+               container that a swap could bring one into. Checked before the
+               document-wide `mousemove` below is attached, so pages with no
+               covers at all pay nothing for this. */
+            if (!document.querySelector("[data-cover-url], #bookResults")) {
                 return;
             }
 
             /* Skip entirely for touch and narrow screens: there is no hover
                to speak of. The cover is still reachable there by tapping the
-               book name, which opens the details modal. */
+               row, which opens the details modal. */
             var canHover = window.matchMedia(
                 "(hover: hover) and (min-width: 768px)"
             );
@@ -829,6 +832,11 @@ document.addEventListener(
             document.body.appendChild(preview);
 
             var GAP = 16;
+
+            /* Which element the preview is currently following, so a move
+               inside it repositions but a move into a different row starts
+               over with the right cover. */
+            var current = null;
 
 
             function position(e) {
@@ -855,35 +863,59 @@ document.addEventListener(
 
 
             function hide() {
+                current = null;
                 preview.classList.remove("show");
             }
 
 
-            rows.forEach(function (row) {
+            function show(source, e) {
 
-                var url = row.getAttribute("data-cover-url");
+                var url = source.getAttribute("data-cover-url");
 
-                /* No cover: no preview at all, which is the graceful case. */
+                /* No cover: no preview at all, which is the graceful case.
+                   Rows without one carry no attribute and never match. */
                 if (!url) {
                     return;
                 }
 
-                row.addEventListener("mouseenter", function (e) {
+                if (image.getAttribute("src") !== url) {
+                    image.setAttribute("src", url);
+                    image.setAttribute(
+                        "alt",
+                        "Cover of " + (source.getAttribute("data-cover-title") || "")
+                    );
+                }
 
-                    if (image.getAttribute("src") !== url) {
-                        image.setAttribute("src", url);
-                        image.setAttribute(
-                            "alt",
-                            "Cover of " + (row.getAttribute("data-cover-title") || "")
-                        );
+                current = source;
+
+                position(e);
+                preview.classList.add("show");
+            }
+
+
+            /* `mousemove` rather than `mouseover`, so the preview both
+               appears and tracks the pointer from one listener. */
+            document.addEventListener("mousemove", function (e) {
+
+                var source = e.target && e.target.closest
+                    ? e.target.closest("[data-cover-url]")
+                    : null;
+
+                if (!source) {
+
+                    if (current) {
+                        hide();
                     }
 
-                    position(e);
-                    preview.classList.add("show");
-                });
+                    return;
+                }
 
-                row.addEventListener("mousemove", position);
-                row.addEventListener("mouseleave", hide);
+                if (source !== current) {
+                    show(source, e);
+                    return;
+                }
+
+                position(e);
             });
 
 
@@ -891,9 +923,9 @@ document.addEventListener(
             window.addEventListener("scroll", hide, true);
             window.addEventListener("resize", hide);
 
-            /* Clicking the book name opens a dialog without the pointer
-               moving, so `mouseleave` may never fire and the preview would
-               hang around over the page. Hide it explicitly. */
+            /* Clicking a row opens a dialog without the pointer moving, so
+               nothing else would hide the preview and it would hang around
+               over the page. Hide it explicitly. */
             document.addEventListener("click", hide, true);
 
             var sharedModal = document.getElementById("globalModal");
@@ -909,21 +941,18 @@ document.addEventListener(
            CLICKABLE BOOK ROWS
 
            The whole row opens that book's details, so a click on the title,
-           the author, or empty space all do the same thing. Delegated from
-           <tbody>, which means one listener however many rows there are, and
-           it keeps working if the table is ever re-rendered.
+           the author, or empty space all do the same thing.
+
+           Delegated from the document rather than bound per row: the book
+           list re-renders its table in place when the search, a filter, the
+           sorting or the page changes, and rows bound at load would come
+           back dead after the first of those.
 
            The Edit and Delete buttons are excluded: they sit inside
            [data-row-actions] and must keep doing their own job.
            ========================= */
 
         (function () {
-
-            var rows = document.querySelectorAll("[data-book-row][data-book-url]");
-
-            if (!rows.length) {
-                return;
-            }
 
             var modalEl = document.getElementById("globalModal");
 
@@ -950,40 +979,803 @@ document.addEventListener(
             }
 
 
-            function handled(target) {
-                /* Anything that is its own control keeps its own behaviour. */
-                return target.closest("[data-row-actions]")
+            /* The row this event happened in, or null if it happened on
+               something that is its own control — a link, a button, or the
+               Edit/Delete group — which keeps its own behaviour. */
+            function rowFor(target) {
+
+                if (!target || !target.closest) {
+                    return null;
+                }
+
+                var row = target.closest("[data-book-row][data-book-url]");
+
+                if (!row) {
+                    return null;
+                }
+
+                if (
+                    target.closest("[data-row-actions]")
                     || target.closest("a")
-                    || target.closest("button");
+                    || target.closest("button")
+                ) {
+                    return null;
+                }
+
+                return row;
             }
 
 
-            rows.forEach(function (row) {
+            document.addEventListener("click", function (e) {
 
-                row.addEventListener("click", function (e) {
+                var row = rowFor(e.target);
 
-                    if (handled(e.target)) {
+                if (row) {
+                    open(row);
+                }
+
+            });
+
+
+            /* Rows carry role="button" and tabindex, so honour the keys a
+               button would. */
+            document.addEventListener("keydown", function (e) {
+
+                if (e.key !== "Enter" && e.key !== " ") {
+                    return;
+                }
+
+                var row = rowFor(e.target);
+
+                if (!row) {
+                    return;
+                }
+
+                e.preventDefault();
+                open(row);
+            });
+
+        })();
+
+
+        /* =========================
+           FORM DIALOG (ADD / EDIT / DELETE BOOK)
+
+           The list's Add, Edit and Delete controls are real links to real
+           pages; these handlers intercept them so the work happens in
+           #formModal instead, and the list keeps its search, filters,
+           sorting and page.
+
+           Delegated from the document, because the Edit and Delete buttons
+           live inside the results table, which the list re-renders in
+           place whenever anything changes.
+           ========================= */
+
+        (function () {
+
+            var modalEl = document.getElementById("formModal");
+
+            if (!modalEl || !window.bootstrap || !window.htmx) {
+                return;
+            }
+
+            var body = modalEl.querySelector(".modal-body");
+            var label = document.getElementById("formModalLabel");
+
+            var placeholder =
+                '<div class="text-center text-body-secondary py-5">' +
+                '<span class="spinner-border spinner-border-sm" role="status"></span>' +
+                '<span class="visually-hidden">Loading</span>' +
+                "</div>";
+
+
+            function reset() {
+                body.innerHTML = placeholder;
+
+                if (label) {
+                    label.textContent = "Loading…";
+                }
+            }
+
+
+            /* HTMX does the fetching (the trigger element carries hx-get),
+               so this only has to open the dialog. Opening it on click
+               rather than on the response keeps the spinner visible while
+               the fragment is on its way. */
+            document.addEventListener("click", function (e) {
+
+                if (!e.target || !e.target.closest) {
+                    return;
+                }
+
+                var trigger = e.target.closest("[data-form-modal]");
+
+                if (!trigger) {
+                    return;
+                }
+
+                /* Let a modified click do what the browser would: these are
+                   genuine links to genuine pages. */
+                if (
+                    e.metaKey || e.ctrlKey || e.shiftKey || e.altKey
+                    || e.button !== 0
+                ) {
+                    return;
+                }
+
+                e.preventDefault();
+
+                window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            });
+
+
+            modalEl.addEventListener("hidden.bs.modal", reset);
+            modalEl.addEventListener("show.bs.modal", reset);
+
+        })();
+
+
+        /* =========================
+           GUIDED ADD BOOK
+
+           One form, revealed a step at a time. There is no wizard on the
+           server: the whole thing posts once, so a book, its volumes and
+           its copies are created together or not at all.
+
+           Everything here is an enhancement. With the script absent the
+           steps are all on screen at once and the form still saves — which
+           is why the step buttons and the indicator start hidden in the
+           markup and are shown from here.
+           ========================= */
+
+        (function () {
+
+            function setup(form) {
+
+                if (form.hasAttribute("data-wizard-ready")) {
+                    return;
+                }
+
+                form.setAttribute("data-wizard-ready", "");
+
+                var steps = Array.prototype.slice.call(
+                    form.querySelectorAll("[data-book-step]")
+                );
+
+                if (!steps.length) {
+                    return;
+                }
+
+                var stepList = form.querySelector("[data-step-list]");
+                var backButton = form.querySelector("[data-step-back]");
+                var nextButton = form.querySelector("[data-step-next]");
+                var submitButton = form.querySelector("[data-step-submit]");
+
+                var volumeRows = form.querySelector("[data-volume-rows]");
+                var quantityRows = form.querySelector("[data-copy-quantities]");
+                var manualCodes = form.querySelector("[data-manual-codes]");
+
+                var current = 0;
+
+                if (stepList) {
+                    stepList.hidden = false;
+                }
+
+
+                function multipleVolumes() {
+                    var choice = form.querySelector(
+                        "[data-volume-mode]:checked"
+                    );
+
+                    return !!choice && choice.value === "multiple";
+                }
+
+
+                function addingCopies() {
+                    var choice = form.querySelector(
+                        "[data-copies-mode]:checked"
+                    );
+
+                    return !!choice && choice.value === "add";
+                }
+
+
+                function manualCodeMode() {
+                    var choice = form.querySelector("[data-code-mode]:checked");
+
+                    return !!choice && choice.value === "manual";
+                }
+
+
+                /* Step 4 only exists when copies are being added: with none
+                   to place, asking where to put them is a dead end. */
+                function visibleSteps() {
+                    return steps.filter(function (step) {
+                        return step.getAttribute("data-book-step") !== "4"
+                            || addingCopies();
+                    });
+                }
+
+
+                function render() {
+
+                    var shown = visibleSteps();
+
+                    if (current >= shown.length) {
+                        current = shown.length - 1;
+                    }
+
+                    steps.forEach(function (step) {
+                        step.hidden = step !== shown[current];
+                    });
+
+                    if (stepList) {
+                        Array.prototype.forEach.call(
+                            stepList.children,
+                            function (item) {
+                                var number = item.getAttribute("data-step-for");
+                                var step = form.querySelector(
+                                    '[data-book-step="' + number + '"]'
+                                );
+
+                                item.hidden = shown.indexOf(step) === -1;
+                                item.classList.toggle(
+                                    "current",
+                                    step === shown[current]
+                                );
+                            }
+                        );
+                    }
+
+                    var last = current === shown.length - 1;
+
+                    if (backButton) {
+                        backButton.hidden = current === 0;
+                    }
+
+                    if (nextButton) {
+                        nextButton.hidden = last;
+                    }
+
+                    if (submitButton) {
+                        submitButton.hidden = !last;
+                    }
+                }
+
+
+                function newVolumeRow(number) {
+                    var row = document.createElement("div");
+
+                    row.className = "row g-2 align-items-end mb-2";
+                    row.setAttribute("data-volume-row", "");
+
+                    row.innerHTML =
+                        '<div class="col-4 col-sm-3">' +
+                        '<label class="form-label small mb-1">Volume no.</label>' +
+                        '<input type="number" min="1" class="form-control form-control-sm"' +
+                        ' name="volume_number" value="' + number + '">' +
+                        "</div>" +
+                        '<div class="col">' +
+                        '<label class="form-label small mb-1">Volume title (optional)</label>' +
+                        '<input type="text" class="form-control form-control-sm"' +
+                        ' name="volume_title">' +
+                        "</div>" +
+                        '<div class="col-auto">' +
+                        '<button type="button" class="btn btn-sm btn-outline-danger"' +
+                        ' data-remove-volume aria-label="Remove this volume">' +
+                        '<i class="bi bi-x-lg" aria-hidden="true"></i>' +
+                        "</button>" +
+                        "</div>";
+
+                    return row;
+                }
+
+
+                function volumeRowCount() {
+                    return volumeRows
+                        ? volumeRows.querySelectorAll("[data-volume-row]").length
+                        : 0;
+                }
+
+
+                function addVolume() {
+                    if (!volumeRows) {
                         return;
                     }
 
-                    open(row);
+                    volumeRows.appendChild(
+                        newVolumeRow(volumeRowCount() + 1)
+                    );
+
+                    syncQuantities();
+                }
+
+
+                /* The copy counts are rebuilt from the volume rows rather
+                   than kept in step by hand, so the two lists are always
+                   the same length and in the same order — which is how the
+                   server pairs them. */
+                function syncQuantities() {
+
+                    if (!quantityRows) {
+                        return;
+                    }
+
+                    var existing = {};
+
+                    Array.prototype.forEach.call(
+                        quantityRows.querySelectorAll('[name="copy_qty"]'),
+                        function (input, index) {
+                            existing[index] = input.value;
+                        }
+                    );
+
+                    if (!multipleVolumes()) {
+
+                        quantityRows.innerHTML =
+                            '<div class="row g-2 align-items-center" data-copy-qty-row>' +
+                            '<div class="col"><label class="form-label small mb-0">' +
+                            "Number of copies</label></div>" +
+                            '<div class="col-4 col-sm-3">' +
+                            '<input type="number" min="0" class="form-control form-control-sm"' +
+                            ' name="copy_qty" value="' +
+                            (existing[0] || "1") +
+                            '" aria-label="Number of copies">' +
+                            "</div></div>";
+
+                        syncManualCodes();
+                        return;
+                    }
+
+                    var rows = volumeRows
+                        ? volumeRows.querySelectorAll("[data-volume-row]")
+                        : [];
+
+                    var html = "";
+
+                    Array.prototype.forEach.call(rows, function (row, index) {
+
+                        var number = row.querySelector('[name="volume_number"]');
+                        var title = row.querySelector('[name="volume_title"]');
+
+                        var name = "Volume " + (
+                            number && number.value ? number.value : index + 1
+                        );
+
+                        if (title && title.value) {
+                            name += " — " + title.value;
+                        }
+
+                        html +=
+                            '<div class="row g-2 align-items-center mb-2" data-copy-qty-row>' +
+                            '<div class="col"><span class="small text-body-secondary">' +
+                            escapeHtml(name) +
+                            "</span></div>" +
+                            '<div class="col-4 col-sm-3">' +
+                            '<input type="number" min="0" class="form-control form-control-sm"' +
+                            ' name="copy_qty" value="' +
+                            (existing[index] || "0") +
+                            '" aria-label="Number of copies">' +
+                            "</div></div>";
+                    });
+
+                    quantityRows.innerHTML = html;
+
+                    syncManualCodes();
+                }
+
+
+                /* One box per copy, in the same order the server will
+                   create them, so a typed-in label lands on the copy the
+                   librarian meant. */
+                function syncManualCodes() {
+
+                    if (!manualCodes) {
+                        return;
+                    }
+
+                    if (!manualCodeMode()) {
+                        manualCodes.innerHTML = "";
+                        return;
+                    }
+
+                    var total = 0;
+
+                    Array.prototype.forEach.call(
+                        form.querySelectorAll('[name="copy_qty"]'),
+                        function (input) {
+                            total += parseInt(input.value, 10) || 0;
+                        }
+                    );
+
+                    var kept = Array.prototype.map.call(
+                        manualCodes.querySelectorAll('[name="copy_code"]'),
+                        function (input) {
+                            return input.value;
+                        }
+                    );
+
+                    var html = "";
+
+                    for (var index = 0; index < total; index += 1) {
+                        html +=
+                            '<input type="text" class="form-control form-control-sm mb-2"' +
+                            ' name="copy_code" placeholder="Copy code ' +
+                            (index + 1) +
+                            '" aria-label="Copy code ' + (index + 1) + '"' +
+                            ' value="' + escapeHtml(kept[index] || "") + '">';
+                    }
+
+                    manualCodes.innerHTML = html;
+                }
+
+
+                function escapeHtml(value) {
+                    var holder = document.createElement("div");
+
+                    holder.textContent = value;
+
+                    return holder.innerHTML.replace(/"/g, "&quot;");
+                }
+
+
+                function toggleNotes() {
+
+                    var singleNote = form.querySelector("[data-volume-single-note]");
+                    var skipNote = form.querySelector("[data-copies-skip-note]");
+                    var copiesPanel = form.querySelector("[data-copies-panel]");
+                    var autoNote = form.querySelector("[data-code-auto-note]");
+                    var addVolumeButton = form.querySelector("[data-add-volume]");
+
+                    if (singleNote) {
+                        singleNote.hidden = multipleVolumes();
+                    }
+
+                    if (volumeRows) {
+                        volumeRows.hidden = !multipleVolumes();
+                    }
+
+                    if (addVolumeButton) {
+                        addVolumeButton.hidden = !multipleVolumes();
+                    }
+
+                    if (skipNote) {
+                        skipNote.hidden = addingCopies();
+                    }
+
+                    if (copiesPanel) {
+                        copiesPanel.hidden = !addingCopies();
+                    }
+
+                    if (autoNote) {
+                        autoNote.hidden = manualCodeMode();
+                    }
+                }
+
+
+                form.addEventListener("click", function (e) {
+
+                    if (e.target.closest("[data-add-volume]")) {
+                        e.preventDefault();
+                        addVolume();
+                        return;
+                    }
+
+                    if (e.target.closest("[data-remove-volume]")) {
+                        e.preventDefault();
+
+                        var row = e.target.closest("[data-volume-row]");
+
+                        if (row) {
+                            row.remove();
+                            syncQuantities();
+                        }
+
+                        return;
+                    }
+
+                    if (e.target.closest("[data-step-next]")) {
+                        e.preventDefault();
+                        current += 1;
+                        render();
+                        return;
+                    }
+
+                    if (e.target.closest("[data-step-back]")) {
+                        e.preventDefault();
+                        current -= 1;
+                        render();
+                    }
                 });
 
-                /* Rows carry role="button" and tabindex, so honour the keys
-                   a button would. */
-                row.addEventListener("keydown", function (e) {
 
-                    if (e.key !== "Enter" && e.key !== " ") {
+                form.addEventListener("change", function (e) {
+
+                    if (e.target.matches("[data-volume-mode]")) {
+
+                        /* Switching to multiple with nothing there yet
+                           gives them a row to type in rather than an empty
+                           panel. */
+                        if (multipleVolumes() && !volumeRowCount()) {
+                            addVolume();
+                        }
+
+                        toggleNotes();
+                        syncQuantities();
+                        render();
                         return;
                     }
 
-                    if (handled(e.target)) {
+                    if (
+                        e.target.matches("[data-copies-mode]")
+                        || e.target.matches("[data-code-mode]")
+                    ) {
+                        toggleNotes();
+                        syncManualCodes();
+                        render();
                         return;
                     }
 
-                    e.preventDefault();
-                    open(row);
+                    if (e.target.matches('[name="copy_qty"]')) {
+                        syncManualCodes();
+                        return;
+                    }
+
+                    if (
+                        e.target.matches('[name="volume_number"]')
+                        || e.target.matches('[name="volume_title"]')
+                    ) {
+                        syncQuantities();
+                    }
                 });
+
+
+                toggleNotes();
+                syncQuantities();
+                render();
+            }
+
+
+            function setupAll() {
+                Array.prototype.forEach.call(
+                    document.querySelectorAll("[data-book-wizard]"),
+                    setup
+                );
+            }
+
+
+            setupAll();
+
+            /* The dialog's form arrives in a swap, and comes back as a new
+               element every time validation rejects it. */
+            document.body.addEventListener("htmx:afterSwap", setupAll);
+
+        })();
+
+
+        /* =========================
+           QUICK ADD (LOCATION / SHELF)
+
+           Small inline boxes in the Add Book dialog. HTMX posts to the
+           existing location_add / shelf_add views and swaps back the
+           refreshed option list with the new record selected; this closes
+           the box once that happened, which the `quickAddDone` event says.
+           ========================= */
+
+        (function () {
+
+            document.addEventListener("click", function (e) {
+
+                if (!e.target || !e.target.closest) {
+                    return;
+                }
+
+                var toggle = e.target.closest("[data-quick-add-toggle]");
+
+                if (!toggle) {
+                    return;
+                }
+
+                e.preventDefault();
+
+                var which = toggle.getAttribute("data-quick-add-toggle");
+                var box = document.querySelector(
+                    '[data-quick-add="' + which + '"]'
+                );
+
+                if (!box) {
+                    return;
+                }
+
+                box.hidden = !box.hidden;
+
+                if (!box.hidden) {
+                    var input = box.querySelector("[data-quick-add-name]");
+
+                    if (input) {
+                        input.focus();
+                    }
+                }
+            });
+
+
+            function errorBox(entity) {
+                var box = document.querySelector(
+                    '[data-quick-add="' + entity + '"]'
+                );
+
+                return box
+                    ? box.querySelector("[data-quick-add-error]")
+                    : null;
+            }
+
+
+            /* Nothing was created — say why and leave the box open, since
+               the response itself can only carry <option> elements. */
+            document.body.addEventListener("quickAddFailed", function (e) {
+
+                var detail = (e.detail && e.detail.value) || e.detail || {};
+                var target = errorBox(detail.entity);
+
+                if (target) {
+                    target.textContent = detail.message || "";
+                }
+            });
+
+
+            document.body.addEventListener("quickAddDone", function (e) {
+
+                var detail = (e.detail && e.detail.value) || e.detail || {};
+
+                Array.prototype.forEach.call(
+                    document.querySelectorAll("[data-quick-add]"),
+                    function (box) {
+                        box.hidden = true;
+
+                        var input = box.querySelector("[data-quick-add-name]");
+
+                        if (input) {
+                            input.value = "";
+                        }
+
+                        var problem = box.querySelector("[data-quick-add-error]");
+
+                        if (problem) {
+                            problem.textContent = "";
+                        }
+                    }
+                );
+
+                /* A new location means the Shelf list belongs to the
+                   wrong one, so ask it to reload. Not after a new shelf:
+                   that response already is the refreshed list, with the
+                   new shelf selected, and reloading would drop it. */
+                if (detail.entity !== "location") {
+                    return;
+                }
+
+                var location = document.querySelector("[data-location-select]");
+
+                if (location && window.htmx) {
+                    window.htmx.trigger(location, "change");
+                }
+            });
+
+        })();
+
+
+        /* =========================
+           TOASTS
+
+           The dialogs answer a successful save with "no content" and an
+           event, so there is no page load for a Django message to arrive
+           on. These turn the event into a confirmation instead, and ask the
+           book list to redraw itself.
+           ========================= */
+
+        (function () {
+
+            var area = document.getElementById("toastArea");
+
+            if (!area || !window.bootstrap) {
+                return;
+            }
+
+
+            function announce(message, tone) {
+
+                var toast = document.createElement("div");
+
+                toast.className =
+                    "toast align-items-center text-bg-" + (tone || "success")
+                    + " border-0";
+                toast.setAttribute("role", "status");
+                toast.setAttribute("aria-live", "polite");
+                toast.setAttribute("aria-atomic", "true");
+
+                var holder = document.createElement("div");
+                holder.className = "d-flex";
+
+                var text = document.createElement("div");
+                text.className = "toast-body";
+                text.textContent = message;
+
+                var close = document.createElement("button");
+                close.type = "button";
+                close.className = "btn-close btn-close-white me-2 m-auto";
+                close.setAttribute("data-bs-dismiss", "toast");
+                close.setAttribute("aria-label", "Close");
+
+                holder.appendChild(text);
+                holder.appendChild(close);
+                toast.appendChild(holder);
+                area.appendChild(toast);
+
+                toast.addEventListener("hidden.bs.toast", function () {
+                    toast.remove();
+                });
+
+                window.bootstrap.Toast.getOrCreateInstance(toast, {
+                    delay: 5000
+                }).show();
+            }
+
+
+            function closeFormModal() {
+
+                var modalEl = document.getElementById("formModal");
+
+                if (!modalEl) {
+                    return;
+                }
+
+                var instance = window.bootstrap.Modal.getInstance(modalEl);
+
+                if (instance) {
+                    instance.hide();
+                }
+            }
+
+
+            function refreshList() {
+                /* #bookListRefresh listens for this and re-requests the
+                   results for whatever the list is currently showing. */
+                document.body.dispatchEvent(
+                    new CustomEvent("bookListChanged", { bubbles: true })
+                );
+            }
+
+
+            document.body.addEventListener("bookSaved", function (e) {
+
+                var detail = (e.detail && e.detail.value) || e.detail || {};
+
+                var message = detail.title
+                    ? '"' + detail.title + '" saved'
+                    : "Book saved";
+
+                if (detail.copies) {
+                    message += " with " + detail.copies + " cop"
+                        + (detail.copies === 1 ? "y" : "ies");
+                }
+
+                closeFormModal();
+                refreshList();
+                announce(message + ".");
+            });
+
+
+            document.body.addEventListener("bookDeleted", function (e) {
+
+                var detail = (e.detail && e.detail.value) || e.detail || {};
+
+                closeFormModal();
+                refreshList();
+                announce(
+                    (detail.title ? '"' + detail.title + '"' : "The book")
+                    + " was deleted.",
+                    "danger"
+                );
             });
 
         })();

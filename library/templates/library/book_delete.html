@@ -24,15 +24,46 @@
 
                     <h4 class="fw-bold mb-3">Delete Book?</h4>
 
-                    <p class="text-body-secondary mb-4">
-                        Are you sure you want to delete:<br>
-                        <strong class="text-body">{{ book.title }}</strong>?
-                    </p>
+                    {% comment %}
+                      `blocker` says why the book has to stay — copies still
+                      on the shelf, or loan history that deleting them would
+                      destroy. Without this the delete used to reach the
+                      database and fail there, since book_copies.volume_id
+                      is a NO ACTION foreign key. See book_delete_blocker.
+                    {% endcomment %}
+                    {% if blocker %}
 
-                    <p class="text-danger small mb-4">
-                        <i class="bi bi-info-circle me-1"></i>
-                        This action cannot be undone.
-                    </p>
+                        <div class="alert alert-warning text-start" role="alert">
+                            <i class="bi bi-shield-exclamation me-1"></i>
+                            {{ blocker }}
+                        </div>
+
+                        <p class="text-body-secondary mb-4">
+                            <strong class="text-body">{{ book.title }}</strong>
+                            stays as it is.
+                        </p>
+
+                    {% else %}
+
+                        <p class="text-body-secondary mb-4">
+                            Are you sure you want to delete:<br>
+                            <strong class="text-body">{{ book.title }}</strong>?
+                        </p>
+
+                        {% if volume_count %}
+                            <p class="text-body-secondary small mb-4">
+                                Its {{ volume_count }}
+                                volume{{ volume_count|pluralize }} will be
+                                removed too. It has no physical copies.
+                            </p>
+                        {% endif %}
+
+                        <p class="text-danger small mb-4">
+                            <i class="bi bi-info-circle me-1"></i>
+                            This action cannot be undone.
+                        </p>
+
+                    {% endif %}
 
                     <div class="d-flex justify-content-center gap-2">
                         {% if from_page == "detail" %}
@@ -44,12 +75,14 @@
                                 <i class="bi bi-x-lg me-1"></i> Cancel
                             </a>
                         {% endif %}
-                        <form method="post" class="d-inline">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-danger">
-                                <i class="bi bi-trash me-1"></i> Yes, Delete
-                            </button>
-                        </form>
+                        {% if not blocker %}
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="bi bi-trash me-1"></i> Yes, Delete
+                                </button>
+                            </form>
+                        {% endif %}
                     </div>
 
                 </div>

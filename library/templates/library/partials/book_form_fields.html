@@ -1,0 +1,88 @@
+{% comment %}
+The book's own details: title, author, category, publisher, cover.
+
+Shared by all four places a book is described — the Add and Edit pages and
+the Add and Edit dialogs — so there is one set of fields, one set of names
+and one thing to keep in step with `book_add` / `book_edit`.
+
+Expected context:
+  form_data   the dict both views build (title, author, author_name, ...)
+  book        the book being edited, or absent when adding. Its presence is
+              what turns on the current-cover preview and the "remove
+              cover" checkbox, which only make sense for an edit.
+  id_prefix   prefix for element ids, so a dialog and the page behind it
+              can both be in the DOM without colliding.
+{% endcomment %}
+
+{% url 'author_list' as author_search_url %}
+{% url 'category_list' as category_search_url %}
+{% url 'publisher_list' as publisher_search_url %}
+
+<div class="mb-3">
+    <label for="{{ id_prefix }}Title" class="form-label fw-semibold">
+        Title <span class="text-danger">*</span>
+    </label>
+    <input
+        type="text"
+        class="form-control"
+        id="{{ id_prefix }}Title"
+        name="title"
+        value="{{ form_data.title }}"
+        required
+    >
+</div>
+
+{% include "library/partials/combobox_field.html" with label="Author" field_name="author" input_id=id_prefix|add:"Author" entity_label="author" search_url=author_search_url selected_id=form_data.author selected_name=form_data.author_name required=True allow_create=True compact=False submit_on_select=False %}
+
+{% include "library/partials/combobox_field.html" with label="Category" field_name="category" input_id=id_prefix|add:"Category" entity_label="category" search_url=category_search_url selected_id=form_data.category selected_name=form_data.category_name required=False allow_create=True compact=False submit_on_select=False %}
+
+{% include "library/partials/combobox_field.html" with label="Publisher" field_name="publisher" input_id=id_prefix|add:"Publisher" entity_label="publisher" search_url=publisher_search_url selected_id=form_data.publisher selected_name=form_data.publisher_name required=False allow_create=True compact=False submit_on_select=False %}
+
+<div class="mb-3">
+    <label for="{{ id_prefix }}CoverImage" class="form-label fw-semibold">
+        Cover Image
+    </label>
+
+    {% if book %}
+        {% if book.cover_image %}
+            <div class="d-flex align-items-start gap-3 mb-2">
+                <img
+                    src="{{ book.cover_image.url }}"
+                    alt="Current cover of {{ book.title }}"
+                    class="cover-edit-preview"
+                >
+                <div class="form-check">
+                    <input
+                        type="checkbox"
+                        class="form-check-input"
+                        id="{{ id_prefix }}RemoveCover"
+                        name="remove_cover"
+                    >
+                    <label class="form-check-label" for="{{ id_prefix }}RemoveCover">
+                        Remove current cover
+                    </label>
+                </div>
+            </div>
+        {% else %}
+            <p class="text-body-secondary small mb-2">
+                <i class="bi bi-image me-1"></i>No cover image yet.
+            </p>
+        {% endif %}
+    {% endif %}
+
+    <input
+        type="file"
+        class="form-control"
+        id="{{ id_prefix }}CoverImage"
+        name="cover_image"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+    >
+    <div class="form-text">
+        {% if book and book.cover_image %}
+            Choosing a file replaces the current cover.
+        {% else %}
+            Optional.
+        {% endif %}
+        JPG, PNG, WEBP or GIF, up to 2&nbsp;MB.
+    </div>
+</div>

@@ -1,0 +1,277 @@
+{% comment %}
+The browsing half of the book list: the mode pills, the filter control that
+goes with the chosen mode, and the results.
+
+Split out because changing mode changes which control is shown, so a mode
+switch has to replace the pills and the card as well as the table. The pills
+swap this whole fragment; everything inside the filter card swaps only
+#bookResults, which is why a search keeps the box it was typed into.
+
+Expected context: mode, mode_links, plus everything
+library/partials/book_list_results.html needs.
+{% endcomment %}
+
+{% comment %}
+  Assigned here rather than in the page: this fragment is also rendered on
+  its own, and a combobox with no search URL falls back to requesting the
+  current page.
+{% endcomment %}
+{% url 'author_list' as author_search_url %}
+{% url 'category_list' as category_search_url %}
+
+    {% comment %}
+      Browsing mode. Each link drops the other modes' filters, so switching
+      never leaves a filter active that the current control cannot show.
+
+      The attributes live on the <ul> and are inherited, so each link only
+      needs its own hx-get. Switching mode replaces #bookBrowser rather than
+      reloading: the control changes, so the card and the pills have to be
+      re-rendered along with the table.
+    {% endcomment %}
+    <ul
+        class="nav nav-pills mb-3"
+        aria-label="Browse books by"
+        hx-target="#bookBrowser"
+        hx-swap="innerHTML show:none"
+        hx-push-url="true"
+        hx-indicator="#bookBrowser"
+        hx-vals='{"partial": "browser"}'
+    >
+        {% for link in mode_links %}
+            <li class="nav-item">
+                <a
+                    class="nav-link {% if link.active %}active{% endif %}"
+                    href="{{ link.url }}"
+                    hx-get="{{ link.url }}"
+                    {% if link.active %}aria-current="page"{% endif %}
+                >
+                    <i class="bi {{ link.icon }} me-1" aria-hidden="true"></i>
+                    {{ link.label }}
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+
+    <!-- Mode control -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+
+            {% if mode == "all" %}
+
+                {% comment %}
+                  A real GET form, so pressing Enter in the box submits it —
+                  the Search button is a convenience, not a requirement.
+
+                  hx-get answers that submit with just the results fragment
+                  and swaps it into #bookResults, so searching never reloads
+                  the page and never costs the box its focus or its caret.
+                  Without HTMX the same form still works as an ordinary
+                  navigation.
+
+                  hx-include pulls the current sort, direction and page size
+                  out of #tableState, which the fragment re-renders on every
+                  swap — reading them from hidden fields here would send
+                  whatever was true when the page first loaded. `page` is
+                  deliberately not carried, so a new search starts at page 1.
+
+                  hx-disinherit keeps none of these attributes reaching
+                  anything nested. It matters in the other two modes, where
+                  the searchable dropdown inside the form makes its own
+                  hx-get to a different endpoint and must not push history
+                  or swap the results; it is set here too so all three forms
+                  stay identical in this respect.
+
+                  `partial` rides in the hx-get URL rather than hx-vals for
+                  the same reason, and because hx-vals is the one attribute
+                  hx-disinherit does not cover: HTMX merges it down from
+                  every ancestor, so the dropdown's own request would have
+                  carried it as well and come back with a table in it.
+                {% endcomment %}
+                <form
+                    method="get"
+                    hx-get="{% url 'book_list' %}?partial=results"
+                    hx-include="#tableState"
+                    hx-target="#bookResults"
+                    hx-swap="innerHTML show:none"
+                    hx-push-url="true"
+                    hx-indicator="#bookResults"
+                    hx-disinherit="*"
+                >
+                    <input type="hidden" name="mode" value="all">
+
+                    <label for="filterSearch" class="form-label fw-semibold">
+                        Search
+                    </label>
+
+                    <div class="d-flex flex-wrap gap-2">
+                        <input
+                            type="search"
+                            class="form-control"
+                            id="filterSearch"
+                            name="search"
+                            value="{{ search }}"
+                            placeholder="Search by book name..."
+                            style="max-width: 26rem;"
+                        >
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search me-1"></i> Search
+                        </button>
+                        {% comment %}
+                          Always shown, and deliberately a full navigation.
+                          Whether a filter is active is decided in the
+                          results fragment, which swaps on its own; testing
+                          it here would leave the button stale. Reloading is
+                          also the only thing that empties the control
+                          itself — a swap cannot reach outside its target.
+                        {% endcomment %}
+                        <a href="{% url 'book_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg me-1"></i> Clear
+                        </a>
+                    </div>
+
+                    <div class="form-text">
+                        Matches part of a book name. Press Enter to search.
+                        Use <strong>By Author</strong> or <strong>By Category</strong> to filter by those.
+                    </div>
+                </form>
+
+            {% elif mode == "author" %}
+
+                {% comment %}
+                  A real GET form. Picking an option submits it from JS, so
+                  no button is needed in normal use — but because it is a
+                  genuine form, the filter still works if that script is
+                  stale or blocked, which a URL built in JavaScript did not.
+
+                  The HTMX attributes are the same as the All Books form
+                  above, and for the same reasons.
+                {% endcomment %}
+                <form
+                    method="get"
+                    data-filter-form
+                    hx-get="{% url 'book_list' %}?partial=results"
+                    hx-include="#tableState"
+                    hx-target="#bookResults"
+                    hx-swap="innerHTML show:none"
+                    hx-push-url="true"
+                    hx-indicator="#bookResults"
+                    hx-disinherit="*"
+                >
+                    <input type="hidden" name="mode" value="author">
+
+                    <div style="max-width: 26rem;">
+                        {% include "library/partials/combobox_field.html" with label="Author" field_name="author" input_id="filterAuthor" entity_label="author" search_url=author_search_url selected_id=author_id selected_name=author_name required=False allow_create=False compact=True submit_on_select=True %}
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                        {% comment %}
+                          Hidden by app.js once the auto-submit hook is
+                          active, so picking an option is enough. It stays
+                          in the markup — and visible — if that script is
+                          missing or stale, which is the only way to filter
+                          then.
+                        {% endcomment %}
+                        <button type="submit" class="btn btn-primary btn-sm" data-filter-apply>
+                            <i class="bi bi-funnel me-1"></i> Apply
+                        </button>
+
+                        {% comment %}
+                          Always shown, and deliberately a full navigation.
+                          Whether a filter is active is decided in the
+                          results fragment, which swaps on its own; testing
+                          it here would leave the button stale. Reloading is
+                          also the only thing that empties the control
+                          itself — a swap cannot reach outside its target.
+                        {% endcomment %}
+                        <a href="?mode=author" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-x-lg me-1"></i> Clear
+                        </a>
+                    </div>
+
+                    <div class="form-text mt-2">
+                        Start typing to find an author. Books update as soon as you pick one.
+                    </div>
+                </form>
+
+            {% else %}
+
+                <form
+                    method="get"
+                    data-filter-form
+                    hx-get="{% url 'book_list' %}?partial=results"
+                    hx-include="#tableState"
+                    hx-target="#bookResults"
+                    hx-swap="innerHTML show:none"
+                    hx-push-url="true"
+                    hx-indicator="#bookResults"
+                    hx-disinherit="*"
+                >
+                    <input type="hidden" name="mode" value="category">
+
+                    <div style="max-width: 26rem;">
+                        {% include "library/partials/combobox_field.html" with label="Category" field_name="category" input_id="filterCategory" entity_label="category" search_url=category_search_url selected_id=category_id selected_name=category_name required=False allow_create=False compact=True submit_on_select=True %}
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                        {% comment %}
+                          Hidden by app.js once the auto-submit hook is
+                          active, so picking an option is enough. It stays
+                          in the markup — and visible — if that script is
+                          missing or stale, which is the only way to filter
+                          then.
+                        {% endcomment %}
+                        <button type="submit" class="btn btn-primary btn-sm" data-filter-apply>
+                            <i class="bi bi-funnel me-1"></i> Apply
+                        </button>
+
+                        {% comment %}
+                          Always shown, and deliberately a full navigation.
+                          Whether a filter is active is decided in the
+                          results fragment, which swaps on its own; testing
+                          it here would leave the button stale. Reloading is
+                          also the only thing that empties the control
+                          itself — a swap cannot reach outside its target.
+                        {% endcomment %}
+                        <a href="?mode=category" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-x-lg me-1"></i> Clear
+                        </a>
+                    </div>
+
+                    <div class="form-text mt-2">
+                        Start typing to find a category. Books update as soon as you pick one.
+                    </div>
+                </form>
+
+            {% endif %}
+
+        </div>
+    </div>
+
+    {% comment %}
+      Everything that changes on a search, filter, sort, page or page-size
+      change lives in here, so those actions swap this fragment instead of
+      reloading the page. The attributes are set once on the container and
+      inherited by the links inside it, which is why the sort and paging
+      links only need hx-get.
+
+      hx-push-url keeps the address bar in step, so the state is still
+      shareable and the back button still works. `partial` names the
+      fragment the view should answer with; it travels in hx-vals so it
+      exists only on these requests and never on a plain navigation.
+
+      hx-indicator points at this container, which `.swap-busy` dims while a
+      request is in flight. A spinner inserted above the table did the same
+      job but changed the page height twice per search, which read as the
+      page jumping.
+    {% endcomment %}
+    <div
+        id="bookResults"
+        class="swap-busy"
+        hx-target="#bookResults"
+        hx-swap="innerHTML show:none"
+        hx-push-url="true"
+        hx-indicator="#bookResults"
+        hx-vals='{"partial": "results"}'
+    >
+        {% include "library/partials/book_list_results.html" %}
+    </div>

@@ -5,6 +5,13 @@ Separate from the older `_pagination.html`, which renders plain-text links
 and is still included by twelve unmigrated pages — replacing it wholesale
 would change all of them at once.
 
+Each link carries both `href` and `hx-get`. HTMX uses the latter to swap a
+new page of results in without a reload, taking the target and swap style
+from the #bookResults container this include sits inside; the href is what
+makes the link real — shareable, middle-clickable, and still working if the
+script never arrives. Anything else adopting this include needs a container
+like that, or the swap has nowhere to go.
+
 Expected context:
   page_obj           the Page from Paginator.get_page()
   paginator          the Paginator, for the total count
@@ -35,6 +42,7 @@ Expected context:
                     <a
                         class="page-link"
                         href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_obj.previous_page_number }}"
+                        hx-get="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_obj.previous_page_number }}"
                         rel="prev"
                     >
                         <i class="bi bi-chevron-left" aria-hidden="true"></i>
@@ -67,6 +75,7 @@ Expected context:
                         <a
                             class="page-link"
                             href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ number }}"
+                            hx-get="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ number }}"
                         >
                             {{ number }}
                         </a>
@@ -81,6 +90,7 @@ Expected context:
                     <a
                         class="page-link"
                         href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_obj.next_page_number }}"
+                        hx-get="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_obj.next_page_number }}"
                         rel="next"
                     >
                         <i class="bi bi-chevron-right" aria-hidden="true"></i>

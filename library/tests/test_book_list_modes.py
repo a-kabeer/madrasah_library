@@ -115,9 +115,7 @@ class ModeTests(BookListModeTestCase):
             with self.subTest(column=column["key"]):
                 self.assertIn("mode=author", column["url"])
 
-        for option in response.context["page_size_options"]:
-            with self.subTest(size=option["value"]):
-                self.assertIn("mode=author", option["url"])
+        self.assertIn("mode=author", response.context["page_size_hx_url"])
 
 
 class SearchTests(BookListModeTestCase):
@@ -590,3 +588,196 @@ class BookListPermissionTests(BookListModeTestCase):
                     )
 
                     self.assertEqual(response.status_code, expected)
+
+
+class InPlaceUpdateTests(BookListModeTestCase):
+    """Nothing on the book list reloads the page.
+
+    Every action asks for a fragment by naming it in `partial`, alongside
+    the HTMX header, and the browser swaps the answer into place:
+
+      partial=results — search, filter, sort, page, page size
+      partial=browser — a change of browsing mode, which also replaces the
+                        mode pills and the filter control
+    """
+
+    def fragment(self, **params):
+        params.setdefault("partial", "results")
+
+        return self.client.get(
+            self.url, params, headers={"HX-Request": "true"}
+        )
+
+    def test_fragment_request_returns_only_the_results(self):
+        response = self.fragment(search="Masnavi")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(
+            response, "library/partials/book_list_results.html"
+        )
+        self.assertTemplateNotUsed(response, "library/book_list.html")
+
+        body = response.content.decode()
+
+        # The table is there; the page and the controls around it are not.
+        self.assertIn("Masnavi", body)
+        self.assertNotIn("nav-pills", body)
+        self.assertNotIn('id="bookResults"', body)
+        self.assertNotIn('id="filterSearch"', body)
+
+    def test_fragment_applies_the_same_filtering_as_the_page(self):
+        response = self.fragment(mode="author", author=self.ghazali.id)
+
+        self.assertEqual(self.titles(response), ["Ihya Ulum al-Din"])
+
+    def test_browser_fragment_returns_the_controls_and_the_results(self):
+        # A mode change: the pills and the filter card move too, because
+        # which control is shown is the point of the mode.
+        response = self.client.get(
+            self.url,
+            {"mode": "category", "partial": "browser"},
+            headers={"HX-Request": "true"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(
+            response, "library/partials/book_list_browser.html"
+        )
+        self.assertTemplateUsed(
+            response, "library/partials/book_list_results.html"
+        )
+        self.assertTemplateNotUsed(response, "library/book_list.html")
+
+        body = response.content.decode()
+
+        # The pills, the Category control and the table — but not the page.
+        self.assertIn("nav-pills", body)
+        self.assertIn('id="filterCategory"', body)
+        self.assertIn('id="bookResults"', body)
+        self.assertNotIn('id="bookBrowser"', body)
+
+    def test_browser_fragment_shows_the_control_for_its_mode(self):
+        for mode, present, absent in (
+            ("all", 'id="filterSearch"', 'id="filterAuthor"'),
+            ("author", 'id="filterAuthor"', 'id="filterSearch"'),
+            ("category", 'id="filterCategory"', 'id="filterAuthor"'),
+        ):
+            with self.subTest(mode=mode):
+                response = self.client.get(
+                    self.url,
+                    {"mode": mode, "partial": "browser"},
+                    headers={"HX-Request": "true"},
+                )
+
+                self.assertContains(response, present)
+                self.assertNotContains(response, absent)
+
+    def test_browser_fragment_gives_its_dropdown_a_search_url(self):
+        # The URL was once assigned in book_list.html, outside the fragment,
+        # so a mode change rendered hx-get="" and the dropdown searched the
+        # book list instead of the authors — filling its menu with a table.
+        for mode, url_name in (("author", "author_list"),
+                               ("category", "category_list")):
+            with self.subTest(mode=mode):
+                response = self.client.get(
+                    self.url,
+                    {"mode": mode, "partial": "browser"},
+                    headers={"HX-Request": "true"},
+                )
+
+                self.assertContains(
+                    response, 'hx-get="%s"' % reverse(url_name)
+                )
+                self.assertNotContains(response, 'hx-get=""')
+
+    def test_dropdown_search_does_not_inherit_the_fragment_flag(self):
+        # HTMX merges hx-vals down from every ancestor and hx-disinherit
+        # does not cover it, so the filter form — which encloses the
+        # dropdown — must carry `partial` in its URL instead. Getting this
+        # wrong sent the flag along with the dropdown's own search, which
+        # then came back holding a table.
+        response = self.get(mode="author")
+        body = response.content.decode()
+
+        form = body[body.index("<form"):body.index(">", body.index("<form"))]
+
+        self.assertIn("?partial=results", form)
+        self.assertNotIn("hx-vals", form)
+
+        # And the dropdown blanks it, whatever encloses it.
+        self.assertContains(response, 'partial: ""')
+
+    def test_unknown_fragment_name_returns_the_full_page(self):
+        response = self.client.get(
+            self.url, {"partial": "nonsense"}, headers={"HX-Request": "true"}
+        )
+
+        self.assertTemplateUsed(response, "library/book_list.html")
+
+    def test_header_without_the_parameter_returns_the_full_page(self):
+        # One URL must not return two different bodies: a cache keyed on the
+        # URL alone would otherwise be free to mix them up.
+        response = self.client.get(
+            self.url, {"search": "Masnavi"}, headers={"HX-Request": "true"}
+        )
+
+        self.assertTemplateUsed(response, "library/book_list.html")
+
+    def test_parameter_without_the_header_returns_the_full_page(self):
+        for name in ("results", "browser"):
+            with self.subTest(partial=name):
+                response = self.client.get(self.url, {"partial": name})
+
+                self.assertTemplateUsed(response, "library/book_list.html")
+
+    def test_fragment_pushes_the_url_without_the_partial_flag(self):
+        response = self.fragment(mode="author", author=self.rumi.id)
+
+        pushed = response["HX-Push-Url"]
+
+        self.assertNotIn("partial", pushed)
+        self.assertIn("mode=author", pushed)
+        self.assertIn(f"author={self.rumi.id}", pushed)
+        self.assertTrue(pushed.startswith(self.url))
+
+    def test_mode_change_pushes_the_url_without_the_partial_flag(self):
+        response = self.client.get(
+            self.url,
+            {"mode": "author", "partial": "browser"},
+            headers={"HX-Request": "true"},
+        )
+
+        pushed = response["HX-Push-Url"]
+
+        self.assertNotIn("partial", pushed)
+        self.assertIn("mode=author", pushed)
+
+    def test_pushed_url_is_bare_when_nothing_is_selected(self):
+        response = self.fragment()
+
+        self.assertEqual(response["HX-Push-Url"], self.url)
+
+    def test_links_in_the_fragment_never_carry_the_partial_flag(self):
+        # Otherwise the flag would be pushed into the address bar the moment
+        # anyone clicked a sort header, and shared as part of the URL.
+        response = self.fragment(mode="author", author=self.rumi.id)
+
+        for column in response.context["columns"]:
+            with self.subTest(column=column["key"]):
+                self.assertNotIn("partial", column["url"])
+
+        self.assertNotIn("partial", response.context["pagination_query"])
+        self.assertNotIn("partial", response.context["page_size_hx_url"])
+
+        for filter_ in response.context["active_filters"]:
+            with self.subTest(filter=filter_["label"]):
+                self.assertNotIn("partial", filter_["url"])
+
+    def test_fragment_costs_no_more_queries_than_the_page(self):
+        with CaptureQueriesContext(connection) as fragment:
+            self.fragment(search="Masnavi")
+
+        with CaptureQueriesContext(connection) as page:
+            self.get(search="Masnavi")
+
+        self.assertLessEqual(len(fragment), len(page))

@@ -11,7 +11,9 @@ Expected context:
   field_name    "author"        -> the POST key (hidden input name)
   input_id      "formAuthor"    -> id for the text box, label and menu
   entity_label  "author"        -> used in the empty/create wording
-  search_url    URL of the list view that serves suggestions
+  search_url    URL of the list view that serves suggestions. Must be set:
+                an empty one leaves the search pointed at the current page,
+                which answers with something that is not a menu.
   selected_id   currently selected id, or "" / None
   selected_name currently selected name, or "" / None
   required      True to mark the field mandatory
@@ -71,10 +73,28 @@ whatever the surrounding page happens to have.
                 aria-autocomplete="list"
                 aria-controls="{{ input_id }}Menu"
                 data-combobox-input
+                {% comment %}
+                  `partial` is blanked deliberately. HTMX merges hx-vals down
+                  from every ancestor and hx-disinherit does not cover it, so
+                  a page that puts a combobox inside a form that swaps a
+                  fragment would otherwise have that form's `partial` ride
+                  along on this search — and the menu would fill with the
+                  wrong thing entirely. The nearest value wins, so this one
+                  does. Harmless everywhere else: no view treats an empty
+                  `partial` as a request for a fragment.
+                {% endcomment %}
                 hx-get="{{ search_url }}"
                 hx-trigger="focus, input changed delay:250ms"
                 hx-target="#{{ input_id }}Menu"
-                hx-vals='js:{search: this.value, combobox: "1", allow_create: "{{ allow_create|yesno:"1,0" }}"}'
+                {% comment %}
+                  Stated rather than left to the default: the menu is
+                  filled, never replaced. Without this a surrounding form
+                  with hx-swap="outerHTML" — which is how the Add and Edit
+                  Book dialogs re-render themselves — passes it down and the
+                  first search deletes the menu it was aiming at.
+                {% endcomment %}
+                hx-swap="innerHTML"
+                hx-vals='js:{search: this.value, combobox: "1", partial: "", allow_create: "{{ allow_create|yesno:"1,0" }}"}'
                 hx-indicator="#{{ input_id }}Spinner"
             >
 

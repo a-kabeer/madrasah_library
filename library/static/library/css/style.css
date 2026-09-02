@@ -901,6 +901,94 @@ body {
 }
 
 
+/* Progress for the book list's in-place updates.
+
+   HTMX marks the element named by hx-indicator with `htmx-request` while its
+   request is in flight, so the region being replaced can report its own
+   progress. Dimming it adds and removes nothing, which matters: a spinner
+   inserted above the table changed the page height on the way in and again
+   on the way out, and that read as the page jumping on every search.
+
+   `pointer-events` goes with it, so a second click cannot queue a request
+   against results that are already on their way out. */
+.swap-busy {
+    transition: opacity 120ms ease-in;
+}
+
+.swap-busy.htmx-request {
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+
+/* The Add Book dialog's step indicator. Hidden in the markup and shown by
+   app.js, because without the script every step is on screen at once and
+   numbering them would misdescribe the form. */
+.book-steps {
+    display: flex;
+    flex-wrap: wrap;
+
+    gap: 0.5rem 1.25rem;
+
+    margin: 0 0 1.25rem;
+    padding: 0 0 0.75rem;
+
+    list-style: none;
+    counter-reset: book-step;
+
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.book-steps li {
+    counter-increment: book-step;
+
+    font-size: 0.875rem;
+    color: var(--bs-secondary-color);
+}
+
+.book-steps li::before {
+    content: counter(book-step);
+
+    display: inline-grid;
+    place-items: center;
+
+    width: 1.5rem;
+    height: 1.5rem;
+
+    margin-right: 0.4rem;
+
+    border-radius: 50%;
+
+    background: var(--bs-secondary-bg);
+
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.book-steps li.current {
+    color: var(--bs-body-color);
+    font-weight: 600;
+}
+
+.book-steps li.current::before {
+    background: var(--brand-primary);
+    color: var(--brand-on-primary);
+}
+
+
+/* Inline "add a location / shelf without leaving this form" box. Set off
+   from the field above it so it reads as a detour rather than another
+   field. */
+.quick-add {
+    padding: 0.75rem;
+
+    border: 1px dashed var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+
+    background: var(--bs-tertiary-bg);
+}
+
+
 .combobox-clear {
     position: absolute;
 

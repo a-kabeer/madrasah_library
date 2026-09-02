@@ -1,0 +1,27 @@
+{% comment %}
+The Shelf dropdown's <option> list, for one location only.
+
+Served by `shelf_list` when the chosen location changes, and by `shelf_add`
+after a quick-add. Only ever holds shelves belonging to that location, so
+the dialog cannot offer — or save — a shelf from somewhere else. The view
+checks the pair again on submit regardless.
+
+Expected context: shelves, selected_id, has_location.
+
+Nothing but <option> elements — see location_options.html.
+{% endcomment %}
+
+{% if has_location %}
+    <option value="">Select shelf…</option>
+{% else %}
+    <option value="">Choose a location first</option>
+{% endif %}
+
+{% for shelf in shelves %}
+    <option
+        value="{{ shelf.id }}"
+        {% if selected_id == shelf.id|stringformat:"s" %}selected{% endif %}
+    >
+        {{ shelf.shelf_code }}
+    </option>
+{% endfor %}

@@ -1,0 +1,225 @@
+{% comment %}
+Results half of the book list: active filters, the count and rows-per-page
+control, the table, and pagination.
+
+Split out so a search, a filter, a sort, a page change or a page-size change
+can be answered with just this fragment. `book_list` renders it directly for
+those requests and the page swaps it into #bookResults instead of reloading
+— which is why the filter card, and the combobox inside it, live outside
+this file and keep their state across a swap.
+
+Sort, paging and rows-per-page controls carry only hx-get: the target, swap
+and history behaviour are inherited from #bookResults in book_list.html.
+{% endcomment %}
+
+    {% comment %}
+      The table's current state, re-rendered on every swap. The filter forms
+      sit outside this fragment and pull these three values in with
+      hx-include, so a search or a filter keeps the sorting and rows-per-page
+      the user last chose instead of the ones the page happened to load with.
+
+      Hidden inputs rather than data attributes because hx-include serialises
+      form fields. They are outside the forms deliberately: only HTMX reads
+      them, and a plain non-HTMX submit falls back to the default sort, which
+      is the right degradation for a control that has no visible state of its
+      own.
+    {% endcomment %}
+    <div id="tableState" hidden>
+        <input type="hidden" name="sort" value="{{ sort }}">
+        <input type="hidden" name="direction" value="{{ direction }}">
+        <input type="hidden" name="page_size" value="{{ page_size }}">
+    </div>
+
+    {% comment %}
+      Every active filter, whichever mode set it. Each mode shows only its
+      own control, so without these a filter carried in the URL — or
+      ?publisher=, which has no control at all — would narrow the results
+      with nothing on screen to explain it.
+    {% endcomment %}
+    {% if active_filters %}
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+
+            <span class="text-body-secondary small">Filtered by:</span>
+
+            {% for filter in active_filters %}
+                <a href="{{ filter.url }}" hx-get="{{ filter.url }}" class="filter-chip">
+                    <span class="text-body-secondary">{{ filter.label }}:</span>
+                    <strong>{{ filter.value }}</strong>
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                    <span class="visually-hidden">Remove this filter</span>
+                </a>
+            {% endfor %}
+
+            <a href="{% url 'book_list' %}?mode={{ mode }}"
+               hx-get="{% url 'book_list' %}?mode={{ mode }}" class="small">
+                Clear all
+            </a>
+
+        </div>
+    {% endif %}
+
+    <!-- Result count and rows-per-page -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+
+        <p class="text-body-secondary mb-0">
+            Found <strong>{{ paginator.count }}</strong> book(s).
+        </p>
+
+        <div class="d-flex align-items-center gap-2">
+
+            <label for="pageSize" class="text-body-secondary small mb-0">
+                Show
+            </label>
+
+            {% comment %}
+              `page_size_hx_url` already carries the current mode, search,
+              filters and sorting, with `page` dropped so a size change
+              returns to page 1. HTMX appends the chosen size from this
+              select's own name, then swaps the results in place.
+            {% endcomment %}
+            <select
+                class="form-select form-select-sm w-auto"
+                id="pageSize"
+                hx-get="{{ page_size_hx_url }}"
+                hx-trigger="change"
+                hx-include="this"
+                name="page_size"
+                aria-label="Rows per page"
+            >
+                {% for option in page_size_options %}
+                    <option
+                        value="{{ option.value }}"
+                        {% if option.active %}selected{% endif %}
+                    >
+                        {{ option.value }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <span class="text-body-secondary small">per page</span>
+
+        </div>
+
+    </div>
+
+    <!-- Results Table Card -->
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-secondary">
+                    <tr>
+
+                        {% for column in columns %}
+                            <th
+                                {% if column.active %}
+                                    aria-sort="{% if column.direction == 'asc' %}ascending{% else %}descending{% endif %}"
+                                {% endif %}
+                            >
+                                <a href="{{ column.url }}" hx-get="{{ column.url }}" class="table-sort">
+                                    {{ column.label }}
+                                    {% if column.active %}
+                                        <i class="bi {% if column.direction == 'asc' %}bi-sort-up{% else %}bi-sort-down{% endif %}" aria-hidden="true"></i>
+                                    {% else %}
+                                        <i class="bi bi-arrow-down-up table-sort-idle" aria-hidden="true"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                        {% endfor %}
+
+                        <th class="text-end">Actions</th>
+
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for book in books %}
+                        {% comment %}
+                          The whole row opens this book's details. The details
+                          URL, the modal wiring and the cover all live on the
+                          <tr>, so any click inside it — title, author, blank
+                          space — resolves to the same one action. The only
+                          exceptions are the Edit and Delete buttons, which
+                          keep their own behaviour (see app.js).
+                        {% endcomment %}
+                        <tr
+                            class="book-row"
+                            data-book-row
+                            data-book-url="{% url 'book_detail' book.id %}?modal=1"
+                            tabindex="0"
+                            role="button"
+                            aria-label="Show details for {{ book.title }}"
+                            {% if book.cover_image %}
+                                data-cover-url="{{ book.cover_image.url }}"
+                                data-cover-title="{{ book.title }}"
+                            {% endif %}
+                        >
+
+                            <td class="fw-semibold">{{ book.title }}</td>
+
+                            <td>{{ book.author.name }}</td>
+
+                            <td class="text-end">
+                                {% comment %}
+                                  Both buttons open a dialog instead of
+                                  navigating. [data-row-actions] is what
+                                  keeps the row's own click handler out of
+                                  the way, so Edit and Delete do their own
+                                  job and never also open the details popup.
+
+                                  hx-push-url and hx-vals are stated on each
+                                  because these sit inside #bookResults and
+                                  would otherwise inherit its: the address
+                                  bar would change to the edit URL just for
+                                  opening a dialog, and `partial` would ride
+                                  along on the request. HTMX merges hx-vals
+                                  down from every ancestor whatever
+                                  hx-disinherit says, so setting the key here
+                                  — nearest wins — is the only way to stop
+                                  it.
+                                {% endcomment %}
+                                <div class="d-inline-flex gap-1" data-row-actions>
+                                    <a
+                                        href="{% url 'book_edit' book.id %}"
+                                        class="btn btn-sm btn-outline-warning"
+                                        title="Edit"
+                                        aria-label="Edit {{ book.title }}"
+                                        data-form-modal
+                                        hx-get="{% url 'book_edit' book.id %}?modal=1"
+                                        hx-target="#formModal .modal-body"
+                                        hx-swap="innerHTML"
+                                        hx-push-url="false"
+                                        hx-vals='{"partial": ""}'
+                                    >
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a
+                                        href="{% url 'book_delete' book.id %}"
+                                        class="btn btn-sm btn-outline-danger"
+                                        title="Delete"
+                                        aria-label="Delete {{ book.title }}"
+                                        data-form-modal
+                                        hx-get="{% url 'book_delete' book.id %}?modal=1"
+                                        hx-target="#formModal .modal-body"
+                                        hx-swap="innerHTML"
+                                        hx-push-url="false"
+                                        hx-vals='{"partial": ""}'
+                                    >
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-body-secondary py-4">
+                                No books found.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% include "library/partials/pagination.html" with page_obj=books %}

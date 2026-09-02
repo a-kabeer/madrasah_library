@@ -679,6 +679,68 @@
 </div>
 
 
+<!--
+  Form dialog. Separate from #globalModal above, which shows read-only
+  details: a form needs the room, and its own buttons, and must not share a
+  body with whatever detail popup was open a moment ago. It has no footer —
+  each fragment brings its own Save/Cancel, since only the fragment knows
+  what they should say.
+-->
+
+<div
+    class="modal fade"
+    id="formModal"
+    tabindex="-1"
+    aria-labelledby="formModalLabel"
+    aria-hidden="true"
+>
+
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <h5 class="modal-title" id="formModalLabel">
+                    Loading&hellip;
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <!-- Filled by HTMX from book_add / book_edit / book_delete -->
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!--
+  Where confirmations land. The dialogs answer with "no content" and an
+  event rather than a page, so there is no reload for a Django message to
+  ride back on; app.js turns the event into a toast here instead.
+-->
+
+<div
+    class="toast-container position-fixed bottom-0 end-0 p-3"
+    id="toastArea"
+    aria-live="polite"
+    aria-atomic="true"
+></div>
+
+
 <!-- HTMX -->
 
 <script

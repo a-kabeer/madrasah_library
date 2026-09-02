@@ -10,9 +10,12 @@
 
 {% block content %}
 
-{% url 'author_list' as author_search_url %}
-{% url 'category_list' as category_search_url %}
-{% url 'publisher_list' as publisher_search_url %}
+{% comment %}
+  The full page behind the dialog. It posts to the same view, with the same
+  fields from the same partials, so the two cannot drift apart. Reached by
+  its own URL and used when JavaScript is unavailable — the guided steps
+  are then simply all on screen at once.
+{% endcomment %}
 
 <div class="container-fluid px-0">
 
@@ -37,37 +40,11 @@
                     <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
 
-                        <div class="mb-3">
-                            <label for="formTitle" class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
-                            <input
-                                type="text"
-                                class="form-control"
-                                id="formTitle"
-                                name="title"
-                                value="{{ form_data.title }}"
-                                required
-                            >
-                        </div>
+                        {% include "library/partials/book_form_fields.html" with form_data=form_data book=None id_prefix="add" %}
 
-                        {% include "library/partials/combobox_field.html" with label="Author" field_name="author" input_id="formAuthor" entity_label="author" search_url=author_search_url selected_id=form_data.author selected_name=form_data.author_name required=True allow_create=True compact=False %}
+                        <hr class="my-4">
 
-                        {% include "library/partials/combobox_field.html" with label="Category" field_name="category" input_id="formCategory" entity_label="category" search_url=category_search_url selected_id=form_data.category selected_name=form_data.category_name required=False allow_create=True compact=False %}
-
-                        {% include "library/partials/combobox_field.html" with label="Publisher" field_name="publisher" input_id="formPublisher" entity_label="publisher" search_url=publisher_search_url selected_id=form_data.publisher selected_name=form_data.publisher_name required=False allow_create=True compact=False %}
-
-                        <div class="mb-3">
-                            <label for="formCoverImage" class="form-label fw-semibold">Cover Image</label>
-                            <input
-                                type="file"
-                                class="form-control"
-                                id="formCoverImage"
-                                name="cover_image"
-                                accept="image/jpeg,image/png,image/webp,image/gif"
-                            >
-                            <div class="form-text">
-                                Optional. JPG, PNG, WEBP or GIF, up to 2&nbsp;MB.
-                            </div>
-                        </div>
+                        {% include "library/partials/book_inventory_fields.html" with inventory=inventory locations=locations shelves=shelves max_copies_per_volume=max_copies_per_volume max_total_copies=max_total_copies id_prefix="add" %}
 
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary">

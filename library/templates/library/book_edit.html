@@ -10,10 +10,6 @@
 
 {% block content %}
 
-{% url 'author_list' as author_search_url %}
-{% url 'category_list' as category_search_url %}
-{% url 'publisher_list' as publisher_search_url %}
-
 <div class="container-fluid px-0">
 
     <div class="row justify-content-center">
@@ -38,68 +34,7 @@
                         {% csrf_token %}
                         <input type="hidden" name="from" value="{{ from_page }}">
 
-                        <div class="mb-3">
-                            <label for="formTitle" class="form-label fw-semibold">Title <span class="text-danger">*</span></label>
-                            <input
-                                type="text"
-                                class="form-control"
-                                id="formTitle"
-                                name="title"
-                                value="{{ form_data.title }}"
-                                required
-                            >
-                        </div>
-
-                        {% include "library/partials/combobox_field.html" with label="Author" field_name="author" input_id="formAuthor" entity_label="author" search_url=author_search_url selected_id=form_data.author selected_name=form_data.author_name required=True allow_create=True compact=False %}
-
-                        {% include "library/partials/combobox_field.html" with label="Category" field_name="category" input_id="formCategory" entity_label="category" search_url=category_search_url selected_id=form_data.category selected_name=form_data.category_name required=False allow_create=True compact=False %}
-
-                        {% include "library/partials/combobox_field.html" with label="Publisher" field_name="publisher" input_id="formPublisher" entity_label="publisher" search_url=publisher_search_url selected_id=form_data.publisher selected_name=form_data.publisher_name required=False allow_create=True compact=False %}
-
-                        <div class="mb-3">
-                            <label for="formCoverImage" class="form-label fw-semibold">Cover Image</label>
-
-                            {% if book.cover_image %}
-                                <div class="d-flex align-items-start gap-3 mb-2">
-                                    <img
-                                        src="{{ book.cover_image.url }}"
-                                        alt="Current cover of {{ book.title }}"
-                                        class="cover-edit-preview"
-                                    >
-                                    <div class="form-check">
-                                        <input
-                                            type="checkbox"
-                                            class="form-check-input"
-                                            id="formRemoveCover"
-                                            name="remove_cover"
-                                        >
-                                        <label class="form-check-label" for="formRemoveCover">
-                                            Remove current cover
-                                        </label>
-                                    </div>
-                                </div>
-                            {% else %}
-                                <p class="text-body-secondary small mb-2">
-                                    <i class="bi bi-image me-1"></i>No cover image yet.
-                                </p>
-                            {% endif %}
-
-                            <input
-                                type="file"
-                                class="form-control"
-                                id="formCoverImage"
-                                name="cover_image"
-                                accept="image/jpeg,image/png,image/webp,image/gif"
-                            >
-                            <div class="form-text">
-                                {% if book.cover_image %}
-                                    Choosing a file replaces the current cover.
-                                {% else %}
-                                    Optional.
-                                {% endif %}
-                                JPG, PNG, WEBP or GIF, up to 2&nbsp;MB.
-                            </div>
-                        </div>
+                        {% include "library/partials/book_form_fields.html" with form_data=form_data book=book id_prefix="edit" %}
 
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary">

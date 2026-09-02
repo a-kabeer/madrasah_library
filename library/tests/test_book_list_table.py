@@ -201,12 +201,13 @@ class PageSizeTests(BookListTableTestCase):
             page_size=10, page=3, sort="author", direction="desc", search="Book"
         )
 
-        for option in response.context["page_size_options"]:
-            with self.subTest(size=option["value"]):
-                self.assertNotIn("page=", option["url"])
-                self.assertIn("sort=author", option["url"])
-                self.assertIn("direction=desc", option["url"])
-                self.assertIn("search=Book", option["url"])
+        url = response.context["page_size_hx_url"]
+
+        self.assertNotIn("page=", url)
+        self.assertNotIn("page_size=", url)
+        self.assertIn("sort=author", url)
+        self.assertIn("direction=desc", url)
+        self.assertIn("search=Book", url)
 
 
 class PaginationTests(BookListTableTestCase):
@@ -335,7 +336,7 @@ class FilterIntegrationTests(BookListTableTestCase):
         self.assertEqual(response.context["author_name"], "Author Alpha")
         self.assertEqual(response.context["category_name"], "Cat Beta")
         self.assertEqual(response.context["publisher_name"], "Pub Gamma")
-        self.assertTrue(response.context["has_filters"])
+        self.assertEqual(len(response.context["active_filters"]), 3)
 
     def test_legacy_title_parameter_still_filters(self):
         # Links made before the parameter was renamed to `search`.
@@ -345,10 +346,11 @@ class FilterIntegrationTests(BookListTableTestCase):
         self.assertEqual(response.context["search"], "Book 1")
 
     def test_no_filters_reports_no_active_filters(self):
-        self.assertFalse(self.get().context["has_filters"])
+        self.assertEqual(self.get().context["active_filters"], [])
 
-    def test_filter_form_carries_sort_and_page_size(self):
-        # Otherwise pressing Search would silently reset the table.
+    def test_page_carries_sort_and_page_size_for_the_filter_forms(self):
+        # #tableState, which the filter forms pull in with hx-include.
+        # Without it, searching would silently reset the table.
         response = self.get(sort="author", direction="desc", page_size=50)
 
         self.assertContains(response, 'name="sort" value="author"')
