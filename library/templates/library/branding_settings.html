@@ -1,0 +1,259 @@
+{% extends "library/base.html" %}
+
+{% block title %}
+    Branding | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    Branding
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-0">
+
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-9">
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1">Organisation Branding</h2>
+                    <p class="text-body-secondary mb-0">
+                        Applies across the whole app, including the sign-in page.
+                    </p>
+                </div>
+            </div>
+
+            {% if error %}
+                <div class="alert alert-danger d-flex align-items-center" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <div>{{ error }}</div>
+                </div>
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <!-- Identity -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-body">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="bi bi-building me-2"></i>Identity
+                        </h5>
+                    </div>
+                    <div class="card-body">
+
+                        <div class="mb-3">
+                            <label for="formName" class="form-label fw-semibold">
+                                Organisation Name
+                            </label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="formName"
+                                name="name"
+                                value="{{ settings_obj.name }}"
+                                maxlength="255"
+                                placeholder="{{ settings_obj.DEFAULT_NAME }}"
+                            >
+                            <div class="form-text">
+                                Shown in the sidebar, page titles and the sign-in page.
+                                Leave blank to use &ldquo;{{ settings_obj.DEFAULT_NAME }}&rdquo;.
+                            </div>
+                        </div>
+
+                        <!-- Logo -->
+                        <div class="mb-4">
+                            <label for="formLogo" class="form-label fw-semibold">Logo</label>
+
+                            {% if settings_obj.logo %}
+                                <div class="d-flex align-items-start gap-3 mb-2">
+                                    <img
+                                        src="{{ settings_obj.logo.url }}"
+                                        alt="Current logo"
+                                        class="branding-preview-logo"
+                                    >
+                                    <div class="form-check">
+                                        <input
+                                            type="checkbox"
+                                            class="form-check-input"
+                                            id="formRemoveLogo"
+                                            name="remove_logo"
+                                        >
+                                        <label class="form-check-label" for="formRemoveLogo">
+                                            Remove current logo
+                                        </label>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <p class="text-body-secondary small mb-2">
+                                    <i class="bi bi-book-half me-1"></i>
+                                    No logo set — the default book icon is shown.
+                                </p>
+                            {% endif %}
+
+                            <input
+                                type="file"
+                                class="form-control"
+                                id="formLogo"
+                                name="logo"
+                                accept="image/jpeg,image/png,image/webp,image/gif"
+                            >
+                            <div class="form-text">
+                                {% if settings_obj.logo %}
+                                    Choosing a file replaces the current logo.
+                                {% endif %}
+                                JPG, PNG, WEBP or GIF, up to 1&nbsp;MB.
+                            </div>
+                        </div>
+
+                        <!-- Favicon -->
+                        <div class="mb-0">
+                            <label for="formFavicon" class="form-label fw-semibold">Favicon</label>
+
+                            {% if settings_obj.favicon %}
+                                <div class="d-flex align-items-center gap-3 mb-2">
+                                    <img
+                                        src="{{ settings_obj.favicon.url }}"
+                                        alt="Current favicon"
+                                        class="branding-preview-favicon"
+                                    >
+                                    <div class="form-check">
+                                        <input
+                                            type="checkbox"
+                                            class="form-check-input"
+                                            id="formRemoveFavicon"
+                                            name="remove_favicon"
+                                        >
+                                        <label class="form-check-label" for="formRemoveFavicon">
+                                            Remove current favicon
+                                        </label>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <p class="text-body-secondary small mb-2">
+                                    No favicon set — browsers show their default icon.
+                                </p>
+                            {% endif %}
+
+                            <input
+                                type="file"
+                                class="form-control"
+                                id="formFavicon"
+                                name="favicon"
+                                accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/webp,image/gif,image/jpeg"
+                            >
+                            <div class="form-text">
+                                Square works best. PNG, ICO, WEBP, GIF or JPG, up to 256&nbsp;KB.
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Colours -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-body">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="bi bi-palette me-2"></i>Colours
+                        </h5>
+                    </div>
+                    <div class="card-body">
+
+                        <p class="text-body-secondary">
+                            Hex codes, e.g. <code>#0d6efd</code>. Leave a field blank
+                            to use the default. Text on coloured surfaces is switched
+                            between black and white automatically, so a pale colour
+                            stays readable.
+                        </p>
+
+                        {% include "library/partials/color_field.html" with label="Primary" field_name="primary_color" input_id="formPrimaryColor" value=settings_obj.primary_color fallback=settings_obj.DEFAULT_PRIMARY_COLOR help_text="Buttons, links, active navigation and focus rings." %}
+
+                        {% include "library/partials/color_field.html" with label="Secondary" field_name="secondary_color" input_id="formSecondaryColor" value=settings_obj.secondary_color fallback=settings_obj.DEFAULT_SECONDARY_COLOR help_text="Supporting accents." %}
+
+                        {% include "library/partials/color_field.html" with label="Accent" field_name="accent_color" input_id="formAccentColor" value=settings_obj.accent_color fallback=settings_obj.DEFAULT_ACCENT_COLOR help_text="Highlights." %}
+
+                    </div>
+                </div>
+
+                <!-- Contact / footer -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-body">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="bi bi-info-circle me-2"></i>Contact &amp; Footer
+                        </h5>
+                    </div>
+                    <div class="card-body">
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label for="formContactEmail" class="form-label fw-semibold">
+                                    Contact Email
+                                </label>
+                                <input
+                                    type="email"
+                                    class="form-control"
+                                    id="formContactEmail"
+                                    name="contact_email"
+                                    value="{{ settings_obj.contact_email }}"
+                                    maxlength="255"
+                                >
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="formContactPhone" class="form-label fw-semibold">
+                                    Contact Phone
+                                </label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="formContactPhone"
+                                    name="contact_phone"
+                                    value="{{ settings_obj.contact_phone }}"
+                                    maxlength="50"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label for="formFooterText" class="form-label fw-semibold">
+                                Footer Text
+                            </label>
+                            <textarea
+                                class="form-control"
+                                id="formFooterText"
+                                name="footer_text"
+                                rows="2"
+                            >{{ settings_obj.footer_text }}</textarea>
+                            <div class="form-text">
+                                Shown at the bottom of every page and under the sign-in box.
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i> Save Branding
+                    </button>
+                    <a href="{% url 'library_home' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-lg me-1"></i> Cancel
+                    </a>
+                </div>
+
+            </form>
+
+            <p class="text-body-secondary small mt-4 mb-0">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                Uploaded files are stored on the server's own filesystem. On hosting
+                that resets its disk on each deploy (such as Render's free tier), the
+                logo and favicon will need re-uploading after a redeploy.
+            </p>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

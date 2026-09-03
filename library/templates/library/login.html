@@ -1,34 +1,99 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Login - Madrasah Library</title>
-</head>
-<body>
+{% extends "library/base.html" %}
 
-<h1>Madrasah Library — Login</h1>
+{% comment %}
+Extends the shared layout for the head only — branding, favicon, colours,
+theme resolution and assets — and replaces `body` with a centred card,
+because there is no sidebar or topbar to show before signing in.
+{% endcomment %}
 
-{% if error %}
-    <p style="color: red;">
-        <strong>{{ error }}</strong>
-    </p>
-{% endif %}
+{% block title %}
+    Sign in | {{ branding.display_name }}
+{% endblock %}
 
-<form method="post">
-    {% csrf_token %}
-    <input type="hidden" name="next" value="{{ request.GET.next }}">
+{% block body %}
 
-    <label for="username">Username:</label>
-    <input type="text" name="username" id="username" required autofocus>
+<div class="auth-shell">
 
-    <br><br>
+    <div class="auth-card">
 
-    <label for="password">Password:</label>
-    <input type="password" name="password" id="password" required>
+        {% comment %}
+          Anonymous visitors get the same three-way control; with no user to
+          save against it persists to localStorage only, which is what the
+          pre-paint script reads on the next visit.
+        {% endcomment %}
+        <div class="d-flex justify-content-end mb-2">
+            {% include "library/partials/theme_selector.html" %}
+        </div>
 
-    <br><br>
+        <div class="auth-brand">
 
-    <button type="submit">Log In</button>
-</form>
+            {% if branding.logo %}
+                <img src="{{ branding.logo.url }}" alt="">
+            {% else %}
+                <i class="bi bi-book-half" aria-hidden="true"></i>
+            {% endif %}
 
-</body>
-</html>
+            <h1>{{ branding.display_name }}</h1>
+
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+
+                <h2 class="h6 text-body-secondary mb-3">Sign in to continue</h2>
+
+                {% if error %}
+                    <div class="alert alert-danger d-flex align-items-center" role="alert">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <div>{{ error }}</div>
+                    </div>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.GET.next }}">
+
+                    <div class="mb-3">
+                        <label for="username" class="form-label fw-semibold">Username</label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            name="username"
+                            id="username"
+                            autocomplete="username"
+                            required
+                            autofocus
+                        >
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="password" class="form-label fw-semibold">Password</label>
+                        <input
+                            type="password"
+                            class="form-control"
+                            name="password"
+                            id="password"
+                            autocomplete="current-password"
+                            required
+                        >
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Log In
+                    </button>
+                </form>
+
+            </div>
+        </div>
+
+        {% if branding.footer_text %}
+            <p class="text-center text-body-secondary small mt-3 mb-0">
+                {{ branding.footer_text }}
+            </p>
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endblock %}

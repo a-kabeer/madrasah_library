@@ -1,33 +1,133 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Loans</title>
-</head>
+{% extends "library/base.html" %}
 
-<body>
+{% block title %}Loans | {{ branding.display_name }}{% endblock %}
 
-{% include "library/_account_bar.html" %}
+{% block page_title %}Loans{% endblock %}
 
-    <p>
-        <a href="{% url 'library_home' %}">
-            ← Back to Home
-        </a>
-    </p>
+{% block content %}
+<div class="container-fluid px-0">
 
-    <h1>Loans</h1>
+    <div class="mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'circulation_dashboard' %}">Circulation</a></li>
+                <li class="breadcrumb-item active">All Loans</li>
+            </ol>
+        </nav>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="fw-bold mb-1">Loans</h2>
+                <p class="text-body-secondary mb-0">Search, filter, and manage all loans.</p>
+            </div>
+            <a href="{% url 'circulation_issue' %}" class="btn btn-primary">Issue Books</a>
+        </div>
+    </div>
 
-    <form method="get">
+    <div class="mb-3">
+        <div class="btn-group" role="group">
+            <a href="{% url 'loan_list' %}" class="btn btn-outline-secondary {% if not status and not search %}active{% endif %}">All</a>
+            <a href="{% url 'loan_list' %}?status=active" class="btn btn-outline-primary {% if status == 'active' %}active{% endif %}">Active</a>
+            <a href="{% url 'loan_list' %}?status=overdue" class="btn btn-outline-danger {% if status == 'overdue' %}active{% endif %}">Overdue</a>
+            <a href="{% url 'loan_list' %}?status=due_today" class="btn btn-outline-warning {% if status == 'due_today' %}active{% endif %}">Due Today</a>
+            <a href="{% url 'loan_list' %}?status=returned" class="btn btn-outline-success {% if status == 'returned' %}active{% endif %}">Returned</a>
+        </div>
+    </div>
 
-        <p>
-            <label>Search:</label>
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="search" class="form-label">Search</label>
+                    <input type="text" class="form-control" id="search" name="search" value="{{ search }}" placeholder="Borrower, copy code, book title...">
+                </div>
+                <div class="col-md-3">
+                    <label for="status" class="form-label">Status</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">All Statuses</option>
+                        <option value="active" {% if status == "active" %}selected{% endif %}>Active</option>
+                        <option value="overdue" {% if status == "overdue" %}selected{% endif %}>Overdue</option>
+                        <option value="due_today" {% if status == "due_today" %}selected{% endif %}>Due Today</option>
+                        <option value="returned" {% if status == "returned" %}selected{% endif %}>Returned</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="borrower" class="form-label">Borrower</label>
+                    <select class="form-select" id="borrower" name="borrower">
+                        <option value="">All Borrowers</option>
+                        {% for b in borrowers %}
+                        <option value="{{ b.id }}" {% if borrower_id == b.id|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">Filter</button>
+                </div>
+                {% if search or status or borrower_id %}
+                <div class="col-12">
+                    <a href="{% url 'loan_list' %}" class="btn btn-sm btn-outline-secondary">Clear Filters</a>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
 
-            <input
-                type="text"
-                name="search"
-                value="{{ search }}"
-                placeholder="Search borrower, book, copy..."
-            >
-        </p>
+    <p class="text-body-secondary">Found {{ loans.paginator.count }} loan{{ loans.paginator.count|pluralize }}.</p>
+
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Copy</th>
+                        <th>Book</th>
+                        <th>Borrower</th>
+                        <th>Issue Date</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in loans %}
+                    <tr>
+                        <td>{{ loan.id }}</td>
+                        <td class="fw-semibold">{{ loan.copy.copy_code }}</td>
+                        <td><a href="{% url 'book_detail' loan.copy.volume.book.id %}">{{ loan.copy.volume.book.title }}</a></td>
+                        <td><a href="{% url 'borrower_detail' loan.borrower.id %}">{{ loan.borrower.name }}</a></td>
+                        <td>{{ loan.issue_date }}</td>
+                        <td>{{ loan.due_date }}</td>
+                        <td>
+                            {% if loan.return_date %}
+                                <span class="badge bg-secondary">Returned</span>
+                            {% elif loan.days_overdue > 0 %}
+                                <span class="badge bg-danger">Overdue ({{ loan.days_overdue }}d)</span>
+                            {% else %}
+                                <span class="badge bg-success">Active</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'loan_detail' loan.id %}" class="btn btn-outline-secondary">View</a>
+                                {% if not loan.return_date %}
+                                <a href="{% url 'loan_return' loan.id %}" class="btn btn-outline-success">Return</a>
+                                <a href="{% url 'loan_renew' loan.id %}" class="btn btn-outline-primary">Renew</a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="8" class="text-center text-body-secondary py-4">No loans found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% include "library/_pagination.html" with page_obj=loans %}
+
+</div>
+{% endblock %}
 
         <p>
             <label>Status:</label>

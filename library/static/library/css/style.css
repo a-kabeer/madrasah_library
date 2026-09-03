@@ -1,0 +1,1315 @@
+/* =========================
+   ROOT
+========================= */
+
+/*
+  Layout constants and the theme/branding tokens.
+
+  The --brand-* tokens are the single source of truth for the
+  organisation's colours. base.html re-declares them in an inline <style>
+  when branding has been configured, so the values here are the defaults
+  for an unbranded install. They must not be referenced anywhere before
+  being defined, hence this block coming first.
+
+  Bootstrap's own --bs-primary is pointed at --brand-primary so buttons,
+  links, badges and focus rings pick up the branding for free. The
+  project's older --primary is kept as an alias, so both it and --bs-primary
+  can never drift apart again.
+*/
+:root {
+    --sidebar-width: 260px;
+    --topbar-height: 70px;
+
+    --brand-primary: #0d6efd;
+    --brand-secondary: #6c757d;
+    --brand-accent: #198754;
+
+    /* Readable foreground for filled brand-coloured surfaces. Overridden
+       in the dark block only where the surface itself changes. */
+    --brand-on-primary: #fff;
+
+    --sidebar-bg: #212529;
+    --sidebar-hover: #343a40;
+    --sidebar-text: #ced4da;
+    --sidebar-text-strong: #fff;
+    --sidebar-section: #adb5bd;
+    --sidebar-border: rgba(255, 255, 255, 0.1);
+
+    --scrim: rgba(0, 0, 0, 0.5);
+    --shadow-soft: rgba(0, 0, 0, 0.15);
+    --shadow-strong: rgba(0, 0, 0, 0.25);
+}
+
+/*
+  Bootstrap reads --bs-primary (and the -rgb form, used by utilities that
+  compose alpha) from :root, so aliasing them here is what makes branding
+  reach Bootstrap's own components.
+*/
+:root,
+[data-bs-theme="light"],
+[data-bs-theme="dark"] {
+    --bs-primary: var(--brand-primary);
+    --bs-link-color: var(--brand-primary);
+    --bs-link-hover-color: var(--brand-primary);
+
+    /* Channels for the default brand colour. base.html overrides this from
+       the configured colour, since CSS cannot split a hex into channels. */
+    --bs-primary-rgb: 13, 110, 253;
+
+    /* Kept as an alias of the brand token — it used to be a separate
+       hardcoded colour, which meant the sidebar and Bootstrap disagreed. */
+    --primary: var(--brand-primary);
+}
+
+/*
+  Dark mode variable overrides.
+  Bootstrap handles component colors via data-bs-theme.
+  These custom variables adapt our custom chrome (sidebar, etc).
+*/
+[data-bs-theme="dark"] {
+    --sidebar-bg: #1a1d21;
+    --sidebar-hover: #2d3238;
+
+    /* Shadows and the mobile scrim need more weight on a dark ground. */
+    --shadow-soft: rgba(0, 0, 0, 0.5);
+    --shadow-strong: rgba(0, 0, 0, 0.7);
+}
+
+
+
+/* =========================
+   BRAND-DRIVEN BOOTSTRAP COMPONENTS
+
+   Aliasing --bs-primary is not enough on its own. Bootstrap 5.3 compiles
+   per-component variables with literal colours baked in — .btn-primary sets
+   its own --bs-btn-bg: #0d6efd, and form focus rings hardcode an rgba() —
+   so those have to be pointed at the brand token explicitly. Utilities
+   built on --bs-primary-rgb (.text-primary, .bg-primary) already follow it.
+
+   Hover/active states use a brightness filter rather than a pre-darkened
+   colour, so they work for any brand colour without needing the
+   administrator to supply shade variants.
+   ========================= */
+
+.btn-primary {
+    --bs-btn-bg: var(--brand-primary);
+    --bs-btn-border-color: var(--brand-primary);
+    --bs-btn-color: var(--brand-on-primary);
+
+    --bs-btn-hover-bg: var(--brand-primary);
+    --bs-btn-hover-border-color: var(--brand-primary);
+    --bs-btn-hover-color: var(--brand-on-primary);
+
+    --bs-btn-active-bg: var(--brand-primary);
+    --bs-btn-active-border-color: var(--brand-primary);
+    --bs-btn-active-color: var(--brand-on-primary);
+
+    --bs-btn-disabled-bg: var(--brand-primary);
+    --bs-btn-disabled-border-color: var(--brand-primary);
+    --bs-btn-disabled-color: var(--brand-on-primary);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--brand-primary);
+    --bs-btn-border-color: var(--brand-primary);
+
+    --bs-btn-hover-bg: var(--brand-primary);
+    --bs-btn-hover-border-color: var(--brand-primary);
+    --bs-btn-hover-color: var(--brand-on-primary);
+
+    --bs-btn-active-bg: var(--brand-primary);
+    --bs-btn-active-border-color: var(--brand-primary);
+    --bs-btn-active-color: var(--brand-on-primary);
+
+    --bs-btn-disabled-color: var(--brand-primary);
+    --bs-btn-disabled-border-color: var(--brand-primary);
+}
+
+.btn-primary:hover,
+.btn-primary:focus-visible,
+.btn-outline-primary:hover,
+.btn-outline-primary:focus-visible {
+    filter: brightness(0.92);
+}
+
+.btn-primary:active,
+.btn-outline-primary:active {
+    filter: brightness(0.85);
+}
+
+
+/* Nav pills bake in their own literal too, the same way buttons do. */
+.nav-pills {
+    --bs-nav-pills-link-active-bg: var(--brand-primary);
+    --bs-nav-pills-link-active-color: var(--brand-on-primary);
+}
+
+.nav-pills .nav-link {
+    color: var(--bs-body-color);
+}
+
+.nav-pills .nav-link:hover:not(.active) {
+    background: var(--bs-tertiary-bg);
+}
+
+
+/* Focus rings and checked controls: both hardcode Bootstrap's blue. */
+.form-control:focus,
+.form-select:focus,
+.form-check-input:focus {
+    border-color: var(--brand-primary);
+
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+.form-check-input:checked {
+    background-color: var(--brand-primary);
+
+    border-color: var(--brand-primary);
+}
+
+.btn:focus-visible {
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+
+/* =========================
+   GLOBAL
+========================= */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--bs-tertiary-bg);
+    color: var(--bs-body-color);
+}
+
+
+/* =========================
+   APP WRAPPER
+========================= */
+
+.app-wrapper {
+    min-height: 100vh;
+}
+
+
+/* =========================
+   SIDEBAR
+========================= */
+
+.sidebar {
+    position: fixed;
+
+    top: 0;
+    left: 0;
+
+    width: var(--sidebar-width);
+    height: 100vh;
+
+    background: var(--sidebar-bg);
+
+    overflow-y: auto;
+
+    z-index: 1040;
+
+    transition: transform 0.25s ease;
+}
+
+
+/* =========================
+   SIDEBAR BRAND
+========================= */
+
+.sidebar-brand {
+    height: var(--topbar-height);
+
+    display: flex;
+    align-items: center;
+
+    padding: 0 1.5rem;
+
+    border-bottom: 1px solid var(--sidebar-border);
+}
+
+.sidebar-brand a {
+    color: var(--sidebar-text-strong);
+
+    text-decoration: none;
+
+    font-size: 1.2rem;
+    font-weight: 600;
+
+    display: flex;
+    align-items: center;
+
+    gap: 0.75rem;
+}
+
+.sidebar-brand i {
+    font-size: 1.5rem;
+}
+
+/* Uploaded organisation logo, shown in place of the fallback glyph.
+   Bounded so any aspect ratio fits the brand bar without pushing it. */
+.brand-logo {
+    max-height: 2.25rem;
+    max-width: 2.75rem;
+
+    object-fit: contain;
+
+    flex-shrink: 0;
+}
+
+
+/* =========================
+   SIDEBAR NAVIGATION
+========================= */
+
+.sidebar-nav {
+    padding: 1rem 0;
+}
+
+.nav-section-title {
+    color: var(--sidebar-section);
+
+    font-size: 0.7rem;
+    font-weight: 700;
+
+    letter-spacing: 0.08rem;
+
+    padding:
+
+        1.25rem
+        1.5rem
+        0.5rem;
+}
+
+.nav-link-custom {
+    display: flex;
+
+    align-items: center;
+
+    gap: 0.9rem;
+
+    color: var(--sidebar-text);
+
+    text-decoration: none;
+
+    padding:
+
+        0.75rem
+        1.5rem;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease;
+}
+
+.nav-link-custom:hover {
+    background: var(--sidebar-hover);
+
+    color: var(--sidebar-text-strong);
+}
+
+/* Active sidebar link */
+.nav-link-custom.active {
+    background: var(--primary);
+
+    color: var(--brand-on-primary);
+
+    font-weight: 600;
+}
+
+.nav-link-custom i {
+    width: 20px;
+
+    font-size: 1.1rem;
+
+    text-align: center;
+}
+
+
+/* =========================
+   MAIN AREA
+========================= */
+
+.main-area {
+    margin-left: var(--sidebar-width);
+
+    min-height: 100vh;
+}
+
+
+/* =========================
+   TOPBAR
+   ========================= */
+
+.topbar {
+    height: var(--topbar-height);
+
+    background: var(--bs-body-bg);
+
+    border-bottom:
+
+        1px solid
+        var(--bs-border-color);
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 1rem;
+
+    padding: 0 1.5rem;
+
+    position: sticky;
+
+    top: 0;
+
+    z-index: 1030;
+}
+
+/* Left: menu toggle + title */
+.topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
+}
+
+/* Center: breadcrumbs */
+.topbar-center {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.topbar-center:empty {
+    display: none;
+}
+
+/* Right: theme toggle + user */
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+
+/* =========================
+   MENU BUTTON
+   ========================= */
+
+.menu-button {
+    display: none;
+
+    font-size: 1.5rem;
+
+    padding: 0;
+
+    color: var(--bs-body-color);
+}
+
+
+/* =========================
+   PAGE HEADING
+   ========================= */
+
+.page-heading h1 {
+    margin: 0;
+
+    font-size: 1.35rem;
+
+    font-weight: 600;
+}
+
+
+/* =========================
+   THEME TOGGLE
+   ========================= */
+
+.theme-toggle {
+    color: var(--bs-body-color);
+
+    font-size: 1.1rem;
+
+    padding: 0.375rem 0.5rem;
+
+    border-radius: 0.375rem;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    line-height: 1;
+}
+
+.theme-toggle:hover {
+    background: var(--bs-tertiary-bg);
+
+    color: var(--bs-primary);
+}
+
+
+/* =========================
+   APPEARANCE MENU
+   ========================= */
+
+.theme-option {
+    display: flex;
+
+    align-items: center;
+
+    gap: 0.6rem;
+}
+
+/* The tick marks the active choice; it also carries the meaning conveyed to
+   assistive tech via aria-checked on the same button. */
+.theme-option-check {
+    margin-left: auto;
+
+    visibility: hidden;
+}
+
+.theme-option.active .theme-option-check {
+    visibility: visible;
+}
+
+/* Bootstrap's .active dropdown-item fills with --bs-primary; keep the text
+   readable whatever brand colour that resolves to. */
+.theme-option.active {
+    background: var(--brand-primary);
+
+    color: var(--brand-on-primary);
+}
+
+
+/* =========================
+   FOOTER
+   ========================= */
+
+.app-footer {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    align-items: center;
+
+    gap: 0.25rem 1.5rem;
+
+    padding: 1rem 1.5rem;
+
+    border-top: 1px solid var(--bs-border-color);
+
+    color: var(--bs-secondary-color);
+
+    font-size: 0.875rem;
+}
+
+.app-footer a {
+    color: inherit;
+
+    text-decoration: none;
+}
+
+.app-footer a:hover {
+    color: var(--brand-primary);
+}
+
+
+/* =========================
+   AUTH PAGES (LOGIN)
+   ========================= */
+
+.auth-shell {
+    min-height: 100vh;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 1.5rem;
+
+    background: var(--bs-tertiary-bg);
+}
+
+.auth-card {
+    width: 100%;
+
+    max-width: 26rem;
+}
+
+.auth-brand {
+    display: flex;
+
+    flex-direction: column;
+    align-items: center;
+
+    gap: 0.75rem;
+
+    margin-bottom: 1.5rem;
+
+    text-align: center;
+}
+
+.auth-brand i {
+    font-size: 2.75rem;
+
+    color: var(--brand-primary);
+
+    line-height: 1;
+}
+
+.auth-brand img {
+    max-height: 4rem;
+    max-width: 12rem;
+
+    object-fit: contain;
+}
+
+.auth-brand h1 {
+    margin: 0;
+
+    font-size: 1.35rem;
+    font-weight: 600;
+}
+
+
+/* =========================
+   CLICKABLE BOOK ROWS
+
+   The whole row opens the book's details, so it has to read as one control
+   rather than a strip containing several.
+   ========================= */
+
+.book-row {
+    cursor: pointer;
+}
+
+.book-row:focus-visible {
+    outline: 2px solid var(--brand-primary);
+
+    outline-offset: -2px;
+}
+
+/* The action buttons are the one part of the row that is not the row. */
+.book-row [data-row-actions] {
+    cursor: default;
+}
+
+
+/* Dismissible active-filter chip. */
+.filter-chip {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 0.35rem;
+
+    padding: 0.15rem 0.6rem;
+
+    border: 1px solid var(--bs-border-color);
+    border-radius: 2rem;
+
+    background: var(--bs-tertiary-bg);
+
+    color: var(--bs-body-color);
+
+    text-decoration: none;
+
+    font-size: 0.875rem;
+}
+
+.filter-chip:hover {
+    border-color: var(--brand-primary);
+
+    color: var(--brand-primary);
+}
+
+
+/* =========================
+   BOOK DETAILS MODAL
+   ========================= */
+
+/*
+  Fixed box, not just a width. With only a width set the height follows the
+  image's aspect ratio, so a tall scan rendered far bigger than a square one
+  — which is why covers looked inconsistent. `contain` fits the whole image
+  inside the box without cropping or distorting it, and the leftover space
+  is the neutral panel colour.
+*/
+.cover-modal {
+    width: 120px;
+    height: 170px;
+
+    flex-shrink: 0;
+
+    padding: 0.25rem;
+
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+
+    background: var(--bs-tertiary-bg);
+
+    object-fit: contain;
+}
+
+/* Same box for books with no cover, so the layout does not shift. */
+.cover-modal-empty {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    color: var(--bs-secondary-color);
+
+    font-size: 1.75rem;
+}
+
+/* Keep a long volume/copy list from growing the dialog past the viewport. */
+.modal-volume-list {
+    max-height: 14rem;
+
+    overflow-y: auto;
+}
+
+
+/* =========================
+   SORTABLE TABLE HEADERS
+   ========================= */
+
+.table-sort {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 0.35rem;
+
+    color: inherit;
+
+    text-decoration: none;
+
+    white-space: nowrap;
+}
+
+.table-sort:hover {
+    color: var(--brand-primary);
+}
+
+/* The neutral up/down glyph on unsorted columns: visible enough to signal
+   the column is sortable, quiet enough not to compete with the active one. */
+.table-sort-idle {
+    opacity: 0.35;
+}
+
+.table-sort:hover .table-sort-idle {
+    opacity: 0.75;
+}
+
+
+/* =========================
+   ERROR PAGES (403 / 404 / 500)
+   ========================= */
+
+.error-code {
+    font-size: 4rem;
+    font-weight: 700;
+
+    line-height: 1;
+
+    /* Large but recessive: the message matters more than the number. */
+    color: var(--bs-secondary-color);
+
+    opacity: 0.35;
+}
+
+.error-icon {
+    margin: -1.25rem 0 0.75rem;
+
+    font-size: 2.5rem;
+
+    color: var(--brand-primary);
+
+    line-height: 1;
+}
+
+
+/* =========================
+   BRANDING SETTINGS
+   ========================= */
+
+/* Native colour input, sized to sit beside its hex text field. */
+.color-swatch-input {
+    width: 3rem;
+
+    padding: 0.25rem;
+
+    flex-shrink: 0;
+}
+
+.branding-preview-logo {
+    max-height: 5rem;
+    max-width: 12rem;
+
+    object-fit: contain;
+
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+
+    padding: 0.25rem;
+
+    background: var(--bs-body-bg);
+}
+
+.branding-preview-favicon {
+    width: 32px;
+    height: 32px;
+
+    object-fit: contain;
+}
+
+
+/* =========================
+   USER MENU
+   ========================= */
+
+.user-menu-button {
+    border: none;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 0.5rem;
+}
+
+.user-menu-button i {
+    font-size: 1.3rem;
+}
+
+
+/* =========================
+   BREADCRUMBS
+   ========================= */
+
+.topbar .breadcrumb {
+    margin-bottom: 0;
+
+    font-size: 0.875rem;
+
+    flex-wrap: nowrap;
+
+    overflow: hidden;
+}
+
+.topbar .breadcrumb-item a {
+    color: var(--bs-secondary-color);
+
+    text-decoration: none;
+}
+
+.topbar .breadcrumb-item a:hover {
+    color: var(--bs-primary);
+
+    text-decoration: underline;
+}
+
+.topbar .breadcrumb-item.active {
+    color: var(--bs-body-color);
+}
+
+
+/* =========================
+   MAIN CONTENT
+========================= */
+
+.main-content {
+    padding: 2rem;
+
+    max-width: 1600px;
+}
+
+
+/* =========================
+   SIDEBAR OVERLAY
+========================= */
+
+.sidebar-overlay {
+    display: none;
+
+    position: fixed;
+
+    inset: 0;
+
+    background: var(--scrim);
+
+    z-index: 1035;
+}
+
+.sidebar-overlay.show {
+    display: block;
+}
+
+
+
+/* =========================
+   SEARCHABLE DROPDOWN (COMBOBOX)
+   ========================= */
+
+.combobox {
+    position: relative;
+}
+
+
+.combobox-control {
+    position: relative;
+}
+
+
+/* Room for the spinner and clear button sitting inside the field. */
+.combobox-input {
+    padding-right: 4.5rem;
+}
+
+
+.combobox-spinner {
+    position: absolute;
+
+    top: 50%;
+    right: 2.25rem;
+
+    transform: translateY(-50%);
+
+    display: none;
+
+    color: var(--bs-secondary-color);
+
+    line-height: 0;
+}
+
+/* HTMX puts `htmx-request` on the indicator while a search is in flight. */
+.combobox-spinner.htmx-request {
+    display: block;
+}
+
+
+/* Progress for the book list's in-place updates.
+
+   HTMX marks the element named by hx-indicator with `htmx-request` while its
+   request is in flight, so the region being replaced can report its own
+   progress. Dimming it adds and removes nothing, which matters: a spinner
+   inserted above the table changed the page height on the way in and again
+   on the way out, and that read as the page jumping on every search.
+
+   `pointer-events` goes with it, so a second click cannot queue a request
+   against results that are already on their way out. */
+.swap-busy {
+    transition: opacity 120ms ease-in;
+}
+
+.swap-busy.htmx-request {
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+
+/* The Add Book dialog's step indicator. Hidden in the markup and shown by
+   app.js, because without the script every step is on screen at once and
+   numbering them would misdescribe the form. */
+.book-steps {
+    display: flex;
+    flex-wrap: wrap;
+
+    gap: 0.5rem 1.25rem;
+
+    margin: 0 0 1.25rem;
+    padding: 0 0 0.75rem;
+
+    list-style: none;
+    counter-reset: book-step;
+
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.book-steps li {
+    counter-increment: book-step;
+
+    font-size: 0.875rem;
+    color: var(--bs-secondary-color);
+}
+
+.book-steps li::before {
+    content: counter(book-step);
+
+    display: inline-grid;
+    place-items: center;
+
+    width: 1.5rem;
+    height: 1.5rem;
+
+    margin-right: 0.4rem;
+
+    border-radius: 50%;
+
+    background: var(--bs-secondary-bg);
+
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.book-steps li.current {
+    color: var(--bs-body-color);
+    font-weight: 600;
+}
+
+.book-steps li.current::before {
+    background: var(--brand-primary);
+    color: var(--brand-on-primary);
+}
+
+
+/* The copy list's move bar, which appears only while copies are ticked.
+   The accent edge is what marks it as something acting on a selection
+   rather than another panel that was always there. */
+.copy-move-bar {
+    border-left: 3px solid var(--brand-primary) !important;
+}
+
+
+/* Inline "add a location / shelf without leaving this form" box. Set off
+   from the field above it so it reads as a detour rather than another
+   field. */
+.quick-add {
+    padding: 0.75rem;
+
+    border: 1px dashed var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+
+    background: var(--bs-tertiary-bg);
+}
+
+
+.combobox-clear {
+    position: absolute;
+
+    top: 50%;
+    right: 0.5rem;
+
+    transform: translateY(-50%);
+
+    display: none;
+
+    padding: 0.25rem;
+
+    border: 0;
+    background: none;
+
+    color: var(--bs-secondary-color);
+
+    line-height: 0;
+
+    cursor: pointer;
+}
+
+/* Only offer "clear" when there is something to clear (class set by JS). */
+.combobox-filled .combobox-clear {
+    display: block;
+}
+
+.combobox-clear:hover {
+    color: var(--bs-danger);
+}
+
+
+.combobox-menu {
+    position: absolute;
+
+    top: calc(100% + 0.25rem);
+    left: 0;
+    right: 0;
+
+    z-index: 1050;
+
+    display: none;
+
+    max-height: 16rem;
+    overflow-y: auto;
+
+    padding: 0.25rem;
+
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+
+    background: var(--bs-body-bg);
+
+    box-shadow: 0 0.5rem 1rem var(--shadow-soft);
+}
+
+/* Nothing to show yet: keep the panel hidden rather than blank. */
+.combobox-open .combobox-menu:not(:empty) {
+    display: block;
+}
+
+
+.combobox-option,
+.combobox-create {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+
+    width: 100%;
+
+    padding: 0.5rem 0.75rem;
+
+    border: 0;
+    border-radius: 0.25rem;
+
+    background: none;
+
+    color: var(--bs-body-color);
+
+    text-align: left;
+
+    cursor: pointer;
+}
+
+
+.combobox-option:hover,
+.combobox-create:hover,
+.combobox-active {
+    background: var(--bs-tertiary-bg);
+}
+
+
+.combobox-option-name {
+    overflow-wrap: anywhere;
+}
+
+
+.combobox-create {
+    justify-content: flex-start;
+
+    margin-top: 0.25rem;
+
+    border-top: 1px solid var(--bs-border-color);
+    border-radius: 0;
+
+    color: var(--bs-primary);
+}
+
+
+.combobox-create[disabled] {
+    opacity: 0.65;
+
+    cursor: progress;
+}
+
+
+.combobox-note {
+    padding: 0.5rem 0.75rem;
+
+    color: var(--bs-secondary-color);
+
+    font-size: 0.875rem;
+}
+
+
+/* Mandatory field left empty on submit. */
+.combobox-invalid .combobox-input {
+    border-color: var(--bs-danger);
+}
+
+
+/* =========================
+   BOOK COVERS
+   ========================= */
+
+/* Row thumbnail. Works on every screen size, including touch, where the
+   hover preview below is deliberately disabled. */
+.cover-thumb {
+    display: block;
+
+    width: 32px;
+    height: 44px;
+
+    border-radius: 0.25rem;
+
+    object-fit: cover;
+}
+
+
+/* Placeholder for a book with no cover. */
+.cover-thumb-empty {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border: 1px dashed var(--bs-border-color);
+
+    background: var(--bs-tertiary-bg);
+
+    color: var(--bs-secondary-color);
+
+    font-size: 0.875rem;
+}
+
+
+/* Cover shown on the Book Details page. */
+.cover-detail {
+    width: 160px;
+
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+
+    object-fit: cover;
+}
+
+
+/* Current cover shown on the Edit Book form. */
+.cover-edit-preview {
+    width: 90px;
+
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+
+    object-fit: cover;
+}
+
+
+/* Pointer-following preview. Fixed to the viewport so the book table's
+   horizontal scroll container cannot clip it. */
+.cover-preview {
+    position: fixed;
+
+    top: 0;
+    left: 0;
+
+    /* Below Bootstrap's modal backdrop (1050) and dialog (1055): the book
+       name both shows this preview and opens a dialog, and a pointer-
+       following thumbnail must never sit on top of that dialog. */
+    z-index: 1040;
+
+    display: none;
+
+    padding: 0.25rem;
+
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+
+    background: var(--bs-body-bg);
+
+    box-shadow: 0 0.75rem 1.5rem var(--shadow-strong);
+
+    opacity: 0;
+
+    transition: opacity 0.15s ease-in-out;
+
+    pointer-events: none;
+}
+
+.cover-preview.show {
+    display: block;
+
+    opacity: 1;
+}
+
+/*
+  Fixed box for the same reason as .cover-modal: a width alone let the
+  preview's height track each image's aspect ratio, so it changed size from
+  row to row. `contain` keeps the whole cover visible and undistorted.
+*/
+.cover-preview img {
+    display: block;
+
+    width: 180px;
+    height: 250px;
+
+    border-radius: 0.375rem;
+
+    background: var(--bs-tertiary-bg);
+
+    object-fit: contain;
+}
+
+
+/* Honour a reduced-motion preference: still appears, just not animated. */
+@media (prefers-reduced-motion: reduce) {
+
+    .cover-preview {
+        transition: none;
+    }
+
+}
+
+
+/* =========================
+   FOCUS / ACCESSIBILITY
+   ========================= */
+
+.menu-button:focus-visible,
+.theme-toggle:focus-visible {
+    outline: 2px solid var(--bs-primary);
+
+    outline-offset: 2px;
+}
+
+
+/* =========================
+   RESPONSIVE DESIGN
+========================= */
+
+@media (max-width: 991.98px) {
+
+    .sidebar {
+        transform: translateX(-100%);
+    }
+
+    .sidebar.show {
+        transform: translateX(0);
+    }
+
+    .main-area {
+        margin-left: 0;
+    }
+
+    .menu-button {
+        display: flex;
+    }
+
+}
+
+
+@media (max-width: 767.98px) {
+
+    .main-content {
+        padding: 1rem;
+    }
+
+    .topbar {
+        padding: 0 1rem;
+    }
+
+    .page-heading h1 {
+        font-size: 1.1rem;
+    }
+
+    .user-menu-button {
+        font-size: 0;
+    }
+
+    .user-menu-button i {
+        font-size: 1.5rem;
+    }
+
+}

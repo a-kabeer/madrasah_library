@@ -1,0 +1,95 @@
+{% comment %}
+Add Book, served into #formModal by `book_add` so the librarian never
+leaves the list — their search, filters, sorting and page are all still
+there behind the dialog.
+
+The whole thing is one <form> submitted once. app.js reveals the four
+sections a step at a time, but there is no server-side wizard and no
+half-saved book: the single POST creates the book, its volumes and its
+copies inside one transaction, or nothing at all.
+
+Re-rendered in place when validation fails, so the dialog stays open with
+the error and everything already typed.
+{% endcomment %}
+
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    <i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Add New Book
+</h5>
+
+<form
+    id="bookAddForm"
+    data-book-wizard
+    hx-post="{% url 'book_add' %}?modal=1"
+    hx-target="#bookAddForm"
+    hx-swap="outerHTML"
+    hx-encoding="multipart/form-data"
+    hx-disabled-elt="find button[type=submit]"
+    hx-disinherit="*"
+>
+    {% csrf_token %}
+
+    {% if error %}
+        <div class="alert alert-danger d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
+            <div>{{ error }}</div>
+        </div>
+    {% endif %}
+
+    {% comment %}
+      The step indicator. Hidden when JavaScript is not running, because
+      then every section is on screen at once and numbering them would be
+      a lie.
+    {% endcomment %}
+    <ol class="book-steps" data-step-list hidden>
+        <li data-step-for="1">Book</li>
+        <li data-step-for="2">Volumes</li>
+        <li data-step-for="3">Copies</li>
+        <li data-step-for="4">Location</li>
+    </ol>
+
+    <div data-book-step="1" class="book-step">
+        {% include "library/partials/book_form_fields.html" with form_data=form_data book=None id_prefix="add" %}
+    </div>
+
+    {% include "library/partials/book_inventory_fields.html" with inventory=inventory locations=locations shelves=shelves max_copies_per_volume=max_copies_per_volume max_total_copies=max_total_copies id_prefix="add" %}
+
+    <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
+
+        <button
+            type="button"
+            class="btn btn-outline-secondary"
+            data-step-back
+            hidden
+        >
+            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i> Back
+        </button>
+
+        <button
+            type="button"
+            class="btn btn-primary"
+            data-step-next
+            hidden
+        >
+            Next <i class="bi bi-arrow-right ms-1" aria-hidden="true"></i>
+        </button>
+
+        {% comment %}
+          hx-disabled-elt on the form disables this for the length of the
+          request, which is what stops a second submission creating a
+          second book.
+        {% endcomment %}
+        <button type="submit" class="btn btn-primary" data-step-submit>
+            <i class="bi bi-check-lg me-1" aria-hidden="true"></i> Save Book
+        </button>
+
+        <button
+            type="button"
+            class="btn btn-outline-secondary ms-auto"
+            data-bs-dismiss="modal"
+        >
+            Cancel
+        </button>
+
+    </div>
+
+</form>

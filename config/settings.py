@@ -34,6 +34,35 @@ DEBUG = config("DEBUG", default=False, cast=bool)
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="", cast=Csv())
 
+# Render injects its own external hostname at runtime; pick it up
+# automatically so it doesn't also have to be set by hand in ALLOWED_HOSTS.
+RENDER_EXTERNAL_HOSTNAME = config("RENDER_EXTERNAL_HOSTNAME", default="")
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
+# Render (and similar platforms) sit behind a proxy that terminates HTTPS
+# and forwards plain HTTP internally, flagging the original scheme via this
+# header. Without it, Django can't tell the request was actually HTTPS.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Needed for CSRF checks on HTTPS deployments where the app doesn't already
+# know its own public hostname (e.g. Render's *.onrender.com domains).
+CSRF_TRUSTED_ORIGINS = config("CSRF_TRUSTED_ORIGINS", default="", cast=Csv())
+if RENDER_EXTERNAL_HOSTNAME:
+    CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
+
+SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=not DEBUG, cast=bool)
+SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=not DEBUG, cast=bool)
+CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=not DEBUG, cast=bool)
+X_FRAME_OPTIONS = "DENY"
+
+# 1 year, once you're confident HTTPS is solid — start lower (e.g. 3600) and
+# raise it once verified, since browsers will refuse plain HTTP for this
+# long once they've seen the header.
+SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=0, cast=int)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
+SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0
+
 
 # Application definition
 
@@ -50,6 +79,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -77,6 +107,9 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                # Organisation branding (name, logo, colours). Must stay
+                # available for anonymous users too — the login page uses it.
+                "library.context_processors.branding",
             ],
         },
     },
@@ -152,6 +185,39 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+
+# Media files (user uploads, e.g. book cover images)
+# https://docs.djangoproject.com/en/6.1/topics/files/
+#
+# NOTE: these are served by Django itself (see config/urls.py), which is fine
+# for local use and the demo deployment but is not how a busy site should
+# serve uploads. Two things to change before relying on this in production:
+# put a real web server or CDN in front of MEDIA_URL, and move MEDIA_ROOT to
+# durable storage — on a container host with an ephemeral filesystem (Render's
+# free tier included) uploaded covers are lost on every redeploy.
+
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+
+# Largest cover image a user may upload, in bytes.
+COVER_IMAGE_MAX_BYTES = 2 * 1024 * 1024
+
+# Branding uploads. A logo is displayed at ~180px wide and a favicon at
+# 32px, so both can be much smaller than a book cover.
+LOGO_MAX_BYTES = 1 * 1024 * 1024
+FAVICON_MAX_BYTES = 256 * 1024
 
 
 # Email

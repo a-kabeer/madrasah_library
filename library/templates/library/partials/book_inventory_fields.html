@@ -1,0 +1,431 @@
+{% comment %}
+The physical side of a new book: volumes, how many copies of each, and
+where they go.
+
+This is the part that saves the librarian walking Book -> Volume -> Copy ->
+Shelf by hand. It is deliberately plain markup: with JavaScript running,
+app.js shows one step at a time, keeps the copy rows in step with the
+volume rows, and reloads the Shelf list when the Location changes. Without
+it every section is simply visible at once and a single-volume book with a
+copy count still saves correctly — one long form rather than a broken one.
+
+Field names are read by `read_volume_rows` and `read_copy_plan`:
+
+  volume_mode   single | multiple
+  volume_number \\ one pair per row, in the same order, so a row and its
+  volume_title  / copy count stay together
+  copy_qty      one per volume row
+  copies_mode   skip | add
+  code_mode     auto | manual
+  copy_code     one per copy, in volume order, only when code_mode=manual
+  location      \\ checked against each other on the server
+  shelf         /
+
+Expected context: inventory, locations, shelves, max_copies_per_volume,
+max_total_copies, id_prefix.
+{% endcomment %}
+
+{% comment %} ---------- Step 2: volumes ---------- {% endcomment %}
+<div data-book-step="2" class="book-step">
+
+    <p class="fw-semibold mb-2">Does this book have more than one volume?</p>
+
+    <div class="d-flex flex-wrap gap-3 mb-3">
+
+        <div class="form-check">
+            <input
+                class="form-check-input"
+                type="radio"
+                name="volume_mode"
+                value="single"
+                id="{{ id_prefix }}VolumeSingle"
+                data-volume-mode
+                {% if inventory.mode != "multiple" %}checked{% endif %}
+            >
+            <label class="form-check-label" for="{{ id_prefix }}VolumeSingle">
+                Single volume
+            </label>
+        </div>
+
+        <div class="form-check">
+            <input
+                class="form-check-input"
+                type="radio"
+                name="volume_mode"
+                value="multiple"
+                id="{{ id_prefix }}VolumeMultiple"
+                data-volume-mode
+                {% if inventory.mode == "multiple" %}checked{% endif %}
+            >
+            <label class="form-check-label" for="{{ id_prefix }}VolumeMultiple">
+                Multiple volumes
+            </label>
+        </div>
+
+    </div>
+
+    <div class="form-text mb-3" data-volume-single-note>
+        Nothing more to fill in — the book is recorded as one volume.
+    </div>
+
+    {% comment %}
+      The rows. `volume_number` and `volume_title` are submitted as parallel
+      lists, and each row carries its own copy count, so the server can pair
+      them up by position without any ids.
+    {% endcomment %}
+    <div data-volume-rows class="mb-2">
+
+        {% if inventory.mode == "multiple" and inventory.rows %}
+
+            {% for row in inventory.rows %}
+                <div class="row g-2 align-items-end mb-2" data-volume-row>
+                    <div class="col-4 col-sm-3">
+                        <label class="form-label small mb-1">Volume no.</label>
+                        <input
+                            type="number"
+                            min="1"
+                            class="form-control form-control-sm"
+                            name="volume_number"
+                            value="{{ row.number }}"
+                        >
+                    </div>
+                    <div class="col">
+                        <label class="form-label small mb-1">Volume title (optional)</label>
+                        <input
+                            type="text"
+                            class="form-control form-control-sm"
+                            name="volume_title"
+                            value="{{ row.title }}"
+                        >
+                    </div>
+                    <div class="col-auto">
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline-danger"
+                            data-remove-volume
+                            aria-label="Remove this volume"
+                        >
+                            <i class="bi bi-x-lg" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+            {% endfor %}
+
+        {% endif %}
+
+    </div>
+
+    <button
+        type="button"
+        class="btn btn-sm btn-outline-primary"
+        data-add-volume
+    >
+        <i class="bi bi-plus-lg me-1"></i> Add volume
+    </button>
+
+</div>
+
+
+{% comment %} ---------- Step 3: copies ---------- {% endcomment %}
+<div data-book-step="3" class="book-step">
+
+    <p class="fw-semibold mb-2">Would you like to add physical copies now?</p>
+
+    <div class="d-flex flex-wrap gap-3 mb-3">
+
+        <div class="form-check">
+            <input
+                class="form-check-input"
+                type="radio"
+                name="copies_mode"
+                value="add"
+                id="{{ id_prefix }}CopiesAdd"
+                data-copies-mode
+                {% if inventory.copies_mode == "add" %}checked{% endif %}
+            >
+            <label class="form-check-label" for="{{ id_prefix }}CopiesAdd">
+                Add copies now
+            </label>
+        </div>
+
+        <div class="form-check">
+            <input
+                class="form-check-input"
+                type="radio"
+                name="copies_mode"
+                value="skip"
+                id="{{ id_prefix }}CopiesSkip"
+                data-copies-mode
+                {% if inventory.copies_mode != "add" %}checked{% endif %}
+            >
+            <label class="form-check-label" for="{{ id_prefix }}CopiesSkip">
+                Skip for now
+            </label>
+        </div>
+
+    </div>
+
+    <div class="form-text mb-3" data-copies-skip-note>
+        The book is catalogued without copies. Add them later from the
+        book's own page, whenever you know where they will live.
+    </div>
+
+    <div data-copies-panel>
+
+        {% comment %}
+          One quantity per volume. app.js rebuilds these from the volume
+          rows above whenever they change, so the two lists always line up.
+          Rendered here too, so the form still works without it.
+        {% endcomment %}
+        <div data-copy-quantities class="mb-3">
+
+            {% if inventory.mode == "multiple" and inventory.rows %}
+
+                {% for row in inventory.rows %}
+                    <div class="row g-2 align-items-center mb-2" data-copy-qty-row>
+                        <div class="col">
+                            <span class="small text-body-secondary">
+                                Volume {{ row.number|default:"?" }}
+                                {% if row.title %}— {{ row.title }}{% endif %}
+                            </span>
+                        </div>
+                        <div class="col-4 col-sm-3">
+                            <input
+                                type="number"
+                                min="0"
+                                max="{{ max_copies_per_volume }}"
+                                class="form-control form-control-sm"
+                                name="copy_qty"
+                                value="{{ row.quantity|default:'0' }}"
+                                aria-label="Number of copies"
+                            >
+                        </div>
+                    </div>
+                {% endfor %}
+
+            {% else %}
+
+                <div class="row g-2 align-items-center" data-copy-qty-row>
+                    <div class="col">
+                        <label class="form-label small mb-0" for="{{ id_prefix }}CopyQty">
+                            Number of copies
+                        </label>
+                    </div>
+                    <div class="col-4 col-sm-3">
+                        <input
+                            type="number"
+                            min="0"
+                            max="{{ max_copies_per_volume }}"
+                            class="form-control form-control-sm"
+                            id="{{ id_prefix }}CopyQty"
+                            name="copy_qty"
+                            value="{% if inventory.rows %}{{ inventory.rows.0.quantity }}{% else %}1{% endif %}"
+                        >
+                    </div>
+                </div>
+
+            {% endif %}
+
+        </div>
+
+        <div class="form-text mb-3">
+            Up to {{ max_copies_per_volume }} per volume,
+            {{ max_total_copies }} in one go.
+        </div>
+
+        <p class="fw-semibold mb-2">Copy codes</p>
+
+        <div class="d-flex flex-wrap gap-3 mb-2">
+
+            <div class="form-check">
+                <input
+                    class="form-check-input"
+                    type="radio"
+                    name="code_mode"
+                    value="auto"
+                    id="{{ id_prefix }}CodeAuto"
+                    data-code-mode
+                    {% if inventory.code_mode != "manual" %}checked{% endif %}
+                >
+                <label class="form-check-label" for="{{ id_prefix }}CodeAuto">
+                    Generate automatically
+                </label>
+            </div>
+
+            <div class="form-check">
+                <input
+                    class="form-check-input"
+                    type="radio"
+                    name="code_mode"
+                    value="manual"
+                    id="{{ id_prefix }}CodeManual"
+                    data-code-mode
+                    {% if inventory.code_mode == "manual" %}checked{% endif %}
+                >
+                <label class="form-check-label" for="{{ id_prefix }}CodeManual">
+                    Enter manually
+                </label>
+            </div>
+
+        </div>
+
+        <div class="form-text mb-3" data-code-auto-note>
+            Each copy gets its own permanent code. The code never changes,
+            even if the book is retitled, and is never given to another copy.
+        </div>
+
+        {% comment %}
+          One input per copy, in volume order, built by app.js from the
+          quantities above. Use this when the books already carry labels.
+        {% endcomment %}
+        <div data-manual-codes class="mb-3">
+
+            {% if inventory.code_mode == "manual" %}
+                {% for code in inventory.codes %}
+                    <input
+                        type="text"
+                        class="form-control form-control-sm mb-2"
+                        name="copy_code"
+                        value="{{ code }}"
+                        placeholder="Copy code"
+                        aria-label="Copy code"
+                    >
+                {% endfor %}
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</div>
+
+
+{% comment %} ---------- Step 4: where the copies live ---------- {% endcomment %}
+<div data-book-step="4" class="book-step">
+
+    <p class="fw-semibold mb-3">Where will the copies be kept?</p>
+
+    <div class="mb-3">
+
+        <label for="{{ id_prefix }}Location" class="form-label fw-semibold">
+            Location
+        </label>
+
+        <div class="d-flex gap-2">
+            {% comment %}
+              Changing the location reloads the Shelf options from
+              `shelf_list`, filtered to that location, so no unrelated
+              shelf is ever offered.
+            {% endcomment %}
+            <select
+                class="form-select"
+                id="{{ id_prefix }}Location"
+                name="location"
+                data-location-select
+                hx-get="{% url 'shelf_list' %}"
+                hx-vals='{"options": "1"}'
+                hx-trigger="change"
+                hx-target="#{{ id_prefix }}Shelf"
+                hx-include="this"
+            >
+                {% include "library/partials/location_options.html" with locations=locations selected_id=inventory.location %}
+            </select>
+
+            <button
+                type="button"
+                class="btn btn-outline-primary flex-shrink-0"
+                data-quick-add-toggle="location"
+            >
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                <span class="d-none d-sm-inline ms-1">New</span>
+            </button>
+        </div>
+
+        <div class="quick-add mt-2" data-quick-add="location" hidden>
+            <label class="form-label small mb-1" for="{{ id_prefix }}NewLocation">
+                New location name
+            </label>
+            <div class="d-flex gap-2">
+                {% comment %}
+                  Not a <form> — this sits inside the Add Book form and
+                  forms cannot nest. hx-vals names exactly the fields to
+                  send, so nothing else on the page goes with it.
+                {% endcomment %}
+                <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    id="{{ id_prefix }}NewLocation"
+                    data-quick-add-name="location"
+                    placeholder="e.g. Main Hall"
+                >
+                <button
+                    type="button"
+                    class="btn btn-sm btn-primary flex-shrink-0"
+                    hx-post="{% url 'location_add' %}"
+                    hx-vals='js:{options: "1", name: document.getElementById("{{ id_prefix }}NewLocation").value}'
+                    hx-target="#{{ id_prefix }}Location"
+                    hx-swap="innerHTML"
+                >
+                    Save
+                </button>
+            </div>
+            <div data-quick-add-error class="form-text text-danger"></div>
+        </div>
+
+    </div>
+
+    <div class="mb-3">
+
+        <label for="{{ id_prefix }}Shelf" class="form-label fw-semibold">
+            Shelf
+        </label>
+
+        <div class="d-flex gap-2">
+            <select
+                class="form-select"
+                id="{{ id_prefix }}Shelf"
+                name="shelf"
+                data-shelf-select
+            >
+                {% include "library/partials/shelf_options.html" with shelves=shelves selected_id=inventory.shelf has_location=inventory.location %}
+            </select>
+
+            <button
+                type="button"
+                class="btn btn-outline-primary flex-shrink-0"
+                data-quick-add-toggle="shelf"
+            >
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                <span class="d-none d-sm-inline ms-1">New</span>
+            </button>
+        </div>
+
+        <div class="quick-add mt-2" data-quick-add="shelf" hidden>
+            <label class="form-label small mb-1" for="{{ id_prefix }}NewShelf">
+                New shelf code, in the location chosen above
+            </label>
+            <div class="d-flex gap-2">
+                <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    id="{{ id_prefix }}NewShelf"
+                    data-quick-add-name="shelf"
+                    placeholder="e.g. A-1"
+                >
+                <button
+                    type="button"
+                    class="btn btn-sm btn-primary flex-shrink-0"
+                    hx-post="{% url 'shelf_add' %}"
+                    hx-vals='js:{options: "1", shelf_code: document.getElementById("{{ id_prefix }}NewShelf").value, location: document.getElementById("{{ id_prefix }}Location").value}'
+                    hx-target="#{{ id_prefix }}Shelf"
+                    hx-swap="innerHTML"
+                >
+                    Save
+                </button>
+            </div>
+            <div data-quick-add-error class="form-text text-danger"></div>
+        </div>
+
+    </div>
+
+</div>

@@ -1,0 +1,767 @@
+{% load static %}
+
+<!DOCTYPE html>
+
+{% comment %}
+  For a signed-in user with an explicit Light/Dark choice the attribute is
+  rendered server-side, so the right theme is in the markup itself — no
+  JavaScript needed and nothing to flash. "System" and anonymous visitors
+  fall through to the inline script below, which still runs before paint.
+{% endcomment %}
+<html lang="en" data-bs-theme="{% if theme_preference == 'light' or theme_preference == 'dark' %}{{ theme_preference }}{% else %}light{% endif %}"{% if request.user.is_authenticated %} data-theme-save-url="{% url 'theme_set' %}"{% endif %}>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <meta
+        name="description"
+        content="{{ branding.display_name }} — library management"
+    >
+
+    <!--
+      Theme resolution (inline, runs before paint).
+
+      `theme_preference` is the signed-in user's stored choice, or "" for
+      anonymous visitors. A stored choice always wins and refreshes the
+      localStorage mirror; with no stored choice we fall back to that mirror
+      and then to the OS setting, which is the behaviour anonymous pages
+      (e.g. login) had before.
+    -->
+    <script>
+        (function () {
+            var root = document.documentElement;
+            var KEY = "madrasah_theme";
+            var serverChoice = "{{ theme_preference|escapejs }}";
+            var choice;
+
+            function prefersDark() {
+                return !!(
+                    window.matchMedia
+                    && window.matchMedia("(prefers-color-scheme: dark)").matches
+                );
+            }
+
+            if (serverChoice) {
+                choice = serverChoice;
+                try {
+                    localStorage.setItem(KEY, serverChoice);
+                } catch (e) {
+                    /* localStorage unavailable; the attribute is enough */
+                }
+            } else {
+                choice = "system";
+                try {
+                    var stored = localStorage.getItem(KEY);
+                    if (stored === "light" || stored === "dark" || stored === "system") {
+                        choice = stored;
+                    }
+                } catch (e) {
+                    /* localStorage unavailable: fall back to the OS setting */
+                }
+            }
+
+            root.setAttribute(
+                "data-bs-theme",
+                choice === "system"
+                    ? (prefersDark() ? "dark" : "light")
+                    : choice
+            );
+
+            /* The choice itself, which "data-bs-theme" cannot express:
+               it only ever holds the resolved light/dark value. */
+            root.setAttribute("data-theme-choice", choice);
+        })();
+    </script>
+
+    <title>
+
+        {% block title %}
+
+            {{ branding.display_name }}
+
+        {% endblock %}
+
+    </title>
+
+
+    <!-- Favicon: only emitted when one has been uploaded, so there is
+         never a link pointing at a missing file. -->
+
+    {% if branding.favicon %}
+        <link rel="icon" href="{{ branding.favicon.url }}">
+    {% endif %}
+
+
+    <!-- Bootstrap CSS -->
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+
+    <!-- Bootstrap Icons -->
+
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+    >
+
+
+    {% comment %}
+      Custom CSS. `asset_version` is the files' modification time, and is
+      empty unless DEBUG: production filenames already carry a content hash,
+      but the dev server serves a stable URL with no Cache-Control, so
+      without this the browser keeps an old copy and edits appear not to
+      take effect.
+    {% endcomment %}
+
+    <link
+        rel="stylesheet"
+        href="{% static 'library/css/style.css' %}{% if asset_version %}?v={{ asset_version }}{% endif %}"
+    >
+
+
+    {% comment %}
+      Organisation colours, injected last so they override the defaults in
+      style.css. This has to be inline rather than a generated stylesheet:
+      static files are hashed and manifested by
+      CompressedManifestStaticFilesStorage at collectstatic time, so a file
+      written at runtime could not be served through {% static %}.
+
+      Only emitted when colours have actually been configured, so a default
+      install ships no inline CSS at all.
+    {% endcomment %}
+    {% if branding.has_custom_colors %}
+        <style>
+            :root {
+                --brand-primary: {{ branding.display_primary_color }};
+                --brand-secondary: {{ branding.display_secondary_color }};
+                --brand-accent: {{ branding.display_accent_color }};
+
+                /* Bootstrap composes alpha from the -rgb channels, which CSS
+                   cannot derive from a hex value. */
+                --bs-primary-rgb: {{ branding.display_primary_rgb }};
+
+                /* Chosen for contrast against the primary colour, so a pale
+                   brand colour does not leave white-on-white text. */
+                --brand-on-primary: {{ branding.display_on_primary }};
+            }
+        </style>
+    {% endif %}
+
+</head>
+<body>
+
+{% comment %}
+  Everything below is the signed-in application chrome. Auth pages (login)
+  override `body` to replace it, while still inheriting the head above —
+  branding, favicon, colours, theme resolution and assets — so there is no
+  need for a second layout template.
+{% endcomment %}
+{% block body %}
+
+<div class="app-wrapper">
+
+
+    <!-- Mobile Sidebar Overlay -->
+
+    <div
+        class="sidebar-overlay"
+        id="sidebarOverlay"
+    ></div>
+
+
+    <!-- Sidebar -->
+
+    <aside
+        class="sidebar"
+        id="sidebar"
+        aria-label="Main navigation"
+    >
+
+        <!-- Logo -->
+
+        <div class="sidebar-brand">
+
+            <a href="{% url 'library_home' %}">
+
+                {% if branding.logo %}
+                    <img
+                        src="{{ branding.logo.url }}"
+                        alt=""
+                        class="brand-logo"
+                    >
+                {% else %}
+                    <i class="bi bi-book-half" aria-hidden="true"></i>
+                {% endif %}
+
+                <span>
+                    {{ branding.display_name }}
+                </span>
+
+            </a>
+
+        </div>
+
+
+        <!-- Navigation -->
+
+        <nav class="sidebar-nav" aria-label="Primary">
+
+            <a
+                href="{% url 'library_home' %}"
+                class="nav-link-custom"
+                data-nav-exact="{% url 'dashboard' %}"
+            >
+
+                <i class="bi bi-grid-1x2"></i>
+
+                <span>
+                    Dashboard
+                </span>
+
+            </a>
+
+
+            <div class="nav-section-title">
+
+                LIBRARY
+
+            </div>
+
+
+            <a
+                href="{% url 'book_list' %}"
+                class="nav-link-custom"
+            >
+
+                <i class="bi bi-book"></i>
+
+                <span>
+                    Books
+                </span>
+
+            </a>
+
+
+            <a
+                href="{% url 'book_copy_list' %}"
+                class="nav-link-custom"
+            >
+
+                <i class="bi bi-collection"></i>
+
+                <span>
+                    Book Copies
+                </span>
+
+            </a>
+
+
+            <a
+                href="{% url 'book_content_list' %}"
+                class="nav-link-custom"
+            >
+
+                <i class="bi bi-file-earmark-text"></i>
+
+                <span>
+                    Contents
+                </span>
+
+            </a>
+
+
+            <div class="nav-section-title">
+
+                PEOPLE
+
+            </div>
+
+
+            <a
+                href="{% url 'borrower_list' %}"
+                class="nav-link-custom"
+            >
+
+                <i class="bi bi-people"></i>
+
+                <span>
+                    Borrowers
+                </span>
+
+            </a>
+
+
+            <div class="nav-section-title">
+
+                CIRCULATION
+
+            </div>
+
+
+            <a
+                href="{% url 'loan_list' %}"
+                class="nav-link-custom"
+            >
+
+                <i class="bi bi-arrow-left-right"></i>
+
+                <span>
+                    Loans
+                </span>
+
+            </a>
+
+
+            <div class="nav-section-title">
+
+                MANAGEMENT
+
+            </div>
+
+
+            <a
+                href="{% url 'location_list' %}"
+                class="nav-link-custom"
+            >
+
+                <i class="bi bi-geo-alt"></i>
+
+                <span>
+                    Locations
+                </span>
+
+            </a>
+
+
+            <a
+                href="{% url 'shelf_list' %}"
+                class="nav-link-custom"
+            >
+
+                <i class="bi bi-box-seam"></i>
+
+                <span>
+                    Shelves
+                </span>
+
+            </a>
+
+
+            <a
+                href="{% url 'user_list' %}"
+                class="nav-link-custom"
+            >
+
+                <i class="bi bi-person-gear"></i>
+
+                <span>
+                    Users
+                </span>
+
+            </a>
+
+
+            {% comment %}
+              Branding is Admin-only. Hiding the link is convenience, not
+              security — the view enforces it with @role_required("Admin").
+            {% endcomment %}
+            {% if request.user.role == "Admin" %}
+
+                <a
+                    href="{% url 'branding_settings' %}"
+                    class="nav-link-custom"
+                >
+
+                    <i class="bi bi-palette"></i>
+
+                    <span>
+                        Branding
+                    </span>
+
+                </a>
+
+            {% endif %}
+
+
+        </nav>
+
+    </aside>
+
+
+    <!-- Main Application Area -->
+
+    <div class="main-area">
+
+
+        <!-- Top Navigation -->
+
+        <header class="topbar">
+
+            <!-- Left: menu toggle + page title -->
+
+            <div class="topbar-left">
+
+                <button
+                    type="button"
+                    class="btn menu-button"
+                    id="menuToggle"
+                    aria-label="Toggle navigation menu"
+                    aria-expanded="false"
+                    aria-controls="sidebar"
+                >
+
+                    <i class="bi bi-list" aria-hidden="true"></i>
+
+                </button>
+
+                <div class="page-heading">
+
+                    <h1>
+
+                        {% block page_title %}
+
+                            {{ branding.display_name }}
+
+                        {% endblock %}
+
+                    </h1>
+
+                </div>
+
+            </div>
+
+
+            <!-- Center: breadcrumbs (optional, overridable) -->
+
+            <div class="topbar-center">
+
+                {% block breadcrumbs %}{% endblock %}
+
+            </div>
+
+
+            <!-- Right: theme toggle + user menu -->
+
+            <div class="topbar-right">
+
+                {% include "library/partials/theme_selector.html" %}
+
+                <!-- User Area -->
+
+                <div class="topbar-user">
+
+                {% if request.user.is_authenticated %}
+
+                    <div class="dropdown">
+
+                        <button
+                            class="btn dropdown-toggle user-menu-button"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                        >
+
+                            <i class="bi bi-person-circle" aria-hidden="true"></i>
+
+                            {{ request.user.username }}
+
+                        </button>
+
+
+                        <ul class="dropdown-menu dropdown-menu-end">
+
+                            <li>
+
+                                <span class="dropdown-item-text">
+
+                                    Signed in as
+
+                                    <strong>
+                                        {{ request.user.username }}
+                                    </strong>
+
+                                    <span class="d-block small text-body-secondary">
+                                        {{ request.user.role }}
+                                    </span>
+
+                                </span>
+
+                            </li>
+
+
+                            <li>
+
+                                <hr class="dropdown-divider">
+
+                            </li>
+
+
+                            <li>
+
+                                <a
+                                    class="dropdown-item"
+                                    href="{% url 'profile' %}"
+                                >
+
+                                    <i class="bi bi-person" aria-hidden="true"></i>
+
+                                    My Profile
+
+                                </a>
+
+                            </li>
+
+
+                            <li>
+
+                                <hr class="dropdown-divider">
+
+                            </li>
+
+
+                            <li>
+
+                                <a
+                                    class="dropdown-item text-danger"
+                                    href="{% url 'logout' %}"
+                                >
+
+                                    <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+
+                                    Logout
+
+                                </a>
+
+                            </li>
+
+                        </ul>
+
+                    </div>
+
+                {% endif %}
+
+            </div>
+
+
+        </header>
+
+
+        <!-- Page Content -->
+
+        <main class="main-content">
+
+            {% if messages %}
+
+                {% for message in messages %}
+
+                    <div
+                        class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show"
+                        role="alert"
+                    >
+
+                        {{ message }}
+
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="alert"
+                            aria-label="Close"
+                        ></button>
+
+                    </div>
+
+                {% endfor %}
+
+            {% endif %}
+
+
+            {% block content %}
+            {% endblock %}
+
+        </main>
+
+
+        {% if branding.footer_text or branding.contact_email or branding.contact_phone %}
+
+            <footer class="app-footer">
+
+                {% if branding.footer_text %}
+                    <span>{{ branding.footer_text }}</span>
+                {% endif %}
+
+                {% if branding.contact_email %}
+                    <a href="mailto:{{ branding.contact_email }}">
+                        <i class="bi bi-envelope" aria-hidden="true"></i>
+                        {{ branding.contact_email }}
+                    </a>
+                {% endif %}
+
+                {% if branding.contact_phone %}
+                    <span>
+                        <i class="bi bi-telephone" aria-hidden="true"></i>
+                        {{ branding.contact_phone }}
+                    </span>
+                {% endif %}
+
+            </footer>
+
+        {% endif %}
+
+
+    </div>
+
+
+</div>
+
+{% endblock %}
+
+
+<!-- Global Reusable Modal -->
+
+<div
+    class="modal fade"
+    id="globalModal"
+    tabindex="-1"
+    aria-labelledby="globalModalLabel"
+    aria-hidden="true"
+>
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <h5 class="modal-title" id="globalModalLabel">
+                    Modal title
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <!-- Content is injected here via HTMX or JS -->
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                >
+                    Close
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!--
+  Form dialog. Separate from #globalModal above, which shows read-only
+  details: a form needs the room, and its own buttons, and must not share a
+  body with whatever detail popup was open a moment ago. It has no footer —
+  each fragment brings its own Save/Cancel, since only the fragment knows
+  what they should say.
+-->
+
+<div
+    class="modal fade"
+    id="formModal"
+    tabindex="-1"
+    aria-labelledby="formModalLabel"
+    aria-hidden="true"
+>
+
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <h5 class="modal-title" id="formModalLabel">
+                    Loading&hellip;
+                </h5>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+            <div class="modal-body">
+
+                <!-- Filled by HTMX from book_add / book_edit / book_delete -->
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!--
+  Where confirmations land. The dialogs answer with "no content" and an
+  event rather than a page, so there is no reload for a Django message to
+  ride back on; app.js turns the event into a toast here instead.
+-->
+
+<div
+    class="toast-container position-fixed bottom-0 end-0 p-3"
+    id="toastArea"
+    aria-live="polite"
+    aria-atomic="true"
+></div>
+
+
+<!-- HTMX -->
+
+<script
+    src="https://unpkg.com/htmx.org@2.0.8"
+></script>
+
+
+<!-- Bootstrap JavaScript -->
+
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+></script>
+
+
+<!-- Custom JavaScript (see the CSS link above for why ?v= is appended) -->
+
+<script
+    src="{% static 'library/js/app.js' %}{% if asset_version %}?v={{ asset_version }}{% endif %}"
+></script>
+
+
+</body>
+
+</html>

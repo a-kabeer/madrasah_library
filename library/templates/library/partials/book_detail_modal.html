@@ -1,0 +1,148 @@
+{% comment %}
+Book details for the shared #globalModal, served by `book_detail` when the
+request carries HX-Request. Opened from the book list so the user keeps
+their search, filters, sorting and page.
+
+Every field shown here exists on the real models — nothing is invented.
+`BookCopy.shelf` is nullable, so the location line is guarded.
+
+The modal heading is set by an out-of-band swap: HTMX puts the main
+response in `.modal-body`, and separately replaces the `<h5>` in the modal
+header by id, which saves any JavaScript for the title.
+{% endcomment %}
+
+<h5 class="modal-title" id="globalModalLabel" hx-swap-oob="true">
+    {{ book.title }}
+</h5>
+
+<div class="d-flex flex-column flex-sm-row gap-3">
+
+    {% comment %}
+      Same fixed box either way, so the dialog is the same shape for a book
+      with a cover and one without.
+    {% endcomment %}
+    {% if book.cover_image %}
+        <img
+            src="{{ book.cover_image.url }}"
+            alt="Cover of {{ book.title }}"
+            class="cover-modal align-self-start"
+        >
+    {% else %}
+        <div
+            class="cover-modal cover-modal-empty align-self-start"
+            aria-label="No cover image"
+        >
+            <i class="bi bi-book" aria-hidden="true"></i>
+        </div>
+    {% endif %}
+
+    <div class="flex-grow-1">
+
+        <dl class="row mb-0 small">
+
+            <dt class="col-4 text-body-secondary fw-normal">Author</dt>
+            <dd class="col-8 fw-semibold">{{ book.author.name }}</dd>
+
+            <dt class="col-4 text-body-secondary fw-normal">Category</dt>
+            <dd class="col-8">
+                {% if book.category %}
+                    <span class="badge bg-secondary">{{ book.category.name }}</span>
+                {% else %}
+                    <span class="text-body-secondary">Not set</span>
+                {% endif %}
+            </dd>
+
+            <dt class="col-4 text-body-secondary fw-normal">Publisher</dt>
+            <dd class="col-8 fw-semibold">
+                {% if book.publisher %}
+                    {{ book.publisher.name }}
+                    {% if book.publisher.city %}
+                        <span class="text-body-secondary fw-normal">
+                            — {{ book.publisher.city }}
+                        </span>
+                    {% endif %}
+                {% else %}
+                    <span class="text-body-secondary fw-normal">Not set</span>
+                {% endif %}
+            </dd>
+
+            <dt class="col-4 text-body-secondary fw-normal">Volumes</dt>
+            <dd class="col-8 fw-semibold mb-0">{{ volumes|length }}</dd>
+
+        </dl>
+
+    </div>
+
+</div>
+
+
+{% if volumes %}
+
+    <hr>
+
+    <h6 class="fw-bold mb-2">
+        <i class="bi bi-collection me-1" aria-hidden="true"></i>
+        Volumes &amp; Copies
+    </h6>
+
+    <ul class="list-unstyled mb-0 small modal-volume-list">
+
+        {% for volume in volumes %}
+
+            <li class="mb-2">
+
+                <span class="fw-semibold">
+                    Volume {{ volume.volume_number }}
+                </span>
+
+                {% if volume.title %}
+                    <span class="text-body-secondary">— {{ volume.title }}</span>
+                {% endif %}
+
+                {% comment %}
+                  `copies` is one pre-joined queryset for the whole book, so
+                  filtering it per volume in the template costs no extra
+                  query — it iterates rows already fetched.
+                {% endcomment %}
+                <ul class="list-unstyled ms-3 mt-1 mb-0 text-body-secondary">
+
+                    {% for copy in copies %}
+                        {% if copy.volume_id == volume.id %}
+                            <li>
+                                <code>{{ copy.copy_code }}</code>
+                                <span class="badge bg-secondary">{{ copy.status }}</span>
+                                {% if copy.shelf %}
+                                    — {{ copy.shelf.location.name }},
+                                    shelf {{ copy.shelf.shelf_code }}
+                                {% else %}
+                                    — <span class="fst-italic">no shelf assigned</span>
+                                {% endif %}
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                </ul>
+
+            </li>
+
+        {% endfor %}
+
+    </ul>
+
+{% else %}
+
+    <hr>
+
+    <p class="text-body-secondary small mb-0">
+        No volumes have been added for this book yet.
+    </p>
+
+{% endif %}
+
+
+<hr>
+
+<a href="{% url 'book_detail' book.id %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>
+    Open full details page
+</a>

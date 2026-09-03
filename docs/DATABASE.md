@@ -56,6 +56,18 @@ erDiagram
 | `users` | Staff/librarian accounts (not wired to Django auth — see note below) | `username` (unique), `role`, `is_active` |
 | `loans` | Issue/return records | `copy_id`, `borrower_id`, `issue_date`, `due_date`, `return_date`, `issued_by`, `returned_to` |
 | `activity_logs` | Audit trail of CREATE/UPDATE/DELETE/ISSUE/RETURN actions | `user_id` (optional), `action`, `entity_type`, `entity_id`, `description`, `created_at` |
+| `organization_settings` | Single-row branding for this installation | `name`, `logo`, `favicon`, `primary_color`/`secondary_color`/`accent_color`, `contact_email`, `contact_phone`, `footer_text`, `updated_at` |
+
+> **`organization_settings` is a singleton.** A `CHECK (id = 1)` constraint
+> means there can only ever be one row. `OrganizationSettings.load()` returns
+> an unsaved instance carrying defaults when the row does not exist yet, so a
+> fresh install renders correctly before anything is configured, and
+> `save()` pins the primary key. Every column is optional — blank values fall
+> back to defaults in the model's `display_*` properties.
+>
+> **`users.theme_preference`** (added at the same time) stores each user's
+> Light/Dark/System appearance choice. It is nullable with no default, so
+> adding it did not rewrite existing rows; `NULL` is read as "system".
 
 > **`users` is now Django's `AUTH_USER_MODEL`** (`library.User`, extending
 > `AbstractBaseUser`). `password_hash` stores a real Django password hash

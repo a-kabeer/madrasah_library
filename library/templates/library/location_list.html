@@ -1,116 +1,171 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Locations</title>
-</head>
+{% extends "library/base.html" %}
 
-<body>
+{% block title %}
+    Locations | {{ branding.display_name }}
+{% endblock %}
 
-{% include "library/_account_bar.html" %}
+{% block page_title %}
+    Locations
+{% endblock %}
 
-<p>
-    <a href="{% url 'library_home' %}">
-        ← Back to Home
-    </a>
-</p>
+{% block content %}
 
-<h1>Locations</h1>
+<div class="container-fluid px-0">
 
-<form method="get">
+    <!-- Page Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h2 class="fw-bold mb-1">Locations</h2>
+            <p class="text-body-secondary mb-0">
+                Where the library keeps its books. Open a location to see its shelves.
+            </p>
+        </div>
+        {% if can_edit %}
+            <a href="{% url 'location_add' %}" class="btn btn-primary">
+                <i class="bi bi-plus-lg me-1"></i> Add Location
+            </a>
+        {% endif %}
+    </div>
 
-    <input
-        type="text"
-        name="search"
-        value="{{ search }}"
-        placeholder="Search locations..."
-    >
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" class="d-flex flex-wrap gap-2">
+                <input
+                    type="search"
+                    class="form-control"
+                    name="search"
+                    value="{{ search }}"
+                    placeholder="Search locations..."
+                    style="max-width: 26rem;"
+                    aria-label="Search locations"
+                >
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-search me-1"></i> Search
+                </button>
+                {% if search %}
+                    <a href="{% url 'location_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-lg me-1"></i> Clear
+                    </a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
 
-    <button type="submit">
-        Search
-    </button>
-
-    {% if search %}
-        <a href="{% url 'location_list' %}">
-            Clear
+    {% comment %}
+      Copies with no shelf belong to no location, so this is the only place
+      they can be reached from. Shown as a count so it reads as inventory
+      waiting to be placed rather than as an error.
+    {% endcomment %}
+    {% if unshelved_count %}
+        <a
+            href="{% url 'book_copy_list' %}?status=unshelved"
+            class="alert alert-warning d-flex align-items-center gap-2 text-decoration-none mb-4"
+        >
+            <i class="bi bi-inbox" aria-hidden="true"></i>
+            <span>
+                <strong>{{ unshelved_count }}</strong>
+                cop{{ unshelved_count|pluralize:"y,ies" }}
+                {{ unshelved_count|pluralize:"has,have" }} arrived but
+                {{ unshelved_count|pluralize:"is,are" }} not on a shelf yet.
+            </span>
+            <i class="bi bi-chevron-right ms-auto" aria-hidden="true"></i>
         </a>
     {% endif %}
 
-</form>
-
-{% if search %}
-
-    <p>
-        Search results for:
-        <strong>{{ search }}</strong>
+    <p class="text-body-secondary mb-3">
+        Found <strong>{{ paginator.count }}</strong>
+        location{{ paginator.count|pluralize }}.
     </p>
 
-{% endif %}
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>Location</th>
+                        <th>Shelves</th>
+                        <th>Copies</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for location in locations %}
+                        {% comment %}
+                          The whole row opens the location, the same pattern
+                          the book and copy lists use. The action buttons
+                          sit inside [data-row-actions], which is what keeps
+                          the row handler off them.
+                        {% endcomment %}
+                        <tr
+                            class="book-row"
+                            data-row-url="{% url 'location_detail' location.id %}"
+                            tabindex="0"
+                            role="button"
+                            aria-label="Open {{ location.name }}"
+                        >
+                            <td>
+                                <span class="fw-semibold">{{ location.name }}</span>
+                                {% if location.description %}
+                                    <span class="d-block small text-body-secondary">
+                                        {{ location.description|truncatechars:80 }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge text-bg-secondary">
+                                    {{ location.shelf_count }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge text-bg-secondary">
+                                    {{ location.copy_count }}
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1" data-row-actions>
+                                    <a
+                                        href="{% url 'location_detail' location.id %}"
+                                        class="btn btn-sm btn-outline-secondary"
+                                        title="Open"
+                                        aria-label="Open {{ location.name }}"
+                                    >
+                                        <i class="bi bi-box-arrow-up-right"></i>
+                                    </a>
+                                    {% if can_edit %}
+                                        <a
+                                            href="{% url 'location_edit' location.id %}"
+                                            class="btn btn-sm btn-outline-warning"
+                                            title="Edit"
+                                            aria-label="Edit {{ location.name }}"
+                                        >
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a
+                                            href="{% url 'location_delete' location.id %}"
+                                            class="btn btn-sm btn-outline-danger"
+                                            title="Delete"
+                                            aria-label="Delete {{ location.name }}"
+                                        >
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-body-secondary py-4">
+                                No locations found.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-<p>
-    Found {{ locations.paginator.count }} location(s).
-</p>
+    {% include "library/partials/pagination.html" with page_obj=locations %}
 
-<p>
-    <a href="{% url 'location_add' %}">
-        Add Location
-    </a>
-</p>
+</div>
 
-<ul>
-
-    {% for location in locations %}
-
-        <li>
-
-           <strong>
-    <a href="{% url 'location_detail' location.id %}">
-        {{ location.name }}
-    </a>
-</strong>
-
-            {% if location.description %}
-                <br>
-                Description:
-                {{ location.description }}
-            {% endif %}
-
-            <br>
-
-            Shelves:
-            {{ location.shelf_count }}
-
-            |
-
-            Book Copies:
-            {{ location.copy_count }}
-
-            <br><br>
-
-            <a href="{% url 'location_edit' location.id %}">
-                Edit
-            </a>
-
-            |
-
-            <a href="{% url 'location_delete' location.id %}">
-                Delete
-            </a>
-
-        </li>
-
-        <br>
-
-    {% empty %}
-
-        <li>
-            No locations found.
-        </li>
-
-    {% endfor %}
-
-</ul>
-
-{% include "library/_pagination.html" with page_obj=locations %}
-
-</body>
-</html>
+{% endblock %}

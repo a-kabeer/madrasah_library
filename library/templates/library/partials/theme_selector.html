@@ -1,0 +1,80 @@
+{% comment %}
+Light / Dark / System selector for the topbar.
+
+Reuses the Bootstrap dropdown pattern already used by the topbar user menu.
+`aria-checked` marks the active option, and JS keeps it in step; the icon is
+swapped to match the resolved theme.
+
+Each option carries the value only — the JavaScript applies it immediately
+and, for a signed-in user, persists it to the server. There is deliberately
+no <form> here: the same control has to work on the login page, where there
+is no user to save a preference for.
+{% endcomment %}
+
+<div class="dropdown">
+
+    <button
+        type="button"
+        class="btn theme-toggle"
+        id="themeToggle"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+        aria-label="Appearance"
+        title="Appearance"
+    >
+
+        <i class="bi bi-circle-half" id="themeIcon" aria-hidden="true"></i>
+
+    </button>
+
+    <ul
+        class="dropdown-menu dropdown-menu-end"
+        role="menu"
+        aria-label="Appearance"
+    >
+
+        <li>
+            <button
+                type="button"
+                class="dropdown-item theme-option"
+                data-theme-value="light"
+                role="menuitemradio"
+                aria-checked="false"
+            >
+                <i class="bi bi-sun-fill" aria-hidden="true"></i>
+                Light
+                <i class="bi bi-check2 theme-option-check" aria-hidden="true"></i>
+            </button>
+        </li>
+
+        <li>
+            <button
+                type="button"
+                class="dropdown-item theme-option"
+                data-theme-value="dark"
+                role="menuitemradio"
+                aria-checked="false"
+            >
+                <i class="bi bi-moon-stars-fill" aria-hidden="true"></i>
+                Dark
+                <i class="bi bi-check2 theme-option-check" aria-hidden="true"></i>
+            </button>
+        </li>
+
+        <li>
+            <button
+                type="button"
+                class="dropdown-item theme-option"
+                data-theme-value="system"
+                role="menuitemradio"
+                aria-checked="false"
+            >
+                <i class="bi bi-laptop" aria-hidden="true"></i>
+                System
+                <i class="bi bi-check2 theme-option-check" aria-hidden="true"></i>
+            </button>
+        </li>
+
+    </ul>
+
+</div>

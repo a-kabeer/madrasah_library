@@ -8,6 +8,14 @@ venv/
 
 # Django
 *.log
+staticfiles/
+
+# Uploaded spreadsheets waiting to be imported. Deliberately outside
+# MEDIA_ROOT so they are never served, and never committed.
+private/
+
+# User uploads (book covers) — belong in storage, not in the repo
+media/
 
 # Database backups (contain real data — never commit)
 backups/*.dump

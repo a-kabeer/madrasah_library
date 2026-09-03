@@ -1,42 +1,77 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Edit Location</title>
-</head>
-<body>
+{% extends "library/base.html" %}
 
-{% include "library/_account_bar.html" %}
+{% block title %}
+    Edit Location | {{ branding.display_name }}
+{% endblock %}
 
-<h1>Edit Location</h1>
+{% block page_title %}
+    Edit Location
+{% endblock %}
 
-<form method="post">
-    {% csrf_token %}
+{% block content %}
 
-    <label>Name:</label>
-    <input
-        type="text"
-        name="name"
-        value="{{ location.name }}"
-        required
-    >
+<div class="container-fluid px-0">
 
-    <br><br>
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-7">
 
-    <label>Description:</label>
-    <textarea name="description">{{ location.description|default:'' }}</textarea>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-pencil me-2"></i>Edit Location
+                    </h5>
+                </div>
+                <div class="card-body">
 
-    <br><br>
+                    <form method="post">
+                        {% csrf_token %}
 
-    <button type="submit">
-        Update Location
-    </button>
-</form>
+                        <div class="mb-3">
+                            <label for="formName" class="form-label fw-semibold">
+                                Name <span class="text-danger">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="formName"
+                                name="name"
+                                value="{{ location.name }}"
+                                required
+                            >
+                            <div class="form-text">
+                                A place in the building, e.g. "Main Hall".
+                            </div>
+                        </div>
 
-<br>
+                        <div class="mb-3">
+                            <label for="formDescription" class="form-label fw-semibold">
+                                Description
+                            </label>
+                            <textarea
+                                class="form-control"
+                                id="formDescription"
+                                name="description"
+                                rows="3"
+                            >{{ location.description|default:'' }}</textarea>
+                        </div>
 
-<a href="{% url 'location_detail' location.id %}">
-    Back to {{ location.name }}
-</a>
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Update Location
+                            </button>
+                            <a href="{% url 'location_detail' location.id %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i> Cancel
+                            </a>
+                        </div>
 
-</body>
-</html>
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

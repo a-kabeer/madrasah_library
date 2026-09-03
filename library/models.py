@@ -1,6 +1,86 @@
+import re
+
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
+
+
+HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
+
+
+def validate_hex_color(value):
+    """Accept "#rgb" / "#rrggbb", or an empty value meaning "use the default"."""
+
+    if not value:
+        return
+
+    if not HEX_COLOR_RE.match(value):
+        raise ValidationError(
+            "Enter a colour as a hex code, e.g. #0d6efd."
+        )
+
+
+def hex_to_rgb_triplet(value):
+    """"#0d6efd" -> "13, 110, 253", the form Bootstrap's --bs-*-rgb wants.
+
+    Several Bootstrap utilities compose alpha from the -rgb variables (e.g.
+    `bg-primary bg-opacity-25`, focus-ring shadows), and CSS cannot derive
+    those channels from a hex value — so they are computed here instead.
+    """
+
+    if not value or not HEX_COLOR_RE.match(value):
+        return ""
+
+    digits = value.lstrip("#")
+
+    if len(digits) == 3:
+        digits = "".join(char * 2 for char in digits)
+
+    return ", ".join(
+        str(int(digits[index:index + 2], 16))
+        for index in (0, 2, 4)
+    )
+
+
+def readable_foreground(value):
+    """"#fff" or "#000", whichever stays legible on `value`.
+
+    Administrators pick one brand colour; expecting them to also nominate a
+    matching text colour would be a poor trade. This uses WCAG relative
+    luminance so a pale brand colour gets dark text instead of unreadable
+    white-on-yellow.
+
+    The threshold is deliberately well above WCAG's equal-contrast crossover
+    (~0.179). At that crossover even Bootstrap's own blue (#0d6efd,
+    luminance 0.18) tips to black text, which would both look wrong and
+    disagree with the white default in style.css. The failure mode worth
+    guarding against is a genuinely pale colour, so only those flip.
+    """
+
+    triplet = hex_to_rgb_triplet(value)
+
+    if not triplet:
+        return "#fff"
+
+    red, green, blue = (int(part) for part in triplet.split(", "))
+
+    def channel(raw):
+        proportion = raw / 255
+
+        if proportion <= 0.03928:
+            return proportion / 12.92
+
+        return ((proportion + 0.055) / 1.055) ** 2.4
+
+    luminance = (
+        0.2126 * channel(red)
+        + 0.7152 * channel(green)
+        + 0.0722 * channel(blue)
+    )
+
+    return "#000" if luminance > 0.45 else "#fff"
+
 
 # Create your models here.
 class Author(models.Model):
@@ -62,6 +142,16 @@ class Book(models.Model):
         null=True,
         blank=True,
         db_column="publisher_id"
+    )
+
+    # Optional: books added before this field existed have no cover, and
+    # templates must keep working without one. max_length matches the
+    # varchar(255) column added in migration 0002.
+    cover_image = models.ImageField(
+        upload_to="book_covers/",
+        max_length=255,
+        null=True,
+        blank=True,
     )
 
     class Meta:
@@ -356,6 +446,26 @@ class User(AbstractBaseUser):
 
     created_at = models.DateTimeField()
 
+    # Appearance preference. Nullable with no default so the column could be
+    # added to the existing `users` table without rewriting a single row:
+    # NULL means "follow the system", same as an explicit "system".
+    THEME_SYSTEM = "system"
+    THEME_LIGHT = "light"
+    THEME_DARK = "dark"
+
+    THEME_CHOICES = [
+        (THEME_LIGHT, "Light"),
+        (THEME_DARK, "Dark"),
+        (THEME_SYSTEM, "System"),
+    ]
+
+    theme_preference = models.CharField(
+        max_length=10,
+        choices=THEME_CHOICES,
+        null=True,
+        blank=True,
+    )
+
     USERNAME_FIELD = "username"
     REQUIRED_FIELDS = ["full_name", "role"]
 
@@ -367,6 +477,17 @@ class User(AbstractBaseUser):
 
     def __str__(self):
         return self.username
+
+    @property
+    def theme(self):
+        """The user's appearance choice, treating NULL/unknown as "system"."""
+
+        valid = {choice for choice, _ in self.THEME_CHOICES}
+
+        if self.theme_preference in valid:
+            return self.theme_preference
+
+        return self.THEME_SYSTEM
     
 class Loan(models.Model):
     id = models.AutoField(primary_key=True)
@@ -461,4 +582,156 @@ class ActivityLog(models.Model):
 
     def __str__(self):
         return f"{self.action} - {self.created_at}"
-    
+
+
+class OrganizationSettings(models.Model):
+    """Branding for the one organisation this installation serves.
+
+    A single-row table rather than a key-value store, so colours, logo and
+    favicon get real field types and real validation. Every field is
+    optional: `load()` returns an unsaved instance carrying the defaults
+    below when nothing has been configured yet, so the whole application
+    (including the login page) renders correctly on a fresh install.
+    """
+
+    # Every row is forced to this id, which is what makes the table a
+    # singleton — see save() and load().
+    SINGLETON_ID = 1
+
+    DEFAULT_NAME = "Madrasah Library"
+    DEFAULT_PRIMARY_COLOR = "#0d6efd"
+    DEFAULT_SECONDARY_COLOR = "#6c757d"
+    DEFAULT_ACCENT_COLOR = "#198754"
+
+    id = models.AutoField(primary_key=True)
+
+    name = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+    )
+
+    logo = models.ImageField(
+        upload_to="branding/",
+        max_length=255,
+        null=True,
+        blank=True,
+    )
+
+    favicon = models.ImageField(
+        upload_to="branding/",
+        max_length=255,
+        null=True,
+        blank=True,
+    )
+
+    primary_color = models.CharField(
+        max_length=7,
+        blank=True,
+        default="",
+        validators=[validate_hex_color],
+    )
+
+    secondary_color = models.CharField(
+        max_length=7,
+        blank=True,
+        default="",
+        validators=[validate_hex_color],
+    )
+
+    accent_color = models.CharField(
+        max_length=7,
+        blank=True,
+        default="",
+        validators=[validate_hex_color],
+    )
+
+    contact_email = models.EmailField(
+        max_length=255,
+        blank=True,
+        default="",
+    )
+
+    contact_phone = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+    )
+
+    footer_text = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    updated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        managed = False
+        db_table = "organization_settings"
+
+    def __str__(self):
+        return self.display_name
+
+    def save(self, *args, **kwargs):
+        # Pin the primary key so a second row can never be created, whatever
+        # the caller does.
+        self.id = self.SINGLETON_ID
+        self.updated_at = timezone.now()
+
+        return super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        """The settings row, or an unsaved instance holding the defaults.
+
+        Never returns None, so templates and the context processor don't
+        need to guard against an unconfigured install.
+        """
+
+        existing = cls.objects.filter(id=cls.SINGLETON_ID).first()
+
+        if existing is not None:
+            return existing
+
+        return cls()
+
+    # The `display_*` properties are what templates should use: they fall
+    # back to the defaults so a half-filled row still renders sensibly.
+
+    @property
+    def display_name(self):
+        return self.name or self.DEFAULT_NAME
+
+    @property
+    def display_primary_color(self):
+        return self.primary_color or self.DEFAULT_PRIMARY_COLOR
+
+    @property
+    def display_secondary_color(self):
+        return self.secondary_color or self.DEFAULT_SECONDARY_COLOR
+
+    @property
+    def display_accent_color(self):
+        return self.accent_color or self.DEFAULT_ACCENT_COLOR
+
+    @property
+    def display_primary_rgb(self):
+        return hex_to_rgb_triplet(self.display_primary_color)
+
+    @property
+    def display_on_primary(self):
+        """Text colour that stays readable on the primary colour."""
+
+        return readable_foreground(self.display_primary_color)
+
+    @property
+    def has_custom_colors(self):
+        return bool(
+            self.primary_color
+            or self.secondary_color
+            or self.accent_color
+        )
+

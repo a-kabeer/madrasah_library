@@ -1,105 +1,197 @@
-<!DOCTYPE html>
-<html>
+{% extends "library/base.html" %}
 
-<head>
-    <title>{{ book.title }}</title>
-</head>
+{% block title %}
+    {{ book.title }} | {{ branding.display_name }}
+{% endblock %}
 
-<body>
+{% block page_title %}
+    Book Details
+{% endblock %}
 
-{% include "library/_account_bar.html" %}
+{% block content %}
 
-    <p>
-        <a href="{% url 'book_list' %}">
-            ← Back to Books
+<div class="container-fluid px-0">
+
+    <!-- Navigation & Actions -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <a href="{% url 'book_list' %}" class="text-decoration-none">
+            <i class="bi bi-arrow-left me-1"></i> Back to Books
         </a>
-    </p>
+        <div class="d-flex gap-2">
+            <a href="{% url 'book_edit' book.id %}?from=detail" class="btn btn-warning">
+                <i class="bi bi-pencil me-1"></i> Edit Book
+            </a>
+            <a href="{% url 'book_delete' book.id %}?from=detail" class="btn btn-danger">
+                <i class="bi bi-trash me-1"></i> Delete Book
+            </a>
+        </div>
+    </div>
 
-    <h1>{{ book.title }}</h1>
+    <!-- Book Information Card -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-body">
+            <h5 class="mb-0 fw-bold">
+                <i class="bi bi-book me-2"></i>Book Information
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="d-flex flex-column flex-sm-row gap-4">
 
-    <hr>
+                {% if book.cover_image %}
+                    <img
+                        src="{{ book.cover_image.url }}"
+                        alt="Cover of {{ book.title }}"
+                        class="cover-detail align-self-start"
+                    >
+                {% endif %}
 
-    <h2>Book Information</h2>
+                <div class="flex-grow-1">
+                    <h3 class="fw-bold mb-3">{{ book.title }}</h3>
+                    <div class="row g-3">
+                        <div class="col-12 col-lg-4">
+                            <p class="mb-1 text-body-secondary small">Author</p>
+                            <p class="fw-semibold mb-0">{{ book.author.name }}</p>
+                        </div>
+                        <div class="col-12 col-lg-4">
+                            <p class="mb-1 text-body-secondary small">Category</p>
+                            <p class="fw-semibold mb-0">
+                                {% if book.category %}
+                                    <span class="badge bg-secondary">{{ book.category.name }}</span>
+                                {% else %}
+                                    <span class="text-body-secondary">N/A</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-12 col-lg-4">
+                            <p class="mb-1 text-body-secondary small">Publisher</p>
+                            <p class="fw-semibold mb-0">
+                                {% if book.publisher %}
+                                    {{ book.publisher.name }}
+                                {% else %}
+                                    <span class="text-body-secondary">N/A</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
 
-    <p>
-        <strong>Author:</strong>
-        {{ book.author.name }}
-    </p>
+            </div>
+        </div>
+    </div>
 
-    <p>
-        <strong>Category:</strong>
+    <!-- Volumes Card -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h5 class="mb-0 fw-bold">
+                <i class="bi bi-collection me-2"></i>Volumes
+            </h5>
+            <a href="{% url 'book_volume_add' %}?book={{ book.id }}" class="btn btn-sm btn-primary">
+                <i class="bi bi-plus-lg me-1"></i> Add Volume
+            </a>
+        </div>
+        <div class="card-body">
+            {% comment %}
+              A book with one volume has it because a copy has to hang off
+              one, not because anyone asked for volumes. Its copies are
+              listed here directly, so the librarian is not sent through a
+              page that would only show the same thing under a heading that
+              means nothing to them.
+            {% endcomment %}
+            {% if single_volume %}
 
-        {% if book.category %}
-            {{ book.category.name }}
-        {% else %}
-            N/A
-        {% endif %}
-    </p>
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <span class="text-body-secondary">
+                        This book is recorded as a single volume with
+                        <strong>{{ volume_copies|length }}</strong>
+                        cop{{ volume_copies|length|pluralize:"y,ies" }}.
+                    </span>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'book_copy_list' %}?volume={{ single_volume.id }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-list-ul me-1"></i> Manage copies
+                        </a>
+                        {% if can_edit %}
+                            <a href="{% url 'book_copy_add' %}?volume={{ single_volume.id }}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-plus-lg me-1"></i> Add Copy
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
 
-    <p>
-        <strong>Publisher:</strong>
+                {% if volume_copies %}
+                    <div class="list-group list-group-flush">
+                        {% for copy in volume_copies %}
+                            <div
+                                class="list-group-item book-row d-flex flex-wrap justify-content-between align-items-center gap-2"
+                                data-copy-row
+                                data-copy-url="{% url 'book_copy_detail' copy.id %}?modal=1"
+                                tabindex="0"
+                                role="button"
+                                aria-label="Show details for copy {{ copy.copy_code }}"
+                            >
+                                <div>
+                                    <span class="fw-semibold">{{ copy.copy_code }}</span>
+                                    <span class="d-block small text-body-secondary">
+                                        {% if copy.shelf %}
+                                            {{ copy.shelf.location.name }} — {{ copy.shelf.shelf_code }}
+                                        {% else %}
+                                            Unshelved
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <span class="badge text-bg-{{ copy.state_tone }}">
+                                    {{ copy.state_label }}
+                                </span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-body-secondary mb-0">
+                        No physical copies yet.
+                    </p>
+                {% endif %}
 
-        {% if book.publisher %}
-            {{ book.publisher.name }}
-        {% else %}
-            N/A
-        {% endif %}
-    </p>
+            {% elif volumes %}
 
-    <hr>
+                {% comment %}
+                  Two separate links per row, not one wrapping both: the
+                  volume name opens the volume, and the copy count goes
+                  straight to those copies in the copy list, which is where
+                  they are managed. Nesting one anchor inside another is
+                  not valid HTML, so the row is a plain flex container.
+                {% endcomment %}
+                <div class="list-group list-group-flush">
+                    {% for volume in volumes %}
+                        <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <a
+                                href="{% url 'book_volume_detail' volume.id %}"
+                                class="text-decoration-none flex-grow-1"
+                            >
+                                <span class="fw-semibold">Volume {{ volume.volume_number }}</span>
+                                {% if volume.title %}
+                                    <span class="text-body-secondary"> — {{ volume.title }}</span>
+                                {% endif %}
+                            </a>
+                            <a
+                                href="{% url 'book_copy_list' %}?volume={{ volume.id }}"
+                                class="text-decoration-none"
+                                aria-label="Manage the {{ volume.copy_count }} cop{{ volume.copy_count|pluralize:'y,ies' }} of volume {{ volume.volume_number }}"
+                            >
+                                <span class="badge text-bg-secondary">
+                                    {{ volume.copy_count }}
+                                    cop{{ volume.copy_count|pluralize:"y,ies" }}
+                                    <i class="bi bi-chevron-right ms-1" aria-hidden="true"></i>
+                                </span>
+                            </a>
+                        </div>
+                    {% endfor %}
+                </div>
 
-    <h2>Volumes</h2>
+            {% else %}
+                <p class="text-body-secondary mb-0">No volumes have been added yet.</p>
+            {% endif %}
+        </div>
+    </div>
 
-    <p>
-        <a href="{% url 'book_volume_add' %}?book={{ book.id }}">
-    + Add Volume
-</a>
-    </p>
+</div>
 
-    <ul>
-
-        {% for volume in volumes %}
-
-            <li>
-
-               <a href="{% url 'book_volume_detail' volume.id %}">
-
-    <strong>
-        Volume {{ volume.volume_number }}
-    </strong>
-
-    - {{ volume.title }}
-
-</a>
-
-            </li>
-
-        {% empty %}
-
-            <li>
-                No volumes have been added yet.
-            </li>
-
-        {% endfor %}
-
-    </ul>
-
-    <hr>
-
-    <h2>Actions</h2>
-
-    <p>
-        <a href="{% url 'book_edit' book.id %}?from=detail">
-            Edit Book
-        </a>
-    </p>
-
-    <p>
-        <a href="{% url 'book_delete' book.id %}?from=detail">
-            Delete Book
-        </a>
-    </p>
-
-</body>
-
-</html>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% comment %}
+One brand colour: a native colour picker paired with a hex text field.
+
+Both carry the same name, which would submit twice — so the picker is
+deliberately unnamed and JS mirrors it into the text field. The text field
+is the value that posts, which also means the field degrades to a plain
+(still valid) hex input without JavaScript.
+
+Expected context:
+  label       "Primary"
+  field_name  "primary_color"  -> the POST key
+  input_id    "formPrimaryColor"
+  value       currently stored value, or ""
+  fallback    colour shown in the picker when nothing is stored
+  help_text   short explanation of what the colour affects
+{% endcomment %}
+
+<div class="mb-3">
+
+    <label for="{{ input_id }}" class="form-label fw-semibold">
+        {{ label }}
+    </label>
+
+    <div class="d-flex align-items-center gap-2" data-color-field>
+
+        <input
+            type="color"
+            class="form-control form-control-color color-swatch-input"
+            value="{{ value|default:fallback }}"
+            aria-label="{{ label }} colour picker"
+            data-color-picker
+        >
+
+        <input
+            type="text"
+            class="form-control"
+            id="{{ input_id }}"
+            name="{{ field_name }}"
+            value="{{ value }}"
+            placeholder="{{ fallback }}"
+            maxlength="7"
+            pattern="^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+            spellcheck="false"
+            data-color-text
+        >
+
+    </div>
+
+    <div class="form-text">
+        {{ help_text }} Blank uses {{ fallback }}.
+    </div>
+
+</div>

@@ -1,39 +1,125 @@
-<!DOCTYPE html>
-<html>
+{% extends "library/base.html" %}
 
-<head>
-    <title>Add Loan</title>
-</head>
+{% block title %}Issue Books | {{ branding.display_name }}{% endblock %}
 
-<body>
+{% block page_title %}Issue Books{% endblock %}
 
-{% include "library/_account_bar.html" %}
+{% block content %}
+<div class="container-fluid px-0">
 
-    <p>
-        <a href="{% url 'loan_list' %}">
-            ← Back to Loans
-        </a>
-    </p>
-
-    <h1>Add Loan</h1>
+    <div class="mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'circulation_dashboard' %}">Circulation</a></li>
+                <li class="breadcrumb-item active">Issue Books</li>
+            </ol>
+        </nav>
+        <h2 class="fw-bold mb-1">Issue Books</h2>
+        <p class="text-body-secondary mb-0">Select a borrower and one or more available copies to issue.</p>
+    </div>
 
     {% if error_message %}
-
-        <p>
-            <strong>
-                {{ error_message }}
-            </strong>
-        </p>
-
+    <div class="alert alert-danger" role="alert">
+        <strong>{{ error_message }}</strong>
+    </div>
     {% endif %}
 
     <form method="post">
-
         {% csrf_token %}
 
-        <label for="copy">
-            Book Copy:
-        </label>
+        <div class="row">
+            <div class="col-12 col-lg-8">
+
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Step 2: Select Copies</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th style="width: 40px;"><input type="checkbox" id="selectAll" class="form-check-input"></th>
+                                        <th>Copy Code</th>
+                                        <th>Book</th>
+                                        <th>Volume</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for copy in copies %}
+                                    <tr>
+                                        <td><input type="checkbox" name="copies" value="{{ copy.id }}" class="form-check-input copy-cb"></td>
+                                        <td class="fw-semibold">{{ copy.copy_code }}</td>
+                                        <td>{{ copy.volume.book.title }}</td>
+                                        <td>{{ copy.volume.volume_number }}</td>
+                                        <td><span class="badge bg-success">{{ copy.status }}</span></td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr><td colspan="5" class="text-center text-body-secondary py-4">No available copies found.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Step 3: Set Dates</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="issue_date" class="form-label fw-semibold">Issue Date</label>
+                                <input type="date" class="form-control" id="issue_date" name="issue_date"
+                                    value="{% if request.POST.issue_date %}{{ request.POST.issue_date }}{% else %}{{ default_issue_date }}{% endif %}" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="due_date" class="form-label fw-semibold">Due Date</label>
+                                <input type="date" class="form-control" id="due_date" name="due_date"
+                                    value="{% if request.POST.due_date %}{{ request.POST.due_date }}{% else %}{{ default_due_date }}{% endif %}" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="issued_by" class="form-label fw-semibold">Issued By</label>
+                            <select name="issued_by" id="issued_by" class="form-select">
+                                <option value="">— Select user (optional) —</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}">{{ user.full_name|default:user.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="notes" class="form-label fw-semibold">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="2">{{ request.POST.notes }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mb-4">
+            <button type="submit" class="btn btn-primary btn-lg">Issue Book(s)</button>
+            <a href="{% url 'circulation_dashboard' %}" class="btn btn-outline-secondary btn-lg">Cancel</a>
+        </div>
+
+    </form>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var sa = document.getElementById('selectAll');
+    if (sa) {
+        sa.addEventListener('change', function() {
+            document.querySelectorAll('.copy-cb').forEach(function(cb) { cb.checked = sa.checked; });
+        });
+    }
+});
+</script>
+{% endblock %}
 
         <select
             name="copy"

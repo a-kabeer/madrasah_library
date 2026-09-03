@@ -1,87 +1,131 @@
-<!DOCTYPE html>
-<html>
+{% extends "library/base.html" %}
 
-<head>
-    <title>Loan Details</title>
-</head>
+{% block title %}Loan #{{ loan.id }} | {{ branding.display_name }}{% endblock %}
 
-<body>
+{% block page_title %}Loan #{{ loan.id }}{% endblock %}
 
-{% include "library/_account_bar.html" %}
+{% block content %}
+<div class="container-fluid px-0">
 
-   <p>
-    {% if request.GET.next %}
-        <a href="{{ request.GET.next }}">
-            ← Back to Book Copy
-        </a>
-    {% else %}
-        <a href="{% url 'loan_list' %}">
-            ← Back to Loans
-        </a>
-    {% endif %}
-</p>
+    <div class="mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'circulation_dashboard' %}">Circulation</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'loan_list' %}">Loans</a></li>
+                <li class="breadcrumb-item active">Loan #{{ loan.id }}</li>
+            </ol>
+        </nav>
+        <h2 class="fw-bold mb-1">Loan Details</h2>
+    </div>
 
-    <h1>Loan Details</h1>
+    <div class="row">
+        <div class="col-12 col-lg-8">
 
-    <h2>Book Information</h2>
+    <div class="card shadow-sm border-0">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Book Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Book Copy</div>
+                        <div class="col-sm-8 fw-semibold">{{ loan.copy.copy_code }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Book</div>
+                        <div class="col-sm-8"><a href="{% url 'book_detail' loan.copy.volume.book.id %}">{{ loan.copy.volume.book.title }}</a></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Volume</div>
+                        <div class="col-sm-8">Volume {{ loan.copy.volume.volume_number }}{% if loan.copy.volume.title %} — {{ loan.copy.volume.title }}{% endif %}</div>
+                    </div>
+                </div>
+            </div>
 
-    <p>
-        <strong>Book Copy:</strong>
-        {{ loan.copy.copy_code }}
-    </p>
+            <div class="card shadow-sm border-0 mt-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Borrower Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Name</div>
+                        <div class="col-sm-8"><a href="{% url 'borrower_detail' loan.borrower.id %}">{{ loan.borrower.name }}</a></div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Phone</div>
+                        <div class="col-sm-8">{{ loan.borrower.phone|default:"N/A" }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Type</div>
+                        <div class="col-sm-8">{{ loan.borrower.borrower_type|default:"N/A" }}</div>
+                    </div>
+                    {% if loan.borrower.registration_no %}
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Registration No</div>
+                        <div class="col-sm-8">{{ loan.borrower.registration_no }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
 
-    <p>
-        <strong>Book:</strong>
-        {{ loan.copy.volume.book.title }}
-    </p>
+            <div class="card shadow-sm border-0 mt-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Loan Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Issue Date</div>
+                        <div class="col-sm-8">{{ loan.issue_date }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Due Date</div>
+                        <div class="col-sm-8">{{ loan.due_date }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Issued By</div>
+                        <div class="col-sm-8">{% if loan.issued_by %}{{ loan.issued_by.full_name|default:loan.issued_by.username }}{% else %}N/A{% endif %}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Status</div>
+                        <div class="col-sm-8">
+                            {% if loan.return_date %}
+                                <span class="badge bg-secondary">Returned</span>
+                            {% elif loan.days_overdue > 0 %}
+                                <span class="badge bg-danger">Overdue by {{ loan.days_overdue }} day{{ loan.days_overdue|pluralize }}</span>
+                            {% else %}
+                                <span class="badge bg-success">Active</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Notes</div>
+                        <div class="col-sm-8">{{ loan.notes|default:"N/A" }}</div>
+                    </div>
+                    {% if loan.return_date %}
+                    <hr>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Return Date</div>
+                        <div class="col-sm-8">{{ loan.return_date }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Returned To</div>
+                        <div class="col-sm-8">{% if loan.returned_to %}{{ loan.returned_to.full_name|default:loan.returned_to.username }}{% else %}N/A{% endif %}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
 
-    <p>
-        <strong>Volume:</strong>
-        Volume {{ loan.copy.volume.volume_number }}
-        - {{ loan.copy.volume.title }}
-    </p>
+            {% if not loan.return_date %}
+            <div class="d-flex gap-2 mt-4">
+                <a href="{% url 'loan_return' loan.id %}" class="btn btn-success">Return Book</a>
+                <a href="{% url 'loan_renew' loan.id %}" class="btn btn-primary">Renew Loan</a>
+            </div>
+            {% endif %}
 
-    <hr>
+        </div>
+    </div>
 
-    <h2>Borrower Information</h2>
-
-    <p>
-        <strong>Name:</strong>
-        {{ loan.borrower.name }}
-    </p>
-
-    <p>
-        <strong>Phone:</strong>
-        {{ loan.borrower.phone|default:"N/A" }}
-    </p>
-
-    <p>
-        <strong>Type:</strong>
-        {{ loan.borrower.borrower_type|default:"N/A" }}
-    </p>
-
-    {% if loan.borrower.registration_no %}
-        <p>
-            <strong>Registration No:</strong>
-            {{ loan.borrower.registration_no }}
-        </p>
-    {% endif %}
-
-    {% if loan.borrower.department %}
-        <p>
-            <strong>Department:</strong>
-            {{ loan.borrower.department }}
-        </p>
-    {% endif %}
-
-    <hr>
-
-    <h2>Loan Information</h2>
-
-    <p>
-        <strong>Issue Date:</strong>
-        {{ loan.issue_date }}
-    </p>
+</div>
+{% endblock %}
 
     <p>
         <strong>Due Date:</strong>

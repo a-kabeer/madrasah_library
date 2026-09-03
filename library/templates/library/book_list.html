@@ -1,153 +1,82 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Books</title>
-</head>
+{% extends "library/base.html" %}
 
-<body>
+{% block title %}
+    Books | {{ branding.display_name }}
+{% endblock %}
 
-{% include "library/_account_bar.html" %}
+{% block page_title %}
+    Books
+{% endblock %}
 
-<p>
-    <a href="{% url 'library_home' %}">
-        ← Back to Home
-    </a>
-</p>
+{% block content %}
 
-<h1>Books</h1>
+<div class="container-fluid px-0">
 
-<form method="get">
+    <!-- Page Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h2 class="fw-bold mb-1">Books</h2>
+            <p class="text-body-secondary mb-0">Manage your library's book collection.</p>
+        </div>
+        {% comment %}
+          Opens the Add Book dialog rather than navigating, so the list
+          keeps its search, filters, sorting and page. The href is real, so
+          the page still works if the script never arrives, and the link is
+          still middle-clickable.
+        {% endcomment %}
+        {% comment %}
+          Bulk work sits beside Add Book rather than behind a menu: it is
+          the same job at a different scale. Both are Admin/Librarian only,
+          which `role_required` on the views enforces.
+        {% endcomment %}
+        <a href="{% url 'book_import' %}" class="btn btn-outline-primary">
+            <i class="bi bi-upload me-1"></i> Import
+        </a>
+        <a href="{% url 'book_export' %}?{{ pagination_query }}" class="btn btn-outline-secondary">
+            <i class="bi bi-download me-1"></i> Export
+        </a>
+        <a
+            href="{% url 'book_add' %}"
+            class="btn btn-primary"
+            data-form-modal
+            hx-get="{% url 'book_add' %}?modal=1"
+            hx-target="#formModal .modal-body"
+            hx-swap="innerHTML"
+        >
+            <i class="bi bi-plus-lg me-1"></i> Add Book
+        </a>
+    </div>
 
-    <label>Book Title:</label>
+    {% comment %}
+      Everything below the page header is swapped rather than reloaded, so
+      it lives in its own fragment. This wrapper is only the landing spot:
+      it carries no HTMX attributes of its own, so nothing inside can
+      inherit anything unintended from it.
+    {% endcomment %}
+    <div id="bookBrowser" class="swap-busy">
+        {% include "library/partials/book_list_browser.html" %}
+    </div>
 
-    <input
-        type="text"
-        name="title"
-        value="{{ title }}"
-        placeholder="Search by book title..."
-    >
+    {% comment %}
+      Redraws the results after a book is added, edited or deleted, keeping
+      whatever search, filters, sorting, page and page size are in force —
+      it re-requests the current URL rather than a fresh one.
 
-    <br><br>
+      It sits outside #bookResults so the swap cannot remove it, and
+      `refresh` tells the view not to push a history entry: nothing
+      navigated, so the back button should not gain a step.
+    {% endcomment %}
+    <div
+        id="bookListRefresh"
+        hx-get="{{ request.get_full_path }}"
+        hx-vals='{"partial": "results", "refresh": "1"}'
+        hx-trigger="bookListChanged from:body"
+        hx-target="#bookResults"
+        hx-swap="innerHTML show:none"
+        hx-push-url="false"
+        hidden
+    ></div>
 
-    <label>Author:</label>
+</div>
 
-    <select name="author">
-        <option value="">All Authors</option>
-
-        {% for author in authors %}
-            <option value="{{ author.id }}"
-                {% if author_id == author.id|stringformat:"s" %}
-                    selected
-                {% endif %}
-            >
-                {{ author.name }}
-            </option>
-        {% endfor %}
-    </select>
-
-    <br><br>
-
-    <label>Category:</label>
-
-    <select name="category">
-        <option value="">All Categories</option>
-
-        {% for category in categories %}
-            <option value="{{ category.id }}"
-                {% if category_id == category.id|stringformat:"s" %}
-                    selected
-                {% endif %}
-            >
-                {{ category.name }}
-            </option>
-        {% endfor %}
-    </select>
-
-    <br><br>
-
-    <label>Publisher:</label>
-
-    <select name="publisher">
-        <option value="">All Publishers</option>
-
-        {% for publisher in publishers %}
-            <option value="{{ publisher.id }}"
-                {% if publisher_id == publisher.id|stringformat:"s" %}
-                    selected
-                {% endif %}
-            >
-                {{ publisher.name }}
-            </option>
-        {% endfor %}
-    </select>
-
-    <br><br>
-
-    <button type="submit">Search</button>
-
-    <a href="{% url 'book_list' %}">
-        Clear Filters
-    </a>
-
-</form>
-
-<br>
-
-<p>
-    Found {{ books.paginator.count }} book(s).
-</p>
-
-<p>
-    <a href="{% url 'book_add' %}">
-        Add Book
-    </a>
-</p>
-
-<ul>
-
-    {% for book in books %}
-
-        <li>
-
-            ID: {{ book.id }}
-
-            - {{ book.title }}
-
-            - Author: {{ book.author.name }}
-
-            - Category:
-            {{ book.category.name|default:"N/A" }}
-
-            - Publisher:
-            {{ book.publisher.name|default:"N/A" }}
-
-            <a href="{% url 'book_detail' book.id %}">
-    View Details
-</a>
-
-|
-
-<a href="{% url 'book_edit' book.id %}">
-    Edit
-</a>
-
-|
-
-<a href="{% url 'book_delete' book.id %}">
-    Delete
-</a>
-
-        </li>
-
-    {% empty %}
-
-        <li>No books found.</li>
-
-    {% endfor %}
-
-</ul>
-
-{% include "library/_pagination.html" with page_obj=books %}
-
-</body>
-</html>
+{% endblock %}

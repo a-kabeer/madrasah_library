@@ -1,173 +1,107 @@
-<!DOCTYPE html>
-<html>
+{% extends "library/base.html" %}
 
-<head>
-    <title>Return Book</title>
-</head>
+{% block title %}Return Book | {{ branding.display_name }}{% endblock %}
 
-<body>
+{% block page_title %}Return Book{% endblock %}
 
-{% include "library/_account_bar.html" %}
+{% block content %}
+<div class="container-fluid px-0">
 
-    <p>
-        {% if next_url %}
-            <a href="{{ next_url }}">
-                ← Back
-            </a>
-        {% else %}
-            <a href="{% url 'loan_list' %}">
-                ← Back to Loans
-            </a>
-        {% endif %}
-    </p>
+    <div class="mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'circulation_dashboard' %}">Circulation</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'loan_list' %}">Loans</a></li>
+                <li class="breadcrumb-item active">Return</li>
+            </ol>
+        </nav>
+        <h2 class="fw-bold mb-1">Return Book</h2>
+    </div>
 
-    <h1>Return Book</h1>
+    <div class="row">
+        <div class="col-12 col-lg-8">
 
-    <p>
-        <strong>Book Copy:</strong>
-        {{ loan.copy.copy_code }}
-    </p>
+            {% if loan.return_date %}
+            <div class="alert alert-info" role="alert">
+                <strong>This book has already been returned.</strong>
+                <p class="mb-0 mt-2">Return Date: {{ loan.return_date }}</p>
+            </div>
+            <a href="{% url 'loan_list' %}" class="btn btn-outline-secondary">Back to Loans</a>
+            {% else %}
 
-    <p>
-        <strong>Book:</strong>
-        {{ loan.copy.volume.book.title }}
-    </p>
+            {% if error_message %}
+            <div class="alert alert-danger" role="alert">
+                <strong>{{ error_message }}</strong>
+            </div>
+            {% endif %}
 
-    <p>
-        <strong>Borrower:</strong>
-        {{ loan.borrower.name }}
-    </p>
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Copy Code</div>
+                        <div class="col-sm-8 fw-semibold">{{ loan.copy.copy_code }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Book</div>
+                        <div class="col-sm-8">{{ loan.copy.volume.book.title }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Borrower</div>
+                        <div class="col-sm-8">{{ loan.borrower.name }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Issue Date</div>
+                        <div class="col-sm-8">{{ loan.issue_date }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Due Date</div>
+                        <div class="col-sm-8">
+                            {{ loan.due_date }}
+                            {% if loan.days_overdue > 0 %}
+                                <span class="badge bg-danger ms-2">Overdue by {{ loan.days_overdue }} day{{ loan.days_overdue|pluralize }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-    <p>
-        <strong>Issue Date:</strong>
-        {{ loan.issue_date }}
-    </p>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Confirm Return</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ next_url }}">
+                        <div class="mb-3">
+                            <label for="return_date" class="form-label fw-semibold">Return Date</label>
+                            <input type="date" class="form-control" id="return_date" name="return_date" value="{% now 'Y-m-d' %}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="returned_to" class="form-label fw-semibold">Returned To</label>
+                            <select class="form-select" id="returned_to" name="returned_to">
+                                <option value="">— Select user —</option>
+                                {% for user in users %}
+                                <option value="{{ user.id }}">{{ user.full_name|default:user.username }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="notes" class="form-label fw-semibold">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-success">Confirm Return</button>
+                            <a href="{% url 'loan_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
 
-    <p>
-        <strong>Due Date:</strong>
-        {{ loan.due_date }}
-    </p>
+            {% endif %}
 
-    <hr>
+        </div>
+    </div>
 
-    {% if loan.return_date %}
-
-    <p>
-        <strong>
-            This book has already been returned.
-        </strong>
-    </p>
-
-    <p>
-        <strong>Return Date:</strong>
-        {{ loan.return_date }}
-    </p>
-
-    <p>
-        <strong>Returned To:</strong>
-
-        {% if loan.returned_to %}
-
-        {% if loan.returned_to.full_name %}
-        {{ loan.returned_to.full_name }}
-        {% else %}
-        {{ loan.returned_to.username }}
-        {% endif %}
-
-        {% else %}
-        N/A
-        {% endif %}
-    </p>
-
-    <p>
-        {% if next_url %}
-            <a href="{{ next_url }}">
-                ← Back
-            </a>
-        {% else %}
-            <a href="{% url 'loan_list' %}">
-                ← Back to Loans
-            </a>
-        {% endif %}
-    </p>
-
-    {% else %}
-
-    {% if error_message %}
-    <p style="color: red;">
-        <strong>{{ error_message }}</strong>
-    </p>
-    {% endif %}
-
-    <form method="post">
-
-        {% csrf_token %}
-        <input type="hidden" name="next" value="{{ next_url }}">
-
-        <label for="return_date">
-            Return Date:
-        </label>
-
-        <input type="date" name="return_date" id="return_date" value="{% now 'Y-m-d' %}" required>
-
-        <br><br>
-
-        <label for="returned_to">
-            Returned To:
-        </label>
-
-        <select name="returned_to" id="returned_to">
-
-            <option value="">
-                Select User
-            </option>
-
-            {% for user in users %}
-
-            <option value="{{ user.id }}">
-
-                {% if user.full_name %}
-                {{ user.full_name }}
-                {% else %}
-                {{ user.username }}
-                {% endif %}
-
-            </option>
-
-            {% endfor %}
-
-        </select>
-
-        <br><br>
-
-        <label for="notes">
-            Notes:
-        </label>
-
-        <br>
-
-        <textarea name="notes" id="notes" rows="5" cols="50"></textarea>
-
-        <br><br>
-
-        <button type="submit">
-            Confirm Return
-        </button>
-
-        {% if next_url %}
-            <a href="{{ next_url }}">
-                Cancel
-            </a>
-        {% else %}
-            <a href="{% url 'loan_list' %}">
-                Cancel
-            </a>
-        {% endif %}
-
-    </form>
-
-    {% endif %}
-
-</body>
-
-</html>
+</div>
+{% endblock %}

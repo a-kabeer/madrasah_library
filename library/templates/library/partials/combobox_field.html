@@ -1,0 +1,141 @@
+{% comment %}
+Searchable dropdown ("combobox") for picking an Author / Category / Publisher,
+with the option to create a missing one without leaving the page.
+
+The visible text box is only for searching and display: the value the form
+actually posts lives in the hidden input, so the receiving view still just
+reads an id from `request.POST[field_name]` exactly as it did with a <select>.
+
+Expected context:
+  label         "Author"
+  field_name    "author"        -> the POST key (hidden input name)
+  input_id      "formAuthor"    -> id for the text box, label and menu
+  entity_label  "author"        -> used in the empty/create wording
+  search_url    URL of the list view that serves suggestions. Must be set:
+                an empty one leaves the search pointed at the current page,
+                which answers with something that is not a menu.
+  selected_id   currently selected id, or "" / None
+  selected_name currently selected name, or "" / None
+  required      True to mark the field mandatory
+  allow_create  True to offer creating a missing record from the dropdown.
+                Pass False where the dropdown only picks an existing record
+                (list filters), so filtering can never add data.
+  compact       True to drop the hint line and bottom margin, so the field
+                lines up with plain inputs in a filter row.
+  submit_on_select
+                Optional. True makes picking an option submit the
+                surrounding form, which is how the book list filters
+                without an Apply button. Because it submits a real form
+                rather than a URL built in JavaScript, the field still
+                works when that script is stale or blocked. Omit it (as
+                Add/Edit Book do) and selecting only fills the input.
+
+All of these are passed explicitly at every call site: `{% include %}`
+inherits the parent context, so an omitted flag would silently pick up
+whatever the surrounding page happens to have.
+{% endcomment %}
+
+<div class="{% if not compact %}mb-3{% endif %}">
+
+    <label for="{{ input_id }}" class="form-label fw-semibold">
+        {{ label }}
+        {% if required %}
+            <span class="text-danger">*</span>
+        {% endif %}
+    </label>
+
+    <div
+        class="combobox"
+        data-combobox
+        data-entity="{{ entity_label }}"
+        {% if required %}data-combobox-required="true"{% endif %}
+        {% if submit_on_select %}data-combobox-submit{% endif %}
+    >
+
+        <input
+            type="hidden"
+            name="{{ field_name }}"
+            value="{{ selected_id|default_if_none:'' }}"
+            data-combobox-value
+        >
+
+        <div class="combobox-control">
+
+            <input
+                type="text"
+                class="form-control combobox-input"
+                id="{{ input_id }}"
+                value="{{ selected_name|default_if_none:'' }}"
+                placeholder="{% if allow_create %}Search or add {{ entity_label }}...{% else %}Any {{ entity_label }}{% endif %}"
+                autocomplete="off"
+                role="combobox"
+                aria-expanded="false"
+                aria-autocomplete="list"
+                aria-controls="{{ input_id }}Menu"
+                data-combobox-input
+                {% comment %}
+                  `partial` is blanked deliberately. HTMX merges hx-vals down
+                  from every ancestor and hx-disinherit does not cover it, so
+                  a page that puts a combobox inside a form that swaps a
+                  fragment would otherwise have that form's `partial` ride
+                  along on this search — and the menu would fill with the
+                  wrong thing entirely. The nearest value wins, so this one
+                  does. Harmless everywhere else: no view treats an empty
+                  `partial` as a request for a fragment.
+                {% endcomment %}
+                hx-get="{{ search_url }}"
+                hx-trigger="focus, input changed delay:250ms"
+                hx-target="#{{ input_id }}Menu"
+                {% comment %}
+                  Stated rather than left to the default: the menu is
+                  filled, never replaced. Without this a surrounding form
+                  with hx-swap="outerHTML" — which is how the Add and Edit
+                  Book dialogs re-render themselves — passes it down and the
+                  first search deletes the menu it was aiming at.
+                {% endcomment %}
+                hx-swap="innerHTML"
+                hx-vals='js:{search: this.value, combobox: "1", partial: "", allow_create: "{{ allow_create|yesno:"1,0" }}"}'
+                hx-indicator="#{{ input_id }}Spinner"
+            >
+
+            <span
+                class="combobox-spinner htmx-indicator"
+                id="{{ input_id }}Spinner"
+                aria-hidden="true"
+            >
+                <span class="spinner-border spinner-border-sm"></span>
+            </span>
+
+            <button
+                type="button"
+                class="combobox-clear"
+                aria-label="Clear {{ label }}"
+                tabindex="-1"
+                data-combobox-clear
+            >
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
+            </button>
+
+        </div>
+
+        <div
+            class="combobox-menu"
+            id="{{ input_id }}Menu"
+            role="listbox"
+            aria-label="{{ label }} suggestions"
+            data-combobox-menu
+        ></div>
+
+    </div>
+
+    {% if not compact %}
+        <div class="form-text">
+            {% if allow_create %}
+                Start typing to search. If it does not exist yet, you can add it from here.
+            {% else %}
+                Start typing to search, then pick a result.
+            {% endif %}
+        </div>
+    {% endif %}
+
+</div>

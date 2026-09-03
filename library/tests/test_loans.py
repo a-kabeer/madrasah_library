@@ -18,7 +18,7 @@ class LoanIssueTests(TestCase):
         copy = make_copy(status="Available")
 
         response = self.client.post(reverse("loan_add"), {
-            "copy": copy.id,
+            "copies": [copy.id],
             "borrower": self.borrower.id,
             "issue_date": date.today().isoformat(),
             "due_date": (date.today() + timedelta(days=14)).isoformat(),
@@ -35,7 +35,7 @@ class LoanIssueTests(TestCase):
         copy = make_copy(status="Available")
 
         response = self.client.post(reverse("loan_add"), {
-            "copy": copy.id,
+            "copies": [copy.id],
             "borrower": self.borrower.id,
             "issue_date": date.today().isoformat(),
             "due_date": (date.today() - timedelta(days=1)).isoformat(),
@@ -62,7 +62,7 @@ class LoanIssueTests(TestCase):
         copy = make_copy(status="Issued")
 
         response = self.client.post(reverse("loan_add"), {
-            "copy": copy.id,
+            "copies": [copy.id],
             "borrower": self.borrower.id,
             "issue_date": date.today().isoformat(),
             "due_date": (date.today() + timedelta(days=14)).isoformat(),

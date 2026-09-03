@@ -1,250 +1,335 @@
-<!DOCTYPE html>
+{% extends "library/base.html" %}
 
-<html>
+{% block title %}
+    {{ borrower.name }} | {{ branding.display_name }}
+{% endblock %}
 
-<head>
+{% block page_title %}
+    Borrower
+{% endblock %}
 
-    <title>{{ borrower.name }}</title>
+{% block breadcrumbs %}
+    <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item">
+                <a href="{% url 'borrower_list' %}">Borrowers</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                {{ borrower.name }}
+            </li>
+        </ol>
+    </nav>
+{% endblock %}
 
-</head>
+{% block content %}
 
-<body>
+<div class="container-fluid px-0">
 
-{% include "library/_account_bar.html" %}
+    <!-- Page Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+        <div>
+            <a href="{% url 'borrower_list' %}" class="small text-decoration-none">
+                <i class="bi bi-arrow-left me-1"></i> Borrowers
+            </a>
+            <h2 class="fw-bold mb-1 mt-1">{{ borrower.name }}</h2>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                {% comment %}
+                  The borrower's own standing. Whether they are holding
+                  anything is the next card down — two different things,
+                  deliberately shown apart.
+                {% endcomment %}
+                {% if borrower.is_active %}
+                    <span class="badge text-bg-success">Active</span>
+                {% else %}
+                    <span class="badge text-bg-secondary">Inactive</span>
+                {% endif %}
+                <span class="text-body-secondary">{{ borrower.borrower_type }}</span>
+            </div>
+        </div>
 
-<p>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'borrower_edit' borrower.id %}" class="btn btn-warning">
+                <i class="bi bi-pencil me-1"></i> Edit
+            </a>
 
-    <a href="{% url 'borrower_list' %}">
-        ← Back to Borrowers
-    </a>
+            {% comment %}
+              Deactivating is what `is_active` is for, and the alternative
+              to deleting a borrower whose history has to be kept.
+            {% endcomment %}
+            <form method="post" action="{% url 'borrower_toggle_active' borrower.id %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-outline-secondary">
+                    {% if borrower.is_active %}
+                        <i class="bi bi-pause-circle me-1"></i> Deactivate
+                    {% else %}
+                        <i class="bi bi-play-circle me-1"></i> Reactivate
+                    {% endif %}
+                </button>
+            </form>
 
-</p>
+            {% if can_delete %}
+                <a href="{% url 'borrower_delete' borrower.id %}" class="btn btn-outline-danger">
+                    <i class="bi bi-trash me-1"></i> Delete
+                </a>
+            {% endif %}
+        </div>
+    </div>
 
-
-<h1>
-    Borrower: {{ borrower.name }}
-</h1>
-
-<hr>
-
-
-<h2>Borrower Information</h2>
-
-<p>
-
-    <strong>Name:</strong>
-
-    {{ borrower.name }}
-
-</p>
-
-<p>
-
-    <strong>Phone:</strong>
-
-    {{ borrower.phone|default:"N/A" }}
-
-</p>
-
-<p>
-
-    <strong>Borrower Type:</strong>
-
-    {{ borrower.borrower_type|default:"N/A" }}
-
-</p>
-
-<p>
-
-    <strong>Registration No:</strong>
-
-    {{ borrower.registration_no|default:"N/A" }}
-
-</p>
-
-<p>
-
-    <strong>Department:</strong>
-
-    {{ borrower.department|default:"N/A" }}
-
-</p>
-
-<p>
-
-    <strong>Status:</strong>
-
-    {% if borrower.is_active %}
-
-        Active
-
-    {% else %}
-
-        Inactive
-
+    {% if overdue_count %}
+        <div class="alert alert-danger d-flex align-items-center gap-2" role="alert">
+            <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+            <span>
+                <strong>{{ overdue_count }}</strong>
+                of the {{ active_count }} item{{ active_count|pluralize }}
+                {{ overdue_count|pluralize:"is,are" }} overdue.
+            </span>
+        </div>
     {% endif %}
 
-</p>
-
-<hr>
-
-
-<h2>
-    Current Loans
-</h2>
-
-{% if active_loans %}
-
-    <ul>
-
-        {% for loan in active_loans %}
-
-            <li>
-
-                <strong>
-                    {{ loan.copy.copy_code }}
-                </strong>
-
-                —
-
-                {{ loan.copy.volume.book.title }}
-
-                —
-
-                Volume:
-                {{ loan.copy.volume.title }}
-
-                <br>
-
-                Issued:
-                {{ loan.issue_date }}
-
-                |
-
-                Due:
-                {{ loan.due_date }}
-
-                |
-
-                <a href="{% url 'loan_detail' loan.id %}?next={{ request.path|urlencode }}">
-                    View Loan Details
-                </a>
-
-            </li>
-
-            <br>
-
-        {% endfor %}
-
-    </ul>
-
-{% else %}
-
-    <p>
-        This borrower has no currently issued books.
-    </p>
-
-{% endif %}
-
-<hr>
-
-
-<h2>
-    Loan History
-</h2>
-
-{% if loans %}
-
-    <ul>
-
-        {% for loan in loans %}
-
-            <li>
-
-                <strong>
-                    {{ loan.copy.copy_code }}
-                </strong>
-
-                —
-
-                {{ loan.copy.volume.book.title }}
-
-                <br>
-
-                Issued:
-                {{ loan.issue_date }}
-
-                |
-
-                Due:
-                {{ loan.due_date }}
-
-                |
-
-                {% if loan.return_date %}
-
-                    Returned:
-                    {{ loan.return_date }}
-
-                {% else %}
-
-                    Currently Issued
-
-                {% endif %}
-
-                |
-
-                <a href="{% url 'loan_detail' loan.id %}?next={{ request.path|urlencode }}">
-                    View Details
-                </a>
-
-            </li>
-
-            <br>
-
-        {% endfor %}
-
-    </ul>
-
-{% else %}
-
-    <p>
-        No loan history found.
-    </p>
-
-{% endif %}
-
-<hr>
-
-
-<h2>
-    Actions
-</h2>
-
-<p>
-
-    <a href="{% url 'borrower_edit' borrower.id %}?next={{ request.path|urlencode }}">
-        Edit Borrower
-    </a>
-
-</p>
-
-<p>
-
-    <a href="{% url 'borrower_delete' borrower.id %}?next={{ request.path|urlencode }}">
-        Delete Borrower
-    </a>
-
-</p>
-
-<form method="post" action="{% url 'borrower_toggle_active' borrower.id %}">
-    {% csrf_token %}
-    <input type="hidden" name="next" value="{{ request.path }}">
-    <button type="submit">
-        {% if borrower.is_active %}Deactivate{% else %}Activate{% endif %} Borrower
-    </button>
-</form>
-
-</body>
-
-</html>
+    {% if not borrower.is_active %}
+        <div class="alert alert-warning d-flex align-items-start gap-2" role="alert">
+            <i class="bi bi-info-circle-fill mt-1" aria-hidden="true"></i>
+            <div>
+                <strong>This borrower is inactive.</strong>
+                <span class="d-block small">
+                    Inactive borrowers cannot receive new loans. Existing loans and loan history remain unchanged and are still accessible below.
+                    {% if active_count > 0 %}
+                        This borrower currently has {{ active_count }} active loan{{ active_count|pluralize }}.
+                    {% endif %}
+                    Reactivate the borrower to allow new loans.
+                </span>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="row g-4">
+
+        <!-- Basic information -->
+        <div class="col-12 col-xl-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-person me-2"></i>Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+
+                        <dt class="col-5 fw-normal text-body-secondary">Phone</dt>
+                        <dd class="col-7">{{ borrower.phone }}</dd>
+
+                        <dt class="col-5 fw-normal text-body-secondary">Type</dt>
+                        <dd class="col-7">{{ borrower.borrower_type }}</dd>
+
+                        <dt class="col-5 fw-normal text-body-secondary">Registration No</dt>
+                        <dd class="col-7">{{ borrower.registration_no|default:"—" }}</dd>
+
+                        <dt class="col-5 fw-normal text-body-secondary">Department</dt>
+                        <dd class="col-7">{{ borrower.department|default:"—" }}</dd>
+
+                        <dt class="col-5 fw-normal text-body-secondary">Address</dt>
+                        <dd class="col-7">{{ borrower.address|default:"—"|linebreaksbr }}</dd>
+
+                        <dt class="col-5 fw-normal text-body-secondary">Registered</dt>
+                        <dd class="col-7">{{ borrower.created_at|date:"j M Y" }}</dd>
+
+                        <dt class="col-5 fw-normal text-body-secondary">Notes</dt>
+                        <dd class="col-7 mb-0">
+                            {{ borrower.notes|default:"—"|linebreaksbr }}
+                        </dd>
+
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current activity -->
+        <div class="col-12 col-xl-8">
+            <div class="row g-3 mb-4">
+                <div class="col-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body">
+                            <p class="text-body-secondary small mb-1">Out on loan</p>
+                            <p class="fs-3 fw-bold mb-0">{{ active_count }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body">
+                            <p class="text-body-secondary small mb-1">Overdue</p>
+                            <p class="fs-3 fw-bold mb-0 {% if overdue_count %}text-danger{% endif %}">
+                                {{ overdue_count }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current loans -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-arrow-left-right me-2"></i>Currently out
+                    </h5>
+                    <a href="{% url 'loan_add' %}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i> Issue a book
+                    </a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-secondary">
+                            <tr>
+                                <th>Book</th>
+                                <th>Copy</th>
+                                <th>Issued</th>
+                                <th>Due</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for loan in current_loans %}
+                                <tr {% if loan.days_overdue %}class="table-danger"{% endif %}>
+                                    <td>
+                                        {% comment %}
+                                          Through to the book's own page —
+                                          nothing about a book is described
+                                          again here.
+                                        {% endcomment %}
+                                        <a href="{% url 'book_detail' loan.copy.volume.book.id %}"
+                                           class="fw-semibold text-decoration-none">
+                                            {{ loan.copy.volume.book.title }}
+                                        </a>
+                                        {% if loan.copy.volume.volume_number != 1 or loan.copy.volume.title %}
+                                            <span class="d-block small">
+                                                Volume {{ loan.copy.volume.volume_number }}{% if loan.copy.volume.title %} — {{ loan.copy.volume.title }}{% endif %}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'book_copy_detail' loan.copy.id %}"
+                                           class="text-decoration-none">
+                                            {{ loan.copy.copy_code }}
+                                        </a>
+                                    </td>
+                                    {% comment %}
+                                      Not muted: an overdue row is shaded,
+                                      and secondary text on that shading is
+                                      barely readable.
+                                    {% endcomment %}
+                                    <td>{{ loan.issue_date }}</td>
+                                    <td>
+                                        {{ loan.due_date }}
+                                        {% if loan.days_overdue %}
+                                            <span class="d-block small text-danger">
+                                                {{ loan.days_overdue }} day{{ loan.days_overdue|pluralize }} late
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-inline-flex gap-1">
+                                            <a href="{% url 'loan_detail' loan.id %}"
+                                               class="btn btn-sm btn-outline-secondary" title="Open loan">
+                                                <i class="bi bi-box-arrow-up-right"></i>
+                                            </a>
+                                            {% comment %}
+                                              Taking a book back happens on
+                                              the loan, which owns that
+                                              workflow.
+                                            {% endcomment %}
+                                            <a href="{% url 'loan_return' loan.id %}?next={{ request.get_full_path|urlencode }}"
+                                               class="btn btn-sm btn-outline-success" title="Take back">
+                                                <i class="bi bi-arrow-return-left"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-body-secondary py-4">
+                                        Nothing out on loan.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Loan history -->
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h5 class="mb-0 fw-bold">
+                <i class="bi bi-clock-history me-2"></i>Loan History
+            </h5>
+            <span class="text-body-secondary small">
+                {{ paginator.count }} loan{{ paginator.count|pluralize }} in all
+            </span>
+        </div>
+        <div class="table-responsive">
+            {% comment %}
+              Paginated: a borrower's history only grows, and loading all of
+              it would make this page slower every year.
+            {% endcomment %}
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>Book</th>
+                        <th>Copy</th>
+                        <th>Issued</th>
+                        <th>Due</th>
+                        <th>Returned</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in loans %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'book_detail' loan.copy.volume.book.id %}"
+                                   class="text-decoration-none">
+                                    {{ loan.copy.volume.book.title }}
+                                </a>
+                            </td>
+                            <td class="text-body-secondary">{{ loan.copy.copy_code }}</td>
+                            <td class="text-body-secondary">{{ loan.issue_date }}</td>
+                            <td class="text-body-secondary">{{ loan.due_date }}</td>
+                            <td>
+                                {% if loan.return_date %}
+                                    {{ loan.return_date }}
+                                {% elif loan.days_overdue %}
+                                    <span class="badge text-bg-danger">
+                                        Overdue by {{ loan.days_overdue }} day{{ loan.days_overdue|pluralize }}
+                                    </span>
+                                {% else %}
+                                    <span class="badge text-bg-info">Still out</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <a href="{% url 'loan_detail' loan.id %}"
+                                   class="btn btn-sm btn-outline-secondary" title="Open loan">
+                                    <i class="bi bi-box-arrow-up-right"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-body-secondary py-4">
+                                This borrower has never taken a book out.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% include "library/partials/pagination.html" with page_obj=loans %}
+
+</div>
+
+{% endblock %}

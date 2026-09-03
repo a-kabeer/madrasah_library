@@ -15,7 +15,25 @@ from library.models import (
     Borrower,
     User,
     Loan,
+    OrganizationSettings,
 )
+
+
+def make_branding(**fields):
+    """Create (or overwrite) the singleton branding row.
+
+    `save()` pins the primary key, so calling this twice updates the same
+    row rather than creating a second one.
+    """
+
+    settings_obj = OrganizationSettings.load()
+
+    for name, value in fields.items():
+        setattr(settings_obj, name, value)
+
+    settings_obj.save()
+
+    return settings_obj
 
 
 def make_author(name="Test Author"):

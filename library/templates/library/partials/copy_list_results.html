@@ -1,0 +1,268 @@
+{% comment %}
+Results half of the copy list: active filters, the count and rows-per-page
+control, the table, and pagination.
+
+Split out so the list can redraw itself after copies are moved without
+losing the current search, filters, sorting or page. The filter card and
+the move bar live outside this file, so a swap does not disturb what the
+librarian has typed or ticked.
+
+Sort, paging and rows-per-page controls carry only hx-get: the target,
+swap and history behaviour come from #copyResults in book_copy_list.html.
+The row's own buttons are plain links and say so, because they would
+otherwise inherit that container's history and `partial` settings.
+
+Expected context: everything `book_copy_list` provides.
+{% endcomment %}
+
+    {% comment %}
+      The table's current state, re-rendered on every swap. The filter form
+      sits outside this fragment and pulls these in with hx-include, so a
+      new search keeps the sorting and rows-per-page the librarian chose
+      rather than the ones the page happened to load with.
+    {% endcomment %}
+    <div id="copyTableState" hidden>
+        <input type="hidden" name="sort" value="{{ sort }}">
+        <input type="hidden" name="direction" value="{{ direction }}">
+        <input type="hidden" name="page_size" value="{{ page_size }}">
+    </div>
+
+    {% comment %}
+      Every filter that is narrowing the list, including `?book=` and
+      `?volume=`, which arrive from a book or volume page and have no
+      control of their own here — without a chip they would narrow the
+      results with nothing on screen to explain it.
+    {% endcomment %}
+    {% if active_filters %}
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+
+            <span class="text-body-secondary small">Filtered by:</span>
+
+            {% for filter in active_filters %}
+                <a href="{{ filter.url }}" hx-get="{{ filter.url }}" class="filter-chip">
+                    <span class="text-body-secondary">{{ filter.label }}:</span>
+                    <strong>{{ filter.value }}</strong>
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                    <span class="visually-hidden">Remove this filter</span>
+                </a>
+            {% endfor %}
+
+            <a href="{% url 'book_copy_list' %}"
+               hx-get="{% url 'book_copy_list' %}" class="small">Clear all</a>
+
+        </div>
+    {% endif %}
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+
+        <p class="text-body-secondary mb-0">
+            Found <strong>{{ paginator.count }}</strong> cop{{ paginator.count|pluralize:"y,ies" }}.
+        </p>
+
+        <div class="d-flex align-items-center gap-2">
+
+            <label for="copyPageSize" class="text-body-secondary small mb-0">
+                Show
+            </label>
+
+            {% comment %}
+              `page_size_hx_url` carries the current search, filters and
+              sorting with `page` dropped, so a size change returns to page
+              1 keeping everything else. HTMX appends the chosen size from
+              this select's own name.
+            {% endcomment %}
+            <select
+                class="form-select form-select-sm w-auto"
+                id="copyPageSize"
+                hx-get="{{ page_size_hx_url }}"
+                hx-trigger="change"
+                hx-include="this"
+                name="page_size"
+                aria-label="Rows per page"
+            >
+                {% for option in page_size_options %}
+                    <option
+                        value="{{ option.value }}"
+                        {% if option.active %}selected{% endif %}
+                    >
+                        {{ option.value }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <span class="text-body-secondary small">per page</span>
+
+        </div>
+
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-secondary">
+                    <tr>
+
+                        {% if can_edit %}
+                            <th style="width: 2.5rem;">
+                                {% comment %}
+                                  Ticks every copy on this page. Only the
+                                  page: a select-all across pages would
+                                  move copies the librarian never saw.
+                                {% endcomment %}
+                                <input
+                                    type="checkbox"
+                                    class="form-check-input"
+                                    data-copy-select-all
+                                    aria-label="Select all copies on this page"
+                                >
+                            </th>
+                        {% endif %}
+
+                        {% for column in columns %}
+                            <th
+                                {% if column.active %}
+                                    aria-sort="{% if column.direction == 'asc' %}ascending{% else %}descending{% endif %}"
+                                {% endif %}
+                            >
+                                <a href="{{ column.url }}" hx-get="{{ column.url }}" class="table-sort">
+                                    {{ column.label }}
+                                    {% if column.active %}
+                                        <i class="bi {% if column.direction == 'asc' %}bi-sort-up{% else %}bi-sort-down{% endif %}" aria-hidden="true"></i>
+                                    {% else %}
+                                        <i class="bi bi-arrow-down-up table-sort-idle" aria-hidden="true"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                        {% endfor %}
+
+                        <th class="text-end">Actions</th>
+
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for copy in copies %}
+                        {% comment %}
+                          The whole row opens this copy's details, the same
+                          way a book row does. The checkbox and the action
+                          buttons sit inside [data-row-actions] so they keep
+                          their own behaviour.
+                        {% endcomment %}
+                        <tr
+                            class="book-row"
+                            data-copy-row
+                            data-copy-url="{% url 'book_copy_detail' copy.id %}?modal=1"
+                            tabindex="0"
+                            role="button"
+                            aria-label="Show details for copy {{ copy.copy_code }}"
+                        >
+
+                            {% if can_edit %}
+                                <td data-row-actions>
+                                    <input
+                                        type="checkbox"
+                                        class="form-check-input"
+                                        name="copy"
+                                        value="{{ copy.id }}"
+                                        data-copy-checkbox
+                                        aria-label="Select copy {{ copy.copy_code }}"
+                                    >
+                                </td>
+                            {% endif %}
+
+                            <td class="fw-semibold">{{ copy.copy_code }}</td>
+
+                            <td>{{ copy.volume.book.title }}</td>
+
+                            <td class="text-body-secondary small">
+                                {% if copy.volume.volume_number == 1 and not copy.volume.title %}
+                                    —
+                                {% else %}
+                                    Volume {{ copy.volume.volume_number }}
+                                {% endif %}
+                            </td>
+
+                            {% comment %}
+                              `book_copies.shelf_id` is nullable, so these
+                              two are named rather than left blank — a gap
+                              reads as missing data instead of as a copy
+                              that has arrived but not been placed.
+                            {% endcomment %}
+                            <td>
+                                {% if copy.shelf %}
+                                    {{ copy.shelf.location.name }}
+                                {% else %}
+                                    <span class="text-body-secondary">Not placed</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if copy.shelf %}
+                                    {{ copy.shelf.shelf_code }}
+                                {% else %}
+                                    <span class="text-body-secondary">Unshelved</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                <span class="badge text-bg-{{ copy.state_tone }}">
+                                    {{ copy.state_label }}
+                                </span>
+                                {% if copy.days_overdue %}
+                                    <span class="d-block small text-danger">
+                                        {{ copy.days_overdue }} day{{ copy.days_overdue|pluralize }} late
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1" data-row-actions>
+                                    {% if can_edit %}
+                                        <a
+                                            href="{% url 'book_copy_edit' copy.id %}"
+                                            class="btn btn-sm btn-outline-warning"
+                                            title="Edit"
+                                            aria-label="Edit copy {{ copy.copy_code }}"
+                                            hx-push-url="false"
+                                            hx-vals='{"partial": ""}'
+                                        >
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a
+                                            href="{% url 'book_copy_move' copy.id %}"
+                                            class="btn btn-sm btn-outline-primary"
+                                            title="Move"
+                                            aria-label="Move copy {{ copy.copy_code }}"
+                                            hx-push-url="false"
+                                            hx-vals='{"partial": ""}'
+                                        >
+                                            <i class="bi bi-arrow-left-right"></i>
+                                        </a>
+                                    {% else %}
+                                        <a
+                                            href="{% url 'book_copy_detail' copy.id %}"
+                                            class="btn btn-sm btn-outline-secondary"
+                                            title="Open"
+                                            aria-label="Open copy {{ copy.copy_code }}"
+                                            hx-push-url="false"
+                                            hx-vals='{"partial": ""}'
+                                        >
+                                            <i class="bi bi-box-arrow-up-right"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="{% if can_edit %}8{% else %}7{% endif %}" class="text-center text-body-secondary py-4">
+                                No copies found.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% include "library/partials/pagination.html" with page_obj=copies swap=True %}

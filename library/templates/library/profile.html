@@ -1,76 +1,190 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>My Profile</title>
-</head>
-<body>
+{% extends "library/base.html" %}
 
-{% include "library/_account_bar.html" %}
+{% block title %}
+    My Profile | {{ branding.display_name }}
+{% endblock %}
 
-<p>
-    <a href="{% url 'dashboard' %}">
-        ← Back to Dashboard
-    </a>
-</p>
+{% block page_title %}
+    My Profile
+{% endblock %}
 
-<h1>My Profile</h1>
+{% block content %}
 
-<p>
-    <strong>Username:</strong> {{ user.username }}
-</p>
+<div class="container-fluid px-0">
 
-<p>
-    <strong>Full Name:</strong> {{ user.full_name }}
-</p>
+    <div class="row justify-content-center g-4">
+        <div class="col-12 col-lg-8">
 
-<p>
-    <strong>Role:</strong> {{ user.role }}
-</p>
+            <!-- Account -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-person-circle me-2"></i>Account
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-sm-6">
+                            <p class="mb-1 text-body-secondary small">Username</p>
+                            <p class="fw-semibold mb-0">{{ user.username }}</p>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <p class="mb-1 text-body-secondary small">Full Name</p>
+                            <p class="fw-semibold mb-0">{{ user.full_name }}</p>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <p class="mb-1 text-body-secondary small">Role</p>
+                            <p class="fw-semibold mb-0">
+                                <span class="badge bg-secondary">{{ user.role }}</span>
+                            </p>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <p class="mb-1 text-body-secondary small">Last Login</p>
+                            <p class="fw-semibold mb-0">{{ user.last_login|default:"N/A" }}</p>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <p class="mb-1 text-body-secondary small">Account Created</p>
+                            <p class="fw-semibold mb-0">{{ user.created_at }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-<p>
-    <strong>Last Login:</strong> {{ user.last_login|default:"N/A" }}
-</p>
+            <!-- Appearance -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-circle-half me-2"></i>Appearance
+                    </h5>
+                </div>
+                <div class="card-body">
 
-<p>
-    <strong>Account Created:</strong> {{ user.created_at }}
-</p>
+                    <p class="text-body-secondary">
+                        Choose how the app looks. This is saved to your account,
+                        so it follows you to other browsers and devices.
+                    </p>
 
-<hr>
+                    {% comment %}
+                      A real form post, so this works without JavaScript. The
+                      topbar selector drives the same endpoint over HTMX.
+                    {% endcomment %}
+                    <form method="post" action="{% url 'theme_set' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'profile' %}">
 
-<h2>Change Password</h2>
+                        <fieldset>
+                            <legend class="visually-hidden">Appearance</legend>
 
-{% if error %}
-    <p style="color: red;">
-        <strong>{{ error }}</strong>
-    </p>
-{% endif %}
+                            {% for value, label in theme_choices %}
+                                <div class="form-check">
+                                    <input
+                                        class="form-check-input"
+                                        type="radio"
+                                        name="theme"
+                                        id="theme{{ value }}"
+                                        value="{{ value }}"
+                                        {% if user.theme == value %}checked{% endif %}
+                                    >
+                                    <label class="form-check-label" for="theme{{ value }}">
+                                        {{ label }}
+                                        {% if value == "system" %}
+                                            <span class="text-body-secondary small">
+                                                — follow my device setting
+                                            </span>
+                                        {% endif %}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </fieldset>
 
-{% if success %}
-    <p style="color: green;">
-        <strong>{{ success }}</strong>
-    </p>
-{% endif %}
+                        <button type="submit" class="btn btn-primary mt-3">
+                            <i class="bi bi-check-lg me-1"></i> Save Appearance
+                        </button>
+                    </form>
 
-<form method="post">
-    {% csrf_token %}
+                </div>
+            </div>
 
-    <label for="current_password">Current Password:</label>
-    <input type="password" name="current_password" id="current_password" required>
+            <!-- Change Password -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-key me-2"></i>Change Password
+                    </h5>
+                </div>
+                <div class="card-body">
 
-    <br><br>
+                    {% if error %}
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <div>{{ error }}</div>
+                        </div>
+                    {% endif %}
 
-    <label for="new_password">New Password:</label>
-    <input type="password" name="new_password" id="new_password" required>
+                    {% if success %}
+                        <div class="alert alert-success d-flex align-items-center" role="alert">
+                            <i class="bi bi-check-circle-fill me-2"></i>
+                            <div>{{ success }}</div>
+                        </div>
+                    {% endif %}
 
-    <br><br>
+                    <form method="post">
+                        {% csrf_token %}
 
-    <label for="confirm_password">Confirm New Password:</label>
-    <input type="password" name="confirm_password" id="confirm_password" required>
+                        <div class="mb-3">
+                            <label for="current_password" class="form-label fw-semibold">
+                                Current Password <span class="text-danger">*</span>
+                            </label>
+                            <input
+                                type="password"
+                                class="form-control"
+                                name="current_password"
+                                id="current_password"
+                                autocomplete="current-password"
+                                required
+                            >
+                        </div>
 
-    <br><br>
+                        <div class="mb-3">
+                            <label for="new_password" class="form-label fw-semibold">
+                                New Password <span class="text-danger">*</span>
+                            </label>
+                            <input
+                                type="password"
+                                class="form-control"
+                                name="new_password"
+                                id="new_password"
+                                autocomplete="new-password"
+                                required
+                            >
+                            <div class="form-text">At least 8 characters.</div>
+                        </div>
 
-    <button type="submit">Update Password</button>
-</form>
+                        <div class="mb-3">
+                            <label for="confirm_password" class="form-label fw-semibold">
+                                Confirm New Password <span class="text-danger">*</span>
+                            </label>
+                            <input
+                                type="password"
+                                class="form-control"
+                                name="confirm_password"
+                                id="confirm_password"
+                                autocomplete="new-password"
+                                required
+                            >
+                        </div>
 
-</body>
-</html>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i> Update Password
+                        </button>
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

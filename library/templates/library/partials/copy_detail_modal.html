@@ -1,0 +1,160 @@
+{% comment %}
+One physical copy, in the shared #globalModal — opened by clicking its row
+so the librarian keeps their search, filters and page.
+
+Two halves, and no more: where the copy is, and what it is doing. The loan
+history deliberately stays on the copy's own page and in Loans; this shows
+only the loan that is open now, and links to it.
+{% endcomment %}
+
+<h5 class="modal-title" id="globalModalLabel" hx-swap-oob="true">
+    {{ copy.copy_code }}
+</h5>
+
+<div class="mb-3">
+    <span class="badge text-bg-{{ copy.state_tone }}">{{ copy.state_label }}</span>
+    {% if copy.days_overdue %}
+        <span class="text-danger small ms-1">
+            {{ copy.days_overdue }} day{{ copy.days_overdue|pluralize }} overdue
+        </span>
+    {% endif %}
+</div>
+
+<h6 class="fw-bold text-body-secondary small text-uppercase">Copy</h6>
+
+<dl class="row mb-4">
+
+    <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Copy code</dt>
+    <dd class="col-7 col-sm-8 fw-semibold">{{ copy.copy_code }}</dd>
+
+    <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Book</dt>
+    <dd class="col-7 col-sm-8">
+        <a href="{% url 'book_detail' copy.volume.book.id %}">
+            {{ copy.volume.book.title }}
+        </a>
+        {% if copy.volume.book.author %}
+            <span class="d-block small text-body-secondary">
+                {{ copy.volume.book.author.name }}
+            </span>
+        {% endif %}
+    </dd>
+
+    {% comment %}
+      Only worth a line when the book actually has volumes. A single-volume
+      book has its BookVolume because a copy must hang off one, and saying
+      "Volume 1" would put that plumbing back in front of the librarian.
+    {% endcomment %}
+    {% if copy.volume.volume_number != 1 or copy.volume.title %}
+        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Volume</dt>
+        <dd class="col-7 col-sm-8">
+            <a href="{% url 'book_volume_detail' copy.volume.id %}">
+                Volume {{ copy.volume.volume_number }}{% if copy.volume.title %} — {{ copy.volume.title }}{% endif %}
+            </a>
+        </dd>
+    {% endif %}
+
+    <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Location</dt>
+    <dd class="col-7 col-sm-8">
+        {% if copy.shelf %}
+            {{ copy.shelf.location.name }}
+        {% else %}
+            <span class="text-body-secondary">Not placed yet</span>
+        {% endif %}
+    </dd>
+
+    <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Shelf</dt>
+    <dd class="col-7 col-sm-8">
+        {% if copy.shelf %}
+            {{ copy.shelf.shelf_code }}
+        {% else %}
+            <span class="text-body-secondary">Unshelved</span>
+        {% endif %}
+    </dd>
+
+    {% if copy.acquisition_date %}
+        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Acquired</dt>
+        <dd class="col-7 col-sm-8">{{ copy.acquisition_date }}</dd>
+    {% endif %}
+
+    {% if copy.notes %}
+        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Notes</dt>
+        <dd class="col-7 col-sm-8">{{ copy.notes }}</dd>
+    {% endif %}
+
+</dl>
+
+<h6 class="fw-bold text-body-secondary small text-uppercase">Circulation</h6>
+
+{% if active_loan %}
+
+    <dl class="row mb-3">
+
+        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Borrower</dt>
+        <dd class="col-7 col-sm-8">
+            <a href="{% url 'borrower_detail' active_loan.borrower.id %}">
+                {{ active_loan.borrower.name }}
+            </a>
+            <span class="d-block small text-body-secondary">
+                {{ active_loan.borrower.phone }}
+            </span>
+        </dd>
+
+        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Issued</dt>
+        <dd class="col-7 col-sm-8">{{ active_loan.issue_date }}</dd>
+
+        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Due</dt>
+        <dd class="col-7 col-sm-8">
+            {{ active_loan.due_date }}
+            {% if copy.days_overdue %}
+                <span class="badge text-bg-danger ms-1">Overdue</span>
+            {% endif %}
+        </dd>
+
+    </dl>
+
+    {% comment %}
+      The loan record itself is where returns and edits happen — this
+      dialog points at it rather than repeating it.
+    {% endcomment %}
+    <a href="{% url 'loan_detail' active_loan.id %}" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>
+        Open the loan
+    </a>
+
+{% else %}
+
+    <p class="text-body-secondary">
+        Not out on loan.
+        {% if copy.state == "available" %}
+            It is on the shelf and can be issued.
+        {% elif copy.state == "unshelved" %}
+            It has no shelf yet, so it needs placing before it can be found.
+        {% else %}
+            It is recorded as {{ copy.state_label|lower }}.
+        {% endif %}
+    </p>
+
+{% endif %}
+
+<div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
+
+    <a href="{% url 'book_copy_detail' copy.id %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>
+        Full page &amp; loan history
+    </a>
+
+    {% comment %}
+      Shown only to the roles that can use them. `role_required` on the
+      views is what actually enforces it; this just avoids offering a
+      button that would answer 403.
+    {% endcomment %}
+    {% if can_edit %}
+        <a href="{% url 'book_copy_edit' copy.id %}" class="btn btn-sm btn-outline-warning">
+            <i class="bi bi-pencil me-1" aria-hidden="true"></i> Edit copy
+        </a>
+        <a href="{% url 'book_copy_move' copy.id %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i> Move
+        </a>
+    {% endif %}
+
+</div>

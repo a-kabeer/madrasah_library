@@ -1,62 +1,113 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Move {{ copy.copy_code }}</title>
-</head>
-<body>
+{% extends "library/base.html" %}
 
-{% include "library/_account_bar.html" %}
+{% block title %}
+    Move {{ copy.copy_code }} | {{ branding.display_name }}
+{% endblock %}
 
-<p>
-    <a href="{% url 'book_copy_detail' copy.id %}">
-        ← Back to {{ copy.copy_code }}
-    </a>
-</p>
+{% block page_title %}
+    Move Copy
+{% endblock %}
 
-<h1>Move Book Copy</h1>
+{% block content %}
 
-<p>
-    <strong>Copy:</strong> {{ copy.copy_code }}
-    — {{ copy.volume.book.title }}
-</p>
+<div class="container-fluid px-0">
 
-<p>
-    <strong>Current Shelf:</strong>
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-6">
 
-    {% if copy.shelf %}
-        {{ copy.shelf.location.name }} - {{ copy.shelf.shelf_code }}
-    {% else %}
-        Not assigned
-    {% endif %}
-</p>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-arrow-left-right me-2"></i>Move {{ copy.copy_code }}
+                    </h5>
+                </div>
+                <div class="card-body">
 
-{% if error_message %}
-    <p style="color: red;">
-        <strong>{{ error_message }}</strong>
-    </p>
-{% endif %}
+                    {% if error_message %}
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <div>{{ error_message }}</div>
+                        </div>
+                    {% endif %}
 
-<form method="post">
-    {% csrf_token %}
-    <input type="hidden" name="from" value="{{ from_page }}">
+                    <dl class="row mb-4">
 
-    <label for="shelf">Move to Shelf:</label>
+                        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Book</dt>
+                        <dd class="col-7 col-sm-8">
+                            {{ copy.volume.book.title }}
+                            {% if volume_name and volume_name != "Single volume" %}
+                                <span class="d-block small text-body-secondary">
+                                    {{ volume_name }}
+                                </span>
+                            {% endif %}
+                        </dd>
 
-    <select name="shelf" id="shelf" required>
-        <option value="">Select Shelf</option>
+                        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Currently on</dt>
+                        <dd class="col-7 col-sm-8 mb-0">
+                            {% if copy.shelf %}
+                                {{ copy.shelf.location.name }} — {{ copy.shelf.shelf_code }}
+                            {% else %}
+                                <span class="text-body-secondary">Unshelved</span>
+                            {% endif %}
+                        </dd>
 
-        {% for shelf in shelves %}
-            <option
-                value="{{ shelf.id }}"
-                {% if copy.shelf_id == shelf.id %}selected{% endif %}
-            >
-                {{ shelf.location.name }} - {{ shelf.shelf_code }}
-            </option>
-        {% endfor %}
-    </select>
+                    </dl>
 
-    <button type="submit">Move Copy</button>
-</form>
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="from" value="{{ from_page }}">
 
-</body>
-</html>
+                        <div class="mb-3">
+                            <label for="moveLocation" class="form-label fw-semibold">
+                                Location
+                            </label>
+                            {% comment %}
+                              Choosing a location loads that location's
+                              shelves and nothing else, so a copy cannot be
+                              filed somewhere it does not exist. The pair is
+                              checked again on the server.
+                            {% endcomment %}
+                            <select
+                                class="form-select"
+                                id="moveLocation"
+                                name="location"
+                                data-location-select
+                                hx-get="{% url 'shelf_list' %}"
+                                hx-vals='{"options": "1"}'
+                                hx-trigger="change"
+                                hx-target="#moveShelf"
+                                hx-include="this"
+                            >
+                                {% include "library/partials/location_options.html" with locations=locations selected_id=location_id %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="moveShelf" class="form-label fw-semibold">
+                                Shelf
+                            </label>
+                            <select class="form-select" id="moveShelf" name="shelf" required>
+                                {% include "library/partials/shelf_options.html" with shelves=shelves selected_id=copy.shelf_id has_location=location_id %}
+                            </select>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Move Copy
+                            </button>
+                            <a href="{% url 'book_copy_detail' copy.id %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i> Cancel
+                            </a>
+                        </div>
+
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

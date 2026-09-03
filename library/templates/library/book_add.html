@@ -1,92 +1,67 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Add Book</title>
-</head>
-<body>
+{% extends "library/base.html" %}
 
-{% include "library/_account_bar.html" %}
+{% block title %}
+    Add Book | {{ branding.display_name }}
+{% endblock %}
 
-<h1>Add Book</h1>
+{% block page_title %}
+    Add Book
+{% endblock %}
 
-{% if error %}
-    <p style="color: red;">
-        {{ error }}
-    </p>
-{% endif %}
+{% block content %}
 
-<form method="post">
-    {% csrf_token %}
+{% comment %}
+  The full page behind the dialog. It posts to the same view, with the same
+  fields from the same partials, so the two cannot drift apart. Reached by
+  its own URL and used when JavaScript is unavailable — the guided steps
+  are then simply all on screen at once.
+{% endcomment %}
 
-    <label>Title:</label>
-    <input type="text" name="title" value="{{ form_data.title }}" required>
+<div class="container-fluid px-0">
 
-    <br><br>
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
 
-    <label>Author:</label>
-    <select name="author" required>
-        <option value="">Select Author</option>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-plus-lg me-2"></i>Add New Book
+                    </h5>
+                </div>
+                <div class="card-body">
 
-        {% for author in authors %}
-            <option
-                value="{{ author.id }}"
-                {% if form_data.author == author.id|stringformat:"s" %}
-                    selected
-                {% endif %}
-            >
-                {{ author.name }}
-            </option>
-        {% endfor %}
-    </select>
+                    {% if error %}
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <div>{{ error }}</div>
+                        </div>
+                    {% endif %}
 
-    <br><br>
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
 
-    <label>Category:</label>
-    <select name="category">
-        <option value="">Select Category</option>
+                        {% include "library/partials/book_form_fields.html" with form_data=form_data book=None id_prefix="add" %}
 
-        {% for category in categories %}
-            <option
-                value="{{ category.id }}"
-                {% if form_data.category == category.id|stringformat:"s" %}
-                    selected
-                {% endif %}
-            >
-                {{ category.name }}
-            </option>
-        {% endfor %}
-    </select>
+                        <hr class="my-4">
 
-    <br><br>
+                        {% include "library/partials/book_inventory_fields.html" with inventory=inventory locations=locations shelves=shelves max_copies_per_volume=max_copies_per_volume max_total_copies=max_total_copies id_prefix="add" %}
 
-    <label>Publisher:</label>
-    <select name="publisher">
-        <option value="">Select Publisher</option>
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Add Book
+                            </button>
+                            <a href="{% url 'book_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
 
-        {% for publisher in publishers %}
-            <option
-                value="{{ publisher.id }}"
-                {% if form_data.publisher == publisher.id|stringformat:"s" %}
-                    selected
-                {% endif %}
-            >
-                {{ publisher.name }}
-            </option>
-        {% endfor %}
-    </select>
+                </div>
+            </div>
 
-    <br><br>
+        </div>
+    </div>
 
-    <button type="submit">
-        Add Book
-    </button>
-</form>
+</div>
 
-<br>
-
-<a href="{% url 'book_list' %}">
-    Back to Books
-</a>
-
-</body>
-</html>
+{% endblock %}

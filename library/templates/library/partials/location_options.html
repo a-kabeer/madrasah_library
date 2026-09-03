@@ -1,0 +1,25 @@
+{% comment %}
+The Location dropdown's <option> list.
+
+Served on its own by `location_add` after a quick-add, so the new location
+appears in the list — in alphabetical order like the rest — and is already
+chosen. `error` is set instead when nothing could be created.
+
+Expected context: locations, selected_id.
+
+Nothing but <option> elements: this is swapped straight into a
+<select>, where any other tag is invalid HTML and gets moved or
+dropped by the parser. Errors travel in the response's trigger
+event instead — see `render_options`.
+{% endcomment %}
+
+<option value="">Select location…</option>
+
+{% for location in locations %}
+    <option
+        value="{{ location.id }}"
+        {% if selected_id == location.id|stringformat:"s" %}selected{% endif %}
+    >
+        {{ location.name }}
+    </option>
+{% endfor %}
