@@ -1,82 +1,224 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Shelf {{ shelf.shelf_code }}</title>
-</head>
+{% extends "library/base.html" %}
 
-<body>
+{% block title %}
+    {{ shelf.shelf_code }} | {{ branding.display_name }}
+{% endblock %}
 
-{% include "library/_account_bar.html" %}
+{% block page_title %}
+    Shelf
+{% endblock %}
 
-<p>
-    <a href="{% url 'location_detail' shelf.location.id %}">
-        ← Back to {{ shelf.location.name }}
-    </a>
-</p>
+{% block breadcrumbs %}
+    <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item">
+                <a href="{% url 'location_list' %}">Locations</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'location_detail' shelf.location.id %}">
+                    {{ shelf.location.name }}
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                {{ shelf.shelf_code }}
+            </li>
+        </ol>
+    </nav>
+{% endblock %}
 
-<h1>Shelf: {{ shelf.shelf_code }}</h1>
+{% block content %}
 
-<p>
-    <strong>Location:</strong>
-    {{ shelf.location.name }}
-</p>
+<div class="container-fluid px-0">
 
-<hr>
+    <!-- Page Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+        <div>
+            <a href="{% url 'location_detail' shelf.location.id %}" class="small text-decoration-none">
+                <i class="bi bi-arrow-left me-1"></i> {{ shelf.location.name }}
+            </a>
+            <h2 class="fw-bold mb-1 mt-1">{{ shelf.shelf_code }}</h2>
+            <p class="text-body-secondary mb-0">
+                {{ paginator.count }} cop{{ paginator.count|pluralize:"y,ies" }}
+                across {{ title_count }} title{{ title_count|pluralize }}{% if shelf.description %} · {{ shelf.description }}{% endif %}
+            </p>
+        </div>
+        {% if can_edit %}
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'shelf_edit' shelf.id %}" class="btn btn-warning">
+                    <i class="bi bi-pencil me-1"></i> Edit
+                </a>
+                <a href="{% url 'shelf_delete' shelf.id %}" class="btn btn-outline-danger">
+                    <i class="bi bi-trash me-1"></i> Delete
+                </a>
+            </div>
+        {% endif %}
+    </div>
 
-<h2>Book Copies on this Shelf</h2>
+    {% comment %}
+      What titles are on this shelf and how many of each — one grouped
+      query, and each title opens the book's own page rather than anything
+      new being described here. Deliberately not filtered by the search
+      below: it describes the shelf, not the current view of it.
+    {% endcomment %}
+    {% if titles %}
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-body">
+                <h5 class="mb-0 fw-bold">
+                    <i class="bi bi-book me-2"></i>Books on this shelf
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    {% for title in titles %}
+                        <a
+                            href="{% url 'book_detail' title.volume__book_id %}"
+                            class="filter-chip text-decoration-none"
+                        >
+                            <span>{{ title.volume__book__title }}</span>
+                            <span class="badge text-bg-secondary">{{ title.copies }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
 
-<p>
-    Total Copies: {{ copies|length }}
-</p>
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" class="d-flex flex-wrap gap-2">
+                <input
+                    type="search"
+                    class="form-control"
+                    name="search"
+                    value="{{ search }}"
+                    placeholder="Copy code or book title..."
+                    style="max-width: 26rem;"
+                    aria-label="Search copies on this shelf"
+                >
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-search me-1"></i> Search
+                </button>
+                {% if search %}
+                    <a href="{% url 'shelf_detail' shelf.id %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-lg me-1"></i> Clear
+                    </a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
 
-<ul>
+    <!-- Copies -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h5 class="mb-0 fw-bold">
+                <i class="bi bi-collection me-2"></i>Copies
+            </h5>
+            <div class="d-flex flex-wrap gap-2">
+                {% comment %}
+                  The copy list, filtered to this shelf, is where selecting
+                  and moving several at once already lives.
+                {% endcomment %}
+                <a href="{% url 'book_copy_list' %}?shelf={{ shelf.id }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-list-ul me-1"></i> Manage copies
+                </a>
+                {% if can_edit %}
+                    <a href="{% url 'book_copy_add' %}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i> Add Copy
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>Copy Code</th>
+                        <th>Book</th>
+                        <th>Volume</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for copy in copies %}
+                        {% comment %}
+                          The row opens the existing copy detail in the
+                          shared dialog — the same handler and the same
+                          fragment the copy list uses, so nothing about a
+                          copy is described twice.
+                        {% endcomment %}
+                        <tr
+                            class="book-row"
+                            data-copy-row
+                            data-copy-url="{% url 'book_copy_detail' copy.id %}?modal=1"
+                            tabindex="0"
+                            role="button"
+                            aria-label="Show details for copy {{ copy.copy_code }}"
+                        >
+                            <td class="fw-semibold">{{ copy.copy_code }}</td>
+                            <td>{{ copy.volume.book.title }}</td>
+                            <td class="text-body-secondary small">
+                                {% if copy.volume.volume_number == 1 and not copy.volume.title %}
+                                    —
+                                {% else %}
+                                    Volume {{ copy.volume.volume_number }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge text-bg-{{ copy.state_tone }}">
+                                    {{ copy.state_label }}
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1" data-row-actions>
+                                    {% if can_edit %}
+                                        <a
+                                            href="{% url 'book_copy_edit' copy.id %}?from=shelf"
+                                            class="btn btn-sm btn-outline-warning"
+                                            title="Edit"
+                                            aria-label="Edit copy {{ copy.copy_code }}"
+                                        >
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a
+                                            href="{% url 'book_copy_move' copy.id %}?from=shelf"
+                                            class="btn btn-sm btn-outline-primary"
+                                            title="Move"
+                                            aria-label="Move copy {{ copy.copy_code }}"
+                                        >
+                                            <i class="bi bi-arrow-left-right"></i>
+                                        </a>
+                                    {% else %}
+                                        <a
+                                            href="{% url 'book_copy_detail' copy.id %}?from=shelf"
+                                            class="btn btn-sm btn-outline-secondary"
+                                            title="Open"
+                                            aria-label="Open copy {{ copy.copy_code }}"
+                                        >
+                                            <i class="bi bi-box-arrow-up-right"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-body-secondary py-4">
+                                {% if search %}
+                                    Nothing on this shelf matches that.
+                                {% else %}
+                                    This shelf is empty.
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-    {% for copy in copies %}
+    {% include "library/partials/pagination.html" with page_obj=copies %}
 
-        <li>
+</div>
 
-            <strong>
-    <a href="{% url 'book_copy_detail' copy.id %}?from=shelf">
-        {{ copy.copy_code }}
-    </a>
-</strong>
-
-            - Book:
-            {{ copy.volume.book.title }}
-
-            - Volume:
-            {{ copy.volume.title }}
-
-            - Status:
-            {{ copy.status }}
-
-        </li>
-
-    {% empty %}
-
-        <li>
-            No book copies found on this shelf.
-        </li>
-
-    {% endfor %}
-
-</ul>
-
-<hr>
-
-<h2>Actions</h2>
-
-<p>
-    <a href="{% url 'shelf_edit' shelf.id %}">
-        Edit Shelf
-    </a>
-</p>
-
-<p>
-    <a href="{% url 'shelf_delete' shelf.id %}">
-        Delete Shelf
-    </a>
-</p>
-
-</body>
-</html>
+{% endblock %}

@@ -1,37 +1,77 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Add Location</title>
-</head>
-<body>
+{% extends "library/base.html" %}
 
-{% include "library/_account_bar.html" %}
+{% block title %}
+    Add Location | {{ branding.display_name }}
+{% endblock %}
 
-<h1>Add Location</h1>
+{% block page_title %}
+    Add Location
+{% endblock %}
 
-<form method="post">
-    {% csrf_token %}
+{% block content %}
 
-    <label>Name:</label>
-    <input type="text" name="name" required>
+<div class="container-fluid px-0">
 
-    <br><br>
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-7">
 
-    <label>Description:</label>
-    <textarea name="description"></textarea>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-plus-lg me-2"></i>Add Location
+                    </h5>
+                </div>
+                <div class="card-body">
 
-    <br><br>
+                    <form method="post">
+                        {% csrf_token %}
 
-    <button type="submit">
-        Add Location
-    </button>
-</form>
+                        <div class="mb-3">
+                            <label for="formName" class="form-label fw-semibold">
+                                Name <span class="text-danger">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="formName"
+                                name="name"
+                                value=""
+                                required
+                            >
+                            <div class="form-text">
+                                A place in the building, e.g. "Main Hall".
+                            </div>
+                        </div>
 
-<br>
+                        <div class="mb-3">
+                            <label for="formDescription" class="form-label fw-semibold">
+                                Description
+                            </label>
+                            <textarea
+                                class="form-control"
+                                id="formDescription"
+                                name="description"
+                                rows="3"
+                            ></textarea>
+                        </div>
 
-<a href="{% url 'location_list' %}">
-    Back to Locations
-</a>
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Add Location
+                            </button>
+                            <a href="{% url 'location_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i> Cancel
+                            </a>
+                        </div>
 
-</body>
-</html>
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

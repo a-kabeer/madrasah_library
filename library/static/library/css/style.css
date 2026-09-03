@@ -976,6 +976,14 @@ body {
 }
 
 
+/* The copy list's move bar, which appears only while copies are ticked.
+   The accent edge is what marks it as something acting on a selection
+   rather than another panel that was always there. */
+.copy-move-bar {
+    border-left: 3px solid var(--brand-primary) !important;
+}
+
+
 /* Inline "add a location / shelf without leaving this form" box. Set off
    from the field above it so it reads as a detour rather than another
    field. */

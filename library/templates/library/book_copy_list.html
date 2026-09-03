@@ -1,321 +1,258 @@
-<!DOCTYPE html>
+{% extends "library/base.html" %}
 
-<html>
-<head>
-    <title>Book Copies</title>
-</head>
+{% block title %}
+    Book Copies | {{ branding.display_name }}
+{% endblock %}
 
-<body>
+{% block page_title %}
+    Book Copies
+{% endblock %}
 
-{% include "library/_account_bar.html" %}
+{% block content %}
 
+<div class="container-fluid px-0">
 
-<p>
-    <a href="{% url 'library_home' %}">
-        ← Back to Home
-    </a>
-</p>
+    <!-- Page Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h2 class="fw-bold mb-1">Book Copies</h2>
+            <p class="text-body-secondary mb-0">
+                Every physical copy, where it is kept and what it is doing.
+            </p>
+        </div>
+        {% if can_edit %}
+            <a href="{% url 'book_copy_add' %}" class="btn btn-primary">
+                <i class="bi bi-plus-lg me-1"></i> Add Copy
+            </a>
+        {% endif %}
+    </div>
 
-<h1>Book Copies</h1>
+    {% comment %}
+      Search and filters. A real GET form, so Enter submits it; hx-get
+      answers with just the results so the box keeps its focus and caret.
 
-<form method="get">
+      Location and Shelf are plain dropdowns because a library has as many
+      as the building has — a searchable one would be more machinery than
+      the data needs. Book and Volume have no dropdown at all: there are
+      hundreds of books, the search box covers titles, and `?book=` /
+      `?volume=` still filter for the links that arrive from those pages.
+    {% endcomment %}
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
 
-    <p>
-        <label for="copy_code">Copy Code:</label>
+            <form
+                method="get"
+                hx-get="{% url 'book_copy_list' %}?partial=results"
+                hx-include="#copyTableState"
+                hx-target="#copyResults"
+                hx-swap="innerHTML show:none"
+                hx-push-url="true"
+                hx-indicator="#copyResults"
+                hx-disinherit="*"
+            >
 
-        <input
-            type="text"
-            name="copy_code"
-            id="copy_code"
-            value="{{ copy_code }}"
-            placeholder="Search copy code..."
+                <div class="row g-3 align-items-end">
+
+                    <div class="col-12 col-lg-4">
+                        <label for="copySearch" class="form-label fw-semibold">
+                            Search
+                        </label>
+                        <input
+                            type="search"
+                            class="form-control"
+                            id="copySearch"
+                            name="search"
+                            value="{{ search }}"
+                            placeholder="Copy code or book title..."
+                        >
+                    </div>
+
+                    <div class="col-6 col-lg-3">
+                        <label for="copyLocation" class="form-label fw-semibold">
+                            Location
+                        </label>
+                        {% comment %}
+                          Changing this reloads the Shelf options for that
+                          location only, from `shelf_list`. It also clears
+                          any shelf already chosen, since a shelf from the
+                          previous location would no longer make sense.
+                        {% endcomment %}
+                        <select
+                            class="form-select"
+                            id="copyLocation"
+                            name="location"
+                            data-location-select
+                            hx-get="{% url 'shelf_list' %}"
+                            hx-vals='{"options": "1"}'
+                            hx-trigger="change"
+                            hx-target="#copyShelf"
+                            hx-include="this"
+                        >
+                            {% include "library/partials/location_options.html" with locations=locations selected_id=location_id %}
+                        </select>
+                    </div>
+
+                    <div class="col-6 col-lg-2">
+                        <label for="copyShelf" class="form-label fw-semibold">
+                            Shelf
+                        </label>
+                        <select class="form-select" id="copyShelf" name="shelf">
+                            {% include "library/partials/shelf_options.html" with shelves=shelves selected_id=shelf_id has_location=location_id %}
+                        </select>
+                    </div>
+
+                    <div class="col-6 col-lg-2">
+                        <label for="copyStatus" class="form-label fw-semibold">
+                            Status
+                        </label>
+                        <select class="form-select" id="copyStatus" name="status">
+                            <option value="">Any status</option>
+                            {% for option in state_options %}
+                                <option
+                                    value="{{ option.value }}"
+                                    {% if option.active %}selected{% endif %}
+                                >
+                                    {{ option.label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-6 col-lg-1 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search"></i>
+                            <span class="visually-hidden">Search</span>
+                        </button>
+                    </div>
+
+                </div>
+
+                <div class="form-text mt-2">
+                    <strong>Unshelved</strong> finds copies that have arrived
+                    but have not been placed on a shelf yet.
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+    {% comment %}
+      Bulk move. A real form posting to `book_copy_bulk_move`, so without
+      JavaScript it still works and redirects back here via `next`. With
+      it, app.js shows the bar only while copies are ticked, and the move
+      is answered with an event that redraws the list in place.
+
+      Only rendered for the roles that can move copies — `role_required`
+      on the view is what enforces it.
+    {% endcomment %}
+    {% if can_edit %}
+        <form
+            id="copyMoveForm"
+            class="card shadow-sm border-0 mb-4 copy-move-bar"
+            method="post"
+            action="{% url 'book_copy_bulk_move' %}"
+            hx-post="{% url 'book_copy_bulk_move' %}"
+            hx-include="[data-copy-checkbox]:checked, #copyMoveLocation, #copyMoveShelf"
+            hx-disabled-elt="find button[type=submit]"
+            hx-disinherit="*"
+            hidden
         >
-    </p>
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
 
-    <p>
-        <label for="book">Book:</label>
+            <div class="card-body d-flex flex-wrap align-items-end gap-3">
 
-        <select name="book" id="book">
+                <div>
+                    <span class="fw-semibold d-block">Move selected copies</span>
+                    <span class="text-body-secondary small">
+                        <span data-copy-selected-count>0</span> selected
+                    </span>
+                </div>
 
-            <option value="">
-                All Books
-            </option>
+                <div>
+                    <label for="copyMoveLocation" class="form-label small mb-1">
+                        Location
+                    </label>
+                    <select
+                        class="form-select form-select-sm"
+                        id="copyMoveLocation"
+                        name="location"
+                        data-location-select
+                        hx-get="{% url 'shelf_list' %}"
+                        hx-vals='{"options": "1"}'
+                        hx-trigger="change"
+                        hx-target="#copyMoveShelf"
+                        hx-include="this"
+                    >
+                        {% include "library/partials/location_options.html" with locations=locations selected_id="" %}
+                    </select>
+                </div>
 
-            {% for book in books %}
+                <div>
+                    <label for="copyMoveShelf" class="form-label small mb-1">
+                        Shelf
+                    </label>
+                    <select
+                        class="form-select form-select-sm"
+                        id="copyMoveShelf"
+                        name="shelf"
+                    >
+                        {% include "library/partials/shelf_options.html" with shelves=None selected_id="" has_location=False %}
+                    </select>
+                </div>
 
-                <option
-                    value="{{ book.id }}"
-                    {% if book_id == book.id|stringformat:"s" %}selected{% endif %}
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-arrow-left-right me-1"></i> Move Copies
+                </button>
+
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    data-copy-clear-selection
                 >
-                    {{ book.title }}
-                </option>
+                    Clear selection
+                </button>
 
-            {% endfor %}
-
-        </select>
-    </p>
-
-    <p>
-        <label for="volume">Volume:</label>
-
-        <select name="volume" id="volume">
-
-            <option value="">
-                All Volumes
-            </option>
-
-            {% for volume in volumes %}
-
-                <option
-                    value="{{ volume.id }}"
-                    {% if volume_id == volume.id|stringformat:"s" %}selected{% endif %}
-                >
-                    {{ volume.book.title }}
-                    - Volume {{ volume.volume_number }}
-                    - {{ volume.title }}
-                </option>
-
-            {% endfor %}
-
-        </select>
-    </p>
-
-    <p>
-        <label for="status">Status:</label>
-
-        <select name="status" id="status">
-
-            <option value="">
-                All Statuses
-            </option>
-
-            {% for item in statuses %}
-
-                <option
-                    value="{{ item }}"
-                    {% if status == item %}selected{% endif %}
-                >
-                    {{ item }}
-                </option>
-
-            {% endfor %}
-
-        </select>
-    </p>
-
-    <p>
-        <label for="location">Location:</label>
-
-        <select name="location" id="location">
-
-            <option value="">
-                All Locations
-            </option>
-
-            {% for location in locations %}
-
-                <option
-                    value="{{ location.id }}"
-                    {% if location_id == location.id|stringformat:"s" %}selected{% endif %}
-                >
-                    {{ location.name }}
-                </option>
-
-            {% endfor %}
-
-        </select>
-    </p>
-
-    <p>
-        <label for="shelf">Shelf:</label>
-
-        <select name="shelf" id="shelf">
-
-            <option value="">
-                All Shelves
-            </option>
-
-            {% for shelf in shelves %}
-
-                <option
-                    value="{{ shelf.id }}"
-                    {% if shelf_id == shelf.id|stringformat:"s" %}selected{% endif %}
-                >
-                    {{ shelf.location.name }}
-                    - {{ shelf.shelf_code }}
-                </option>
-
-            {% endfor %}
-
-        </select>
-    </p>
-
-    <button type="submit">
-        Apply Filters
-    </button>
-
-    {% if copy_code or book_id or volume_id or status or location_id or shelf_id %}
-
-        <a href="{% url 'book_copy_list' %}">
-            Clear Filters
-        </a>
-
+            </div>
+        </form>
     {% endif %}
 
-</form>
+    {% comment %}
+      Everything that changes on a search, filter, sort, page or page-size
+      change lives in here, so those actions swap this fragment instead of
+      reloading. Set once on the container and inherited by the links
+      inside it, which is why they only need hx-get.
+    {% endcomment %}
+    <div
+        id="copyResults"
+        class="swap-busy"
+        hx-target="#copyResults"
+        hx-swap="innerHTML show:none"
+        hx-push-url="true"
+        hx-indicator="#copyResults"
+        hx-vals='{"partial": "results"}'
+    >
+        {% include "library/partials/copy_list_results.html" %}
+    </div>
 
-<br>
+    {% comment %}
+      Redraws the results after copies are moved, keeping whatever search,
+      filters, sorting, page and page size are in force — it re-requests
+      the current URL. `refresh` tells the view not to push a history
+      entry, since nothing navigated.
+    {% endcomment %}
+    <div
+        id="copyListRefresh"
+        hx-get="{{ request.get_full_path }}"
+        hx-vals='{"partial": "results", "refresh": "1"}'
+        hx-trigger="copyListChanged from:body"
+        hx-target="#copyResults"
+        hx-swap="innerHTML show:none"
+        hx-push-url="false"
+        hidden
+    ></div>
 
-<p>
-    Found {{ copies.paginator.count }} copy/copies.
-</p>
+</div>
 
-<p>
-    <a href="{% url 'book_copy_add' %}">
-        Add Book Copy
-    </a>
-</p>
-
-<ul>
-
-    {% for copy in copies %}
-
-        <li>
-
-    <strong>ID:</strong>
-    {{ copy.id }}
-
-    -
-
-    <strong>Copy:</strong>
-    {{ copy.copy_code }}
-
-    -
-
-    <strong>Book:</strong>
-    {{ copy.volume.book.title }}
-
-    -
-
-    <strong>Volume:</strong>
-    {{ copy.volume.volume_number }}
-
-    {% if copy.shelf %}
-
-        -
-
-        <strong>Shelf:</strong>
-        {{ copy.shelf.shelf_code }}
-
-        -
-
-        <strong>Location:</strong>
-        {{ copy.shelf.location.name }}
-
-    {% else %}
-
-        -
-
-        <strong>Shelf:</strong>
-        N/A
-
-        -
-
-        <strong>Location:</strong>
-        N/A
-
-    {% endif %}
-
-    -
-
-    <strong>Status:</strong>
-    {{ copy.status }}
-
-    {% if copy.active_loan %}
-
-        <hr>
-
-        <strong>Currently Issued To:</strong>
-        {{ copy.active_loan.borrower.name }}
-
-        <br>
-
-        <strong>Phone:</strong>
-
-        {% if copy.active_loan.borrower.phone %}
-            {{ copy.active_loan.borrower.phone }}
-        {% else %}
-            N/A
-        {% endif %}
-
-        <br>
-
-        <strong>Issue Date:</strong>
-        {{ copy.active_loan.issue_date }}
-
-        <br>
-
-        <strong>Due Date:</strong>
-        {{ copy.active_loan.due_date }}
-
-        <br>
-
-        {% if copy.days_overdue > 0 %}
-
-            <strong>Status:</strong>
-            Overdue by {{ copy.days_overdue }} day(s)
-
-        {% else %}
-
-            <strong>Loan Status:</strong>
-            Active
-
-        {% endif %}
-
-    {% endif %}
-
-    <br><br>
-   <a href="{% url 'book_copy_detail' copy.id %}?from=list">
-    View Details
-</a>
-|
-    <a href="{% url 'book_copy_edit' copy.id %}?from=list">
-        Edit
-    </a>
-
-    |
-
-    {% if copy.active_loan %}
-
-        <a href="{% url 'loan_return' copy.active_loan.id %}?next={{ request.path|urlencode }}">
-            Return Book
-        </a>
-
-        |
-
-    {% endif %}
-
-    <a href="{% url 'book_copy_delete' copy.id %}?from=list">
-        Delete
-    </a>
-
-</li>
-
-<br>
-
-        <br>
-
-    {% empty %}
-
-        <li>
-            No book copies found.
-        </li>
-
-    {% endfor %}
-
-</ul>
-
-{% include "library/_pagination.html" with page_obj=copies %}
-
-</body>
-</html>
+{% endblock %}

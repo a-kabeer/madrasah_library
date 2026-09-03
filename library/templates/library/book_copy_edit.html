@@ -1,241 +1,204 @@
-<!DOCTYPE html>
+{% extends "library/base.html" %}
 
-<html>
+{% block title %}
+    Edit {{ copy.copy_code }} | {{ branding.display_name }}
+{% endblock %}
 
-<head>
-    <title>Edit Book Copy</title>
-</head>
+{% block page_title %}
+    Edit Copy
+{% endblock %}
 
-<body>
+{% block content %}
 
-{% include "library/_account_bar.html" %}
+<div class="container-fluid px-0">
 
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
 
-<p>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-pencil me-2"></i>{{ copy.copy_code }}
+                    </h5>
+                </div>
+                <div class="card-body">
 
-    {% if from_page == "shelf" %}
-
-        <a href="{% url 'shelf_detail' copy.shelf.id %}">
-            ← Back to Shelf {{ copy.shelf.shelf_code }}
-        </a>
-
-    {% elif from_page == "volume" %}
-
-        <a href="{% url 'book_volume_detail' copy.volume.id %}">
-            ← Back to Volume
-        </a>
-
-    {% else %}
-
-        <a href="{% url 'book_copy_list' %}">
-            ← Back to Book Copies
-        </a>
-
-    {% endif %}
-
-</p>
-
-<h1>Edit Book Copy</h1>
-
-{% if error_message %}
-
-    <p>
-        <strong>
-            {{ error_message }}
-        </strong>
-    </p>
-
-{% endif %}
-
-{% if is_issued %}
-
-    <p>
-        <strong>Status: Issued</strong>
-    </p>
-
-    <p>
-        This copy is currently issued and its status
-        cannot be changed manually.
-    </p>
-
-{% endif %}
-
-<form method="post">
-
-    {% csrf_token %}
-<input
-    type="hidden"
-    name="from"
-    value="{{ from_page }}"
->
-    <p>
-
-        <label for="volume">
-            Volume:
-        </label>
-
-        <select
-            name="volume"
-            id="volume"
-            required
-        >
-
-            {% for volume in volumes %}
-
-                <option
-                    value="{{ volume.id }}"
-
-                    {% if volume.id == form_data.volume_id %}
-                        selected
+                    {% if error_message %}
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <div>{{ error_message }}</div>
+                        </div>
                     {% endif %}
 
-                >
+                    {% comment %}
+                      This page is about the physical copy only. The book it
+                      belongs to is shown for orientation and is not
+                      editable here — bibliographic details are edited from
+                      the book itself, so retitling a book never has to go
+                      near the shelf.
+                    {% endcomment %}
+                    <div class="alert alert-secondary d-flex align-items-start" role="note">
+                        <i class="bi bi-info-circle me-2 mt-1"></i>
+                        <div>
+                            <strong>{{ copy.volume.book.title }}</strong>
+                            {% if volume_name and volume_name != "Single volume" %}
+                                <span class="d-block small">{{ volume_name }}</span>
+                            {% endif %}
+                            <span class="d-block small text-body-secondary">
+                                The book's own details are edited from
+                                <a href="{% url 'book_detail' copy.volume.book.id %}">its page</a>.
+                            </span>
+                        </div>
+                    </div>
 
-                    {{ volume.book.title }}
-                    - Volume {{ volume.volume_number }}
-                    - {{ volume.title }}
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="from" value="{{ from_page }}">
 
-                </option>
+                        {% comment %}
+                          Read-only. The code is printed on the physical
+                          book and quoted in past activity-log entries, so
+                          changing it would leave the label and the record
+                          disagreeing. `book_copy_edit` does not read it
+                          from the form either.
+                        {% endcomment %}
+                        <div class="mb-3">
+                            <label for="formCopyCode" class="form-label fw-semibold">
+                                Copy Code
+                            </label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="formCopyCode"
+                                value="{{ copy.copy_code }}"
+                                readonly
+                                aria-describedby="formCopyCodeHelp"
+                            >
+                            <div class="form-text" id="formCopyCodeHelp">
+                                Fixed once the copy exists — it is the label
+                                on the book and appears in its history.
+                            </div>
+                        </div>
 
-            {% endfor %}
+                        <div class="row g-3">
 
-        </select>
+                            <div class="col-12 col-sm-6">
+                                <label for="formLocation" class="form-label fw-semibold">
+                                    Location
+                                </label>
+                                {% comment %}
+                                  Choosing a location reloads the Shelf
+                                  options for that location only, from
+                                  `shelf_list`. The pair is checked again
+                                  on the server when this is submitted.
+                                {% endcomment %}
+                                <select
+                                    class="form-select"
+                                    id="formLocation"
+                                    name="location"
+                                    data-location-select
+                                    hx-get="{% url 'shelf_list' %}"
+                                    hx-vals='{"options": "1"}'
+                                    hx-trigger="change"
+                                    hx-target="#formShelf"
+                                    hx-include="this"
+                                >
+                                    {% include "library/partials/location_options.html" with locations=locations selected_id=form_data.location_id %}
+                                </select>
+                            </div>
 
-    </p>
+                            <div class="col-12 col-sm-6">
+                                <label for="formShelf" class="form-label fw-semibold">
+                                    Shelf
+                                </label>
+                                <select class="form-select" id="formShelf" name="shelf">
+                                    {% include "library/partials/shelf_options.html" with shelves=shelves selected_id=form_data.shelf_id has_location=form_data.location_id %}
+                                </select>
+                                <div class="form-text">
+                                    Leave the shelf unset for a copy that has
+                                    arrived but not been placed yet.
+                                </div>
+                            </div>
 
-    <p>
+                        </div>
 
-        <label for="shelf">
-            Shelf:
-        </label>
+                        <div class="mb-3 mt-3">
+                            <label for="formStatus" class="form-label fw-semibold">
+                                Status
+                            </label>
+                            {% comment %}
+                              A copy that is out stays "Issued": the loan is
+                              what says so and the return is what changes
+                              it. Same rule the view enforces.
+                            {% endcomment %}
+                            {% if is_issued %}
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="formStatus"
+                                    value="Issued"
+                                    readonly
+                                >
+                                <div class="form-text">
+                                    This copy is out on loan. Take it back
+                                    from the loan to change its status.
+                                </div>
+                            {% else %}
+                                <select class="form-select" id="formStatus" name="status">
+                                    {% for status in statuses %}
+                                        <option
+                                            value="{{ status }}"
+                                            {% if form_data.status == status %}selected{% endif %}
+                                        >
+                                            {{ status }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            {% endif %}
+                        </div>
 
-        <select
-            name="shelf"
-            id="shelf"
-            required
-        >
+                        <div class="mb-3">
+                            <label for="formAcquisitionDate" class="form-label fw-semibold">
+                                Acquisition Date
+                            </label>
+                            <input
+                                type="date"
+                                class="form-control"
+                                id="formAcquisitionDate"
+                                name="acquisition_date"
+                                value="{{ form_data.acquisition_date }}"
+                            >
+                        </div>
 
-            {% for shelf in shelves %}
+                        <div class="mb-3">
+                            <label for="formNotes" class="form-label fw-semibold">
+                                Notes
+                            </label>
+                            <textarea
+                                class="form-control"
+                                id="formNotes"
+                                name="notes"
+                                rows="3"
+                            >{{ form_data.notes }}</textarea>
+                        </div>
 
-                <option
-                    value="{{ shelf.id }}"
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Save Changes
+                            </button>
+                            <a href="{% url 'book_copy_detail' copy.id %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i> Cancel
+                            </a>
+                        </div>
 
-                    {% if shelf.id == form_data.shelf_id %}
-                        selected
-                    {% endif %}
+                    </form>
 
-                >
+                </div>
+            </div>
 
-                    {{ shelf.location.name }}
-                    - {{ shelf.shelf_code }}
+        </div>
+    </div>
 
-                </option>
+</div>
 
-            {% endfor %}
-
-        </select>
-
-    </p>
-
-    <p>
-
-        <label for="copy_code">
-            Copy Code:
-        </label>
-
-        <input
-            type="text"
-            name="copy_code"
-            id="copy_code"
-            value="{{ form_data.copy_code }}"
-            required
-        >
-
-    </p>
-
-    <p>
-
-        <label for="status">
-            Status:
-        </label>
-
-        {% if is_issued %}
-
-            <input
-                type="text"
-                value="Issued"
-                readonly
-            >
-
-        {% else %}
-
-            <select
-                name="status"
-                id="status"
-            >
-
-                {% for status_item in statuses %}
-
-                    <option
-                        value="{{ status_item }}"
-
-                        {% if status_item == form_data.status %}
-                            selected
-                        {% endif %}
-
-                    >
-
-                        {{ status_item }}
-
-                    </option>
-
-                {% endfor %}
-
-            </select>
-
-        {% endif %}
-
-    </p>
-
-    <p>
-
-        <label for="acquisition_date">
-            Acquisition Date:
-        </label>
-
-        <input
-            type="date"
-            name="acquisition_date"
-            id="acquisition_date"
-            value="{{ form_data.acquisition_date }}"
-        >
-
-    </p>
-
-    <p>
-
-        <label for="notes">
-            Notes:
-        </label>
-
-        <br>
-
-        <textarea
-            name="notes"
-            id="notes"
-            rows="5"
-            cols="50"
-        >{{ form_data.notes }}</textarea>
-
-    </p>
-
-    <button type="submit">
-        Update Book Copy
-    </button>
-
-</form>
-
-
-</body>
-
-</html>
+{% endblock %}

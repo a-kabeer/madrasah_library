@@ -1,0 +1,125 @@
+{% extends "library/base.html" %}
+
+{% block title %}Return Book | {{ branding.display_name }}{% endblock %}
+
+{% block page_title %}Return Book{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+    <div class="mb-4">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'circulation_dashboard' %}">Circulation</a></li>
+                <li class="breadcrumb-item active">Return Book</li>
+            </ol>
+        </nav>
+        <h2 class="fw-bold mb-1">Return Book</h2>
+        <p class="text-body-secondary mb-0">Scan or enter a copy code to find the active loan.</p>
+    </div>
+
+    <div class="row">
+        <div class="col-12 col-lg-8">
+
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body">
+                    <form method="get" action="{% url 'circulation_return_lookup' %}">
+                        <div class="mb-3">
+                            <label for="copy_code" class="form-label fw-semibold">Copy Code</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                                    </svg>
+                                </span>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="copy_code"
+                                    name="copy_code"
+                                    value="{{ copy_code }}"
+                                    placeholder="Scan or type copy code (e.g. LIB-000001)"
+                                    autofocus
+                                    autocomplete="off"
+                                >
+                                <button class="btn btn-primary" type="submit">Find</button>
+                            </div>
+                            <div class="form-text">Enter the copy code from the book barcode or label.</div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if error_message %}
+            <div class="alert alert-warning" role="alert">
+                <strong>{{ error_message }}</strong>
+            </div>
+            {% endif %}
+
+            {% if loan %}
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Active Loan Found</h5>
+                </div>
+                <div class="card-body">
+
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Copy Code</div>
+                        <div class="col-sm-8 fw-semibold">{{ loan.copy.copy_code }}</div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Book</div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'book_detail' loan.copy.volume.book.id %}">{{ loan.copy.volume.book.title }}</a>
+                            {% if loan.copy.volume.title %}
+                                <span class="text-body-secondary">— {{ loan.copy.volume.title }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Borrower</div>
+                        <div class="col-sm-8">
+                            <a href="{% url 'borrower_detail' loan.borrower.id %}">{{ loan.borrower.name }}</a>
+                            {% if loan.borrower.phone %}
+                                <span class="text-body-secondary">— {{ loan.borrower.phone }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Issue Date</div>
+                        <div class="col-sm-8">{{ loan.issue_date }}</div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-body-secondary">Due Date</div>
+                        <div class="col-sm-8">
+                            {{ loan.due_date }}
+                            {% if loan.days_overdue > 0 %}
+                                <span class="badge bg-danger ms-2">Overdue by {{ loan.days_overdue }} day{{ loan.days_overdue|pluralize }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'loan_return' loan.id %}?next={% url 'circulation_return_lookup' %}" class="btn btn-success">
+                            Proceed to Return
+                        </a>
+                        <a href="{% url 'loan_detail' loan.id %}" class="btn btn-outline-secondary">
+                            View Loan Details
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

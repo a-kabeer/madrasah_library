@@ -1,63 +1,95 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Add Shelf</title>
-</head>
-<body>
+{% extends "library/base.html" %}
 
-{% include "library/_account_bar.html" %}
+{% block title %}
+    Add Shelf | {{ branding.display_name }}
+{% endblock %}
 
-<h1>Add Shelf</h1>
+{% block page_title %}
+    Add Shelf
+{% endblock %}
 
-<form method="post">
-    {% csrf_token %}
+{% block content %}
 
-    <label>Location:</label>
+<div class="container-fluid px-0">
 
-    <select name="location" required>
-        <option value="">Select Location</option>
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-7">
 
-        {% for location in locations %}
-            <option value="{{ location.id }}">
-                {{ location.name }}
-            </option>
-        {% endfor %}
-    </select>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-plus-lg me-2"></i>Add Shelf
+                    </h5>
+                </div>
+                <div class="card-body">
 
-    <br><br>
+                    <form method="post">
+                        {% csrf_token %}
 
-    <label>Shelf Code:</label>
+                        <div class="mb-3">
+                            <label for="formLocation" class="form-label fw-semibold">
+                                Location <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="formLocation" name="location" required>
+                                <option value="">Select location&hellip;</option>
+                                {% for option in locations %}
+                                    <option
+                                        value="{{ option.id }}"
+                                        {% if preselected_location and preselected_location.id == option.id %}selected{% endif %}
+                                    >
+                                        {{ option.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                A shelf only means anything inside a location,
+                                and its code has to be unique there.
+                            </div>
+                        </div>
 
-    <input
-        type="text"
-        name="shelf_code"
-        required
-    >
+                        <div class="mb-3">
+                            <label for="formShelfCode" class="form-label fw-semibold">
+                                Shelf Code <span class="text-danger">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="formShelfCode"
+                                name="shelf_code"
+                                value=""
+                                required
+                            >
+                        </div>
 
-    <br><br>
+                        <div class="mb-3">
+                            <label for="formDescription" class="form-label fw-semibold">
+                                Description
+                            </label>
+                            <textarea
+                                class="form-control"
+                                id="formDescription"
+                                name="description"
+                                rows="3"
+                            ></textarea>
+                        </div>
 
-    <label>Description:</label>
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Add Shelf
+                            </button>
+                            <a href="{% url 'shelf_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i> Cancel
+                            </a>
+                        </div>
 
-    <textarea name="description"></textarea>
+                    </form>
 
-    <br><br>
+                </div>
+            </div>
 
-    <button type="submit">
-        Add Shelf
-    </button>
-</form>
+        </div>
+    </div>
 
-<br>
+</div>
 
-{% if request.GET.next %}
-    <a href="{{ request.GET.next }}">
-        ← Cancel and Go Back
-    </a>
-{% else %}
-    <a href="{% url 'shelf_list' %}">
-        ← Back to Shelves
-    </a>
-{% endif %}
-
-</body>
-</html>
+{% endblock %}

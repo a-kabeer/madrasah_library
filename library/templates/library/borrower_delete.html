@@ -1,103 +1,133 @@
-<!DOCTYPE html>
+{% extends "library/base.html" %}
 
-<html>
-<head>
-    <title>Delete Borrower</title>
-</head>
+{% block title %}
+    Delete Borrower | {{ branding.display_name }}
+{% endblock %}
 
-<body>
+{% block page_title %}
+    Delete Borrower
+{% endblock %}
 
-{% include "library/_account_bar.html" %}
+{% block content %}
 
+<div class="container-fluid px-0">
 
-<p>
-    {% if next_url %}
-        <a href="{{ next_url }}">
-            ← Back
-        </a>
-    {% else %}
-        <a href="{% url 'borrower_list' %}">
-            ← Back to Borrowers
-        </a>
-    {% endif %}
-</p>
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-7">
 
-<h1>Delete Borrower</h1>
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center p-5">
 
-<p>
-    <strong>Name:</strong>
-    {{ borrower.name }}
-</p>
+                    {% comment %}
+                      `loans.borrower_id -> borrowers.id` is a NO ACTION
+                      foreign key, so any loan at all — current or long
+                      returned — stops the delete at the database. That is
+                      the point: the loan history says who had which book
+                      and when, and it is not this page's to destroy.
 
-<p>
-    <strong>Phone:</strong>
-    {{ borrower.phone }}
-</p>
+                      Deactivating is the answer, and what `is_active` is
+                      already there for: the borrower stops being offered
+                      for new loans and everything they ever borrowed stays
+                      on the record.
+                    {% endcomment %}
+                    {% if loan_history_exists %}
 
-<p>
-    <strong>Borrower Type:</strong>
-    {{ borrower.borrower_type }}
-</p>
+                        <div class="mb-4">
+                            <i class="bi bi-shield-exclamation text-warning" style="font-size: 3rem;"></i>
+                        </div>
 
-<hr>
+                        <h4 class="fw-bold mb-3">This borrower cannot be deleted</h4>
 
-{% if loan_history_exists %}
+                        <p class="text-body-secondary mb-4">
+                            <strong class="text-body">{{ borrower.name }}</strong>
+                            has {{ loan_count }} loan{{ loan_count|pluralize }}
+                            on record{% if active_loan_count %},
+                            {{ active_loan_count }} of
+                            {{ active_loan_count|pluralize:"which is,which are" }}
+                            still out{% endif %}.
+                            Deleting them would take that history with it —
+                            who had which book, and when.
+                        </p>
 
-    <p>
-        <strong>
-            This borrower cannot be deleted.
-        </strong>
-    </p>
+                        {% if borrower.is_active %}
+                            <p class="text-body-secondary mb-4">
+                                Deactivate them instead. They stop being
+                                offered for new loans, and everything they
+                                have ever borrowed stays on the record.
+                            </p>
 
-    <p>
-        This borrower has loan history (active or past) on record.
-        Deleting them would break that history, so it's blocked.
-    </p>
+                            <div class="d-flex justify-content-center flex-wrap gap-2">
+                                <form method="post" action="{% url 'borrower_toggle_active' borrower.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <input
+                                        type="hidden"
+                                        name="next"
+                                        value="{% url 'borrower_detail' borrower.id %}"
+                                    >
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-pause-circle me-1"></i>
+                                        Deactivate instead
+                                    </button>
+                                </form>
+                                <a href="{% url 'borrower_detail' borrower.id %}" class="btn btn-outline-secondary">
+                                    Back to the borrower
+                                </a>
+                            </div>
+                        {% else %}
+                            <p class="text-body-secondary mb-4">
+                                They are already inactive, so they are not
+                                offered for new loans.
+                            </p>
 
-    <p>
-        {% if next_url %}
-            <a href="{{ next_url }}">
-                Back
-            </a>
-        {% else %}
-            <a href="{% url 'borrower_list' %}">
-                Back to Borrowers
-            </a>
-        {% endif %}
-    </p>
+                            <a href="{% url 'borrower_detail' borrower.id %}" class="btn btn-outline-secondary">
+                                Back to the borrower
+                            </a>
+                        {% endif %}
 
-{% else %}
+                    {% else %}
 
-    <p>
-        Are you sure you want to permanently delete
-        this borrower?
-    </p>
+                        <div class="mb-4">
+                            <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
+                        </div>
 
-    <form method="post">
+                        <h4 class="fw-bold mb-3">Delete Borrower?</h4>
 
-        {% csrf_token %}
-        <input type="hidden" name="next" value="{{ next_url }}">
+                        <p class="text-body-secondary mb-4">
+                            Are you sure you want to delete:<br>
+                            <strong class="text-body">{{ borrower.name }}</strong>?
+                        </p>
 
-        <button type="submit">
-            Yes, Delete
-        </button>
+                        <p class="text-body-secondary small mb-4">
+                            They have never taken a book out, so no loan
+                            history is affected.
+                        </p>
 
-    </form>
+                        <p class="text-danger small mb-4">
+                            <i class="bi bi-info-circle me-1"></i>
+                            This action cannot be undone.
+                        </p>
 
-    <br>
+                        <div class="d-flex justify-content-center gap-2">
+                            <a href="{% url 'borrower_detail' borrower.id %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i> Cancel
+                            </a>
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{{ next_url }}">
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="bi bi-trash me-1"></i> Yes, Delete
+                                </button>
+                            </form>
+                        </div>
 
-    {% if next_url %}
-        <a href="{{ next_url }}">
-            Cancel
-        </a>
-    {% else %}
-        <a href="{% url 'borrower_list' %}">
-            Cancel
-        </a>
-    {% endif %}
+                    {% endif %}
 
-{% endif %}
+                </div>
+            </div>
 
+        </div>
+    </div>
 
-</body>
-</html>
+</div>
+
+{% endblock %}

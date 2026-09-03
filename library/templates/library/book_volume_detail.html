@@ -1,172 +1,187 @@
-<!DOCTYPE html>
-<html>
+{% extends "library/base.html" %}
 
-<head>
-    <title>{{ volume.book.title }} - Volume {{ volume.volume_number }}</title>
-</head>
+{% block title %}
+    {{ volume_name }} | {{ branding.display_name }}
+{% endblock %}
 
-<body>
+{% block page_title %}
+    Volume
+{% endblock %}
 
-{% include "library/_account_bar.html" %}
+{% block content %}
 
-    <p>
-        <a href="{% url 'book_detail' volume.book.id %}">
-            ← Back to {{ volume.book.title }}
-        </a>
-    </p>
+<div class="container-fluid px-0">
 
-    <h1>
-        {{ volume.book.title }}
-    </h1>
+    <div class="row justify-content-center">
+        <div class="col-12 col-xl-9">
 
-    <h2>
-        Volume {{ volume.volume_number }}
-        - {{ volume.title }}
-    </h2>
+            <!-- Page header -->
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                <div>
+                    <a href="{% url 'book_detail' volume.book.id %}" class="small text-decoration-none">
+                        <i class="bi bi-arrow-left me-1"></i> {{ volume.book.title }}
+                    </a>
+                    <h2 class="fw-bold mb-0 mt-1">{{ volume_name }}</h2>
+                </div>
 
-    <hr>
-
-    <h2>Book Information</h2>
-
-    <p>
-        <strong>Author:</strong>
-        {{ volume.book.author.name }}
-    </p>
-
-    <p>
-        <strong>Category:</strong>
-        {{ volume.book.category.name|default:"N/A" }}
-    </p>
-
-    <p>
-        <strong>Publisher:</strong>
-        {{ volume.book.publisher.name|default:"N/A" }}
-    </p>
-
-    <hr>
-
-    <h2>Table of Contents</h2>
-
-{% if contents %}
-
-    <ul>
-
-        {% for content in contents %}
-
-    <li>
-
-        <strong>
-            {{ content.title }}
-        </strong>
-
-        {% if content.page_number %}
-            — Page {{ content.page_number }}
-        {% endif %}
-
-        |
-
-        <a href="{% url 'book_content_edit' content.id %}?from=volume">
-    Edit
-</a>
-
-        |
-
-        <a href="{% url 'book_content_delete' content.id %}?from=volume">
-    Delete
-</a>
-
-    </li>
-
-{% endfor %}
-    </ul>
-
-{% else %}
-
-    <p>
-        No contents have been added yet.
-    </p>
-
-{% endif %}
-
-<p>
-    <a href="{% url 'book_content_add' %}?volume={{ volume.id }}">
-        + Add Book Content
-    </a>
-</p>
-
-    <hr>
-
-    <h2>Physical Copies</h2>
-
-    <p>
-        Total Copies: {{ copies|length }}
-    </p>
-
-    <ul>
-
-        {% for copy in copies %}
-
-            <li>
-
-                <strong>
-                    {{ copy.copy_code }}
-                </strong>
-
-                — Status: {{ copy.status }}
-
-                {% if copy.shelf %}
-
-                    — Location:
-                    {{ copy.shelf.location.name }}
-
-                    — Shelf:
-                    {{ copy.shelf.shelf_code }}
-
-                {% else %}
-
-                    — Not assigned to a shelf
-
+                {% if can_edit %}
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'book_volume_edit' volume.id %}?from=detail" class="btn btn-warning">
+                            <i class="bi bi-pencil me-1"></i> Edit
+                        </a>
+                        <a href="{% url 'book_volume_delete' volume.id %}?from=detail" class="btn btn-outline-danger">
+                            <i class="bi bi-trash me-1"></i> Delete
+                        </a>
+                    </div>
                 {% endif %}
+            </div>
 
-                |
+            <!-- Copies -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-collection me-2"></i>Copies
+                        <span class="badge text-bg-secondary ms-1">{{ copies|length }}</span>
+                    </h5>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% comment %}
+                          Straight through to the copy list, filtered to
+                          this volume — where searching, sorting and moving
+                          several at once already live, rather than
+                          repeating any of it here.
+                        {% endcomment %}
+                        <a href="{% url 'book_copy_list' %}?volume={{ volume.id }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-list-ul me-1"></i> Manage copies
+                        </a>
+                        {% if can_edit %}
+                            <a href="{% url 'book_copy_add' %}?volume={{ volume.id }}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-plus-lg me-1"></i> Add Copy
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-secondary">
+                            <tr>
+                                <th>Copy Code</th>
+                                <th>Location</th>
+                                <th>Shelf</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for copy in copies %}
+                                {% comment %}
+                                  Same clickable-row behaviour as the copy
+                                  list: the whole row opens this copy's
+                                  details in the shared dialog.
+                                {% endcomment %}
+                                <tr
+                                    class="book-row"
+                                    data-copy-row
+                                    data-copy-url="{% url 'book_copy_detail' copy.id %}?modal=1"
+                                    tabindex="0"
+                                    role="button"
+                                    aria-label="Show details for copy {{ copy.copy_code }}"
+                                >
+                                    <td class="fw-semibold">{{ copy.copy_code }}</td>
+                                    <td>
+                                        {% if copy.shelf %}
+                                            {{ copy.shelf.location.name }}
+                                        {% else %}
+                                            <span class="text-body-secondary">Not placed</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if copy.shelf %}
+                                            {{ copy.shelf.shelf_code }}
+                                        {% else %}
+                                            <span class="text-body-secondary">Unshelved</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge text-bg-{{ copy.state_tone }}">
+                                            {{ copy.state_label }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="d-inline-flex gap-1" data-row-actions>
+                                            {% if can_edit %}
+                                                <a href="{% url 'book_copy_edit' copy.id %}?from=volume" class="btn btn-sm btn-outline-warning" title="Edit">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <a href="{% url 'book_copy_move' copy.id %}?from=volume" class="btn btn-sm btn-outline-primary" title="Move">
+                                                    <i class="bi bi-arrow-left-right"></i>
+                                                </a>
+                                            {% else %}
+                                                <a href="{% url 'book_copy_detail' copy.id %}?from=volume" class="btn btn-sm btn-outline-secondary" title="Open">
+                                                    <i class="bi bi-box-arrow-up-right"></i>
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-body-secondary py-4">
+                                        No copies of this volume yet.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-                <a href="{% url 'book_copy_detail' copy.id %}?from=volume">
-                    View Details
-                </a>
+            <!-- Contents -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-list-nested me-2"></i>Contents
+                    </h5>
+                    {% if can_edit %}
+                        <a href="{% url 'book_content_add' %}?volume={{ volume.id }}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-plus-lg me-1"></i> Add Entry
+                        </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if contents %}
+                        <div class="list-group list-group-flush">
+                            {% for content in contents %}
+                                <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                    <div>
+                                        <span class="fw-semibold">{{ content.title }}</span>
+                                        <span class="d-block small text-body-secondary">
+                                            {{ content.content_type }}{% if content.page_number %} · page {{ content.page_number }}{% endif %}
+                                        </span>
+                                    </div>
+                                    {% if can_edit %}
+                                        <div class="d-inline-flex gap-1">
+                                            <a href="{% url 'book_content_edit' content.id %}?from=volume" class="btn btn-sm btn-outline-warning" title="Edit">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <a href="{% url 'book_content_delete' content.id %}?from=volume" class="btn btn-sm btn-outline-danger" title="Delete">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-body-secondary mb-0">
+                            No contents have been recorded for this volume.
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
 
-            </li>
+        </div>
+    </div>
 
-        {% empty %}
+</div>
 
-            <li>
-                No physical copies have been added yet.
-            </li>
-
-        {% endfor %}
-
-    </ul>
-
-    <p>
-        <a href="{% url 'book_copy_add' %}?volume={{ volume.id }}">
-            + Add Physical Copy
-        </a>
-    </p>
-
-    <hr>
-
-<h2>Actions</h2>
-
-<p>
-    <a href="{% url 'book_volume_edit' volume.id %}?from=detail">
-        Edit Volume
-    </a>
-</p>
-
-<p>
-    <a href="{% url 'book_volume_delete' volume.id %}?from=detail">
-        Delete Volume
-    </a>
-</p>
-</body>
-
-</html>
+{% endblock %}

@@ -190,8 +190,15 @@ class AssetVersionTests(TestCase):
             )
             stat = os.stat(path)
 
+            # The version is the newest mtime across all the local assets,
+            # so the bump has to clear the newest one — not just this file's.
+            # Adding to its own mtime silently proves nothing whenever a
+            # sibling happens to have been edited more recently.
             try:
-                os.utime(path, (stat.st_atime, stat.st_mtime + 60))
+                os.utime(
+                    path,
+                    (stat.st_atime, int(before) + 3600),
+                )
                 self.assertNotEqual(get_asset_version(), before)
 
             finally:

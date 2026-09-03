@@ -423,18 +423,25 @@ class BookDetailModalTests(BookListModeTestCase):
         self.assertIn("shelves", copy_queries[0]["sql"])
         self.assertIn("locations", copy_queries[0]["sql"])
 
-    def test_full_page_does_not_pay_for_the_copies_query(self):
-        volume = make_volume(book=self.masnavi, volume_number=1)
-        make_copy(volume=volume, copy_code="C-1")
+    def test_a_multi_volume_page_does_not_pay_for_the_copies_query(self):
+        # It lists volumes and their counts, not the copies themselves, so
+        # it must not fetch them. (A single-volume book deliberately does
+        # show its copies — see the copy navigation tests.)
+        for number in (1, 2):
+            volume = make_volume(book=self.masnavi, volume_number=number)
+            make_copy(volume=volume, copy_code="C-%d" % number)
 
         with CaptureQueriesContext(connection) as ctx:
             self.client.get(self.detail_url)
 
-        # The full page never shows copies, so it must not fetch them.
-        self.assertEqual(
-            [q for q in ctx.captured_queries if "book_copies" in q["sql"]],
-            [],
-        )
+        rows = [
+            q for q in ctx.captured_queries
+            if "book_copies" in q["sql"]
+        ]
+
+        # The per-volume count joins book_copies, but only to count them.
+        self.assertEqual(len(rows), 1)
+        self.assertIn("COUNT", rows[0]["sql"].upper())
 
 
 class BookListRowTests(BookListModeTestCase):

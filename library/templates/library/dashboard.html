@@ -275,6 +275,62 @@
         </div>
 
 
+        <div class="col-12 col-sm-6 col-xl-3">
+
+            <a
+                href="{% url 'loan_list' %}?status=due_today"
+                class="text-decoration-none"
+            >
+
+                <div class="card shadow-sm border-0 h-100">
+
+                    <div class="card-body">
+
+                        <p class="text-body-secondary mb-2">
+                            Due Today
+                        </p>
+
+                        <h3 class="fw-bold mb-0">
+                            {{ due_today_loans }}
+                        </h3>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+
+        <div class="col-12 col-sm-6 col-xl-3">
+
+            <a
+                href="{% url 'circulation_dashboard' %}"
+                class="text-decoration-none"
+            >
+
+                <div class="card shadow-sm border-0 h-100 border-primary border-2">
+
+                    <div class="card-body text-center">
+
+                        <p class="text-body-secondary mb-2">
+                            Circulation
+                        </p>
+
+                        <h5 class="fw-bold mb-0 text-primary">
+                            Issue / Return
+                        </h5>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+
     </div>
 
 

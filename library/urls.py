@@ -157,6 +157,32 @@ path(
     name="book_add",
 ),
 
+# Bulk import and export. `import` is the four-step workflow in one view;
+# the other three are downloads.
+path(
+    "books/import/",
+    views.book_import,
+    name="book_import",
+),
+
+path(
+    "books/import/template/",
+    views.book_import_template,
+    name="book_import_template",
+),
+
+path(
+    "books/import/errors/",
+    views.book_import_errors,
+    name="book_import_errors",
+),
+
+path(
+    "books/export/",
+    views.book_export,
+    name="book_export",
+),
+
 path(
     "books/<int:book_id>/",
     views.book_detail,
@@ -265,6 +291,14 @@ path(
     name="book_copy_move",
 ),
 
+# Several copies to one shelf in one go. The single-copy move above is
+# unchanged; this reuses the same operation inside a transaction.
+path(
+    "book-copies/move/",
+    views.book_copy_bulk_move,
+    name="book_copy_bulk_move",
+),
+
 path(
     "book-copies/<int:copy_id>/delete/",
     views.book_copy_delete,
@@ -296,6 +330,12 @@ path(
 ),
 
 path(
+    "loans/<int:loan_id>/renew/",
+    views.loan_renew,
+    name="loan_renew",
+),
+
+path(
     "loans/<int:loan_id>/delete/",
     views.loan_delete,
     name="loan_delete",
@@ -305,6 +345,30 @@ path(
     "loans/<int:loan_id>/",
     views.loan_detail,
     name="loan_detail"
+),
+
+path(
+    "circulation/",
+    views.circulation_dashboard,
+    name="circulation_dashboard",
+),
+
+path(
+    "circulation/issue/",
+    views.loan_add,
+    name="circulation_issue",
+),
+
+path(
+    "circulation/return/",
+    views.loan_return_lookup,
+    name="circulation_return_lookup",
+),
+
+path(
+    "circulation/active-loans/",
+    views.loan_list,
+    name="circulation_active_loans",
 ),
 
 path(

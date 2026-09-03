@@ -1,196 +1,165 @@
-<!DOCTYPE html>
+{% extends "library/base.html" %}
 
-<html>
-<head>
-    <title>Edit Borrower</title>
-</head>
+{% block title %}
+    Edit Borrower | {{ branding.display_name }}
+{% endblock %}
 
-<body>
+{% block page_title %}
+    Edit Borrower
+{% endblock %}
 
-{% include "library/_account_bar.html" %}
+{% block content %}
 
+<div class="container-fluid px-0">
 
-<p>
-    {% if next_url %}
-        <a href="{{ next_url }}">
-            ← Back
-        </a>
-    {% else %}
-        <a href="{% url 'borrower_list' %}">
-            ← Back to Borrowers
-        </a>
-    {% endif %}
-</p>
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
 
-<h1>Edit Borrower</h1>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-pencil me-2"></i>{{ borrower.name }}
+                    </h5>
+                </div>
+                <div class="card-body">
 
-{% if error %}
-
-    <p>
-        <strong>
-            {{ error }}
-        </strong>
-    </p>
-
-{% endif %}
-
-<form method="post">
-
-    {% csrf_token %}
-    <input type="hidden" name="next" value="{{ next_url }}">
-
-    <p>
-        <label for="name">
-            Name:
-        </label>
-
-        <input
-            type="text"
-            name="name"
-            id="name"
-            value="{{ form_data.name }}"
-            required
-        >
-    </p>
-
-    <p>
-        <label for="phone">
-            Phone:
-        </label>
-
-        <input
-            type="text"
-            name="phone"
-            id="phone"
-            value="{{ form_data.phone }}"
-            required
-        >
-    </p>
-
-    <p>
-        <label for="borrower_type">
-            Borrower Type:
-        </label>
-
-        <select
-            name="borrower_type"
-            id="borrower_type"
-            required
-        >
-
-            <option value="">
-                Select Borrower Type
-            </option>
-
-            {% for type in borrower_types %}
-
-                <option
-                    value="{{ type }}"
-                    {% if form_data.borrower_type == type %}
-                        selected
+                    {% comment %}
+                      Everything typed comes back on the error, so a
+                      rejected form never costs the librarian their work.
+                    {% endcomment %}
+                    {% if error %}
+                        <div class="alert alert-danger d-flex align-items-start" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2 mt-1"></i>
+                            <div>{{ error }}</div>
+                        </div>
                     {% endif %}
-                >
-                    {{ type }}
-                </option>
 
-            {% endfor %}
+                    <form method="post">
+                        {% csrf_token %}
 
-        </select>
-    </p>
+                        <div class="row g-3">
 
-    <p>
-        <label for="registration_no">
-            Registration No:
-        </label>
+                            <div class="col-12 col-sm-6">
+                                <label for="formName" class="form-label fw-semibold">
+                                    Name <span class="text-danger">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="formName"
+                                    name="name"
+                                    value="{{ form_data.name }}"
+                                    required
+                                >
+                            </div>
 
-        <input
-            type="text"
-            name="registration_no"
-            id="registration_no"
-            value="{{ form_data.registration_no }}"
-        >
-    </p>
+                            <div class="col-12 col-sm-6">
+                                <label for="formPhone" class="form-label fw-semibold">
+                                    Phone <span class="text-danger">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="formPhone"
+                                    name="phone"
+                                    value="{{ form_data.phone }}"
+                                    required
+                                >
+                                <div class="form-text">
+                                    Used to spot a borrower who is already
+                                    registered.
+                                </div>
+                            </div>
 
-    <p>
-        <label for="department">
-            Department:
-        </label>
+                            <div class="col-12 col-sm-6">
+                                <label for="formType" class="form-label fw-semibold">
+                                    Type <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="formType" name="borrower_type" required>
+                                    <option value="">Select type&hellip;</option>
+                                    {% for option in borrower_types %}
+                                        <option
+                                            value="{{ option }}"
+                                            {% if form_data.borrower_type == option %}selected{% endif %}
+                                        >
+                                            {{ option }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
 
-        <input
-            type="text"
-            name="department"
-            id="department"
-            value="{{ form_data.department }}"
-        >
-    </p>
+                            <div class="col-12 col-sm-6">
+                                <label for="formRegistrationNo" class="form-label fw-semibold">
+                                    Registration No
+                                </label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="formRegistrationNo"
+                                    name="registration_no"
+                                    value="{{ form_data.registration_no }}"
+                                >
+                                <div class="form-text">
+                                    Optional, but has to be unique when given.
+                                </div>
+                            </div>
 
-    <p>
-        <label for="address">
-            Address:
-        </label>
+                            <div class="col-12">
+                                <label for="formDepartment" class="form-label fw-semibold">
+                                    Department
+                                </label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="formDepartment"
+                                    name="department"
+                                    value="{{ form_data.department }}"
+                                >
+                            </div>
 
-        <br>
+                            <div class="col-12">
+                                <label for="formAddress" class="form-label fw-semibold">
+                                    Address
+                                </label>
+                                <textarea
+                                    class="form-control"
+                                    id="formAddress"
+                                    name="address"
+                                    rows="2"
+                                >{{ form_data.address }}</textarea>
+                            </div>
 
-        <textarea
-            name="address"
-            id="address"
-            rows="4"
-            cols="50"
-        >{{ form_data.address }}</textarea>
-    </p>
+                            <div class="col-12">
+                                <label for="formNotes" class="form-label fw-semibold">
+                                    Notes
+                                </label>
+                                <textarea
+                                    class="form-control"
+                                    id="formNotes"
+                                    name="notes"
+                                    rows="2"
+                                >{{ form_data.notes }}</textarea>
+                            </div>
 
-    <p>
-        <label for="notes">
-            Notes:
-        </label>
+                        </div>
 
-        <br>
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Save Changes
+                            </button>
+                            <a href="{% url 'borrower_detail' borrower.id %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i> Cancel
+                            </a>
+                        </div>
 
-        <textarea
-            name="notes"
-            id="notes"
-            rows="4"
-            cols="50"
-        >{{ form_data.notes }}</textarea>
-    </p>
+                    </form>
 
-    <p>
-        <label for="is_active">
-            Status:
-        </label>
+                </div>
+            </div>
 
-        <select
-            name="is_active"
-            id="is_active"
-        >
+        </div>
+    </div>
 
-            <option
-                value="True"
-                {% if form_data.is_active %}
-                    selected
-                {% endif %}
-            >
-                Active
-            </option>
+</div>
 
-            <option
-                value="False"
-                {% if not form_data.is_active %}
-                    selected
-                {% endif %}
-            >
-                Inactive
-            </option>
-
-        </select>
-    </p>
-
-    <button type="submit">
-        Update Borrower
-    </button>
-
-</form>
-
-
-</body>
-</html>
+{% endblock %}

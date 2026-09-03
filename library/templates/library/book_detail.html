@@ -90,18 +90,102 @@
             </a>
         </div>
         <div class="card-body">
-            {% if volumes %}
+            {% comment %}
+              A book with one volume has it because a copy has to hang off
+              one, not because anyone asked for volumes. Its copies are
+              listed here directly, so the librarian is not sent through a
+              page that would only show the same thing under a heading that
+              means nothing to them.
+            {% endcomment %}
+            {% if single_volume %}
+
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <span class="text-body-secondary">
+                        This book is recorded as a single volume with
+                        <strong>{{ volume_copies|length }}</strong>
+                        cop{{ volume_copies|length|pluralize:"y,ies" }}.
+                    </span>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'book_copy_list' %}?volume={{ single_volume.id }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-list-ul me-1"></i> Manage copies
+                        </a>
+                        {% if can_edit %}
+                            <a href="{% url 'book_copy_add' %}?volume={{ single_volume.id }}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-plus-lg me-1"></i> Add Copy
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if volume_copies %}
+                    <div class="list-group list-group-flush">
+                        {% for copy in volume_copies %}
+                            <div
+                                class="list-group-item book-row d-flex flex-wrap justify-content-between align-items-center gap-2"
+                                data-copy-row
+                                data-copy-url="{% url 'book_copy_detail' copy.id %}?modal=1"
+                                tabindex="0"
+                                role="button"
+                                aria-label="Show details for copy {{ copy.copy_code }}"
+                            >
+                                <div>
+                                    <span class="fw-semibold">{{ copy.copy_code }}</span>
+                                    <span class="d-block small text-body-secondary">
+                                        {% if copy.shelf %}
+                                            {{ copy.shelf.location.name }} — {{ copy.shelf.shelf_code }}
+                                        {% else %}
+                                            Unshelved
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <span class="badge text-bg-{{ copy.state_tone }}">
+                                    {{ copy.state_label }}
+                                </span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-body-secondary mb-0">
+                        No physical copies yet.
+                    </p>
+                {% endif %}
+
+            {% elif volumes %}
+
+                {% comment %}
+                  Two separate links per row, not one wrapping both: the
+                  volume name opens the volume, and the copy count goes
+                  straight to those copies in the copy list, which is where
+                  they are managed. Nesting one anchor inside another is
+                  not valid HTML, so the row is a plain flex container.
+                {% endcomment %}
                 <div class="list-group list-group-flush">
                     {% for volume in volumes %}
-                        <a href="{% url 'book_volume_detail' volume.id %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                            <div>
+                        <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <a
+                                href="{% url 'book_volume_detail' volume.id %}"
+                                class="text-decoration-none flex-grow-1"
+                            >
                                 <span class="fw-semibold">Volume {{ volume.volume_number }}</span>
-                                <span class="text-body-secondary"> - {{ volume.title }}</span>
-                            </div>
-                            <i class="bi bi-chevron-right text-body-secondary"></i>
-                        </a>
+                                {% if volume.title %}
+                                    <span class="text-body-secondary"> — {{ volume.title }}</span>
+                                {% endif %}
+                            </a>
+                            <a
+                                href="{% url 'book_copy_list' %}?volume={{ volume.id }}"
+                                class="text-decoration-none"
+                                aria-label="Manage the {{ volume.copy_count }} cop{{ volume.copy_count|pluralize:'y,ies' }} of volume {{ volume.volume_number }}"
+                            >
+                                <span class="badge text-bg-secondary">
+                                    {{ volume.copy_count }}
+                                    cop{{ volume.copy_count|pluralize:"y,ies" }}
+                                    <i class="bi bi-chevron-right ms-1" aria-hidden="true"></i>
+                                </span>
+                            </a>
+                        </div>
                     {% endfor %}
                 </div>
+
             {% else %}
                 <p class="text-body-secondary mb-0">No volumes have been added yet.</p>
             {% endif %}

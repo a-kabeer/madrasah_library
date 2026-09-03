@@ -5,12 +5,14 @@ Separate from the older `_pagination.html`, which renders plain-text links
 and is still included by twelve unmigrated pages — replacing it wholesale
 would change all of them at once.
 
-Each link carries both `href` and `hx-get`. HTMX uses the latter to swap a
-new page of results in without a reload, taking the target and swap style
-from the #bookResults container this include sits inside; the href is what
-makes the link real — shareable, middle-clickable, and still working if the
-script never arrives. Anything else adopting this include needs a container
-like that, or the swap has nowhere to go.
+Pass `swap=True` from inside a container that sets hx-target/hx-swap, and
+each link also gets an `hx-get` so a new page arrives without a reload.
+Leave it off and the links are ordinary navigation — which is what a page
+with no such container needs, since an hx-get with nowhere to go swaps the
+link into itself.
+
+Either way the `href` is real: shareable, middle-clickable, and still
+working when the script never arrives.
 
 Expected context:
   page_obj           the Page from Paginator.get_page()
@@ -42,7 +44,7 @@ Expected context:
                     <a
                         class="page-link"
                         href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_obj.previous_page_number }}"
-                        hx-get="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_obj.previous_page_number }}"
+                        {% if swap %}hx-get="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_obj.previous_page_number }}"{% endif %}
                         rel="prev"
                     >
                         <i class="bi bi-chevron-left" aria-hidden="true"></i>
@@ -75,7 +77,7 @@ Expected context:
                         <a
                             class="page-link"
                             href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ number }}"
-                            hx-get="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ number }}"
+                                {% if swap %}hx-get="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ number }}"{% endif %}
                         >
                             {{ number }}
                         </a>
@@ -90,7 +92,7 @@ Expected context:
                     <a
                         class="page-link"
                         href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_obj.next_page_number }}"
-                        hx-get="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_obj.next_page_number }}"
+                        {% if swap %}hx-get="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ page_obj.next_page_number }}"{% endif %}
                         rel="next"
                     >
                         <i class="bi bi-chevron-right" aria-hidden="true"></i>

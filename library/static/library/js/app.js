@@ -938,41 +938,75 @@ document.addEventListener(
 
 
         /* =========================
-           CLICKABLE BOOK ROWS
+           CLICKABLE ROWS
 
-           The whole row opens that book's details, so a click on the title,
-           the author, or empty space all do the same thing.
+           The whole row opens that record, so a click on the title, on a
+           count, or on empty space all do the same thing. Three lists use
+           it: books and copies name a URL to pull into the shared dialog,
+           while locations and shelves name one to navigate to — those are
+           whole pages, not popups.
 
-           Delegated from the document rather than bound per row: the book
-           list re-renders its table in place when the search, a filter, the
-           sorting or the page changes, and rows bound at load would come
-           back dead after the first of those.
+           Delegated from the document rather than bound per row: both
+           lists re-render their table in place when the search, a filter,
+           the sorting or the page changes, and rows bound at load would
+           come back dead after the first of those.
 
-           The Edit and Delete buttons are excluded: they sit inside
-           [data-row-actions] and must keep doing their own job.
+           The action buttons are excluded: they sit inside
+           [data-row-actions] and must keep doing their own job. On the
+           copy list that also covers the selection checkbox.
            ========================= */
 
         (function () {
 
             var modalEl = document.getElementById("globalModal");
 
-            if (!modalEl || !window.bootstrap || !window.htmx) {
+            if (!window.bootstrap || !window.htmx) {
                 return;
             }
 
-            var body = modalEl.querySelector(".modal-body");
+            var body = modalEl ? modalEl.querySelector(".modal-body") : null;
+
+            var placeholder =
+                '<div class="text-center text-body-secondary py-4">' +
+                '<span class="spinner-border spinner-border-sm" role="status"></span>' +
+                '<span class="visually-hidden">Loading</span>' +
+                "</div>";
 
 
             function open(row) {
 
-                var url = row.getAttribute("data-book-url");
+                /* A plain page to go to: locations and shelves are places
+                   to be in, not things to glance at in a dialog. */
+                var page = row.getAttribute("data-row-url");
 
-                if (!url) {
+                if (page) {
+                    window.location.assign(page);
                     return;
                 }
 
-                /* Fetch first, then show — Bootstrap's own data-api would
-                   open the dialog before the request landed. */
+                var url = row.getAttribute("data-book-url")
+                    || row.getAttribute("data-copy-url");
+
+                if (!url || !modalEl) {
+                    return;
+                }
+
+                /* Clear, then fetch, then show. Bootstrap's own data-api
+                   would open the dialog before the request landed, and
+                   clearing from `show.bs.modal` instead would race the
+                   reply and sometimes wipe it. */
+                modalEl.dataset.modalWanted = "1";
+
+                if (body) {
+                    body.innerHTML = placeholder;
+                }
+
+                var label = document.getElementById("globalModalLabel");
+
+                if (label) {
+                    label.textContent = "Loading…";
+                }
+
                 window.htmx.ajax("GET", url, { target: body, swap: "innerHTML" });
 
                 window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
@@ -988,7 +1022,11 @@ document.addEventListener(
                     return null;
                 }
 
-                var row = target.closest("[data-book-row][data-book-url]");
+                var row = target.closest(
+                    "[data-book-row][data-book-url],"
+                    + "[data-copy-row][data-copy-url],"
+                    + "[data-row-url]"
+                );
 
                 if (!row) {
                     return null;
@@ -1069,7 +1107,24 @@ document.addEventListener(
                 "</div>";
 
 
+            /* Tidy-up after a dialog closes — but only if it is still
+               closed. Bootstrap fires `hidden.bs.modal` from a transition
+               callback, which here arrives a second or more after the
+               dismissal: long enough for the next dialog to have been
+               opened and filled, and clearing it then would leave a
+               spinner where the form should be.
+
+               The check is our own flag rather than Bootstrap's `show`
+               class, because that class is added on the same stretched
+               timetable and is not reliably set yet. Every path that opens
+               the dialog clears it explicitly first, so skipping this is
+               always safe. */
             function reset() {
+
+                if (modalEl.dataset.modalWanted === "1") {
+                    return;
+                }
+
                 body.innerHTML = placeholder;
 
                 if (label) {
@@ -1105,12 +1160,25 @@ document.addEventListener(
 
                 e.preventDefault();
 
+                /* Cleared here, before the dialog opens, rather than from
+                   `show.bs.modal`. HTMX starts fetching the moment the
+                   click lands, and on a fast reply the fragment can arrive
+                   before that event fires — a reset there would then wipe
+                   the content it was meant to be waiting for. */
+                modalEl.dataset.modalWanted = "1";
+                reset();
+
                 window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
             });
 
 
+            /* Dismissal is known immediately; the matching `hidden` may be
+               a long time coming. */
+            modalEl.addEventListener("hide.bs.modal", function () {
+                modalEl.dataset.modalWanted = "";
+            });
+
             modalEl.addEventListener("hidden.bs.modal", reset);
-            modalEl.addEventListener("show.bs.modal", reset);
 
         })();
 
@@ -1671,6 +1739,9 @@ document.addEventListener(
            event, so there is no page load for a Django message to arrive
            on. These turn the event into a confirmation instead, and ask the
            book list to redraw itself.
+
+           `window.showToast` is published here so the copy list's move
+           confirmations use the same one.
            ========================= */
 
         (function () {
@@ -1682,7 +1753,9 @@ document.addEventListener(
             }
 
 
-            function announce(message, tone) {
+            /* Published, so anything that needs to confirm something can
+               use the one implementation rather than its own. */
+            window.showToast = function (message, tone) {
 
                 var toast = document.createElement("div");
 
@@ -1718,7 +1791,7 @@ document.addEventListener(
                 window.bootstrap.Toast.getOrCreateInstance(toast, {
                     delay: 5000
                 }).show();
-            }
+            };
 
 
             function closeFormModal() {
@@ -1761,7 +1834,7 @@ document.addEventListener(
 
                 closeFormModal();
                 refreshList();
-                announce(message + ".");
+                window.showToast(message + ".");
             });
 
 
@@ -1771,9 +1844,172 @@ document.addEventListener(
 
                 closeFormModal();
                 refreshList();
-                announce(
+                window.showToast(
                     (detail.title ? '"' + detail.title + '"' : "The book")
                     + " was deleted.",
+                    "danger"
+                );
+            });
+
+        })();
+
+
+        /* =========================
+           SELECTING COPIES TO MOVE
+
+           The move bar is hidden until something is ticked, so the copy
+           list is not carrying a form the librarian has no use for yet.
+
+           Delegated, because the table is re-rendered in place — and the
+           tick boxes go with it, which is deliberate: a selection that
+           survived a change of filter would move copies that are no longer
+           on screen.
+           ========================= */
+
+        (function () {
+
+            var form = document.getElementById("copyMoveForm");
+
+            if (!form) {
+                return;
+            }
+
+            var counter = form.querySelector("[data-copy-selected-count]");
+
+
+            function checkboxes() {
+                return Array.prototype.slice.call(
+                    document.querySelectorAll("[data-copy-checkbox]")
+                );
+            }
+
+
+            function selected() {
+                return checkboxes().filter(function (box) {
+                    return box.checked;
+                });
+            }
+
+
+            function render() {
+
+                var count = selected().length;
+
+                form.hidden = count === 0;
+
+                if (counter) {
+                    counter.textContent = count;
+                }
+
+                var all = document.querySelector("[data-copy-select-all]");
+
+                if (all) {
+                    var boxes = checkboxes();
+
+                    all.checked = boxes.length > 0 && count === boxes.length;
+                    all.indeterminate = count > 0 && count < boxes.length;
+                }
+            }
+
+
+            document.addEventListener("change", function (e) {
+
+                if (e.target.matches("[data-copy-select-all]")) {
+
+                    checkboxes().forEach(function (box) {
+                        box.checked = e.target.checked;
+                    });
+
+                    render();
+                    return;
+                }
+
+                if (e.target.matches("[data-copy-checkbox]")) {
+                    render();
+                }
+            });
+
+
+            document.addEventListener("click", function (e) {
+
+                if (!e.target || !e.target.closest) {
+                    return;
+                }
+
+                if (!e.target.closest("[data-copy-clear-selection]")) {
+                    return;
+                }
+
+                e.preventDefault();
+
+                checkboxes().forEach(function (box) {
+                    box.checked = false;
+                });
+
+                render();
+            });
+
+
+            /* A swap brings a fresh, unticked table with it. */
+            document.body.addEventListener("htmx:afterSwap", render);
+
+            render();
+
+        })();
+
+
+        /* =========================
+           COPY MOVE CONFIRMATIONS
+
+           The move is answered with "no content" and an event, so there is
+           no page load for a Django message to arrive on. These turn the
+           event into a confirmation and ask the copy list to redraw.
+           ========================= */
+
+        (function () {
+
+            var area = document.getElementById("toastArea");
+
+            if (!area || !window.bootstrap) {
+                return;
+            }
+
+
+            function refreshCopies() {
+                document.body.dispatchEvent(
+                    new CustomEvent("copyListChanged", { bubbles: true })
+                );
+            }
+
+
+            document.body.addEventListener("copiesMoved", function (e) {
+
+                var detail = (e.detail && e.detail.value) || e.detail || {};
+                var count = detail.count || 0;
+
+                refreshCopies();
+
+                if (!count) {
+                    window.showToast(
+                        "Those copies are already on that shelf.",
+                        "secondary"
+                    );
+                    return;
+                }
+
+                window.showToast(
+                    count + " cop" + (count === 1 ? "y" : "ies")
+                    + " moved to " + detail.shelf + "."
+                );
+            });
+
+
+            document.body.addEventListener("copiesMoveFailed", function (e) {
+
+                var detail = (e.detail && e.detail.value) || e.detail || {};
+
+                window.showToast(
+                    detail.message || "Those copies could not be moved.",
                     "danger"
                 );
             });
@@ -1811,8 +2047,18 @@ document.addEventListener(
 
             /* The title is swapped in by the response, so it has to be
                cleared too — otherwise opening a second record briefly shows
-               the first one's name above a loading spinner. */
+               the first one's name above a loading spinner.
+
+               Guarded like the form dialog's, and for the same reason:
+               `hidden.bs.modal` comes from a transition callback and can
+               land after the dialog has been reopened, so it must not
+               clear what is now on screen. */
             function reset() {
+
+                if (modal.dataset.modalWanted === "1") {
+                    return;
+                }
+
                 body.innerHTML = placeholder;
 
                 var label = document.getElementById("globalModalLabel");
@@ -1822,11 +2068,14 @@ document.addEventListener(
                 }
             }
 
-            modal.addEventListener("hidden.bs.modal", reset);
+            /* Only on close. Whatever opens this dialog clears it first,
+               just before it starts fetching, because a reset driven by
+               `show.bs.modal` races the reply and can erase it. */
+            modal.addEventListener("hide.bs.modal", function () {
+                modal.dataset.modalWanted = "";
+            });
 
-            /* Also before the first fetch lands, so the dialog never opens
-               showing stale content. */
-            modal.addEventListener("show.bs.modal", reset);
+            modal.addEventListener("hidden.bs.modal", reset);
 
         })();
 

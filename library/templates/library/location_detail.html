@@ -1,81 +1,176 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>{{ location.name }}</title>
-</head>
+{% extends "library/base.html" %}
 
-<body>
+{% block title %}
+    {{ location.name }} | {{ branding.display_name }}
+{% endblock %}
 
-{% include "library/_account_bar.html" %}
+{% block page_title %}
+    Location
+{% endblock %}
 
-<p>
-    <a href="{% url 'location_list' %}">
-        ← Back to Locations
-    </a>
-</p>
+{% block breadcrumbs %}
+    <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item">
+                <a href="{% url 'location_list' %}">Locations</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                {{ location.name }}
+            </li>
+        </ol>
+    </nav>
+{% endblock %}
 
-<h1>{{ location.name }}</h1>
+{% block content %}
 
-{% if location.description %}
-    <p>
-        {{ location.description }}
-    </p>
-{% endif %}
+<div class="container-fluid px-0">
 
-<hr>
+    <!-- Page Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+        <div>
+            <a href="{% url 'location_list' %}" class="small text-decoration-none">
+                <i class="bi bi-arrow-left me-1"></i> Locations
+            </a>
+            <h2 class="fw-bold mb-1 mt-1">{{ location.name }}</h2>
+            {% if location.description %}
+                <p class="text-body-secondary mb-0">{{ location.description }}</p>
+            {% endif %}
+        </div>
+        {% if can_edit %}
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'location_edit' location.id %}" class="btn btn-warning">
+                    <i class="bi bi-pencil me-1"></i> Edit
+                </a>
+                <a href="{% url 'location_delete' location.id %}" class="btn btn-outline-danger">
+                    <i class="bi bi-trash me-1"></i> Delete
+                </a>
+            </div>
+        {% endif %}
+    </div>
 
-<h2>Shelves</h2>
+    <!-- Totals -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <p class="text-body-secondary small mb-1">Shelves</p>
+                    <p class="fs-4 fw-bold mb-0">{{ shelf_count }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <p class="text-body-secondary small mb-1">Book copies</p>
+                    <p class="fs-4 fw-bold mb-0">{{ copy_count }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
-<p>
-    <a href="{% url 'shelf_add' %}?next={{ request.path|urlencode }}">
-    Add Shelf
-</a>
-</p>
+    <!-- Shelves -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h5 class="mb-0 fw-bold">
+                <i class="bi bi-box-seam me-2"></i>Shelves
+            </h5>
+            <div class="d-flex flex-wrap gap-2">
+                {% comment %}
+                  Straight to the copy list filtered to this location — that
+                  is where searching, sorting and moving several at once
+                  already live, rather than any of it being repeated here.
+                {% endcomment %}
+                {% if copy_count %}
+                    <a href="{% url 'book_copy_list' %}?location={{ location.id }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-list-ul me-1"></i> All copies here
+                    </a>
+                {% endif %}
+                {% if can_edit %}
+                    <a href="{% url 'shelf_add' %}?location={{ location.id }}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-plus-lg me-1"></i> Add Shelf
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>Shelf</th>
+                        <th>Copies</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% comment %}
+                      Shelf level only. A location can hold thousands of
+                      copies, so listing them here would make this page grow
+                      with the library; each shelf opens its own contents.
+                    {% endcomment %}
+                    {% for shelf in shelves %}
+                        <tr
+                            class="book-row"
+                            data-row-url="{% url 'shelf_detail' shelf.id %}"
+                            tabindex="0"
+                            role="button"
+                            aria-label="Open shelf {{ shelf.shelf_code }}"
+                        >
+                            <td>
+                                <span class="fw-semibold">{{ shelf.shelf_code }}</span>
+                                {% if shelf.description %}
+                                    <span class="d-block small text-body-secondary">
+                                        {{ shelf.description|truncatechars:80 }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge text-bg-secondary">
+                                    {{ shelf.copy_count }}
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1" data-row-actions>
+                                    <a
+                                        href="{% url 'shelf_detail' shelf.id %}"
+                                        class="btn btn-sm btn-outline-secondary"
+                                        title="Open"
+                                        aria-label="Open shelf {{ shelf.shelf_code }}"
+                                    >
+                                        <i class="bi bi-box-arrow-up-right"></i>
+                                    </a>
+                                    {% if can_edit %}
+                                        <a
+                                            href="{% url 'shelf_edit' shelf.id %}"
+                                            class="btn btn-sm btn-outline-warning"
+                                            title="Edit"
+                                            aria-label="Edit shelf {{ shelf.shelf_code }}"
+                                        >
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a
+                                            href="{% url 'shelf_delete' shelf.id %}"
+                                            class="btn btn-sm btn-outline-danger"
+                                            title="Delete"
+                                            aria-label="Delete shelf {{ shelf.shelf_code }}"
+                                        >
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-body-secondary py-4">
+                                This location has no shelves yet.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-<ul>
+</div>
 
-    {% for shelf in shelves %}
-
-        <li>
-
-            <strong>
-    <a href="{% url 'shelf_detail' shelf.id %}">
-        {{ shelf.shelf_code }}
-    </a>
-</strong>
-
-            |
-
-            Book Copies:
-            {{ shelf.copy_count }}
-
-        </li>
-
-    {% empty %}
-
-        <li>
-            No shelves found in this location.
-        </li>
-
-    {% endfor %}
-
-</ul>
-
-<hr>
-
-<h2>Actions</h2>
-
-<p>
-    <a href="{% url 'location_edit' location.id %}">
-        Edit Location
-    </a>
-</p>
-
-<p>
-    <a href="{% url 'location_delete' location.id %}">
-        Delete Location
-    </a>
-</p>
-
-</body>
-</html>
+{% endblock %}

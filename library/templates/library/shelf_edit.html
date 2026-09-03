@@ -1,63 +1,95 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Edit Shelf</title>
-</head>
-<body>
+{% extends "library/base.html" %}
 
-{% include "library/_account_bar.html" %}
+{% block title %}
+    Edit Shelf | {{ branding.display_name }}
+{% endblock %}
 
-<h1>Edit Shelf</h1>
+{% block page_title %}
+    Edit Shelf
+{% endblock %}
 
-<form method="post">
-    {% csrf_token %}
+{% block content %}
 
-    <label>Location:</label>
+<div class="container-fluid px-0">
 
-    <select name="location" required>
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-7">
 
-        {% for location in locations %}
-            <option
-                value="{{ location.id }}"
-                {% if location.id == shelf.location_id %}
-                    selected
-                {% endif %}
-            >
-                {{ location.name }}
-            </option>
-        {% endfor %}
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-pencil me-2"></i>Edit Shelf
+                    </h5>
+                </div>
+                <div class="card-body">
 
-    </select>
+                    <form method="post">
+                        {% csrf_token %}
 
-    <br><br>
+                        <div class="mb-3">
+                            <label for="formLocation" class="form-label fw-semibold">
+                                Location <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="formLocation" name="location" required>
+                                <option value="">Select location&hellip;</option>
+                                {% for option in locations %}
+                                    <option
+                                        value="{{ option.id }}"
+                                        {% if option.id == shelf.location_id %}selected{% endif %}
+                                    >
+                                        {{ option.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                A shelf only means anything inside a location,
+                                and its code has to be unique there.
+                            </div>
+                        </div>
 
-    <label>Shelf Code:</label>
+                        <div class="mb-3">
+                            <label for="formShelfCode" class="form-label fw-semibold">
+                                Shelf Code <span class="text-danger">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="formShelfCode"
+                                name="shelf_code"
+                                value="{{ shelf.shelf_code }}"
+                                required
+                            >
+                        </div>
 
-    <input
-        type="text"
-        name="shelf_code"
-        value="{{ shelf.shelf_code }}"
-        required
-    >
+                        <div class="mb-3">
+                            <label for="formDescription" class="form-label fw-semibold">
+                                Description
+                            </label>
+                            <textarea
+                                class="form-control"
+                                id="formDescription"
+                                name="description"
+                                rows="3"
+                            >{{ shelf.description|default:'' }}</textarea>
+                        </div>
 
-    <br><br>
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Update Shelf
+                            </button>
+                            <a href="{% url 'shelf_detail' shelf.id %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i> Cancel
+                            </a>
+                        </div>
 
-    <label>Description:</label>
+                    </form>
 
-    <textarea name="description">{{ shelf.description|default:'' }}</textarea>
+                </div>
+            </div>
 
-    <br><br>
+        </div>
+    </div>
 
-    <button type="submit">
-        Update Shelf
-    </button>
-</form>
+</div>
 
-<br>
-
-<a href="{% url 'shelf_detail' shelf.id %}">
-    Back to Shelf {{ shelf.shelf_code }}
-</a>
-
-</body>
-</html>
+{% endblock %}

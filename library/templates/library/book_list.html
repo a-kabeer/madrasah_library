@@ -24,6 +24,17 @@
           the page still works if the script never arrives, and the link is
           still middle-clickable.
         {% endcomment %}
+        {% comment %}
+          Bulk work sits beside Add Book rather than behind a menu: it is
+          the same job at a different scale. Both are Admin/Librarian only,
+          which `role_required` on the views enforces.
+        {% endcomment %}
+        <a href="{% url 'book_import' %}" class="btn btn-outline-primary">
+            <i class="bi bi-upload me-1"></i> Import
+        </a>
+        <a href="{% url 'book_export' %}?{{ pagination_query }}" class="btn btn-outline-secondary">
+            <i class="bi bi-download me-1"></i> Export
+        </a>
         <a
             href="{% url 'book_add' %}"
             class="btn btn-primary"
