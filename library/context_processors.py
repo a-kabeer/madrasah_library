@@ -109,3 +109,54 @@ def branding(request):
         "theme_preference": get_theme_preference(request),
         "asset_version": get_asset_version(),
     }
+
+
+# --------------------------------------------------------------------------
+# Main-content navigation
+#
+# A converted page writes `{% extends layout %}` instead of naming
+# base.html, and this decides which layout that is: the whole application
+# shell for an ordinary request, or just the main-content region for an
+# HTMX navigation. One template, one URL, one view - the request decides how
+# much of the page comes back.
+# --------------------------------------------------------------------------
+
+# The id of the single swap target in base.html. Named here because both the
+# layout and the check below have to agree on it.
+MAIN_CONTENT_ID = "mainContent"
+
+MAIN_LAYOUT = "library/partials/main_layout.html"
+FULL_LAYOUT = "library/base.html"
+
+
+def is_main_nav_request(request):
+    """True only for a link asking to replace the main-content region.
+
+    The HX-Request header alone would not do. Every combobox, modal and
+    list-fragment request in this project carries it too, and treating those
+    as navigation would answer them with the wrong body. `HX-Target` names
+    the element htmx is aiming at, so requiring it to be the main-content
+    container is what separates "navigate" from all the other HTMX traffic -
+    without putting a marker in the URL, which `hx-push-url` would then put
+    in the address bar.
+    """
+
+    return (
+        request.headers.get("HX-Request") == "true"
+        and request.headers.get("HX-Target") == MAIN_CONTENT_ID
+    )
+
+
+def navigation(request):
+    """`layout` for templates that support main-content navigation.
+
+    Templates that do not use it are unaffected: they still name base.html
+    directly, so nothing about their rendering changes.
+    """
+
+    return {
+        "layout": (
+            MAIN_LAYOUT if is_main_nav_request(request) else FULL_LAYOUT
+        ),
+        "main_content_id": MAIN_CONTENT_ID,
+    }

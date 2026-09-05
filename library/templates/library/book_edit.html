@@ -1,4 +1,4 @@
-{% extends "library/base.html" %}
+{% extends layout %}
 
 {% block title %}
     Edit Book | {{ branding.display_name }}
@@ -24,13 +24,17 @@
                 <div class="card-body">
 
                     {% if error %}
-                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                        <div class="alert alert-danger d-flex align-items-start" role="alert">
                             <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                            <div>{{ error }}</div>
+                            <div>
+                                {{ error }}
+                                {% include "library/partials/book_duplicate_notice.html" %}
+                            </div>
                         </div>
                     {% endif %}
 
-                    <form method="post" enctype="multipart/form-data">
+                    {# Left an ordinary submit: this one posts a file. #}
+                    <form method="post" enctype="multipart/form-data" hx-boost="false">
                         {% csrf_token %}
                         <input type="hidden" name="from" value="{{ from_page }}">
 

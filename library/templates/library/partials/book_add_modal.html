@@ -29,9 +29,12 @@ the error and everything already typed.
     {% csrf_token %}
 
     {% if error %}
-        <div class="alert alert-danger d-flex align-items-center" role="alert">
+        <div class="alert alert-danger d-flex align-items-start" role="alert">
             <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
-            <div>{{ error }}</div>
+            <div>
+                {{ error }}
+                {% include "library/partials/book_duplicate_notice.html" %}
+            </div>
         </div>
     {% endif %}
 

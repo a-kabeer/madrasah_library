@@ -19,6 +19,71 @@ document.addEventListener(
 
 
         /* =========================
+           ARRIVING CONTENT
+
+           Pages are swapped into the shell now rather than loaded, so this
+           file runs once for a whole session instead of once per page.
+           Anything holding a reference to a particular element therefore
+           has to hear about the fresh one a navigation brings - and hear
+           about it exactly once, or a page visited twice would carry two
+           of every listener.
+
+           A section that works by delegation from the document needs
+           neither of these; the ones that cannot say so by using them.
+           ========================= */
+
+        /* One setup per matching element, for sections that hold a
+           reference to the element they drive. */
+        function setupEach(selector, setup) {
+
+            var done = new WeakSet();
+
+            function pass() {
+
+                document.querySelectorAll(selector).forEach(function (el) {
+
+                    if (done.has(el)) {
+                        return;
+                    }
+
+                    done.add(el);
+                    setup(el);
+                });
+            }
+
+            pass();
+
+            document.body.addEventListener("htmx:afterSwap", pass);
+            document.body.addEventListener("htmx:historyRestore", pass);
+        }
+
+
+        /* One setup for the document, the first time the thing it cares
+           about is on screen. For sections that install themselves once and
+           then work by delegation: waiting means a session that never opens
+           that page pays nothing for it. */
+        function setupOnce(selector, install) {
+
+            var installed = false;
+
+            function pass() {
+
+                if (installed || !document.querySelector(selector)) {
+                    return;
+                }
+
+                installed = true;
+                install();
+            }
+
+            pass();
+
+            document.body.addEventListener("htmx:afterSwap", pass);
+            document.body.addEventListener("htmx:historyRestore", pass);
+        }
+
+
+        /* =========================
            MOBILE SIDEBAR
            ========================= */
 
@@ -95,6 +160,27 @@ document.addEventListener(
 
             }
         );
+
+
+        /* Picking a destination closes the drawer.
+
+           On a narrow screen the sidebar is an overlay, and it used to be
+           dismissed by the page load that followed the click. A converted
+           link swaps the main content instead, so nothing reloads and the
+           drawer would be left sitting on top of the page just asked for.
+           Bound to the nav rather than to htmx, so it behaves the same
+           whichever kind of link was picked. */
+        if (sidebar) {
+
+            sidebar.addEventListener("click", function (e) {
+
+                if (e.target.closest && e.target.closest("a[href]")) {
+                    closeSidebar();
+                }
+
+            });
+
+        }
 
 
         /* =========================
@@ -281,15 +367,13 @@ document.addEventListener(
 
         (function () {
 
-            var fields = document.querySelectorAll("[data-color-field]");
-
-            if (!fields.length) {
-                return;
-            }
-
             var HEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
 
-            fields.forEach(function (field) {
+            /* Per field, because each pair of inputs is wired to the other
+               one and nothing else. Through `setupEach` so that arriving at
+               Branding Settings by navigation wires the pair that came with
+               it, the same as one that was there at load. */
+            setupEach("[data-color-field]", function (field) {
 
                 var picker = field.querySelector("[data-color-picker]");
                 var text = field.querySelector("[data-color-text]");
@@ -318,7 +402,18 @@ document.addEventListener(
            ========================= */
 
         (function () {
+
+            function markActive() {
+
             var currentPath = window.location.pathname;
+
+            /* Whatever was lit up describes the page we have just left. */
+            document.querySelectorAll(".nav-link-custom.active").forEach(
+                function (link) {
+                    link.classList.remove("active");
+                }
+            );
+
             if (currentPath === "/" || currentPath === "") return;
 
             var links = document.querySelectorAll(".nav-link-custom");
@@ -330,8 +425,14 @@ document.addEventListener(
                     var href = link.getAttribute("href");
                     if (!href) return;
 
-                    /* Normalize: ensure trailing slash for comparison */
-                    var normalizedHref = href.endsWith("/") ? href : href + "/";
+                    /* Normalize: compare paths only, with a trailing slash.
+                       Some entries carry a filter in the href — Active Loans
+                       is /library/loans/?status=active — and comparing that
+                       whole string against a pathname can never match, so
+                       the query and fragment come off first. Which filter is
+                       in force is `data-nav-query`'s business, below. */
+                    var hrefPath = href.split("#")[0].split("?")[0];
+                    var normalizedHref = hrefPath.endsWith("/") ? hrefPath : hrefPath + "/";
                     var normalizedPath = currentPath.endsWith("/") ? currentPath : currentPath + "/";
 
                     /* The dashboard link is a prefix of every other URL, so
@@ -364,19 +465,204 @@ document.addEventListener(
                         return;
                     }
 
+                    /* Two entries can share a path and differ only by a
+                       filter — Active Loans and Overdue are both
+                       /library/loans/. A link that names a query condition
+                       matches only while that condition holds, and steps
+                       aside entirely otherwise, so the other one wins. */
+                    if (link.hasAttribute("data-nav-query")) {
+
+                        var pair = (link.getAttribute("data-nav-query") || "")
+                            .split("=");
+
+                        if (
+                            new URLSearchParams(window.location.search)
+                                .get(pair[0]) !== pair.slice(1).join("=")
+                        ) {
+                            return;
+                        }
+
+                        /* Beats the plain prefix match on the same path. */
+                        bestLink = link;
+                        bestLength = normalizedHref.length + 1;
+
+                        return;
+                    }
+
                     if (normalizedPath === normalizedHref || normalizedPath.startsWith(normalizedHref)) {
                         if (normalizedHref.length > bestLength) {
                             bestLink = link;
                             bestLength = normalizedHref.length;
                         }
                     }
+
+                    /* Sections whose pages live under a different path.
+                       Book Copies, Volumes and Contents are no longer
+                       sidebar entries of their own, so Books claims them:
+                       opening one directly leaves Catalog lit rather than
+                       nothing at all. Scored by the matched prefix, not by
+                       the link's own href, so a real entry deeper in the
+                       tree still outranks it. */
+                    (link.getAttribute("data-nav-prefix") || "")
+                        .split(",")
+                        .forEach(function (extra) {
+
+                            var trimmed = extra.trim();
+
+                            if (!trimmed) {
+                                return;
+                            }
+
+                            if (!trimmed.endsWith("/")) {
+                                trimmed += "/";
+                            }
+
+                            if (
+                                normalizedPath.startsWith(trimmed)
+                                && trimmed.length > bestLength
+                            ) {
+                                bestLink = link;
+                                bestLength = trimmed.length;
+                            }
+                        });
                 }
             );
 
             if (bestLink) {
                 bestLink.classList.add("active");
             }
+
+            }
+
+
+            markActive();
+
+            /* The sidebar sits outside the swapped region, so a
+               main-content navigation changes the URL without touching it.
+               Re-running on settle - and on a history restore, which puts
+               back a body captured on a different page - is what keeps the
+               highlight describing where we actually are. */
+            document.body.addEventListener("htmx:afterSettle", markActive);
+            document.body.addEventListener("htmx:historyRestore", markActive);
+            window.addEventListener("popstate", markActive);
+
         })();
+
+
+        /* =========================
+           AUTOFOCUS AFTER A SWAP
+
+           `autofocus` is honoured once, when a document is parsed. Pages
+           are swapped in now rather than loaded, so a field marked with it
+           got the cursor on the first visit of a session and never again.
+
+           That matters most where a barcode scanner types: the issue form
+           answers a scan by coming back with the copy in the list and the
+           box emptied, and the return lookup comes back with what it
+           found. Both need the cursor where the next code will arrive, or
+           the second scan goes nowhere.
+
+           Only inside the region that was actually replaced, and only for
+           a field that asked for focus. A page with no `autofocus` is left
+           alone, and so is a swap that replaced a fragment somewhere else
+           - which is what keeps this off the book list's search box while
+           someone is typing in it.
+           ========================= */
+
+        document.body.addEventListener("htmx:afterSettle", function (e) {
+
+            var region = e.detail && e.detail.target;
+
+            if (!region || !region.querySelector) {
+                return;
+            }
+
+            var field = region.querySelector("[autofocus]");
+
+            if (!field || field.disabled || field.hidden) {
+                return;
+            }
+
+            /* Not while the librarian is already typing somewhere else: a
+               swap they did not ask for must not take the cursor off the
+               field under their hands. */
+            var active = document.activeElement;
+
+            if (
+                active
+                && active !== document.body
+                && active !== field
+                && region.contains(active)
+            ) {
+                return;
+            }
+
+            field.focus();
+
+            /* At the end of whatever is in it, not selecting it, so typing
+               continues rather than overwriting. */
+            if (typeof field.setSelectionRange === "function") {
+
+                try {
+                    field.setSelectionRange(
+                        field.value.length, field.value.length
+                    );
+
+                } catch (ignored) {
+                    /* Some input types refuse a selection range. The focus
+                       is the part that matters. */
+                }
+            }
+        });
+
+
+        /* =========================
+           WHEN A NAVIGATION IS NOT A NAVIGATION
+
+           A boosted link expects the main-content region back. Three things
+           can come back instead, all of them whole HTML documents:
+
+             * the sign-in page, because the session expired on the way -
+               the redirect is followed by the request itself, so there is
+               no 302 to notice, just a login page where a fragment should
+               have been;
+             * a 403, 404 or 500, which are deliberately whole pages here
+               (see error_base.html) - an error is not a region of the
+               application, and showing one inside the chrome would put a
+               sidebar full of links on a page that just refused;
+             * any page that does not extend the shared layout.
+
+           Swapping a document into a region of another one would nest a
+           second sidebar inside the first. So: recognise a document by its
+           doctype, decline the swap, and let the browser go there properly.
+           Whatever the reason, the result is the navigation that would have
+           happened with no script at all.
+           ========================= */
+
+        document.body.addEventListener("htmx:beforeSwap", function (e) {
+
+            /* Only boosted navigation. Every other swap on the page - the
+               book list, the comboboxes, the dialogs - asks for a fragment
+               from a view that only ever sends one. */
+            if (!e.detail.boosted) {
+                return;
+            }
+
+            if (!/^\s*<!doctype/i.test(e.detail.serverResponse || "")) {
+                return;
+            }
+
+            e.detail.shouldSwap = false;
+
+            /* `responseURL` is where the request actually ended up, which
+               for an expired session is the sign-in page and for an error
+               is the page that was asked for. Going there re-requests it,
+               and this time the browser renders it as the page it is. */
+            window.location.assign(
+                (e.detail.xhr && e.detail.xhr.responseURL)
+                    || window.location.href
+            );
+        });
 
 
         /* =========================
@@ -727,17 +1013,40 @@ document.addEventListener(
 
                 if (form && root.hasAttribute("data-combobox-required")) {
 
-                    form.addEventListener("submit", function (e) {
+                    var missing = function () {
 
                         if (valueInput.value) {
                             root.classList.remove("combobox-invalid");
-                            return;
+                            return false;
                         }
-
-                        e.preventDefault();
 
                         root.classList.add("combobox-invalid");
                         textInput.focus();
+
+                        return true;
+                    };
+
+                    form.addEventListener("submit", function (e) {
+
+                        if (missing()) {
+                            e.preventDefault();
+                        }
+                    });
+
+                    /* And again for htmx, which does not read
+                       `preventDefault` on a submit event: on a boosted
+                       form the listener above would stop the browser and
+                       htmx would send the request anyway. Cancelling
+                       `htmx:beforeRequest` is the answer it does take.
+
+                       Kept to the form's own submit by comparing `elt`,
+                       because this dropdown's search requests bubble
+                       through here as well and must go through. */
+                    form.addEventListener("htmx:beforeRequest", function (e) {
+
+                        if (e.detail.elt === form && missing()) {
+                            e.preventDefault();
+                        }
                     });
                 }
 
@@ -785,6 +1094,13 @@ document.addEventListener(
                 setupAll(document);
             });
 
+            /* A history restore replaces the body wholesale, so the
+               dropdowns in it are fresh elements that have never been set
+               up. */
+            document.body.addEventListener("htmx:historyRestore", function () {
+                setupAll(document);
+            });
+
         })();
 
 
@@ -803,14 +1119,6 @@ document.addEventListener(
 
         (function () {
 
-            /* Nothing to preview here: no cover on the page and no results
-               container that a swap could bring one into. Checked before the
-               document-wide `mousemove` below is attached, so pages with no
-               covers at all pay nothing for this. */
-            if (!document.querySelector("[data-cover-url], #bookResults")) {
-                return;
-            }
-
             /* Skip entirely for touch and narrow screens: there is no hover
                to speak of. The cover is still reachable there by tapping the
                row, which opens the details modal. */
@@ -822,117 +1130,131 @@ document.addEventListener(
                 return;
             }
 
-            var preview = document.createElement("div");
-            preview.className = "cover-preview";
-            preview.setAttribute("aria-hidden", "true");
+            /* Waits for a cover, or for the results container a swap could
+               bring one into, so a session that never opens the book list
+               pays nothing for the document-wide `mousemove` below. It used
+               to be a plain check at load, which was the same thing while
+               every link reloaded the page; now that the book list arrives
+               by navigation, the check has to be able to come out true
+               later than that.
 
-            var image = document.createElement("img");
-            preview.appendChild(image);
+               Once is enough: everything below is delegated, so it covers
+               every table rendered afterwards. */
+            setupOnce("[data-cover-url], #bookResults", function () {
 
-            document.body.appendChild(preview);
+                var preview = document.createElement("div");
+                preview.className = "cover-preview";
+                preview.setAttribute("aria-hidden", "true");
 
-            var GAP = 16;
+                var image = document.createElement("img");
+                preview.appendChild(image);
 
-            /* Which element the preview is currently following, so a move
-               inside it repositions but a move into a different row starts
-               over with the right cover. */
-            var current = null;
+                document.body.appendChild(preview);
 
+                var GAP = 16;
 
-            function position(e) {
-
-                var width = preview.offsetWidth;
-                var height = preview.offsetHeight;
-
-                var left = e.clientX + GAP;
-                var top = e.clientY + GAP;
-
-                /* Flip to the other side of the pointer rather than letting
-                   the preview run off screen. */
-                if (left + width > window.innerWidth) {
-                    left = e.clientX - width - GAP;
-                }
-
-                if (top + height > window.innerHeight) {
-                    top = e.clientY - height - GAP;
-                }
-
-                preview.style.left = Math.max(GAP, left) + "px";
-                preview.style.top = Math.max(GAP, top) + "px";
-            }
+                /* Which element the preview is currently following, so a move
+                   inside it repositions but a move into a different row starts
+                   over with the right cover. */
+                var current = null;
 
 
-            function hide() {
-                current = null;
-                preview.classList.remove("show");
-            }
+                function position(e) {
 
+                    var width = preview.offsetWidth;
+                    var height = preview.offsetHeight;
 
-            function show(source, e) {
+                    var left = e.clientX + GAP;
+                    var top = e.clientY + GAP;
 
-                var url = source.getAttribute("data-cover-url");
-
-                /* No cover: no preview at all, which is the graceful case.
-                   Rows without one carry no attribute and never match. */
-                if (!url) {
-                    return;
-                }
-
-                if (image.getAttribute("src") !== url) {
-                    image.setAttribute("src", url);
-                    image.setAttribute(
-                        "alt",
-                        "Cover of " + (source.getAttribute("data-cover-title") || "")
-                    );
-                }
-
-                current = source;
-
-                position(e);
-                preview.classList.add("show");
-            }
-
-
-            /* `mousemove` rather than `mouseover`, so the preview both
-               appears and tracks the pointer from one listener. */
-            document.addEventListener("mousemove", function (e) {
-
-                var source = e.target && e.target.closest
-                    ? e.target.closest("[data-cover-url]")
-                    : null;
-
-                if (!source) {
-
-                    if (current) {
-                        hide();
+                    /* Flip to the other side of the pointer rather than letting
+                       the preview run off screen. */
+                    if (left + width > window.innerWidth) {
+                        left = e.clientX - width - GAP;
                     }
 
-                    return;
+                    if (top + height > window.innerHeight) {
+                        top = e.clientY - height - GAP;
+                    }
+
+                    preview.style.left = Math.max(GAP, left) + "px";
+                    preview.style.top = Math.max(GAP, top) + "px";
                 }
 
-                if (source !== current) {
-                    show(source, e);
-                    return;
+
+                function hide() {
+                    current = null;
+                    preview.classList.remove("show");
                 }
 
-                position(e);
+
+                function show(source, e) {
+
+                    var url = source.getAttribute("data-cover-url");
+
+                    /* No cover: no preview at all, which is the graceful case.
+                       Rows without one carry no attribute and never match. */
+                    if (!url) {
+                        return;
+                    }
+
+                    if (image.getAttribute("src") !== url) {
+                        image.setAttribute("src", url);
+                        image.setAttribute(
+                            "alt",
+                            "Cover of " + (source.getAttribute("data-cover-title") || "")
+                        );
+                    }
+
+                    current = source;
+
+                    position(e);
+                    preview.classList.add("show");
+                }
+
+
+                /* `mousemove` rather than `mouseover`, so the preview both
+                   appears and tracks the pointer from one listener. */
+                document.addEventListener("mousemove", function (e) {
+
+                    var source = e.target && e.target.closest
+                        ? e.target.closest("[data-cover-url]")
+                        : null;
+
+                    if (!source) {
+
+                        if (current) {
+                            hide();
+                        }
+
+                        return;
+                    }
+
+                    if (source !== current) {
+                        show(source, e);
+                        return;
+                    }
+
+                    position(e);
+                });
+
+
+                /* Any scroll or resize invalidates a pointer-anchored position. */
+                window.addEventListener("scroll", hide, true);
+                window.addEventListener("resize", hide);
+
+                /* Clicking a row opens a dialog without the pointer moving, so
+                   nothing else would hide the preview and it would hang around
+                   over the page. Hide it explicitly. */
+                document.addEventListener("click", hide, true);
+
+                var sharedModal = document.getElementById("globalModal");
+
+                if (sharedModal) {
+                    sharedModal.addEventListener("show.bs.modal", hide);
+                }
+
             });
-
-
-            /* Any scroll or resize invalidates a pointer-anchored position. */
-            window.addEventListener("scroll", hide, true);
-            window.addEventListener("resize", hide);
-
-            /* Clicking a row opens a dialog without the pointer moving, so
-               nothing else would hide the preview and it would hang around
-               over the page. Hide it explicitly. */
-            document.addEventListener("click", hide, true);
-
-            var sharedModal = document.getElementById("globalModal");
-
-            if (sharedModal) {
-                sharedModal.addEventListener("show.bs.modal", hide);
-            }
 
         })();
 
@@ -980,6 +1302,20 @@ document.addEventListener(
                 var page = row.getAttribute("data-row-url");
 
                 if (page) {
+
+                    /* Through the row's own Open link, which the shell
+                       boosts like any other: htmx does the request, the
+                       swap and the history entry, and there is no second
+                       copy of any of that here to fall out of step with.
+                       A row without one loads the page the ordinary way,
+                       which is also what happens with no script at all. */
+                    var primary = row.querySelector("[data-row-primary]");
+
+                    if (primary) {
+                        primary.click();
+                        return;
+                    }
+
                     window.location.assign(page);
                     return;
                 }
@@ -1617,6 +1953,7 @@ document.addEventListener(
             /* The dialog's form arrives in a swap, and comes back as a new
                element every time validation rejects it. */
             document.body.addEventListener("htmx:afterSwap", setupAll);
+            document.body.addEventListener("htmx:historyRestore", setupAll);
 
         })();
 
@@ -1868,13 +2205,12 @@ document.addEventListener(
 
         (function () {
 
-            var form = document.getElementById("copyMoveForm");
-
-            if (!form) {
-                return;
+            /* Looked up per render rather than held onto: a navigation to
+               the copy list brings a new move bar, and a navigation away
+               takes it out of the document altogether. */
+            function moveBar() {
+                return document.getElementById("copyMoveForm");
             }
-
-            var counter = form.querySelector("[data-copy-selected-count]");
 
 
             function checkboxes() {
@@ -1893,9 +2229,17 @@ document.addEventListener(
 
             function render() {
 
+                var form = moveBar();
+
+                if (!form) {
+                    return;
+                }
+
                 var count = selected().length;
 
                 form.hidden = count === 0;
+
+                var counter = form.querySelector("[data-copy-selected-count]");
 
                 if (counter) {
                     counter.textContent = count;
@@ -1912,6 +2256,9 @@ document.addEventListener(
             }
 
 
+            /* Delegated from the document, so these are attached whether
+               or not the copy list is the page on screen; both handlers
+               return at once on anything else. */
             document.addEventListener("change", function (e) {
 
                 if (e.target.matches("[data-copy-select-all]")) {
@@ -1952,6 +2299,7 @@ document.addEventListener(
 
             /* A swap brings a fresh, unticked table with it. */
             document.body.addEventListener("htmx:afterSwap", render);
+            document.body.addEventListener("htmx:historyRestore", render);
 
             render();
 
@@ -2076,6 +2424,290 @@ document.addEventListener(
             });
 
             modal.addEventListener("hidden.bs.modal", reset);
+
+        })();
+
+
+        /* =========================
+           BARCODE SCANNING (mobile)
+           The copy-code field on the issue and return pages.
+
+           Uses the browser's own BarcodeDetector, so there is no scanning
+           library to load and nothing to keep up to date. That API is not
+           everywhere - notably not iOS Safari - so the button is not shown
+           until this decides the device can actually use it: on anything
+           else, including every desktop, the field is the plain text input
+           it always was and nothing below runs.
+
+           On a hit the value goes into the field and the field's own form
+           is submitted, so the search that follows is the existing one.
+           The manual Find button, Enter, and the server side are all
+           untouched.
+           ========================= */
+
+        (function () {
+
+            /* The dialog is part of the shell, so this one element lasts
+               the session. The buttons that open it are page-local and are
+               found below, on arrival. */
+            var dialogEl = document.querySelector("[data-scan-dialog]");
+
+            if (!dialogEl || !window.bootstrap) {
+                return;
+            }
+
+            /* Three things have to be true, and all three are checked
+               rather than sniffed from the user agent: the decoder exists,
+               a camera can be asked for, and the device is touch-primary.
+               The last is what keeps this off the desktop, where the brief
+               says nothing should change. */
+            var supported = (
+                "BarcodeDetector" in window
+                && navigator.mediaDevices
+                && typeof navigator.mediaDevices.getUserMedia === "function"
+                && window.matchMedia("(pointer: coarse)").matches
+            );
+
+            if (!supported) {
+                return;
+            }
+
+            var video = dialogEl.querySelector("[data-scan-video]");
+            var status = dialogEl.querySelector("[data-scan-status]");
+            var errorBox = dialogEl.querySelector("[data-scan-error]");
+            var errorText = dialogEl.querySelector("[data-scan-error-text]");
+            var modal = window.bootstrap.Modal.getOrCreateInstance(dialogEl);
+
+            var stream = null;
+            var detector = null;
+            var scanning = false;
+            var target = null;
+            var trigger = null;
+
+            /* The button ships hidden and is revealed only here, once
+               the three checks above have passed. A navigation brings its
+               own, so this runs again for each page that arrives. */
+            function reveal() {
+
+                document.querySelectorAll("[data-scan-open]").forEach(
+                    function (button) {
+                        button.hidden = false;
+                    }
+                );
+            }
+
+            reveal();
+
+            document.body.addEventListener("htmx:afterSwap", reveal);
+            document.body.addEventListener("htmx:historyRestore", reveal);
+
+            /* One delegated listener rather than one per button: it reaches
+               buttons that arrive later, and it cannot end up bound twice
+               to the same one. */
+            document.addEventListener("click", function (e) {
+
+                var button = e.target && e.target.closest
+                    ? e.target.closest("[data-scan-open]")
+                    : null;
+
+                if (button) {
+                    open(button);
+                }
+            });
+
+            function fail(message) {
+                errorText.textContent = message;
+                errorBox.hidden = false;
+                status.hidden = true;
+            }
+
+            function open(button) {
+
+                trigger = button;
+                target = document.getElementById(
+                    button.getAttribute("data-scan-target")
+                );
+
+                if (!target) {
+                    return;
+                }
+
+                errorBox.hidden = true;
+                status.hidden = false;
+                status.textContent =
+                    "Point the camera at the barcode on the book.";
+
+                modal.show();
+                start();
+            }
+
+            function start() {
+
+                /* The back camera by preference: the one pointing at the
+                   book rather than at the librarian. `ideal` rather than
+                   `exact`, so a device with only one camera still works. */
+                navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: { ideal: "environment" } },
+                    audio: false
+                }).then(function (media) {
+
+                    stream = media;
+                    video.srcObject = media;
+
+                    return video.play();
+
+                }).then(function () {
+
+                    /* The formats a library label plausibly carries. An
+                       unsupported list is what makes the constructor
+                       throw, so it is caught with everything else. */
+                    detector = new window.BarcodeDetector({
+                        formats: [
+                            "code_128", "code_39", "ean_13", "ean_8",
+                            "upc_a", "upc_e", "codabar", "itf", "qr_code"
+                        ]
+                    });
+
+                    scanning = true;
+                    tick();
+
+                }).catch(function (error) {
+
+                    /* A refused camera is an ordinary answer, not a
+                       breakage: say what happened and leave typing as the
+                       way through. */
+                    if (
+                        error && (
+                            error.name === "NotAllowedError"
+                            || error.name === "SecurityError"
+                        )
+                    ) {
+                        fail(
+                            "Camera access was refused. Allow it in your "
+                            + "browser settings, or type the code instead."
+                        );
+                        return;
+                    }
+
+                    if (error && error.name === "NotFoundError") {
+                        fail(
+                            "No camera was found on this device. Type the "
+                            + "code instead."
+                        );
+                        return;
+                    }
+
+                    fail(
+                        "The camera could not be started. Type the code "
+                        + "instead."
+                    );
+                });
+            }
+
+            function tick() {
+
+                if (!scanning || !detector) {
+                    return;
+                }
+
+                detector.detect(video).then(function (found) {
+
+                    if (!scanning) {
+                        return;
+                    }
+
+                    var code = found && found.length
+                        ? (found[0].rawValue || "").trim()
+                        : "";
+
+                    if (code) {
+                        accept(code);
+                        return;
+                    }
+
+                    window.requestAnimationFrame(tick);
+
+                }).catch(function () {
+
+                    /* A frame that could not be read is normal - the book
+                       may be halfway into shot. Keep looking rather than
+                       treating it as a failure. */
+                    if (scanning) {
+                        window.requestAnimationFrame(tick);
+                    }
+                });
+            }
+
+            function accept(code) {
+
+                scanning = false;
+
+                target.value = code;
+                modal.hide();
+
+                /* The loading state, which the librarian needs because the
+                   search that follows is a page load they did not ask for.
+                   The button says what is happening and stops taking
+                   clicks; the page replaces all of it a moment later. */
+                if (trigger) {
+                    trigger.disabled = true;
+                    trigger.innerHTML =
+                        "<span class=\"spinner-border spinner-border-sm\""
+                        + " role=\"status\" aria-hidden=\"true\"></span>"
+                        + "<span class=\"visually-hidden\">Searching</span>";
+                }
+
+                /* The field's own form, submitted the ordinary way, so
+                   whatever that form already does is what happens.
+                   `requestSubmit` runs validation and fires the submit
+                   event, which `submit()` would skip. */
+                var form = target.form;
+
+                if (!form) {
+                    return;
+                }
+
+                if (typeof form.requestSubmit === "function") {
+                    form.requestSubmit();
+                } else {
+                    form.submit();
+                }
+            }
+
+            function stop() {
+
+                scanning = false;
+                detector = null;
+
+                if (stream) {
+                    stream.getTracks().forEach(function (track) {
+                        track.stop();
+                    });
+                    stream = null;
+                }
+
+                video.srcObject = null;
+            }
+
+            /* The camera light staying on after the dialog closes is the
+               thing people notice, so the tracks are stopped on the way
+               out - including when the dialog is dismissed without a
+               scan. */
+            dialogEl.addEventListener("hidden.bs.modal", stop);
+            window.addEventListener("pagehide", stop);
+
+            /* And when the page is swapped out from under it. The field the
+               code was going to be written into leaves with that page, so a
+               scan still running has nowhere to land - and the camera would
+               keep going on a page that no longer has a scan button.
+               `accept` clears `scanning` before it submits, so the
+               navigation it causes does not come back through here. */
+            document.body.addEventListener("htmx:beforeSwap", function () {
+
+                if (scanning) {
+                    modal.hide();
+                }
+            });
 
         })();
 

@@ -1,0 +1,122 @@
+{% extends layout %}
+
+{% block title %}
+    Borrower Activity | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    Borrower Activity
+{% endblock %}
+
+{% block breadcrumbs %}
+    <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item">
+                <a href="{% url 'reports_home' %}">Reports</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Borrower Activity</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-0">
+
+    {% include "library/partials/report_header.html" with report_title="Borrower Activity" report_blurb="What a borrower, or everyone, did over a period." %}
+
+    {% comment %}
+      The filters. A plain GET form, so every state of this report is a URL
+      - which is what makes it bookmarkable, shareable, and the same thing
+      the CSV export reads. Hidden when printing: the values that were
+      applied are already in the line above, and the controls that set them
+      are not what anyone wants on paper.
+    {% endcomment %}
+    <form method="get" class="card shadow-sm border-0 mb-4 print-hidden">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+
+                <div class="col-6 col-md-3">
+                    <label for="startDate" class="form-label small mb-1">From</label>
+                    <input type="date" class="form-control form-control-sm"
+                           id="startDate" name="start" value="{{ start }}">
+                </div>
+                <div class="col-6 col-md-3">
+                    <label for="endDate" class="form-label small mb-1">To</label>
+                    <input type="date" class="form-control form-control-sm"
+                           id="endDate" name="end" value="{{ end }}">
+                </div>
+                <div class="col-12 col-md-4">
+                    {% url 'borrower_list' as borrower_search_url %}
+                    {% include "library/partials/combobox_field.html" with label="Borrower" field_name="borrower" input_id="reportBorrower" entity_label="borrower" search_url=borrower_search_url selected_id=borrower_id selected_name=borrower_name required=False allow_create=False compact=True submit_on_select=False %}
+                </div>
+                <div class="col-12 col-md-auto">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-funnel me-1"></i> Apply
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% if tallies %}
+        <div class="row g-3 mb-4">
+            {% for label, value in tallies_shown %}
+                <div class="col-6 col-lg-2">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body">
+                            <p class="text-body-secondary small mb-1">{{ label }}</p>
+                            <p class="fs-4 fw-bold mb-0">{{ value }}</p>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>Borrower</th><th>Reg. no</th>
+                            <th>Issued</th><th>Returned</th>
+                            <th>Out now</th><th>Overdue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in rows %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'borrower_detail' row.id %}"
+                                       class="text-decoration-none">{{ row.name }}</a>
+                                </td>
+                                <td class="text-body-secondary">
+                                    {{ row.registration_no|default:"-" }}
+                                </td>
+                                <td>{{ row.issued }}</td>
+                                <td>{{ row.returned }}</td>
+                                <td>{{ row.out }}</td>
+                                <td class="{% if row.overdue %}text-danger fw-semibold{% endif %}">
+                                    {{ row.overdue }}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-body-secondary py-4">
+                                    Nobody borrowed anything in this period.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="print-hidden">
+            {% include "library/partials/pagination.html" with page_obj=rows %}
+        </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

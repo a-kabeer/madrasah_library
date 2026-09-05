@@ -1,0 +1,114 @@
+{% extends layout %}
+
+{% block title %}
+    Overdue | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    Overdue
+{% endblock %}
+
+{% block breadcrumbs %}
+    <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item">
+                <a href="{% url 'reports_home' %}">Reports</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Overdue</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-0">
+
+    {% include "library/partials/report_header.html" with report_title="Overdue" report_blurb="Everything out past its due date, longest first." %}
+
+    {% comment %}
+      The filters. A plain GET form, so every state of this report is a URL
+      - which is what makes it bookmarkable, shareable, and the same thing
+      the CSV export reads. Hidden when printing: the values that were
+      applied are already in the line above, and the controls that set them
+      are not what anyone wants on paper.
+    {% endcomment %}
+    <form method="get" class="card shadow-sm border-0 mb-4 print-hidden">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+
+                <div class="col-12 col-md-3">
+                    <label for="filterLocation" class="form-label small mb-1">Location</label>
+                    <select class="form-select form-select-sm" id="filterLocation" name="location">
+                        <option value="">All locations</option>
+                        {% for place in locations %}
+                            <option value="{{ place.id }}"
+                                {% if location_id == place.id|stringformat:"s" %}selected{% endif %}
+                            >{{ place.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-auto">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-funnel me-1"></i> Apply
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <p class="mb-3">
+        <strong>{{ total }}</strong> item{{ total|pluralize }} overdue.
+    </p>
+
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>Borrower</th><th>Reg. no</th><th>Phone</th>
+                        <th>Book</th><th>Copy</th>
+                        <th>Issued</th><th>Due</th><th>Days</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in loans %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'borrower_detail' loan.borrower.id %}"
+                                   class="text-decoration-none">{{ loan.borrower.name }}</a>
+                            </td>
+                            <td class="text-body-secondary">
+                                {{ loan.borrower.registration_no|default:"-" }}
+                            </td>
+                            <td class="text-body-secondary">{{ loan.borrower.phone }}</td>
+                            <td>
+                                {{ loan.copy.volume.book.title }}
+                                {% if loan.copy.volume.book.author %}
+                                    <span class="d-block small text-body-secondary">
+                                        {{ loan.copy.volume.book.author.name }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'book_copy_detail' loan.copy.id %}"
+                                   class="text-decoration-none">{{ loan.copy.copy_code }}</a>
+                            </td>
+                            <td>{{ loan.issue_date }}</td>
+                            <td>{{ loan.due_date }}</td>
+                            <td class="text-danger fw-semibold">{{ loan.days_overdue }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center text-body-secondary py-4">
+                                Nothing is overdue.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

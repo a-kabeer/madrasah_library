@@ -1,0 +1,46 @@
+{% comment %}
+The main-content layout: what a converted page renders when an HTMX
+navigation asks for it, instead of the whole application shell.
+
+A converted page writes `{% extends layout %}` and defines the same blocks
+it always did - `title`, `page_title`, `breadcrumbs`, `content`. Which
+layout it gets is decided per request by `library.context_processors
+.navigation`, so there is one template, one URL and one view behind both
+answers, and an ordinary request still renders the complete page.
+
+What comes back:
+
+  * the contents of the main-content region, which is the swap target
+  * the topbar's heading and breadcrumbs, out of band, because they live
+    outside that region and would otherwise be left describing the previous
+    page
+  * a <title>, which htmx applies to the document
+
+Nothing else. The sidebar, topbar, modal containers, toast area and footer
+are shared chrome: they stay exactly as they are, which is the whole point.
+{% endcomment %}
+
+{% include "library/partials/page_messages.html" %}
+
+{% block content %}{% endblock %}
+
+
+{% comment %}
+  Out-of-band swaps, matched by id against base.html. `hx-swap-oob="true"`
+  replaces the element outright, so each of these needs to carry the same
+  attributes its counterpart in base.html has.
+{% endcomment %}
+
+<h1 id="pageHeading" hx-swap-oob="true">
+    {% block page_title %}{{ branding.display_name }}{% endblock %}
+</h1>
+
+<div class="topbar-center" id="pageBreadcrumbs" hx-swap-oob="true">
+    {% block breadcrumbs %}{% endblock %}
+</div>
+
+{% comment %}
+  htmx reads a <title> out of the response and sets document.title from it,
+  so the tab and the browser-history entry follow the page.
+{% endcomment %}
+<title>{% block title %}{{ branding.display_name }}{% endblock %}</title>

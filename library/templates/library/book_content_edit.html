@@ -1,123 +1,162 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Edit Book Content</title>
-</head>
-<body>
+{% extends layout %}
 
-{% include "library/_account_bar.html" %}
-<p>
+{% block title %}
+    Edit Book Content | {{ branding.display_name }}
+{% endblock %}
 
-    {% if from_page == "volume" %}
+{% block page_title %}
+    Edit Book Content
+{% endblock %}
 
-        <a href="{% url 'book_volume_detail' volume_id %}">
-            ← Back to Volume
-        </a>
+{% block content %}
 
-    {% else %}
+<div class="container-fluid px-0">
 
-        <a href="{% url 'book_content_list' %}">
-            ← Back to Contents
-        </a>
+    <div class="mb-3">
+        {% comment %}
+          `volume_id` comes from the view rather than being read off the
+          content here, so the back link is left exactly as it was.
+        {% endcomment %}
+        {% if from_page == "volume" %}
+            <a href="{% url 'book_volume_detail' volume_id %}" class="small text-decoration-none">
+                <i class="bi bi-arrow-left me-1"></i> Back to Volume
+            </a>
+        {% else %}
+            <a href="{% url 'book_content_list' %}" class="small text-decoration-none">
+                <i class="bi bi-arrow-left me-1"></i> Back to Contents
+            </a>
+        {% endif %}
+    </div>
 
-    {% endif %}
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
 
-</p>
-<h1>Edit Book Content</h1>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-pencil me-2"></i>Edit Book Content
+                    </h5>
+                </div>
+                <div class="card-body">
 
-<form method="post">
-    {% csrf_token %}
-    <label>Volume:</label>
+                    <form method="post">
+                        {% csrf_token %}
 
-<select name="volume" required>
+                        <div class="row g-3">
 
-    {% for volume in volumes %}
+                            <div class="col-12">
+                                <label for="volume" class="form-label fw-semibold">
+                                    Volume <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" name="volume" id="volume" required>
+                                    {% for volume in volumes %}
+                                        <option
+                                            value="{{ volume.id }}"
+                                            {% if volume.id == content.volume.id %}selected{% endif %}
+                                        >
+                                            {{ volume.book.title }}
+                                            - Volume {{ volume.volume_number }}
+                                            - {{ volume.title }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
 
-        <option
-            value="{{ volume.id }}"
-            {% if volume.id == content.volume.id %}
-                selected
-            {% endif %}
-        >
-            {{ volume.book.title }}
-            - Volume {{ volume.volume_number }}
-            - {{ volume.title }}
-        </option>
+                            <div class="col-12">
+                                <label for="parent" class="form-label fw-semibold">
+                                    Parent
+                                </label>
+                                <select class="form-select" name="parent" id="parent">
+                                    <option value="">No Parent</option>
+                                    {% for parent in parents %}
+                                        <option
+                                            value="{{ parent.id }}"
+                                            {% if parent.id == content.parent_id %}selected{% endif %}
+                                        >
+                                            {{ parent.title }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
 
-    {% endfor %}
+                            <div class="col-12">
+                                <label for="title" class="form-label fw-semibold">
+                                    Title <span class="text-danger">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="title"
+                                    name="title"
+                                    value="{{ content.title }}"
+                                    required
+                                >
+                            </div>
 
-</select>
+                            <div class="col-12 col-sm-4">
+                                <label for="content_type" class="form-label fw-semibold">
+                                    Content Type
+                                </label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="content_type"
+                                    name="content_type"
+                                    value="{{ content.content_type|default:'' }}"
+                                >
+                            </div>
 
-    <br><br>
+                            <div class="col-12 col-sm-4">
+                                <label for="page_number" class="form-label fw-semibold">
+                                    Page Number
+                                </label>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="page_number"
+                                    name="page_number"
+                                    value="{{ content.page_number|default:'' }}"
+                                >
+                            </div>
 
-    <label>Parent:</label>
+                            <div class="col-12 col-sm-4">
+                                <label for="sort_order" class="form-label fw-semibold">
+                                    Sort Order
+                                </label>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="sort_order"
+                                    name="sort_order"
+                                    value="{{ content.sort_order }}"
+                                >
+                            </div>
 
-    <select name="parent">
+                        </div>
 
-        <option value="">No Parent</option>
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Update Content
+                            </button>
+                            {% if from_page == "volume" %}
+                                <a href="{% url 'book_volume_detail' volume_id %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-lg me-1"></i> Cancel
+                                </a>
+                            {% else %}
+                                <a href="{% url 'book_content_list' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-lg me-1"></i> Cancel
+                                </a>
+                            {% endif %}
+                        </div>
 
-        {% for parent in parents %}
-            <option
-                value="{{ parent.id }}"
-                {% if parent.id == content.parent_id %}
-                    selected
-                {% endif %}
-            >
-                {{ parent.title }}
-            </option>
-        {% endfor %}
+                    </form>
 
-    </select>
+                </div>
+            </div>
 
-    <br><br>
+        </div>
+    </div>
 
-    <label>Title:</label>
+</div>
 
-    <input
-        type="text"
-        name="title"
-        value="{{ content.title }}"
-        required
-    >
-
-    <br><br>
-
-    <label>Content Type:</label>
-
-    <input
-        type="text"
-        name="content_type"
-        value="{{ content.content_type|default:'' }}"
-    >
-
-    <br><br>
-
-    <label>Page Number:</label>
-
-    <input
-        type="number"
-        name="page_number"
-        value="{{ content.page_number|default:'' }}"
-    >
-
-    <br><br>
-
-    <label>Sort Order:</label>
-
-    <input
-        type="number"
-        name="sort_order"
-        value="{{ content.sort_order }}"
-    >
-
-    <br><br>
-
-    <button type="submit">
-        Update Content
-    </button>
-</form>
-
-
-
-</body>
-</html>
+{% endblock %}

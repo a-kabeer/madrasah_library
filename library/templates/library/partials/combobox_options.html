@@ -25,6 +25,18 @@ existing one it matched, so nothing is ever duplicated).
         {% if item.city %}
             <small class="text-body-secondary">{{ item.city }}</small>
         {% endif %}
+
+        {% comment %}
+          Borrowers only: two people can share a name, so the suggestion
+          carries the registration number and phone that tell them apart.
+          The other entities have neither field, so nothing changes for
+          them.
+        {% endcomment %}
+        {% if item.registration_no or item.phone %}
+            <small class="text-body-secondary">
+                {{ item.registration_no|default:"" }}{% if item.registration_no and item.phone %} · {% endif %}{{ item.phone|default:"" }}
+            </small>
+        {% endif %}
     </button>
 
 {% endfor %}

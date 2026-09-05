@@ -1,0 +1,160 @@
+{% extends layout %}
+
+{% block title %}
+    Start a Stock Check | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    Start a Stock Check
+{% endblock %}
+
+{% block breadcrumbs %}
+    <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item">
+                <a href="{% url 'inventory_session_list' %}">Stock Check</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Start</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-0">
+
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-7">
+
+            <div class="mb-4">
+                <h2 class="fw-bold mb-1">Start a Stock Check</h2>
+                <p class="text-body-secondary mb-0">
+                    Choose what to count. The check works out what should
+                    be there; you scan what is.
+                </p>
+            </div>
+
+            {% if error %}
+                <div class="alert alert-danger d-flex align-items-center" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
+                    <div>{{ error }}</div>
+                </div>
+            {% endif %}
+
+            <form method="post" class="card shadow-sm border-0">
+                {% csrf_token %}
+                <div class="card-body">
+
+                    <div class="mb-4">
+                        <label for="checkName" class="form-label fw-semibold">
+                            Name
+                        </label>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="checkName"
+                            name="name"
+                            value="{{ form.name }}"
+                            maxlength="255"
+                            placeholder="e.g. Main Hall, September"
+                            required
+                            autofocus
+                        >
+                        <div class="form-text">
+                            Something you will recognise in the list later.
+                        </div>
+                    </div>
+
+                    {% comment %}
+                      The scope. Plain radios rather than a control that
+                      shows and hides: all three are worth reading before
+                      choosing, and the two that need a second answer say
+                      so beside themselves.
+                    {% endcomment %}
+                    <fieldset class="mb-4">
+                        <legend class="form-label fw-semibold">
+                            What to count
+                        </legend>
+
+                        {% for value, label in scopes %}
+                            <div class="form-check mb-2">
+                                <input
+                                    class="form-check-input"
+                                    type="radio"
+                                    name="scope"
+                                    id="scope{{ forloop.counter }}"
+                                    value="{{ value }}"
+                                    {% if form.scope == value %}checked{% endif %}
+                                >
+                                <label class="form-check-label" for="scope{{ forloop.counter }}">
+                                    {{ label }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </fieldset>
+
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label for="checkLocation" class="form-label fw-semibold">
+                                Location
+                            </label>
+                            <select
+                                class="form-select"
+                                id="checkLocation"
+                                name="location"
+                            >
+                                <option value="">Choose a location…</option>
+                                {% for location in locations %}
+                                    <option
+                                        value="{{ location.id }}"
+                                        {% if form.location == location.id|stringformat:"s" %}selected{% endif %}
+                                    >{{ location.name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                Only used for a location check.
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label for="checkShelf" class="form-label fw-semibold">
+                                Shelf
+                            </label>
+                            <select
+                                class="form-select"
+                                id="checkShelf"
+                                name="shelf"
+                            >
+                                <option value="">Choose a shelf…</option>
+                                {% for shelf in shelves %}
+                                    <option
+                                        value="{{ shelf.id }}"
+                                        {% if form.shelf == shelf.id|stringformat:"s" %}selected{% endif %}
+                                    >{{ shelf.location.name }} — {{ shelf.shelf_code }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">
+                                Only used for a shelf check.
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="card-footer bg-body d-flex flex-wrap gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-play-fill me-1"></i> Start Counting
+                    </button>
+                    <a
+                        href="{% url 'inventory_session_list' %}"
+                        class="btn btn-outline-secondary"
+                    >Cancel</a>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

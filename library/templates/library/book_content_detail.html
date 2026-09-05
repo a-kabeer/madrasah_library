@@ -1,93 +1,120 @@
-<!DOCTYPE html>
+{% extends layout %}
 
-<html>
+{% block title %}
+    {{ content.title }} | {{ branding.display_name }}
+{% endblock %}
 
-<head>
-    <title>Book Content Details</title>
-</head>
+{% block page_title %}
+    Book Content
+{% endblock %}
 
-<body>
+{% block breadcrumbs %}
+    <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item">
+                <a href="{% url 'book_content_list' %}">Contents</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                {{ content.title }}
+            </li>
+        </ol>
+    </nav>
+{% endblock %}
 
-{% include "library/_account_bar.html" %}
+{% block content %}
 
-    <p>
+<div class="container-fluid px-0">
 
-        {% if from_page == "volume" %}
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+        <div>
+            {% comment %}
+              `from` decides where back goes — the volume this entry belongs
+              to, or the contents list.
+            {% endcomment %}
+            {% if from_page == "volume" %}
+                <a href="{% url 'book_volume_detail' content.volume.id %}" class="small text-decoration-none">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Volume
+                </a>
+            {% else %}
+                <a href="{% url 'book_content_list' %}" class="small text-decoration-none">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Contents
+                </a>
+            {% endif %}
+            <h2 class="fw-bold mb-1 mt-1">{{ content.title }}</h2>
+            <p class="text-body-secondary mb-0">
+                {{ content.content_type|default:"Content" }}
+            </p>
+        </div>
 
-            <a href="{% url 'book_volume_detail' content.volume.id %}">
-                ← Back to Volume
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'book_content_edit' content.id %}?from={{ from_page }}"
+               class="btn btn-warning">
+                <i class="bi bi-pencil me-1"></i> Edit Content
             </a>
-
-        {% else %}
-
-            <a href="{% url 'book_content_list' %}">
-                ← Back to Contents
+            <a href="{% url 'book_content_delete' content.id %}?from={{ from_page }}"
+               class="btn btn-outline-danger">
+                <i class="bi bi-trash me-1"></i> Delete Content
             </a>
+        </div>
+    </div>
 
-        {% endif %}
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
 
-    </p>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-file-earmark-text me-2"></i>Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
 
-    <h1>Book Content Details</h1>
+                        <dt class="col-4 fw-normal text-body-secondary">Title</dt>
+                        <dd class="col-8">{{ content.title }}</dd>
 
-    <p>
-        <strong>Title:</strong>
-        {{ content.title }}
-    </p>
+                        <dt class="col-4 fw-normal text-body-secondary">Book</dt>
+                        <dd class="col-8">
+                            <a href="{% url 'book_detail' content.volume.book.id %}"
+                               class="text-decoration-none">
+                                {{ content.volume.book.title }}
+                            </a>
+                        </dd>
 
-    <p>
-        <strong>Book:</strong>
-        {{ content.volume.book.title }}
-    </p>
+                        <dt class="col-4 fw-normal text-body-secondary">Volume</dt>
+                        <dd class="col-8">
+                            <a href="{% url 'book_volume_detail' content.volume.id %}"
+                               class="text-decoration-none">
+                                Volume {{ content.volume.volume_number }}
+                                - {{ content.volume.title }}
+                            </a>
+                        </dd>
 
-    <p>
-        <strong>Volume:</strong>
-        Volume {{ content.volume.volume_number }}
-        - {{ content.volume.title }}
-    </p>
+                        <dt class="col-4 fw-normal text-body-secondary">Parent</dt>
+                        <dd class="col-8">
+                            {% if content.parent %}
+                                {{ content.parent.title }}
+                            {% else %}
+                                No Parent
+                            {% endif %}
+                        </dd>
 
-    <p>
-        <strong>Parent:</strong>
+                        <dt class="col-4 fw-normal text-body-secondary">Content Type</dt>
+                        <dd class="col-8">{{ content.content_type|default:"N/A" }}</dd>
 
-        {% if content.parent %}
-            {{ content.parent.title }}
-        {% else %}
-            No Parent
-        {% endif %}
+                        <dt class="col-4 fw-normal text-body-secondary">Page Number</dt>
+                        <dd class="col-8">{{ content.page_number|default:"N/A" }}</dd>
 
-    </p>
+                        <dt class="col-4 fw-normal text-body-secondary">Sort Order</dt>
+                        <dd class="col-8 mb-0">{{ content.sort_order }}</dd>
 
-    <p>
-        <strong>Content Type:</strong>
-        {{ content.content_type|default:"N/A" }}
-    </p>
+                    </dl>
+                </div>
+            </div>
 
-    <p>
-        <strong>Page Number:</strong>
-        {{ content.page_number|default:"N/A" }}
-    </p>
+        </div>
+    </div>
 
-    <p>
-        <strong>Sort Order:</strong>
-        {{ content.sort_order }}
-    </p>
+</div>
 
-    <hr>
-
-    <h2>Actions</h2>
-
-    <p>
-        <a href="{% url 'book_content_edit' content.id %}?from={{ from_page }}">
-            Edit Content
-        </a>
-    </p>
-
-    <p>
-        <a href="{% url 'book_content_delete' content.id %}?from={{ from_page }}">
-            Delete Content
-        </a>
-    </p>
-
-</body>
-
-</html>
+{% endblock %}

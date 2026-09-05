@@ -110,28 +110,41 @@ library/partials/book_list_results.html needs.
                             id="filterSearch"
                             name="search"
                             value="{{ search }}"
-                            placeholder="Search by book name..."
+                            placeholder="Book title or author name..."
                             style="max-width: 26rem;"
                         >
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-search me-1"></i> Search
                         </button>
                         {% comment %}
-                          Always shown, and deliberately a full navigation.
+                          Always shown, and deliberately a navigation
+                          rather than a fragment swap.
                           Whether a filter is active is decided in the
                           results fragment, which swaps on its own; testing
-                          it here would leave the button stale. Reloading is
-                          also the only thing that empties the control
-                          itself — a swap cannot reach outside its target.
+                          it here would leave the button stale. And clearing
+                          has to replace this control too, which a swap
+                          aimed at the results cannot reach.
+
+                          So it is a navigation of the whole main-content
+                          region, stated here rather than inherited: the
+                          form around it disinherits everything, which
+                          otherwise takes the shell's `hx-boost` with it and
+                          leaves this link reloading the page.
                         {% endcomment %}
-                        <a href="{% url 'book_list' %}" class="btn btn-outline-secondary">
+                        <a
+                            href="{% url 'book_list' %}"
+                            class="btn btn-outline-secondary"
+                            hx-boost="true"
+                            hx-target="#mainContent"
+                            hx-swap="innerHTML"
+                        >
                             <i class="bi bi-x-lg me-1"></i> Clear
                         </a>
                     </div>
 
                     <div class="form-text">
-                        Matches part of a book name. Press Enter to search.
-                        Use <strong>By Author</strong> or <strong>By Category</strong> to filter by those.
+                        Matches part of a title or an author name. Press
+                        Enter to search.
                     </div>
                 </form>
 
@@ -176,14 +189,27 @@ library/partials/book_list_results.html needs.
                         </button>
 
                         {% comment %}
-                          Always shown, and deliberately a full navigation.
+                          Always shown, and deliberately a navigation
+                          rather than a fragment swap.
                           Whether a filter is active is decided in the
                           results fragment, which swaps on its own; testing
-                          it here would leave the button stale. Reloading is
-                          also the only thing that empties the control
-                          itself — a swap cannot reach outside its target.
+                          it here would leave the button stale. And clearing
+                          has to replace this control too, which a swap
+                          aimed at the results cannot reach.
+
+                          So it is a navigation of the whole main-content
+                          region, stated here rather than inherited: the
+                          form around it disinherits everything, which
+                          otherwise takes the shell's `hx-boost` with it and
+                          leaves this link reloading the page.
                         {% endcomment %}
-                        <a href="?mode=author" class="btn btn-outline-secondary btn-sm">
+                        <a
+                            href="?mode=author"
+                            class="btn btn-outline-secondary btn-sm"
+                            hx-boost="true"
+                            hx-target="#mainContent"
+                            hx-swap="innerHTML"
+                        >
                             <i class="bi bi-x-lg me-1"></i> Clear
                         </a>
                     </div>
@@ -225,14 +251,27 @@ library/partials/book_list_results.html needs.
                         </button>
 
                         {% comment %}
-                          Always shown, and deliberately a full navigation.
+                          Always shown, and deliberately a navigation
+                          rather than a fragment swap.
                           Whether a filter is active is decided in the
                           results fragment, which swaps on its own; testing
-                          it here would leave the button stale. Reloading is
-                          also the only thing that empties the control
-                          itself — a swap cannot reach outside its target.
+                          it here would leave the button stale. And clearing
+                          has to replace this control too, which a swap
+                          aimed at the results cannot reach.
+
+                          So it is a navigation of the whole main-content
+                          region, stated here rather than inherited: the
+                          form around it disinherits everything, which
+                          otherwise takes the shell's `hx-boost` with it and
+                          leaves this link reloading the page.
                         {% endcomment %}
-                        <a href="?mode=category" class="btn btn-outline-secondary btn-sm">
+                        <a
+                            href="?mode=category"
+                            class="btn btn-outline-secondary btn-sm"
+                            hx-boost="true"
+                            hx-target="#mainContent"
+                            hx-swap="innerHTML"
+                        >
                             <i class="bi bi-x-lg me-1"></i> Clear
                         </a>
                     </div>
@@ -245,6 +284,122 @@ library/partials/book_list_results.html needs.
             {% endif %}
 
         </div>
+    </div>
+
+    {% comment %}
+      Secondary filters: Publisher and Availability. Both were already
+      honoured by the view and neither had a control, so this is the first
+      time either can be reached without editing the URL by hand.
+
+      Collapsed by default and kept out of the search area, because these
+      are the narrowing you reach for occasionally while the search box is
+      the one you use every time. The panel opens itself when one of them
+      is in force, so an active filter is never hidden behind it.
+
+      A real GET form with the same HTMX attributes as the search form
+      above, and for the same reasons: Enter submits, the results swap
+      without a reload, and it still filters if the script never arrives.
+    {% endcomment %}
+    <div class="mb-4">
+
+        <a
+            class="btn btn-sm btn-outline-secondary"
+            data-bs-toggle="collapse"
+            href="#bookMoreFilters"
+            role="button"
+            aria-expanded="{% if secondary_active %}true{% else %}false{% endif %}"
+            aria-controls="bookMoreFilters"
+        >
+            <i class="bi bi-funnel me-1" aria-hidden="true"></i>
+            More filters
+            {% if secondary_active %}
+                <span class="badge text-bg-primary ms-1">on</span>
+            {% endif %}
+        </a>
+
+        <div
+            class="collapse {% if secondary_active %}show{% endif %} mt-3"
+            id="bookMoreFilters"
+        >
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+
+                    <form
+                        method="get"
+                        hx-get="{% url 'book_list' %}?partial=results"
+                        hx-include="#tableState"
+                        hx-target="#bookResults"
+                        hx-swap="innerHTML show:none"
+                        hx-push-url="true"
+                        hx-indicator="#bookResults"
+                        hx-disinherit="*"
+                        class="row g-3 align-items-end"
+                    >
+                        {% comment %}
+                          Whatever the primary control has selected travels
+                          with it, so narrowing by publisher does not throw
+                          away the search or the author already in force.
+                        {% endcomment %}
+                        <input type="hidden" name="mode" value="{{ mode }}">
+                        {% if search %}
+                            <input type="hidden" name="search" value="{{ search }}">
+                        {% endif %}
+                        {% if author_id %}
+                            <input type="hidden" name="author" value="{{ author_id }}">
+                        {% endif %}
+                        {% if category_id %}
+                            <input type="hidden" name="category" value="{{ category_id }}">
+                        {% endif %}
+                        {% if show_archived %}
+                            <input type="hidden" name="archived" value="1">
+                        {% endif %}
+
+                        <div class="col-12 col-md-5">
+                            <label for="filterPublisher" class="form-label fw-semibold">
+                                Publisher
+                            </label>
+                            <select class="form-select" id="filterPublisher" name="publisher">
+                                <option value="">Any publisher</option>
+                                {% for option in publishers %}
+                                    <option
+                                        value="{{ option.id }}"
+                                        {% if publisher_id == option.id|stringformat:"s" %}selected{% endif %}
+                                    >
+                                        {{ option.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label for="filterAvailability" class="form-label fw-semibold">
+                                Availability
+                            </label>
+                            <select class="form-select" id="filterAvailability" name="availability">
+                                <option value="">Any</option>
+                                {% for option in availability_options %}
+                                    <option
+                                        value="{{ option.value }}"
+                                        {% if option.active %}selected{% endif %}
+                                    >
+                                        {{ option.label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-3 d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-funnel me-1"></i> Apply
+                            </button>
+                        </div>
+
+                    </form>
+
+                </div>
+            </div>
+        </div>
+
     </div>
 
     {% comment %}

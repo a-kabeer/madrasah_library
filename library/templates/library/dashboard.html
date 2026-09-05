@@ -1,4 +1,11 @@
-{% extends "library/base.html" %}
+{% extends layout %}
+{% comment %}
+  `layout` rather than base.html by name: an ordinary request renders the
+  whole application shell, an HTMX navigation renders only the main-content
+  region. One template, one URL, one view behind both. `{% extends %}` has
+  to be the very first tag, so this note sits under it.
+  See library/context_processors.py.
+{% endcomment %}
 
 
 {% block title %}
@@ -38,6 +45,141 @@
 
     </div>
 
+
+
+    {% comment %}
+      What needs doing today, before anything else on the page.
+
+      These three were the seventh, eighth and ninth cards in the row of
+      statistics below, which is the wrong order for the screen a librarian
+      opens in the morning: the number of publishers is never urgent and an
+      overdue book always is. Same counts, same links - `loan_list` already
+      filters on exactly these three states - just read first.
+
+      Muted at zero rather than hidden, so the row does not change shape
+      through the day, and with no explanation of a number that is nothing
+      to act on.
+    {% endcomment %}
+    <div class="row g-3 mb-4">
+
+        <div class="col-12 col-md-4">
+            <a
+                href="{% url 'loan_list' %}?status=overdue"
+                class="text-decoration-none"
+            >
+                <div class="card shadow-sm border-0 h-100
+                    {% if overdue_loans %}border-danger border-2{% endif %}">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <i
+                            class="bi bi-exclamation-triangle fs-3
+                                {% if overdue_loans %}text-danger{% else %}text-body-secondary{% endif %}"
+                            aria-hidden="true"
+                        ></i>
+                        <div>
+                            <h3 class="fw-bold mb-0 {% if overdue_loans %}text-danger{% endif %}">
+                                {{ overdue_loans }}
+                            </h3>
+                            <p class="text-body-secondary mb-0">
+                                Overdue
+                                {% if overdue_loans %}
+                                    <span class="d-block small">
+                                        Chase these first
+                                    </span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <a
+                href="{% url 'loan_list' %}?status=due_today"
+                class="text-decoration-none"
+            >
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <i
+                            class="bi bi-calendar-check fs-3 text-body-secondary"
+                            aria-hidden="true"
+                        ></i>
+                        <div>
+                            <h3 class="fw-bold mb-0">{{ due_today_loans }}</h3>
+                            <p class="text-body-secondary mb-0">Due today</p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-12 col-md-4">
+            <a
+                href="{% url 'loan_list' %}?status=active"
+                class="text-decoration-none"
+            >
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <i
+                            class="bi bi-arrow-left-right fs-3 text-body-secondary"
+                            aria-hidden="true"
+                        ></i>
+                        <div>
+                            <h3 class="fw-bold mb-0">{{ active_loans }}</h3>
+                            <p class="text-body-secondary mb-0">
+                                Currently out
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+    </div>
+
+
+    {% comment %}
+      The four things this screen is opened to do. Links into the workflows
+      that already own them - no new route, and nothing here decides who may
+      do what.
+
+      Issuing, returning and adding a borrower are open to all three roles.
+      Adding a book is not, so it appears only for the roles whose views
+      would actually answer; `can_edit` is the same question
+      `@role_required("Admin", "Librarian")` asks on `book_add` itself.
+    {% endcomment %}
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body d-flex flex-wrap gap-2">
+
+            <a href="{% url 'circulation_issue' %}" class="btn btn-primary">
+                <i class="bi bi-box-arrow-right me-1"></i> Issue Book
+            </a>
+
+            <a
+                href="{% url 'circulation_return_lookup' %}"
+                class="btn btn-success"
+            >
+                <i class="bi bi-arrow-return-left me-1"></i> Return Book
+            </a>
+
+            {% if can_edit %}
+                <a
+                    href="{% url 'book_add' %}"
+                    class="btn btn-outline-secondary"
+                >
+                    <i class="bi bi-plus-lg me-1"></i> Add Book
+                </a>
+            {% endif %}
+
+            <a
+                href="{% url 'borrower_add' %}"
+                class="btn btn-outline-secondary"
+            >
+                <i class="bi bi-person-plus me-1"></i> Add Borrower
+            </a>
+
+        </div>
+    </div>
 
 
     <!-- Statistics -->
@@ -218,90 +360,6 @@
 
 
 
-        <div class="col-12 col-sm-6 col-xl-3">
-
-            <a
-                href="{% url 'loan_list' %}?status=active"
-                class="text-decoration-none"
-            >
-
-                <div class="card shadow-sm border-0 h-100">
-
-                    <div class="card-body">
-
-                        <p class="text-body-secondary mb-2">
-                            Active Loans
-                        </p>
-
-                        <h3 class="fw-bold mb-0">
-                            {{ active_loans }}
-                        </h3>
-
-                    </div>
-
-                </div>
-
-            </a>
-
-        </div>
-
-
-
-        <div class="col-12 col-sm-6 col-xl-3">
-
-            <a
-                href="{% url 'loan_list' %}?status=overdue"
-                class="text-decoration-none"
-            >
-
-                <div class="card shadow-sm border-0 h-100">
-
-                    <div class="card-body">
-
-                        <p class="text-body-secondary mb-2">
-                            Overdue Loans
-                        </p>
-
-                        <h3 class="fw-bold mb-0">
-                            {{ overdue_loans }}
-                        </h3>
-
-                    </div>
-
-                </div>
-
-            </a>
-
-        </div>
-
-
-        <div class="col-12 col-sm-6 col-xl-3">
-
-            <a
-                href="{% url 'loan_list' %}?status=due_today"
-                class="text-decoration-none"
-            >
-
-                <div class="card shadow-sm border-0 h-100">
-
-                    <div class="card-body">
-
-                        <p class="text-body-secondary mb-2">
-                            Due Today
-                        </p>
-
-                        <h3 class="fw-bold mb-0">
-                            {{ due_today_loans }}
-                        </h3>
-
-                    </div>
-
-                </div>
-
-            </a>
-
-        </div>
-
 
         <div class="col-12 col-sm-6 col-xl-3">
 
@@ -435,7 +493,7 @@
     <div class="row g-4">
 
 
-        <!-- Recent Loans -->
+        <!-- Recently Issued -->
 
         <div class="col-12 col-xl-6">
 
@@ -447,7 +505,7 @@
 
                         <h5 class="mb-0">
 
-                            Recent Loans
+                            Recently Issued
 
                         </h5>
 
@@ -535,6 +593,94 @@
 
         </div>
 
+
+
+        <!-- Recently Returned -->
+
+        {% comment %}
+          The other half of the same story. Read from the loans, where a
+          return is recorded, rather than from the activity log - which
+          would mean reading a sentence to find out which book came back.
+        {% endcomment %}
+        <div class="col-12 col-xl-6">
+
+            <div class="card shadow-sm border-0 h-100">
+
+                <div class="card-body">
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+
+                        <h5 class="mb-0">
+
+                            Recently Returned
+
+                        </h5>
+
+                        <a
+                            href="{% url 'loan_list' %}?status=returned"
+                            class="btn btn-sm btn-outline-primary"
+                        >
+                            View All
+                        </a>
+
+                    </div>
+
+                    {% if recent_returns %}
+
+                        <div class="list-group list-group-flush">
+
+                            {% for loan in recent_returns %}
+
+                                <a
+                                    href="{% url 'loan_detail' loan.id %}"
+                                    class="list-group-item list-group-item-action px-0"
+                                >
+
+                                    <div class="fw-semibold">
+                                        {{ loan.copy.volume.book.title }}
+                                    </div>
+
+                                    <div class="small text-body-secondary">
+                                        Copy:
+                                        {{ loan.copy.copy_code }}
+                                        ·
+                                        Borrower:
+                                        {{ loan.borrower.name }}
+                                    </div>
+
+                                    <div class="small text-body-secondary mt-1">
+                                        Returned
+                                        {{ loan.return_date }}
+                                        {% if loan.returned_to %}
+                                            ·
+                                            to
+                                            {% if loan.returned_to.full_name %}
+                                                {{ loan.returned_to.full_name }}
+                                            {% else %}
+                                                {{ loan.returned_to.username }}
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+
+                                </a>
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% else %}
+
+                        <p class="text-body-secondary mb-0">
+                            Nothing has been returned yet.
+                        </p>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+        </div>
 
 
         <!-- Recent Activity -->

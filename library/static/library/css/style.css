@@ -1313,3 +1313,186 @@ body {
     }
 
 }
+
+/* =========================================================================
+   PRINTING
+
+   The application is a screen: a sidebar, a topbar, buttons that do
+   nothing on paper. What gets printed is the content, and only the parts
+   of it worth the ink.
+
+   Kept general rather than written for one page, because the label sheet
+   is not the last thing anyone will want to print, and a second copy of
+   these rules would be a second thing to keep in step.
+   ========================================================================= */
+
+/* On screen, the paper-only notes are not there. */
+.print-only {
+    display: none;
+}
+
+@media print {
+
+    /* Chrome, in both senses. None of it is on the paper. */
+    .sidebar,
+    .sidebar-overlay,
+    .topbar,
+    .app-footer,
+    .toast-container,
+    .modal,
+    .print-hidden {
+        display: none !important;
+    }
+
+    .print-only {
+        display: block;
+    }
+
+    /* The layout is built for a sidebar that is no longer there. */
+    .app-wrapper,
+    .main-area,
+    .main-content {
+        display: block;
+        margin: 0;
+        padding: 0;
+        width: auto;
+        max-width: none;
+        overflow: visible;
+    }
+
+    /* Printers do not render backgrounds by default, and a page that
+       depends on them comes out unreadable. Black on white, and let the
+       borders do the work. */
+    body {
+        background: #fff;
+        color: #000;
+    }
+
+    a {
+        text-decoration: none;
+        color: inherit;
+    }
+
+    /* A link's href is useful on paper for a report; on a label it is
+       noise. Neither prints it, so this only removes Bootstrap's. */
+    a[href]::after {
+        content: none !important;
+    }
+
+    @page {
+        size: A4;
+        margin: 8mm;
+    }
+}
+
+
+/* =========================================================================
+   COPY LABELS
+
+   A sheet of 24 to an A4 page: 63.5 x 33.9 mm, three across, eight down,
+   which is the size the common label stationery comes in.
+
+   Sized in millimetres throughout, because the one thing a label has to
+   get right is coming off the printer the size it claims. On screen the
+   same grid shows what will print, at the same physical size.
+   ========================================================================= */
+
+.label-sheet {
+    display: grid;
+    grid-template-columns: repeat(3, 63.5mm);
+    gap: 0;
+    justify-content: center;
+}
+
+.label {
+    /* The full cell, so the grid lines up with die-cut stationery. */
+    box-sizing: border-box;
+    width: 63.5mm;
+    height: 33.9mm;
+
+    padding: 2mm 2.5mm;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+
+    overflow: hidden;
+
+    /* Guides for plain paper. They disappear on the sheet below. */
+    border: 1px dashed var(--bs-border-color, #dee2e6);
+
+    color: #000;
+    background: #fff;
+}
+
+.label-org {
+    font-size: 6pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.label-title {
+    font-size: 8pt;
+    font-weight: 700;
+    line-height: 1.15;
+
+    /* Two lines at most: a long title must not push the barcode off the
+       label. */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.label-meta {
+    font-size: 6pt;
+    line-height: 1.2;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.label-barcode {
+    display: block;
+    width: 100%;
+    height: 9mm;
+}
+
+.label-code {
+    font-family: var(--bs-font-monospace, monospace);
+    font-size: 7.5pt;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-align: center;
+    line-height: 1;
+}
+
+.label-footer {
+    margin-top: 4mm;
+    font-size: 7pt;
+    text-align: center;
+}
+
+@media print {
+
+    /* Die-cut stationery brings its own edges. */
+    .label {
+        border: none;
+    }
+
+    /* Never half a label at the foot of a page. */
+    .label {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .label-sheet {
+        justify-content: start;
+    }
+}

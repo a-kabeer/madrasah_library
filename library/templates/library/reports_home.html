@@ -1,0 +1,52 @@
+{% extends layout %}
+
+{% block title %}
+    Reports | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    Reports
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-0">
+
+    <div class="mb-4">
+        <h2 class="fw-bold mb-1">Reports</h2>
+        <p class="text-body-secondary mb-0">
+            Each one reads the same records the rest of the application
+            works from, so nothing here can disagree with the page it
+            summarises.
+        </p>
+    </div>
+
+    {% comment %}
+      Cards rather than six sidebar entries, and rather than one page with
+      every table on it: a report is something you go to deliberately, and
+      the daily numbers are already on the dashboard.
+    {% endcomment %}
+    <div class="row g-3">
+        {% for report in reports %}
+            <div class="col-12 col-md-6 col-xl-4">
+                <a href="{{ report.url }}" class="text-decoration-none">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body d-flex gap-3">
+                            <i class="bi {{ report.icon }} fs-3 text-body-secondary"
+                               aria-hidden="true"></i>
+                            <div>
+                                <h5 class="fw-bold mb-1">{{ report.title }}</h5>
+                                <p class="text-body-secondary small mb-0">
+                                    {{ report.blurb }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+{% endblock %}

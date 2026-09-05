@@ -1,4 +1,4 @@
-{% extends "library/base.html" %}
+{% extends layout %}
 
 {% block title %}
     Books | {{ branding.display_name }}
@@ -32,7 +32,9 @@
         <a href="{% url 'book_import' %}" class="btn btn-outline-primary">
             <i class="bi bi-upload me-1"></i> Import
         </a>
-        <a href="{% url 'book_export' %}?{{ pagination_query }}" class="btn btn-outline-secondary">
+        {# A file, not a page: a background fetch would swap a
+           spreadsheet into the layout. #}
+        <a href="{% url 'book_export' %}" hx-boost="false" class="btn btn-outline-secondary">
             <i class="bi bi-download me-1"></i> Export
         </a>
         <a

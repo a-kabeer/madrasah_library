@@ -1,0 +1,104 @@
+{% extends layout %}
+
+{% block title %}
+    Popular Books | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    Popular Books
+{% endblock %}
+
+{% block breadcrumbs %}
+    <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item">
+                <a href="{% url 'reports_home' %}">Reports</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Popular Books</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-0">
+
+    {% include "library/partials/report_header.html" with report_title="Popular Books" report_blurb="Ranked by how often they were actually lent." %}
+
+    {% comment %}
+      The filters. A plain GET form, so every state of this report is a URL
+      - which is what makes it bookmarkable, shareable, and the same thing
+      the CSV export reads. Hidden when printing: the values that were
+      applied are already in the line above, and the controls that set them
+      are not what anyone wants on paper.
+    {% endcomment %}
+    <form method="get" class="card shadow-sm border-0 mb-4 print-hidden">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+
+                <div class="col-6 col-md-3">
+                    <label for="startDate" class="form-label small mb-1">From</label>
+                    <input type="date" class="form-control form-control-sm"
+                           id="startDate" name="start" value="{{ start }}">
+                </div>
+                <div class="col-6 col-md-3">
+                    <label for="endDate" class="form-label small mb-1">To</label>
+                    <input type="date" class="form-control form-control-sm"
+                           id="endDate" name="end" value="{{ end }}">
+                </div>
+                <div class="col-12 col-md-auto">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-funnel me-1"></i> Apply
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% comment %}
+      Archived books are here on purpose. Taking a book out of the
+      catalogue does not unlend it, and a history that dropped last year's
+      most borrowed title the day it was archived would mislead.
+    {% endcomment %}
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="table-secondary">
+                    <tr>
+                        <th style="width: 4rem;">#</th>
+                        <th>Book</th><th>Author</th>
+                        <th>Times issued</th><th>Copies available</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for book in books %}
+                        <tr>
+                            <td class="text-body-secondary">{{ forloop.counter }}</td>
+                            <td>
+                                <a href="{% url 'book_detail' book.id %}"
+                                   class="text-decoration-none">{{ book.title }}</a>
+                                {% if book.archived_at %}
+                                    <span class="badge text-bg-secondary ms-1">Archived</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-body-secondary">
+                                {% if book.author %}{{ book.author.name }}{% else %}-{% endif %}
+                            </td>
+                            <td class="fw-semibold">{{ book.times_issued }}</td>
+                            <td class="text-body-secondary">{{ book.copies_available }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-body-secondary py-4">
+                                Nothing was issued in this period.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

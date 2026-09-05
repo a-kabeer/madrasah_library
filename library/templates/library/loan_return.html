@@ -1,4 +1,4 @@
-{% extends "library/base.html" %}
+{% extends layout %}
 
 {% block title %}Return Book | {{ branding.display_name }}{% endblock %}
 
@@ -28,6 +28,31 @@
             </div>
             <a href="{% url 'loan_list' %}" class="btn btn-outline-secondary">Back to Loans</a>
             {% else %}
+
+            {% comment %}
+              Somebody is waiting for this book. Shown so whoever is taking
+              it back knows before they shelve it - and that is all. No copy
+              is assigned, nobody is messaged, and the return below works
+              exactly as it did.
+            {% endcomment %}
+            {% if waiting_front %}
+                <div class="alert alert-info d-flex align-items-start gap-2" role="alert">
+                    <i class="bi bi-bookmark-star mt-1" aria-hidden="true"></i>
+                    <div>
+                        <strong>
+                            {{ waiting_count }}
+                            {% if waiting_count == 1 %}person is{% else %}people are{% endif %}
+                            waiting for this book.
+                        </strong>
+                        <span class="d-block small">
+                            {{ waiting_front.borrower.name }} asked first, on
+                            {{ waiting_front.created_at|date:"j M Y" }}. This
+                            copy is not being set aside for them — take the
+                            book back as usual and issue it when they come in.
+                        </span>
+                    </div>
+                </div>
+            {% endif %}
 
             {% if error_message %}
             <div class="alert alert-danger" role="alert">
@@ -77,14 +102,15 @@
                             <label for="return_date" class="form-label fw-semibold">Return Date</label>
                             <input type="date" class="form-control" id="return_date" name="return_date" value="{% now 'Y-m-d' %}" required>
                         </div>
+                        {% comment %}
+                          Stated, not chosen — the same rule the issue page
+                          follows for "Issued By".
+                        {% endcomment %}
                         <div class="mb-3">
-                            <label for="returned_to" class="form-label fw-semibold">Returned To</label>
-                            <select class="form-select" id="returned_to" name="returned_to">
-                                <option value="">— Select user —</option>
-                                {% for user in users %}
-                                <option value="{{ user.id }}">{{ user.full_name|default:user.username }}</option>
-                                {% endfor %}
-                            </select>
+                            <label class="form-label fw-semibold">Returned To</label>
+                            <p class="form-control-plaintext mb-0">
+                                {{ request.user.full_name|default:request.user.username }}
+                            </p>
                         </div>
                         <div class="mb-3">
                             <label for="notes" class="form-label fw-semibold">Notes</label>

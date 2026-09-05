@@ -62,7 +62,44 @@ and history behaviour are inherited from #bookResults in book_list.html.
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
 
         <p class="text-body-secondary mb-0">
-            Found <strong>{{ paginator.count }}</strong> book(s).
+            Found <strong>{{ paginator.count }}</strong>
+            {% if show_archived %}archived {% endif %}book(s).
+
+            {% comment %}
+              The only way in and out of the archive. A plain link rather
+              than a control of its own: archived books are a place you
+              visit, not a filter you combine, and the search, filters,
+              sorting and paging all keep working while you are there.
+            {% endcomment %}
+            {% if show_archived %}
+                {# Inside the results container, which declares the target and
+                   swap for the fragment requests around it - inherited by
+                   anything within, this link included. It is going somewhere
+                   else, so it names the shell's region instead. #}
+                <a
+                    href="{{ catalogue_url }}"
+                    class="ms-2 text-decoration-none"
+                    hx-target="#mainContent"
+                    hx-swap="innerHTML"
+                >
+                    <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>
+                    Back to the catalogue
+                </a>
+            {% elif archived_total %}
+                {# Inside the results container, which declares the target and
+                   swap for the fragment requests around it - inherited by
+                   anything within, this link included. It is going somewhere
+                   else, so it names the shell's region instead. #}
+                <a
+                    href="{{ archived_url }}"
+                    class="ms-2 text-decoration-none"
+                    hx-target="#mainContent"
+                    hx-swap="innerHTML"
+                >
+                    <i class="bi bi-archive me-1" aria-hidden="true"></i>
+                    {{ archived_total }} archived
+                </a>
+            {% endif %}
         </p>
 
         <div class="d-flex align-items-center gap-2">
@@ -126,6 +163,15 @@ and history behaviour are inherited from #bookResults in book_list.html.
                             </th>
                         {% endfor %}
 
+                        {% comment %}
+                          Not sortable: the counts are aggregates over a
+                          join, and offering to sort by them would mean
+                          ordering the whole catalogue by a computed column
+                          on every click. The Availability filter is the
+                          way to narrow by it.
+                        {% endcomment %}
+                        <th>Copies</th>
+
                         <th class="text-end">Actions</th>
 
                     </tr>
@@ -156,6 +202,42 @@ and history behaviour are inherited from #bookResults in book_list.html.
                             <td class="fw-semibold">{{ book.title }}</td>
 
                             <td>{{ book.author.name }}</td>
+
+                            {% comment %}
+                              Annotated on the list's own query, so this
+                              costs no query per row. Only the numbers that
+                              say something are shown: a book with nothing
+                              available says so once rather than printing
+                              three zeroes, and the total only appears when
+                              it differs from what is on the shelf — which
+                              is the case worth a second look.
+                            {% endcomment %}
+                            <td>
+                                {% if book.total_copies %}
+                                    {% if book.available_copies %}
+                                        <span class="badge text-bg-success">
+                                            {{ book.available_copies }} available
+                                        </span>
+                                    {% endif %}
+                                    {% if book.issued_copies %}
+                                        <span class="badge text-bg-info">
+                                            {{ book.issued_copies }} out
+                                        </span>
+                                    {% endif %}
+                                    {% if not book.available_copies and not book.issued_copies %}
+                                        <span class="badge text-bg-secondary">
+                                            None available
+                                        </span>
+                                    {% endif %}
+                                    {% if book.total_copies != book.available_copies %}
+                                        <span class="d-block small text-body-secondary">
+                                            {{ book.total_copies }} in all
+                                        </span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-body-secondary">No copies</span>
+                                {% endif %}
+                            </td>
 
                             <td class="text-end">
                                 {% comment %}
@@ -211,7 +293,7 @@ and history behaviour are inherited from #bookResults in book_list.html.
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="3" class="text-center text-body-secondary py-4">
+                            <td colspan="4" class="text-center text-body-secondary py-4">
                                 No books found.
                             </td>
                         </tr>

@@ -1,76 +1,127 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Add Book Volume</title>
-</head>
-<body>
+{% extends layout %}
 
-{% include "library/_account_bar.html" %}
+{% block title %}
+    Add Book Volume | {{ branding.display_name }}
+{% endblock %}
 
-<h1>Add Book Volume</h1>
+{% block page_title %}
+    Add Book Volume
+{% endblock %}
 
-{% if error %}
-    <p style="color: red;">
-        {{ error }}
-    </p>
-{% endif %}
+{% block content %}
 
-{% if selected_book_id %}
+<div class="container-fluid px-0">
 
-    <a href="{% url 'book_detail' selected_book_id %}">
-        ← Back to Book
-    </a>
+    <div class="mb-3">
+        {% comment %}
+          Back where the librarian came from: a book's own page when the
+          volume is being added to that book, the volume list otherwise.
+        {% endcomment %}
+        {% if selected_book %}
+            <a href="{% url 'book_detail' selected_book.id %}" class="small text-decoration-none">
+                <i class="bi bi-arrow-left me-1"></i> Back to Book
+            </a>
+        {% else %}
+            <a href="{% url 'book_volume_list' %}" class="small text-decoration-none">
+                <i class="bi bi-arrow-left me-1"></i> Back to Volumes
+            </a>
+        {% endif %}
+    </div>
 
-{% else %}
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
 
-    <a href="{% url 'book_volume_list' %}">
-        ← Back to Volumes
-    </a>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-plus-square me-2"></i>Add Book Volume
+                    </h5>
+                </div>
+                <div class="card-body">
 
-{% endif %}
+                    {% if error %}
+                        <div class="alert alert-danger d-flex align-items-start" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2 mt-1" aria-hidden="true"></i>
+                            <div>{{ error }}</div>
+                        </div>
+                    {% endif %}
 
-<form method="post">
-    {% csrf_token %}
+                    <form method="post">
+                        {% csrf_token %}
 
-    <label>Book:</label>
+                        <div class="row g-3">
 
-<select name="book" required>
+                            <div class="col-12">
+                                <label for="book" class="form-label fw-semibold">
+                                    Book <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" name="book" id="book" required>
+                                    <option value="">Select Book</option>
+                                    {% for book in books %}
+                                        <option
+                                            value="{{ book.id }}"
+                                            {% if selected_book_id == book.id|stringformat:"s" %}selected{% endif %}
+                                        >
+                                            {{ book.title }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
 
-    <option value="">Select Book</option>
+                            <div class="col-12 col-sm-4">
+                                <label for="volume_number" class="form-label fw-semibold">
+                                    Volume Number <span class="text-danger">*</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="volume_number"
+                                    name="volume_number"
+                                    min="1"
+                                    value="{{ volume_number }}"
+                                    required
+                                >
+                            </div>
 
-    {% for book in books %}
+                            <div class="col-12 col-sm-8">
+                                <label for="title" class="form-label fw-semibold">
+                                    Title <span class="text-danger">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="title"
+                                    name="title"
+                                    value="{{ title }}"
+                                    required
+                                >
+                            </div>
 
-        <option
-            value="{{ book.id }}"
-            {% if selected_book_id == book.id|stringformat:"s" %}
-                selected
-            {% endif %}
-        >
-            {{ book.title }}
-        </option>
+                        </div>
 
-    {% endfor %}
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Add Volume
+                            </button>
+                            {% if selected_book %}
+                                <a href="{% url 'book_detail' selected_book.id %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-lg me-1"></i> Cancel
+                                </a>
+                            {% else %}
+                                <a href="{% url 'book_volume_list' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-lg me-1"></i> Cancel
+                                </a>
+                            {% endif %}
+                        </div>
 
-</select>
+                    </form>
 
-    <br><br>
+                </div>
+            </div>
 
-    <label>Volume Number:</label>
-    <input type="number" name="volume_number" min="1" value="{{ volume_number }}" required>
+        </div>
+    </div>
 
-    <br><br>
+</div>
 
-    <label>Title:</label>
-    <input type="text" name="title" value="{{ title }}" required>
-
-    <br><br>
-
-    <button type="submit">
-        Add Volume
-    </button>
-</form>
-
-
-
-</body>
-</html>
+{% endblock %}

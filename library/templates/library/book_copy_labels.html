@@ -1,0 +1,152 @@
+{% extends layout %}
+
+{% block title %}
+    Copy Labels | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    Copy Labels
+{% endblock %}
+
+{% block breadcrumbs %}
+    <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item">
+                <a href="{% url 'book_copy_list' %}">Book Copies</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Labels</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-0">
+
+    {% comment %}
+      Everything in here is for the screen and goes away when the sheet is
+      printed - see `.print-hidden` in style.css. What survives is the
+      sheet below and nothing else: no sidebar, no topbar, no buttons.
+    {% endcomment %}
+    <div class="print-hidden">
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <div>
+                <h2 class="fw-bold mb-1">Copy Labels</h2>
+                <p class="text-body-secondary mb-0">
+                    {% if shown == 1 %}
+                        One label, ready to print.
+                    {% else %}
+                        {{ shown }} labels, ready to print.
+                    {% endif %}
+                    Each carries the copy code the scanner already reads.
+                </p>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+                {% comment %}
+                  The browser's own print dialog. Nothing is generated
+                  server-side and no file is produced: the page is the
+                  document, which is why the paper size and the printer are
+                  the librarian's to choose.
+                {% endcomment %}
+                <button
+                    type="button"
+                    class="btn btn-primary"
+                    onclick="window.print()"
+                >
+                    <i class="bi bi-printer me-1"></i> Print
+                </button>
+
+                <a
+                    href="{% url 'book_copy_list' %}"
+                    class="btn btn-outline-secondary"
+                >
+                    Back to copies
+                </a>
+            </div>
+        </div>
+
+        {% if capped %}
+            <div class="alert alert-warning" role="alert">
+                <strong>{{ total }} copies matched, and the first
+                {{ limit }} are here.</strong>
+                <span class="d-block small">
+                    A sheet longer than that is not something anyone is
+                    about to print. Narrow the filters, or tick the copies
+                    you want, and come back.
+                </span>
+            </div>
+        {% endif %}
+
+        {% if not copies %}
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center text-body-secondary py-5">
+                    <i class="bi bi-upc fs-1 d-block mb-2" aria-hidden="true"></i>
+                    <p class="mb-1 fw-semibold">Nothing to print.</p>
+                    <p class="mb-0 small">
+                        Tick some copies on the list, or open a copy and
+                        print its label from there.
+                    </p>
+                </div>
+            </div>
+        {% endif %}
+
+    </div>
+
+    {% comment %}
+      The sheet. A grid of fixed-size labels, sized in millimetres so it
+      comes off the printer the size it says rather than the size the
+      screen happened to be: 63.5 x 33.9 mm, three across and eight down,
+      which is the common 24-per-A4 sheet.
+
+      `break-inside: avoid` on each label is what keeps one from being cut
+      in half by a page break.
+    {% endcomment %}
+    <div class="label-sheet">
+
+        {% for copy in copies %}
+            <div class="label">
+
+                <div class="label-org">{{ branding.display_name }}</div>
+
+                <div class="label-title">{{ copy.volume.book.title }}</div>
+
+                <div class="label-meta">
+                    {% if copy.volume.book.author %}
+                        {{ copy.volume.book.author.name }}
+                    {% endif %}
+                    {% if copy.volume.volume_number != 1 or copy.volume.title %}
+                        · Vol {{ copy.volume.volume_number }}{% if copy.volume.title %} {{ copy.volume.title }}{% endif %}
+                    {% endif %}
+                </div>
+
+                {% comment %}
+                  The barcode encodes `copy.copy_code` exactly, and the code
+                  is printed underneath it in plain text - so a label whose
+                  bars will not read can still be typed in, which is the
+                  path the return lookup already supports.
+                {% endcomment %}
+                {% if copy.label_barcode %}
+                    {{ copy.label_barcode }}
+                {% endif %}
+
+                <div class="label-code">{{ copy.copy_code }}</div>
+
+            </div>
+        {% endfor %}
+
+    </div>
+
+    {% comment %}
+      Only on paper: who printed the sheet and when, so a stack of them on
+      a desk can be told apart.
+    {% endcomment %}
+    <p class="print-only label-footer">
+        {{ branding.display_name }} — {{ shown }} label{{ shown|pluralize }},
+        printed {{ printed_on|date:"j M Y, H:i" }}
+    </p>
+
+</div>
+
+{% endblock %}

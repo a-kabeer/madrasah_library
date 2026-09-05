@@ -1,13 +1,22 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Delete Loan</title>
-</head>
+{% extends layout %}
 
-<body>
+{% block title %}
+    Delete Loan | {{ branding.display_name }}
+{% endblock %}
 
-{% include "library/_account_bar.html" %}
+{% block page_title %}
+    Delete Loan
+{% endblock %}
 
+{% block content %}
+
+{% comment %}
+  Inside the shared shell so this page can be reached without a full
+  reload, but otherwise as it was: the markup below is the same one this
+  template always had. Restyling it to match the rest of the app is a
+  separate job.
+{% endcomment %}
+<div class="container-fluid px-0 legacy-page">
     <p>
         {% if next_url %}
             <a href="{{ next_url }}">
@@ -79,6 +88,6 @@
         {% endif %}
 
     </form>
+</div>
 
-</body>
-</html>
+{% endblock %}

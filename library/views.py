@@ -1,3 +1,5 @@
+from collections import namedtuple
+import csv
 from datetime import date, timedelta
 import io
 import json
@@ -30,6 +32,9 @@ from django.db.models import Q
 
 from .models import (
     Author,
+    InventoryScan,
+    InventorySession,
+    Reservation,
     Category,
     Publisher,
     Location,
@@ -45,12 +50,34 @@ from .models import (
     OrganizationSettings,
     validate_hex_color,
 )
+from django.utils.safestring import mark_safe
+
+from . import barcode
 from . import excel as book_excel
-from .context_processors import clear_branding_cache
+from . import history
+from . import inventory
+from . import policy
+from . import reports
+from . import reservations
+from .context_processors import clear_branding_cache, is_main_nav_request
 from .permissions import can_edit_library, role_required
 
 PAGE_SIZE = 25
-DEFAULT_LOAN_PERIOD_DAYS = 14
+
+# Re-exported so the one place outside the web layer that needs it - the
+# development seed command - keeps working. The rule itself lives in
+# library/policy.py now, along with the three that used to live nowhere.
+DEFAULT_LOAN_PERIOD_DAYS = policy.DEFAULT_LOAN_PERIOD_DAYS
+
+
+class PolicyRefused(Exception):
+    """A borrowing rule said no.
+
+    Raised inside the transaction that would have written the loan, so the
+    refusal and the rollback are the same event. Separate from
+    IntegrityError, which reports a copy that slipped away rather than a
+    rule that was applied - two different things to tell the librarian.
+    """
 
 # Copy codes. The prefix is the one already used by the copies in this
 # library (LIB-000001 ...), so generated codes continue the existing
@@ -101,6 +128,24 @@ COPY_STATE_FILTERS = (
 # Statuses that live in the column rather than being worked out.
 COPY_STORED_STATES = ("lost", "damaged", "missing", "transferred")
 
+# The order the book detail page tallies copy states in, and the three it
+# shows even when the count is nought - "how many can I lend out" is the
+# question the summary exists to answer, and a blank where "Available"
+# should be answers it too.
+COPY_STATE_ORDER = (
+    "available",
+    "issued",
+    "overdue",
+    "unshelved",
+) + COPY_STORED_STATES
+
+COPY_STATE_ALWAYS_SHOWN = ("available", "issued", "overdue")
+
+# The panes on the book detail page. `tab` only marks one active.
+BOOK_DETAIL_TABS = (
+    "overview", "volumes", "copies", "contents", "loans", "reservations",
+)
+
 COPY_SORT_FIELDS = {
     "code": "copy_code",
     "book": "volume__book__title",
@@ -138,6 +183,17 @@ BOOK_SORT_FIELDS = {
 }
 
 BOOK_SORT_DEFAULT = "title"
+
+# What the book list's Availability filter offers, read off the copy counts
+# the list already annotates. Derived from the same rules the copy list
+# applies, so the two cannot disagree.
+BOOK_AVAILABILITY_FILTERS = ("available", "issued", "none")
+
+BOOK_AVAILABILITY_LABELS = {
+    "available": "Available now",
+    "issued": "Something out",
+    "none": "No copies",
+}
 
 # Book-list browsing modes. Each one decides which filter control is shown;
 # the queryset itself applies whatever filter parameters are present.
@@ -215,6 +271,7 @@ ACTIVITY_LOG_DETAIL_ROUTES = {
     "Loan": "loan_detail",
     "Location": "location_detail",
     "Publisher": "publisher_detail",
+    "Reservation": "book_detail",
     "Shelf": "shelf_detail",
 }
 
@@ -390,9 +447,14 @@ def selected_name(model, pk):
     The searchable dropdowns submit an id but display a name, so any page
     that redisplays a combobox needs the name back — whether it is a form
     bouncing on a validation error or a list showing its active filters.
+
+    Anything that is not a plain id answers "" rather than reaching the
+    database. `id=` on an integer column raises ValueError for a value like
+    "abc", which is a 500 for what is only a redisplayed label — and the
+    value can come straight from a query string or a posted form.
     """
 
-    if not pk:
+    if not pk or not str(pk).isdigit():
         return ""
 
     obj = model.objects.filter(id=pk).first()
@@ -513,7 +575,17 @@ def book_list_fragment(request):
     Gated on the HX-Request header as well as the parameter — the same
     belt-and-braces as `is_modal_request`. Without the parameter one URL
     would return several different bodies, which a cache could then mix up.
+
+    A navigation wins over the parameter. The container these fragments are
+    swapped into declares `partial` once, for the sort, filter and paging
+    links inside it, and htmx hands that down to everything within -
+    including a plain link to another page, now that the shell boosts those.
+    Asking to replace the main-content region is asking for a page, so that
+    is what such a request gets, whatever it inherited on the way.
     """
+
+    if is_main_nav_request(request):
+        return ""
 
     if request.headers.get("HX-Request") != "true":
         return ""
@@ -1201,15 +1273,111 @@ def theme_set(request):
     )
 
 
-#Organization branding
+def read_policy_form(request, branding):
+    """Apply the posted borrowing rules to `branding`, or say what is wrong.
+
+    Blank means "not configured", which is stored as NULL and read back as
+    the default - so clearing a field is how a library goes back to the
+    behaviour it had before it set one, and there is no magic number to
+    remember.
+    """
+
+    def whole_number(field, label, low, high):
+
+        raw = (request.POST.get(field) or "").strip()
+
+        if not raw:
+            return None, None
+
+        if not raw.isdigit():
+            return None, "%s has to be a whole number." % label
+
+        value = int(raw)
+
+        if not low <= value <= high:
+            return None, "%s has to be between %d and %d." % (
+                label, low, high
+            )
+
+        return value, None
+
+    fields = (
+        (
+            "loan_period_days",
+            "Loan period",
+            policy.LOAN_PERIOD_MIN,
+            policy.LOAN_PERIOD_MAX,
+        ),
+        (
+            "max_active_loans",
+            "Maximum books per borrower",
+            policy.LIMIT_MIN,
+            policy.LIMIT_MAX,
+        ),
+        (
+            "max_renewals",
+            "Renewal limit",
+            policy.LIMIT_MIN,
+            policy.LIMIT_MAX,
+        ),
+    )
+
+    values = {}
+
+    for field, label, low, high in fields:
+
+        value, problem = whole_number(field, label, low, high)
+
+        if problem:
+            return problem
+
+        values[field] = value
+
+    for field, value in values.items():
+        setattr(branding, field, value)
+
+    branding.block_when_overdue = (
+        request.POST.get("block_when_overdue") == "on"
+    )
+
+    return None
+
+
+#Organization branding and borrowing policy
 @role_required("Admin")
 def branding_settings(request):
 
     branding = OrganizationSettings.load()
 
     error = None
+    policy_error = None
 
-    if request.method == "POST":
+    # Two forms on one page, told apart by a hidden field. Separate because
+    # they are separate state: saving the colours must not blank a lending
+    # rule, and the branding form posts files while this one does not.
+    if request.method == "POST" and request.POST.get("section") == "policy":
+
+        policy_error = read_policy_form(request, branding)
+
+        if policy_error is None:
+
+            branding.save()
+
+            clear_branding_cache()
+
+            create_activity_log(
+                user=request.user,
+                action="UPDATE",
+                entity_type="OrganizationSettings",
+                entity_id=branding.id,
+                description="Borrowing policy updated",
+            )
+
+            messages.success(request, "Borrowing policy updated.")
+
+            return redirect("branding_settings")
+
+    elif request.method == "POST":
 
         name = request.POST.get("name", "").strip()
         primary_color = request.POST.get("primary_color", "").strip()
@@ -1326,8 +1494,888 @@ def branding_settings(request):
         {
             "settings_obj": branding,
             "error": error,
+            "policy_error": policy_error,
+            "policy_defaults": {
+                "loan_period_days": policy.DEFAULT_LOAN_PERIOD_DAYS,
+                "loan_period_min": policy.LOAN_PERIOD_MIN,
+                "loan_period_max": policy.LOAN_PERIOD_MAX,
+                "limit_min": policy.LIMIT_MIN,
+                "limit_max": policy.LIMIT_MAX,
+            },
         }
     )
+
+
+# ==========================================================================
+# STOCK CHECK
+#
+# Counting the shelves against the record. Everything here reports; nothing
+# here changes a copy. See library/inventory.py for why.
+# ==========================================================================
+
+
+@role_required("Admin", "Librarian")
+def inventory_session_list(request):
+    """Every stock check, open ones first.
+
+    The counts on each row are annotated, not looped over: a page listing
+    twenty sessions makes one query for them, not twenty.
+    """
+
+    sessions = InventorySession.objects.select_related(
+        "started_by", "location", "shelf__location"
+    ).annotate(
+        found_count=models.Count(
+            "scans",
+            filter=models.Q(scans__outcome=InventoryScan.OUTCOME_FOUND),
+            distinct=True,
+        ),
+    ).order_by("status", "-started_at", "-id")
+
+    paginator = Paginator(sessions, PAGE_SIZE)
+    page = paginator.get_page(request.GET.get("page"))
+
+    return render(
+        request,
+        "library/inventory_session_list.html",
+        {
+            "sessions": page,
+            "paginator": paginator,
+            "pagination_query": query_with(request, page=None),
+            "open_count": InventorySession.objects.filter(
+                status=InventorySession.STATUS_IN_PROGRESS
+            ).count(),
+        },
+    )
+
+
+@role_required("Admin", "Librarian")
+def inventory_session_start(request):
+    """Begin a stock check over a chosen scope."""
+
+    error = None
+
+    form = {
+        "name": "",
+        "scope": InventorySession.SCOPE_LIBRARY,
+        "location": "",
+        "shelf": "",
+    }
+
+    if request.method == "POST":
+
+        form["name"] = request.POST.get("name", "").strip()
+        form["scope"] = request.POST.get("scope", "").strip()
+        form["location"] = request.POST.get("location", "").strip()
+        form["shelf"] = request.POST.get("shelf", "").strip()
+
+        location = None
+        shelf = None
+
+        if not form["name"]:
+            error = "Give the stock check a name, so it can be told apart."
+
+        elif form["scope"] not in dict(InventorySession.SCOPE_CHOICES):
+            error = "Choose what this stock check covers."
+
+        elif form["scope"] == InventorySession.SCOPE_LOCATION:
+
+            location = Location.objects.filter(
+                id=form["location"]
+            ).first() if form["location"].isdigit() else None
+
+            if location is None:
+                error = "Choose the location to check."
+
+        elif form["scope"] == InventorySession.SCOPE_SHELF:
+
+            shelf = Shelf.objects.select_related("location").filter(
+                id=form["shelf"]
+            ).first() if form["shelf"].isdigit() else None
+
+            if shelf is None:
+                error = "Choose the shelf to check."
+
+        if error is None:
+
+            session = InventorySession.objects.create(
+                name=form["name"],
+                scope=form["scope"],
+                location=location,
+                shelf=shelf,
+                status=InventorySession.STATUS_IN_PROGRESS,
+                started_by=request.user,
+                started_at=timezone.now(),
+            )
+
+            create_activity_log(
+                user=request.user,
+                action="CREATE",
+                entity_type="InventorySession",
+                entity_id=session.id,
+                description=(
+                    "Stock check started: %s (%s)"
+                    % (session.name, session.scope_label)
+                ),
+            )
+
+            return redirect("inventory_session_detail", session_id=session.id)
+
+    return render(
+        request,
+        "library/inventory_session_start.html",
+        {
+            "form": form,
+            "error": error,
+            "scopes": InventorySession.SCOPE_CHOICES,
+            "locations": Location.objects.order_by("name"),
+            "shelves": Shelf.objects.select_related(
+                "location"
+            ).order_by("location__name", "shelf_code"),
+        },
+    )
+
+
+@role_required("Admin", "Librarian")
+def inventory_session_detail(request, session_id):
+    """An open session's counting screen, or a finished one's report.
+
+    One template for both, because they describe the same thing at two
+    points in its life and splitting them would mean keeping two accounts
+    of what a session is in step.
+    """
+
+    session = get_object_or_404(
+        InventorySession.objects.select_related(
+            "started_by", "location", "shelf__location"
+        ),
+        id=session_id,
+    )
+
+    counts = inventory.session_counts(session)
+
+    # The lists are worth the queries only once there is something to say,
+    # which for a session still being counted is not yet.
+    missing = []
+    outside = []
+    duplicates = []
+
+    if not session.is_open:
+        missing = inventory.missing_copies(session)
+        outside = inventory.session_scans(
+            session, InventoryScan.OUTCOME_OUTSIDE
+        )
+        duplicates = inventory.session_scans(
+            session, InventoryScan.OUTCOME_DUPLICATE
+        )
+
+    return render(
+        request,
+        "library/inventory_session_detail.html",
+        {
+            "session": session,
+            "counts": counts,
+            "missing": missing,
+            "outside": outside,
+            "duplicates": duplicates,
+            "recent": inventory.session_scans(
+                session, InventoryScan.OUTCOME_FOUND
+            )[:10] if session.is_open else [],
+        },
+    )
+
+
+@role_required("Admin", "Librarian")
+def inventory_session_scan(request, session_id):
+    """Record one code read during a stock check.
+
+    A POST and a redirect, so a reload does not re-scan the last book and
+    the field comes back empty for the next one. The outcome is reported as
+    a message, which is what the librarian reads between books.
+    """
+
+    session = get_object_or_404(InventorySession, id=session_id)
+
+    landing = redirect("inventory_session_detail", session_id=session.id)
+
+    if request.method != "POST":
+        return landing
+
+    # A finished session is finished. Checked here as well as hidden in the
+    # template, because a kept tab and a hand-made POST both arrive here.
+    if not session.is_open:
+        messages.warning(
+            request,
+            "This stock check is complete. Start a new one to carry on "
+            "counting.",
+        )
+        return landing
+
+    code = request.POST.get("copy_code", "").strip()
+
+    if not code:
+        return landing
+
+    # The same targeted lookup the issue and return workflows use. There is
+    # one scanner in this application, not three.
+    copy = copy_for_code(code)
+
+    outcome, scan = inventory.record_scan(session, copy, code, request.user)
+
+    if outcome == InventoryScan.OUTCOME_FOUND:
+        messages.success(
+            request, "%s found. Scan the next one." % copy.copy_code
+        )
+
+    elif outcome == InventoryScan.OUTCOME_DUPLICATE:
+        messages.info(
+            request,
+            "%s has already been counted in this check." % copy.copy_code,
+        )
+
+    elif outcome == InventoryScan.OUTCOME_OUTSIDE:
+        messages.warning(
+            request,
+            "%s is not part of this check - the record puts it %s. "
+            "Nothing has been changed; move it or edit the copy if it "
+            "belongs here."
+            % (
+                copy.copy_code,
+                (
+                    "on %s, %s"
+                    % (copy.shelf.shelf_code, copy.shelf.location.name)
+                )
+                if copy.shelf_id
+                else "on no shelf",
+            ),
+        )
+
+    else:
+        messages.error(
+            request,
+            "No copy carries the code \u201c%s\u201d. Check the label." % code,
+        )
+
+    return landing
+
+
+@role_required("Admin", "Librarian")
+def inventory_session_complete(request, session_id):
+    """Declare a stock check finished.
+
+    Locked and re-read first, so completing twice is safe: the second
+    request finds it already Completed and changes nothing rather than
+    moving the completion time.
+    """
+
+    session = get_object_or_404(InventorySession, id=session_id)
+
+    if request.method != "POST":
+        return redirect("inventory_session_detail", session_id=session.id)
+
+    with transaction.atomic():
+
+        locked = InventorySession.objects.select_for_update().get(
+            id=session.id
+        )
+
+        if locked.is_open:
+
+            locked.status = InventorySession.STATUS_COMPLETED
+            locked.completed_at = timezone.now()
+            locked.save(update_fields=["status", "completed_at"])
+
+            create_activity_log(
+                user=request.user,
+                action="UPDATE",
+                entity_type="InventorySession",
+                entity_id=locked.id,
+                description="Stock check completed: %s" % locked.name,
+            )
+
+            messages.success(
+                request,
+                "Stock check complete. What was not found is listed below "
+                "- nothing has been marked Missing.",
+            )
+
+        else:
+            messages.info(request, "This stock check was already complete.")
+
+    return redirect("inventory_session_detail", session_id=session.id)
+
+
+# ==========================================================================
+# REPORTS
+#
+# Six operational questions, each answered from the records that already
+# hold the answer - see library/reports.py. Every one takes its filters
+# from the query string, so a report is a URL: bookmarkable, shareable,
+# printable, and exactly what the CSV export reads.
+#
+# Open to the same roles as the pages they summarise. A report shows no
+# borrower detail that `borrower_detail` does not already show to every
+# role, and building a second permission model for the same data would
+# leave two answers to one question.
+# ==========================================================================
+
+
+def csv_response(filename, header, rows):
+    """`rows` as a CSV download.
+
+    The same records the page showed, from the same filtered queryset - the
+    export is the report, not a second query that could answer differently.
+
+    A UTF-8 BOM, because the librarians open these in Excel and without it
+    the Arabic and Urdu titles arrive as mojibake.
+    """
+
+    response = HttpResponse(content_type="text/csv; charset=utf-8")
+
+    # Only what a filename may safely hold, and always ending in .csv.
+    safe = "".join(
+        character if character.isalnum() or character in "-_" else "-"
+        for character in filename
+    ).strip("-") or "report"
+
+    response["Content-Disposition"] = (
+        'attachment; filename="%s-%s.csv"'
+        % (safe, timezone.now().date().isoformat())
+    )
+
+    response.write("\ufeff")
+
+    writer = csv.writer(response)
+    writer.writerow(header)
+
+    for row in rows:
+        writer.writerow(row)
+
+    return response
+
+
+def wants_csv(request):
+    return request.GET.get("format") == "csv"
+
+
+def report_context(request, dates, **extra):
+    """What every report page needs: its period, its filters, its links."""
+
+    context = {
+        "dates": dates,
+        "start": dates.start.isoformat() if dates.start else "",
+        "end": dates.end.isoformat() if dates.end else "",
+        "error": dates.error,
+        "printed_on": timezone.now(),
+        # The current filters, so Print and Export carry them.
+        "export_query": query_with(request, format="csv"),
+        "locations": Location.objects.order_by("name"),
+    }
+    context.update(extra)
+
+    return context
+
+
+def reports_home(request):
+    """One page listing the reports, rather than six sidebar entries."""
+
+    return render(
+        request,
+        "library/reports_home.html",
+        {
+            "reports": [
+                {
+                    "url": reverse(name),
+                    "title": title,
+                    "icon": icon,
+                    "blurb": blurb,
+                }
+                for name, title, icon, blurb in reports.REPORTS
+            ],
+        },
+    )
+
+
+def report_circulation(request):
+    """What went out and came back over a period."""
+
+    dates = reports.parse_range(request)
+
+    location_id = numeric_param(request, "location")
+    borrower_id = numeric_param(request, "borrower")
+    title = (request.GET.get("title") or "").strip()
+
+    if dates.error:
+        # Nothing is reported on a period nobody can read. Saying so beats
+        # answering a question that was not asked.
+        return render(
+            request,
+            "library/report_circulation.html",
+            report_context(request, dates, tallies=None, loans=[]),
+        )
+
+    tallies, loans = reports.circulation(
+        dates, location_id, borrower_id, title
+    )
+
+    if wants_csv(request):
+        return csv_response(
+            "circulation",
+            [
+                "Copy code", "Book", "Author", "Borrower",
+                "Issued", "Due", "Returned",
+            ],
+            (
+                [
+                    loan.copy.copy_code,
+                    loan.copy.volume.book.title,
+                    (
+                        loan.copy.volume.book.author.name
+                        if loan.copy.volume.book.author else ""
+                    ),
+                    loan.borrower.name,
+                    loan.issue_date,
+                    loan.due_date,
+                    loan.return_date or "",
+                ]
+                for loan in loans
+            ),
+        )
+
+    paginator = Paginator(loans, PAGE_SIZE)
+    page = paginator.get_page(request.GET.get("page"))
+
+    return render(
+        request,
+        "library/report_circulation.html",
+        report_context(
+            request,
+            dates,
+            tallies=tallies,
+            # Named and ordered here rather than in the template, so the
+            # page and the CSV describe the same five numbers.
+            tallies_shown=[
+                ("Issued", tallies["issued"]),
+                ("Returned", tallies["returned"]),
+                ("Renewals", tallies["renewals"]),
+                ("Out now", tallies["out"]),
+                ("Overdue now", tallies["overdue"]),
+            ],
+            loans=page,
+            paginator=paginator,
+            pagination_query=query_with(request, page=None),
+            location_id=str(location_id or ""),
+            borrower_id=str(borrower_id or ""),
+            borrower_name=selected_name(Borrower, borrower_id),
+            title_filter=title,
+        ),
+    )
+
+
+def report_overdue(request):
+    """Everything out past its due date, longest first."""
+
+    today = timezone.now().date()
+    location_id = numeric_param(request, "location")
+
+    loans = describe_loans(reports.overdue(location_id), today)
+
+    if wants_csv(request):
+        return csv_response(
+            "overdue",
+            [
+                "Borrower", "Registration no", "Phone", "Book", "Author",
+                "Copy code", "Issued", "Due", "Days overdue",
+            ],
+            (
+                [
+                    loan.borrower.name,
+                    loan.borrower.registration_no or "",
+                    loan.borrower.phone,
+                    loan.copy.volume.book.title,
+                    (
+                        loan.copy.volume.book.author.name
+                        if loan.copy.volume.book.author else ""
+                    ),
+                    loan.copy.copy_code,
+                    loan.issue_date,
+                    loan.due_date,
+                    loan.days_overdue,
+                ]
+                for loan in loans
+            ),
+        )
+
+    return render(
+        request,
+        "library/report_overdue.html",
+        report_context(
+            request,
+            reports.DateRange(None, None, ""),
+            loans=loans,
+            total=len(loans),
+            location_id=str(location_id or ""),
+        ),
+    )
+
+
+def inventory_report(request, template, states, heading):
+    """Shared by the two reports that count copies by state."""
+
+    today = timezone.now().date()
+
+    location_id = numeric_param(request, "location")
+    shelf_id = numeric_param(request, "shelf")
+    state = (request.GET.get("status") or "").strip().casefold()
+
+    if state not in states:
+        state = ""
+
+    copies = BookCopy.objects.select_related(
+        "volume__book__author", "shelf__location"
+    )
+
+    if location_id:
+        copies = copies.filter(shelf__location_id=location_id)
+
+    if shelf_id:
+        copies = copies.filter(shelf_id=shelf_id)
+
+    # Counted over everything the location and shelf filters allow, so the
+    # tiles keep describing the same set whichever state is being listed.
+    tallies = reports.inventory_counts(copies, today, states)
+
+    if state:
+        listed = filter_copies_by_state(copies, state, today)
+
+    elif states == reports.CONDITION_STATES:
+        # With no state chosen, this report is about those states and
+        # nothing else - it exists to answer "what is not usable".
+        listed = copies.filter(
+            status__in=[name.title() for name in states]
+        )
+
+    else:
+        listed = copies
+
+    listed = listed.order_by("copy_code")
+
+    if wants_csv(request):
+        return csv_response(
+            heading.lower().replace(" ", "-"),
+            ["Copy code", "Book", "Author", "Location", "Shelf", "Status"],
+            (
+                [
+                    copy.copy_code,
+                    copy.volume.book.title,
+                    (
+                        copy.volume.book.author.name
+                        if copy.volume.book.author else ""
+                    ),
+                    copy.shelf.location.name if copy.shelf_id else "",
+                    copy.shelf.shelf_code if copy.shelf_id else "",
+                    copy.status,
+                ]
+                for copy in listed
+            ),
+        )
+
+    paginator = Paginator(listed, PAGE_SIZE)
+    page = paginator.get_page(request.GET.get("page"))
+
+    return render(
+        request,
+        template,
+        report_context(
+            request,
+            reports.DateRange(None, None, ""),
+            heading=heading,
+            tallies=tallies,
+            states=[
+                (name, COPY_STATE_LABELS[name], tallies.get(name, 0))
+                for name in states
+            ],
+            copies=page,
+            paginator=paginator,
+            pagination_query=query_with(request, page=None),
+            location_id=str(location_id or ""),
+            shelf_id=str(shelf_id or ""),
+            state=state,
+            shelves=Shelf.objects.select_related("location").order_by(
+                "location__name", "shelf_code"
+            ),
+        ),
+    )
+
+
+def report_inventory(request):
+    """Where the copies are and what state they are in."""
+
+    return inventory_report(
+        request,
+        "library/report_inventory.html",
+        reports.INVENTORY_STATES,
+        "Inventory Status",
+    )
+
+
+def report_condition(request):
+    """The copies that are not on the shelf in usable condition."""
+
+    return inventory_report(
+        request,
+        "library/report_inventory.html",
+        reports.CONDITION_STATES,
+        "Lost, Damaged and Withdrawn",
+    )
+
+
+def report_borrowers(request):
+    """What a borrower, or everyone, did over a period."""
+
+    dates = reports.parse_range(request)
+    borrower_id = numeric_param(request, "borrower")
+
+    if dates.error:
+        return render(
+            request,
+            "library/report_borrowers.html",
+            report_context(request, dates, tallies=None, rows=[]),
+        )
+
+    tallies, rows = reports.borrower_activity(dates, borrower_id)
+
+    if wants_csv(request):
+        return csv_response(
+            "borrower-activity",
+            [
+                "Borrower", "Registration no", "Issued", "Returned",
+                "Currently out", "Overdue",
+            ],
+            (
+                [
+                    row.name,
+                    row.registration_no or "",
+                    row.issued,
+                    row.returned,
+                    row.out,
+                    row.overdue,
+                ]
+                for row in rows
+            ),
+        )
+
+    paginator = Paginator(rows, PAGE_SIZE)
+    page = paginator.get_page(request.GET.get("page"))
+
+    return render(
+        request,
+        "library/report_borrowers.html",
+        report_context(
+            request,
+            dates,
+            tallies=tallies,
+            tallies_shown=[
+                ("Issued", tallies["issued"]),
+                ("Returned", tallies["returned"]),
+                ("Renewals", tallies["renewals"]),
+                ("Out now", tallies["out"]),
+                ("Overdue now", tallies["overdue"]),
+            ],
+            rows=page,
+            paginator=paginator,
+            pagination_query=query_with(request, page=None),
+            borrower_id=str(borrower_id or ""),
+            borrower_name=selected_name(Borrower, borrower_id),
+        ),
+    )
+
+
+def report_popular(request):
+    """Books ranked by how often they were actually lent."""
+
+    dates = reports.parse_range(request, days=365)
+
+    if dates.error:
+        return render(
+            request,
+            "library/report_popular.html",
+            report_context(request, dates, books=[]),
+        )
+
+    books = reports.popular(dates)
+
+    if wants_csv(request):
+        return csv_response(
+            "popular-books",
+            ["Rank", "Book", "Author", "Times issued", "Copies available"],
+            (
+                [
+                    rank,
+                    book.title,
+                    book.author.name if book.author else "",
+                    book.times_issued,
+                    book.copies_available,
+                ]
+                for rank, book in enumerate(books, start=1)
+            ),
+        )
+
+    return render(
+        request,
+        "library/report_popular.html",
+        report_context(request, dates, books=books),
+    )
+
+
+# ==========================================================================
+# RESERVATIONS
+#
+# A queue of borrowers waiting for a book. Nothing here holds a copy back,
+# and nothing happens automatically when one is returned - see
+# library/reservations.py.
+# ==========================================================================
+
+
+def reservation_list(request):
+    """Everyone currently waiting, and what for.
+
+    Grouped by nothing: it is one list, oldest first, because the question
+    a librarian brings to it is "who has been waiting longest".
+    """
+
+    status = (request.GET.get("status") or "").strip()
+
+    if status not in dict(Reservation.STATUS_CHOICES):
+        status = Reservation.STATUS_ACTIVE
+
+    waiting = Reservation.objects.filter(
+        status=status
+    ).select_related(
+        "borrower", "book__author"
+    ).order_by("created_at", "id")
+
+    paginator = Paginator(waiting, PAGE_SIZE)
+    page = paginator.get_page(request.GET.get("page"))
+
+    return render(
+        request,
+        "library/reservation_list.html",
+        {
+            "reservations": page,
+            "paginator": paginator,
+            "pagination_query": query_with(request, page=None),
+            "status": status,
+            "statuses": Reservation.STATUS_CHOICES,
+            "active_total": Reservation.objects.filter(
+                status=Reservation.STATUS_ACTIVE
+            ).count(),
+        },
+    )
+
+
+def reservation_add(request):
+    """Put a borrower in a book's queue.
+
+    A POST from the book's own page, which is where the queue is on
+    screen. The borrower comes from the same searchable control the issue
+    form uses, so there is one way of naming a borrower in this
+    application.
+    """
+
+    book_id = request.POST.get("book", "") if request.method == "POST" else ""
+
+    book = get_object_or_404(Book, id=book_id) if book_id.isdigit() else None
+
+    if request.method != "POST" or book is None:
+        return redirect("book_list")
+
+    landing = redirect(
+        "%s?tab=reservations" % reverse("book_detail", args=[book.id])
+    )
+
+    borrower_id = request.POST.get("borrower", "").strip()
+
+    borrower = Borrower.objects.filter(
+        id=borrower_id
+    ).first() if borrower_id.isdigit() else None
+
+    if borrower is None:
+        messages.error(request, "Choose who is waiting for this book.")
+        return landing
+
+    reservation, error = reservations.reserve(book, borrower)
+
+    if error:
+        messages.warning(request, error)
+        return landing
+
+    create_activity_log(
+        user=request.user,
+        action="RESERVE",
+        entity_type="Reservation",
+        entity_id=book.id,
+        description=(
+            "%s reserved %s" % (borrower.name, book.title)
+        ),
+    )
+
+    messages.success(
+        request,
+        "%s is in the queue for %s." % (borrower.name, book.title),
+    )
+
+    return landing
+
+
+def reservation_cancel(request, reservation_id):
+    """Take a borrower out of a queue.
+
+    Cancelling closes that reservation and nothing else: the people behind
+    move up because they were always behind, not because anything was
+    renumbered.
+    """
+
+    reservation = get_object_or_404(
+        Reservation.objects.select_related("borrower", "book"),
+        id=reservation_id,
+    )
+
+    landing = redirect(
+        safe_redirect_target(
+            request, reverse("borrower_detail", args=[reservation.borrower_id])
+        )
+    )
+
+    if request.method != "POST":
+        return landing
+
+    if reservations.close(
+        reservation, Reservation.STATUS_CANCELLED, request.user
+    ):
+        create_activity_log(
+            user=request.user,
+            action="CANCEL",
+            entity_type="Reservation",
+            entity_id=reservation.book_id,
+            description=(
+                "%s cancelled their reservation for %s"
+                % (reservation.borrower.name, reservation.book.title)
+            ),
+        )
+
+        messages.success(
+            request,
+            "%s is no longer waiting for %s."
+            % (reservation.borrower.name, reservation.book.title),
+        )
+
+    else:
+        messages.info(
+            request, "That reservation had already been closed."
+        )
+
+    return landing
 
 
 #Category View
@@ -2664,6 +3712,44 @@ def shelf_delete(request, shelf_id):
     )
 
 
+def annotate_copy_counts(books):
+    """Total, available and issued copy counts, in the list's own query.
+
+    One pass over the join that is already there rather than a count per
+    row, so a page of results costs the same whatever the catalogue holds.
+    `distinct=True` on each because the three aggregates share one join and
+    would otherwise multiply each other.
+
+    The definitions are the copy list's, not new ones: a copy is out when a
+    loan says so, and available only when it is on a shelf, marked
+    Available, and not out. Withdrawn copies - Lost, Damaged, Missing,
+    Transferred - fall into neither, which is why the two can be less than
+    the total.
+    """
+
+    out = active_loan_copies()
+
+    return books.annotate(
+        total_copies=models.Count(
+            "bookvolume__bookcopy",
+            distinct=True,
+        ),
+        issued_copies=models.Count(
+            "bookvolume__bookcopy",
+            filter=models.Q(bookvolume__bookcopy__id__in=out),
+            distinct=True,
+        ),
+        available_copies=models.Count(
+            "bookvolume__bookcopy",
+            filter=models.Q(
+                bookvolume__bookcopy__status=BookCopy.STATUS_AVAILABLE,
+                bookvolume__bookcopy__shelf__isnull=False,
+            ) & ~models.Q(bookvolume__bookcopy__id__in=out),
+            distinct=True,
+        ),
+    )
+
+
 def book_list(request):
 
     # `search` is the documented parameter; `title` is still honoured so
@@ -2689,17 +3775,35 @@ def book_list(request):
     if mode not in BOOK_LIST_MODES:
         mode = BOOK_LIST_MODE_DEFAULT
 
-    books = Book.objects.select_related(
+    # Archived books are out of the catalogue unless they are asked for.
+    # `archived=1` is the only way to see them, and it is the whole of the
+    # "where did it go" answer - the list, its search and its filters are
+    # otherwise untouched.
+    show_archived = request.GET.get("archived") == "1"
+
+    books = (
+        Book.objects.filter(archived_at__isnull=False)
+        if show_archived
+        else active_books()
+    ).select_related(
         "author",
         "category",
         "publisher",
     )
 
     if search:
-        # Title only. Author and category are filtered through their own
-        # modes, so folding them in here would make one control quietly
-        # overlap the other two.
-        books = books.filter(title__icontains=search)
+        # Title or author, from the one box. A librarian looking for a book
+        # knows one or the other and should not have to say which, and
+        # asking them to pick a mode first was the slower path.
+        #
+        # `author` is a forward many-to-one and NOT NULL, so this join
+        # cannot multiply rows and no .distinct() is needed - which
+        # matters, because .distinct() would fight the nulls-last ordering
+        # below.
+        books = books.filter(
+            Q(title__icontains=search)
+            | Q(author__name__icontains=search)
+        )
 
     if author_id:
         books = books.filter(author_id=author_id)
@@ -2709,6 +3813,24 @@ def book_list(request):
 
     if publisher_id:
         books = books.filter(publisher_id=publisher_id)
+
+    # Counted before it is filtered on, so the numbers in the row and the
+    # filter that selected it are the same figures.
+    books = annotate_copy_counts(books)
+
+    availability = request.GET.get("availability", "").strip()
+
+    if availability not in BOOK_AVAILABILITY_FILTERS:
+        availability = ""
+
+    if availability == "available":
+        books = books.filter(available_copies__gt=0)
+
+    elif availability == "issued":
+        books = books.filter(issued_copies__gt=0)
+
+    elif availability == "none":
+        books = books.filter(total_copies=0)
 
     # Sorting and paging both happen in SQL — only one page of rows is ever
     # fetched, however large the catalogue grows.
@@ -2726,6 +3848,10 @@ def book_list(request):
 
     paginator = Paginator(books, page_size)
     page = paginator.get_page(request.GET.get("page"))
+
+    # How many are put away, so the list can offer the way to them without
+    # a second page. One indexed count over the partial index.
+    archived_total = Book.objects.filter(archived_at__isnull=False).count()
 
     # Only these two columns are shown now, but BOOK_SORT_FIELDS still
     # accepts the others so older ?sort= links keep working.
@@ -2785,6 +3911,11 @@ def book_list(request):
             ("Author", ("author",), selected_name(Author, author_id)),
             ("Category", ("category",), selected_name(Category, category_id)),
             ("Publisher", ("publisher",), selected_name(Publisher, publisher_id)),
+            (
+                "Availability",
+                ("availability",),
+                BOOK_AVAILABILITY_LABELS.get(availability, ""),
+            ),
         )
         if value
     ]
@@ -2830,6 +3961,25 @@ def book_list(request):
             )
         ),
         "page_ellipsis": Paginator.ELLIPSIS,
+        # Whether this is the archive rather than the catalogue, how many
+        # books are in it, and the way in and out.
+        "availability": availability,
+        "availability_options": [
+            {
+                "value": value,
+                "label": BOOK_AVAILABILITY_LABELS[value],
+                "active": value == availability,
+            }
+            for value in BOOK_AVAILABILITY_FILTERS
+        ],
+        # The secondary filters, so the panel holding them can open itself
+        # when one is in force rather than hiding an active filter.
+        "secondary_active": bool(publisher_id or availability),
+        "publishers": Publisher.objects.only("id", "name").order_by("name"),
+        "show_archived": show_archived,
+        "archived_total": archived_total,
+        "archived_url": "?" + query_with(request, archived="1", page=None),
+        "catalogue_url": "?" + query_with(request, archived=None, page=None),
     }
 
     # Everything the page does to itself — searching, filtering, sorting,
@@ -3703,6 +4853,83 @@ def book_import_errors(request):
     )
 
 
+def normalize_title(value):
+    """A title reduced to what a duplicate check should compare.
+
+    Case, leading and trailing space, and runs of whitespace are accidents
+    of typing rather than different books. Nothing else is touched:
+    punctuation and diacritics distinguish real titles, especially in
+    Arabic and Urdu, and folding them away would merge records that are
+    genuinely different.
+    """
+
+    return " ".join((value or "").split()).lower()
+
+
+def find_duplicate_books(title, author_id, exclude_id=None):
+    """Existing books that are this same book, by title and author.
+
+    Narrowed on `author_id` first, which `idx_books_author_id` covers, so
+    the normalising expression only ever runs over that one author's books
+    instead of the catalogue. One query, and it returns matches rather than
+    rows to sift in Python.
+
+    The normalising is done in SQL so it matches `normalize_title` exactly:
+    collapse runs of whitespace, trim the ends, lower the case. `lower()`
+    is used on both sides rather than Python's `casefold`, so the two
+    cannot disagree.
+
+    Deliberately narrow. The same title under a *different* author is left
+    alone - a translation, a commentary, another author's work of the same
+    name - and so is a similar-but-not-identical title. Blocking those
+    would cost more in refused legitimate records than it saves.
+    """
+
+    normalized = normalize_title(title)
+
+    if not normalized or not author_id:
+        return Book.objects.none()
+
+    matches = Book.objects.filter(
+        author_id=author_id
+    ).annotate(
+        normalized_title=models.Func(
+            models.Func(
+                models.Func(
+                    models.F("title"),
+                    models.Value(r"\s+"),
+                    models.Value(" "),
+                    models.Value("g"),
+                    function="regexp_replace",
+                ),
+                function="btrim",
+            ),
+            function="lower",
+            output_field=models.CharField(),
+        )
+    ).filter(
+        normalized_title=normalized
+    )
+
+    if exclude_id:
+        matches = matches.exclude(id=exclude_id)
+
+    return matches.select_related("author").order_by("id")
+
+
+def duplicate_book_error(matches):
+    """The message shown when a book is already on the shelf list."""
+
+    return (
+        "This book is already in the catalogue under the same author. "
+        "Open the existing record instead of adding a second one, or "
+        "change the title if this really is a different book."
+        if len(matches) == 1 else
+        "%d books with this title and author are already in the "
+        "catalogue." % len(matches)
+    )
+
+
 @role_required("Admin", "Librarian")
 def book_add(request):
     """Add a book, and optionally its volumes and physical copies.
@@ -3719,6 +4946,7 @@ def book_add(request):
     modal = is_form_modal_request(request)
 
     error = None
+    duplicates = []
 
     form_data = {
         "title": "",
@@ -3783,9 +5011,21 @@ def book_add(request):
             "codes": copy_raw["codes"],
         }
 
+        # Identity first: if this book is already on the shelves, nothing
+        # about the cover or the volumes matters yet.
+        duplicates = (
+            list(find_duplicate_books(title, author_id)[:5])
+            if title and author_id
+            else []
+        )
+
         if not title or not author_id:
 
             error = "Title and Author are required."
+
+        elif duplicates:
+
+            error = duplicate_book_error(duplicates)
 
         elif cover_error:
 
@@ -3924,6 +5164,7 @@ def book_add(request):
         "shelves": shelf_options_for(inventory["location"]),
         "max_copies_per_volume": MAX_COPIES_PER_VOLUME,
         "max_total_copies": MAX_TOTAL_COPIES,
+        "duplicates": duplicates,
     }
 
     if modal:
@@ -3962,6 +5203,7 @@ def book_edit(request, book_id):
     )
 
     error = None
+    duplicates = []
 
     form_data = {
         "title": book.title,
@@ -3998,9 +5240,21 @@ def book_edit(request, book_id):
             else None
         )
 
+        # `exclude_id` is what stops a book being its own duplicate: save
+        # it unchanged and the only match is itself, which is dropped.
+        duplicates = (
+            list(find_duplicate_books(title, author_id, exclude_id=book.id)[:5])
+            if title and author_id
+            else []
+        )
+
         if not title or not author_id:
 
             error = "Title and Author are required."
+
+        elif duplicates:
+
+            error = duplicate_book_error(duplicates)
 
         elif cover_error:
 
@@ -4066,6 +5320,7 @@ def book_edit(request, book_id):
         "error": error,
         "form_data": form_data,
         "from_page": from_page,
+        "duplicates": duplicates,
     }
 
     if modal:
@@ -4079,6 +5334,190 @@ def book_edit(request, book_id):
         request,
         "library/book_edit.html",
         context,
+    )
+
+
+def active_books():
+    """The catalogue, without the books that have been archived.
+
+    Every screen that means "the library's books" goes through this, so
+    excluding archived ones is one decision in one place rather than a
+    filter each caller has to remember. `idx_books_archived_at` is a
+    partial index over the archived rows, which is the small side.
+    """
+
+    return Book.objects.filter(archived_at__isnull=True)
+
+
+def book_archive_blocker(book):
+    """Why `book` cannot be archived, or "" when it can be.
+
+    Archiving is not destructive, but an archived book is out of the
+    active catalogue, and a book cannot be out of the catalogue while
+    somebody is holding a copy of it. So the one thing that stops it is an
+    active loan - which is the same rule copy withdrawal follows, for the
+    same reason.
+    """
+
+    issued = BookCopy.objects.filter(
+        volume__book=book,
+        id__in=Loan.objects.filter(
+            return_date__isnull=True
+        ).values("copy_id"),
+    ).count()
+
+    if issued:
+        return (
+            "This book cannot be archived because %d of its "
+            "cop%s currently out on loan. Take %s back first."
+            % (
+                issued,
+                "y is" if issued == 1 else "ies are",
+                "it" if issued == 1 else "them",
+            )
+        )
+
+    return ""
+
+
+@role_required("Admin", "Librarian")
+def book_archive(request, book_id):
+    """Take a book out of the active catalogue, keeping everything.
+
+    Nothing is deleted and nothing moves: the volumes, the copies, their
+    codes, and every loan ever recorded against them stay exactly as they
+    are. All that changes is one timestamp, and with it whether the book
+    turns up in the catalogue.
+    """
+
+    book = get_object_or_404(Book, id=book_id)
+
+    blocker = book_archive_blocker(book) if not book.is_archived else ""
+
+    if request.method == "POST" and not blocker and not book.is_archived:
+
+        book.archived_at = timezone.now()
+        book.save(update_fields=["archived_at"])
+
+        cache.delete(BOOK_CACHE_KEY)
+        cache.delete(DASHBOARD_CACHE_KEY)
+
+        create_activity_log(
+            user=request.user,
+            action="ARCHIVE",
+            entity_type="Book",
+            entity_id=book.id,
+            description="%s archived" % book.title,
+        )
+
+        return redirect("book_detail", book_id=book.id)
+
+    return render(
+        request,
+        "library/book_archive.html",
+        {
+            "book": book,
+            "blocker": blocker,
+            "copy_count": BookCopy.objects.filter(volume__book=book).count(),
+            "loan_count": Loan.objects.filter(copy__volume__book=book).count(),
+        }
+    )
+
+
+@role_required("Admin", "Librarian")
+def book_restore(request, book_id):
+    """Put an archived book back into the active catalogue."""
+
+    book = get_object_or_404(Book, id=book_id)
+
+    if request.method == "POST" and book.is_archived:
+
+        book.archived_at = None
+        book.save(update_fields=["archived_at"])
+
+        cache.delete(BOOK_CACHE_KEY)
+        cache.delete(DASHBOARD_CACHE_KEY)
+
+        create_activity_log(
+            user=request.user,
+            action="RESTORE",
+            entity_type="Book",
+            entity_id=book.id,
+            description="%s restored to the catalogue" % book.title,
+        )
+
+    return redirect("book_detail", book_id=book.id)
+
+
+# The status a withdrawn copy carries. Deliberately one of the values the
+# `check_copy_status` CHECK constraint already allows, and one the rest of
+# the app already treats as out of circulation: `COPY_STORED_STATES` keeps
+# it out of `copy_state`'s available/unshelved answers, and the issue form
+# only ever offers copies marked Available. Inventing a "Withdrawn" value
+# would mean altering that constraint and teaching every one of those
+# places a second word for the same thing.
+COPY_WITHDRAWN_STATUS = BookCopy.STATUS_TRANSFERRED
+
+
+@role_required("Admin", "Librarian")
+def book_copy_withdraw(request, copy_id):
+    """Take a single copy out of circulation, keeping its history.
+
+    Refused while the copy is out with a borrower: the loan is the record
+    of where the book physically is, and marking it withdrawn underneath
+    an open loan would leave the two disagreeing. Take it back first, then
+    withdraw it.
+    """
+
+    copy = get_object_or_404(
+        BookCopy.objects.select_related("volume__book", "shelf__location"),
+        id=copy_id,
+    )
+
+    active_loan = Loan.objects.filter(
+        copy=copy,
+        return_date__isnull=True,
+    ).select_related("borrower").first()
+
+    already = (copy.status or "").casefold() in COPY_STORED_STATES
+
+    blocker = ""
+
+    if active_loan is not None:
+        blocker = (
+            "This copy cannot be withdrawn while it is out with %s. "
+            "Take it back first." % active_loan.borrower.name
+        )
+
+    if request.method == "POST" and not blocker and not already:
+
+        copy.status = COPY_WITHDRAWN_STATUS
+        copy.save(update_fields=["status"])
+
+        cache.delete(BOOK_COPY_CACHE_KEY)
+        cache.delete(DASHBOARD_CACHE_KEY)
+
+        create_activity_log(
+            user=request.user,
+            action="WITHDRAW",
+            entity_type="BookCopy",
+            entity_id=copy.id,
+            description="%s withdrawn from circulation" % copy.copy_code,
+        )
+
+        return redirect("book_copy_detail", copy_id=copy.id)
+
+    return render(
+        request,
+        "library/book_copy_withdraw.html",
+        {
+            "copy": copy,
+            "blocker": blocker,
+            "already": already,
+            "active_loan": active_loan,
+            "withdrawn_status": COPY_WITHDRAWN_STATUS,
+            "loan_count": Loan.objects.filter(copy=copy).count(),
+        }
     )
 
 
@@ -4262,11 +5701,41 @@ def book_detail(request, book_id):
             }
         )
 
+    # Which section the page opens on. Only ever decides which pane is
+    # marked active - every pane is rendered either way, so switching is
+    # instant and nothing here changes what is fetched. It exists because
+    # paging the loan history reloads the page, and landing back on
+    # Overview would lose the reader's place; `_pagination.html` carries
+    # every other query parameter through, so `tab` rides along with it.
+    tab = request.GET.get("tab", "")
+
+    if tab not in BOOK_DETAIL_TABS:
+        # Loan history is the only pane that pages, and `_pagination.html`
+        # is shared by a dozen pages so it cannot be taught to add `tab`.
+        # A `page` with no tab named therefore means the loan history -
+        # otherwise page 2 would arrive with Overview showing.
+        tab = "loans" if request.GET.get("page") else BOOK_DETAIL_TABS[0]
+
     # How many copies each volume holds, so the page can offer the count as
     # the way through to them. Annotated rather than counted per row, so the
     # page costs the same whatever the book holds.
     volumes = list(
         volumes.annotate(copy_count=models.Count("bookcopy"))
+    )
+
+    # Every copy of the book, once. The availability summary, the copies
+    # table, the shelf breakdown and a single-volume book's copy list are
+    # all read off this one list rather than querying again per section.
+    copies = describe_copies(
+        BookCopy.objects.filter(
+            volume__book=book
+        ).select_related(
+            "volume",
+            "shelf__location",
+        ).order_by(
+            "volume__volume_number",
+            "copy_code",
+        )
     )
 
     # A book with one volume has it because a copy must hang off one, not
@@ -4275,11 +5744,84 @@ def book_detail(request, book_id):
     # heading that means nothing to the librarian.
     single_volume = volumes[0] if len(volumes) == 1 else None
 
-    volume_copies = describe_copies(
-        BookCopy.objects.filter(
-            volume=single_volume
-        ).select_related("shelf__location").order_by("copy_code")
-    ) if single_volume else []
+    volume_copies = copies if single_volume else []
+
+    # Counted in Python off the list above: the states are derived (a copy
+    # is issued because a loan says so, overdue because of its due date),
+    # so there is nothing to group by in SQL that would not disagree with
+    # what the copy list shows.
+    tally = {}
+
+    for copy in copies:
+        tally[copy.state] = tally.get(copy.state, 0) + 1
+
+    availability = [
+        {
+            "state": state,
+            "label": COPY_STATE_LABELS[state],
+            "tone": COPY_STATE_TONES[state],
+            "count": tally.get(state, 0),
+        }
+        for state in COPY_STATE_ORDER
+        # Available, issued and overdue are the question being asked, so
+        # they show even at nought; the rest only when there are any.
+        if tally.get(state, 0) or state in COPY_STATE_ALWAYS_SHOWN
+    ]
+
+    # Where the copies actually are. Off the same list, so it costs
+    # nothing, and it answers "which shelves do I walk to" - which the
+    # per-copy rows can only answer one row at a time.
+    placements = {}
+
+    for copy in copies:
+
+        # `None` groups the unshelved together, and sorts before any id.
+        key = copy.shelf_id
+
+        if key not in placements:
+            placements[key] = {
+                "shelf_id": key,
+                "location": copy.shelf.location.name if copy.shelf else "",
+                "shelf_code": copy.shelf.shelf_code if copy.shelf else "",
+                "count": 0,
+            }
+
+        placements[key]["count"] += 1
+
+    shelf_summary = sorted(
+        placements.values(),
+        key=lambda entry: (entry["location"], entry["shelf_code"]),
+    )
+
+    # Contents hang off volumes, not off the book, so the page offers the
+    # way in per volume rather than inventing a book-level list. One query
+    # for every volume's count.
+    content_counts = dict(
+        BookContent.objects.filter(
+            volume__book=book
+        ).values_list("volume_id").annotate(
+            total=models.Count("id")
+        )
+    )
+
+    for volume in volumes:
+        volume.content_count = content_counts.get(volume.id, 0)
+
+    # Everything this book has ever been out on, newest first, a page at a
+    # time: a popular book's history only grows.
+    history = Loan.objects.filter(
+        copy__volume__book=book
+    ).select_related(
+        "borrower",
+        "copy__volume",
+        "issued_by",
+        "returned_to",
+    ).order_by("-issue_date", "-id")
+
+    paginator = Paginator(history, PAGE_SIZE)
+    page = paginator.get_page(request.GET.get("page"))
+
+    describe_loans(page.object_list)
 
     return render(
         request,
@@ -4289,7 +5831,29 @@ def book_detail(request, book_id):
             "volumes": volumes,
             "single_volume": single_volume,
             "volume_copies": volume_copies,
+            "copies": copies,
+            "availability": availability,
+            "total_copies": len(copies),
+            "shelf_summary": shelf_summary,
+            "content_total": sum(content_counts.values()),
+            "loans": page,
+            "paginator": paginator,
+            "tab": tab,
             "can_edit": can_edit_library(request.user),
+            # Who is waiting for this book. The count is worth having on
+            # every tab - it belongs beside the availability summary - and
+            # the queue itself only when it is being looked at.
+            "reservation_count": reservations.active_count(book),
+            "reservation_queue": (
+                reservations.active_for_book(book)
+                if tab == "reservations" else []
+            ),
+            # Off the tally above, which is already built from the
+            # copies this page fetched - so saying "some are on the shelf"
+            # costs no query, and it is the derived state the availability
+            # summary shows rather than a second opinion from the status
+            # column.
+            "copies_available_now": tally.get("available", 0),
         }
     )
 
@@ -4357,12 +5921,111 @@ def book_volume_list(request):
     )
 
 
+def isolated(text):
+    """`text` wrapped so it cannot reorder the sentence around it.
+
+    Book and volume titles here are mostly Urdu and Arabic, and dropping
+    right-to-left text into the middle of an English sentence makes the
+    bidirectional algorithm reshuffle the words either side of it - the
+    message becomes hard to read even though every character is correct.
+    U+2068/U+2069 are the Unicode isolate pair: they say "treat this run as
+    one opaque item", which is exactly what a title is.
+    """
+
+    return "⁨%s⁩" % text
+
+
+def read_volume_form(request, exclude_id=None):
+    """The volume a form is asking for, and any complaint about it.
+
+    Returns `(book, number, title, error)`, where `error` is "" when the
+    values are usable. `number` comes back as whatever was typed when it is
+    the thing being complained about, so the form can show it again rather
+    than blanking the field.
+
+    Shared by add and edit so the two cannot drift apart. Every check here
+    stands in front of something the database would otherwise refuse:
+
+      * `unique_book_volume` is a real UNIQUE constraint on
+        (book_id, volume_number), so a repeat used to reach Postgres and
+        come back as an unhandled IntegrityError - a 500 where the
+        librarian only needed to be told the number was taken.
+      * `volume_number` is an integer column, so "abc" was a 500 too.
+      * `book_id` is NOT NULL with a foreign key, so an id that does not
+        exist was a third.
+
+    Pass `exclude_id` when editing, so a volume keeping its own number is
+    not treated as clashing with itself.
+    """
+
+    book_id = (request.POST.get("book") or "").strip()
+    raw_number = (request.POST.get("volume_number") or "").strip()
+    title = request.POST.get("title", "").strip()
+
+    # Resolved as early as possible: an error page that has lost the
+    # librarian's book selection is its own small annoyance.
+    book = (
+        Book.objects.filter(id=book_id).first()
+        if book_id.isdigit()
+        else None
+    )
+
+    if not book_id or not raw_number or not title:
+        return book, raw_number, title, "Please fill in all required fields."
+
+    try:
+        number = int(raw_number)
+    except ValueError:
+        return book, raw_number, title, (
+            "Volume number must be a whole number, like 1 or 2."
+        )
+
+    if number < 1:
+        return book, raw_number, title, (
+            "Volume number must be 1 or more."
+        )
+
+    if book is None:
+        return None, raw_number, title, (
+            "Please choose a book from the list."
+        )
+
+    clash = BookVolume.objects.filter(book=book, volume_number=number)
+
+    if exclude_id is not None:
+        clash = clash.exclude(id=exclude_id)
+
+    existing = clash.first()
+
+    if existing is not None:
+        return book, raw_number, title, (
+            "%s already has a Volume %d%s. Give this one a different "
+            "volume number." % (
+                isolated(book.title),
+                number,
+                " (%s)" % isolated(existing.title) if existing.title else "",
+            )
+        )
+
+    return book, number, title, ""
+
+
 @role_required("Admin", "Librarian")
 def book_volume_add(request):
 
     books = Book.objects.all()
 
-    selected_book_id = request.GET.get("book", "")
+    selected_book_id = (request.GET.get("book") or "").strip()
+
+    # The book itself, for the back link. Kept apart from the raw id above,
+    # which only has to match an <option> value: `{% url %}` cannot be
+    # guarded inside the template, so handing it an id that resolves to
+    # nothing is a 500 -- which "?book=abc" used to be.
+    book = (
+        Book.objects.filter(id=selected_book_id).first()
+        if selected_book_id.isdigit()
+        else None
+    )
 
     error = None
     volume_number = ""
@@ -4370,23 +6033,41 @@ def book_volume_add(request):
 
     if request.method == "POST":
 
-        book_id = request.POST.get("book")
-        volume_number = request.POST.get("volume_number", "")
-        title = request.POST.get("title", "").strip()
+        book, volume_number, title, error = read_volume_form(request)
 
-        selected_book_id = book_id or ""
+        # Whatever was typed goes back into the form, so a rejection never
+        # costs the librarian their work.
+        selected_book_id = (request.POST.get("book") or "").strip()
 
-        if not book_id or not volume_number or not title:
+        if not error:
 
-            error = "Please fill in all required fields."
+            try:
 
-        else:
+                # Its own savepoint: a failed insert leaves the connection
+                # usable, so the page can still be rendered to explain
+                # itself. TestCase wraps each test in a transaction, where
+                # that matters even though requests are not atomic here.
+                with transaction.atomic():
 
-            volume = BookVolume.objects.create(
-                book_id=book_id,
-                volume_number=volume_number,
-                title=title
-            )
+                    volume = BookVolume.objects.create(
+                        book=book,
+                        volume_number=volume_number,
+                        title=title,
+                    )
+
+            except IntegrityError:
+
+                # Only reachable if someone else created the same volume
+                # between the check above and this insert. The constraint is
+                # the real guarantee; this turns losing that race into the
+                # same sentence rather than a 500.
+                error = (
+                    "%s already has a Volume %s. Give this one a "
+                    "different volume number."
+                    % (isolated(book.title), volume_number)
+                )
+
+        if not error:
 
             cache.delete(BOOK_VOLUME_CACHE_KEY)
             cache.delete(DASHBOARD_CACHE_KEY)
@@ -4405,7 +6086,7 @@ def book_volume_add(request):
             # Return to the selected book
             return redirect(
                 "book_detail",
-                book_id=book_id
+                book_id=book.id
             )
 
     return render(
@@ -4414,6 +6095,7 @@ def book_volume_add(request):
         {
             "books": books,
             "selected_book_id": selected_book_id,
+            "selected_book": book,
             "error": error,
             "volume_number": volume_number,
             "title": title,
@@ -4469,17 +6151,46 @@ def book_volume_edit(request, volume_id):
         request.POST.get("from", "")
     )
 
+    error = ""
+
     if request.method == "POST":
-        book_id = request.POST.get("book")
-        volume_number = request.POST.get("volume_number")
-        title = request.POST.get("title", "").strip()
 
-        if book_id and volume_number and title:
-            volume.book_id = book_id
-            volume.volume_number = volume_number
-            volume.title = title
+        # `exclude_id`: a volume keeping the number it already has is not
+        # clashing with itself.
+        book, volume_number, title, error = read_volume_form(
+            request,
+            exclude_id=volume.id,
+        )
 
-            volume.save()
+        # Put what was typed onto the in-memory volume so the form shows it
+        # again on the way back. Nothing is written unless it validates, so
+        # the stored record is untouched on every error path below.
+        if book is not None:
+            volume.book = book
+
+        volume.volume_number = volume_number
+        volume.title = title
+
+        if not error:
+
+            try:
+
+                # Its own savepoint, for the same reason as on the add
+                # page: someone else can take the number between the check
+                # and the write, and losing that race should read as a
+                # sentence rather than a 500.
+                with transaction.atomic():
+                    volume.save()
+
+            except IntegrityError:
+
+                error = (
+                    "%s already has a Volume %s. Give this one a "
+                    "different volume number."
+                    % (isolated(book.title), volume_number)
+                )
+
+        if not error:
 
             cache.delete(BOOK_VOLUME_CACHE_KEY)
             cache.delete(DASHBOARD_CACHE_KEY)
@@ -4508,6 +6219,7 @@ def book_volume_edit(request, volume_id):
             "volume": volume,
             "books": books,
             "from_page": from_page,
+            "error": error,
         }
     )
 
@@ -4522,7 +6234,29 @@ def book_volume_delete(request, volume_id):
         request.POST.get("from", "")
     )
 
+    # `book_copies.volume_id` is a NO ACTION foreign key and BookCopy.volume
+    # is DO_NOTHING, so Django neither cascades nor nullifies: deleting a
+    # volume that still has copies reached Postgres and came back as an
+    # unhandled IntegrityError. Same guard the shelf and copy delete pages
+    # already use.
+    copies_exist = BookCopy.objects.filter(
+        volume_id=volume.id
+    ).exists()
+
     if request.method == "POST":
+
+        if copies_exist:
+
+            return render(
+                request,
+                "library/book_volume_delete.html",
+                {
+                    "volume": volume,
+                    "from_page": from_page,
+                    "copies_exist": True,
+                }
+            )
+
         deleted_volume_id = volume.id
         deleted_volume_title = volume.title
         deleted_volume_number = volume.volume_number
@@ -4551,6 +6285,7 @@ def book_volume_delete(request, volume_id):
         {
             "volume": volume,
             "from_page": from_page,
+            "copies_exist": copies_exist,
         }
     )
 
@@ -5024,8 +6759,18 @@ def copy_list_fragment(request):
 
     Only one so far: the results, which the page swaps in after copies are
     moved so the current search, filters, sorting and page survive. Same
-    shape as `book_list_fragment`.
+    shape as `book_list_fragment`, including the navigation guard.
+
+    A navigation wins over the parameter. The container these fragments are
+    swapped into declares `partial` once, for the sort, filter and paging
+    links inside it, and htmx hands that down to everything within -
+    including a plain link to another page, now that the shell boosts those.
+    Asking to replace the main-content region is asking for a page, so that
+    is what such a request gets, whatever it inherited on the way.
     """
+
+    if is_main_nav_request(request):
+        return ""
 
     if request.headers.get("HX-Request") != "true":
         return ""
@@ -5033,15 +6778,25 @@ def copy_list_fragment(request):
     return COPY_LIST_FRAGMENTS.get(request.GET.get("partial", ""), "")
 
 
-def book_copy_list(request):
-    """Every physical copy, with where it is and what it is doing.
+# What the copy list was asked to show: the queryset, and the filters as
+# they were read, so a caller can put them back on the page.
+CopyFilters = namedtuple(
+    "CopyFilters",
+    "queryset search state book_id volume_id location_id shelf_id",
+)
 
-    Reachable on its own and from a book or a volume (`?book=` / `?volume=`
-    still filter, as they always did, so the links from those pages keep
-    working).
+
+def filtered_copies(request, today=None):
+    """The copies matching the copy list's filters.
+
+    Lifted out of `book_copy_list` unchanged, so the label sheet can print
+    exactly what the librarian is looking at rather than reimplementing the
+    same six filters and drifting from them. The list still reads the
+    parameters it always did.
     """
 
-    today = timezone.now().date()
+    if today is None:
+        today = timezone.now().date()
 
     # `search` covers both things a librarian has to hand: the code printed
     # on the book, and its title. `copy_code` is still honoured so links
@@ -5088,6 +6843,31 @@ def book_copy_list(request):
         copies = copies.filter(shelf_id=shelf_id)
 
     copies = filter_copies_by_state(copies, state, today)
+
+    return CopyFilters(
+        copies, search, state, book_id, volume_id, location_id, shelf_id
+    )
+
+
+def book_copy_list(request):
+    """Every physical copy, with where it is and what it is doing.
+
+    Reachable on its own and from a book or a volume (`?book=` / `?volume=`
+    still filter, as they always did, so the links from those pages keep
+    working).
+    """
+
+    today = timezone.now().date()
+
+    (
+        copies,
+        search,
+        state,
+        book_id,
+        volume_id,
+        location_id,
+        shelf_id,
+    ) = filtered_copies(request, today)
 
     sort, direction = resolve_sort(
         request,
@@ -5214,6 +6994,102 @@ def book_copy_list(request):
         request,
         "library/book_copy_list.html",
         context,
+    )
+
+
+# A sheet of labels is a sheet of paper. Past this many the page has
+# stopped being something anyone is about to print and started being a way
+# to render the whole catalogue by accident.
+LABEL_LIMIT = 200
+
+
+def labelled(copies):
+    """Attach the barcode each copy's label will carry.
+
+    The value encoded is `copy_code` and nothing else - the same string the
+    issue and return workflows scan, so a label made here reads back as the
+    copy it names. There is no second identifier and nothing to migrate.
+
+    A code that Code 128 cannot hold gets no barcode rather than a wrong
+    one; the label still prints with the code as text, which is what a
+    librarian would read out anyway. Only a hand-typed code can get into
+    that state - generated ones are `LIB-` and digits.
+    """
+
+    for copy in copies:
+
+        try:
+            copy.label_barcode = mark_safe(barcode.svg(copy.copy_code))
+
+        except barcode.BarcodeError:
+            copy.label_barcode = None
+
+    return copies
+
+
+@role_required("Admin", "Librarian")
+def book_copy_labels(request):
+    """A printable sheet of labels for the copies asked for.
+
+    Two ways in, both GET, so a sheet can be reloaded, kept as a bookmark
+    and printed again without rebuilding the selection:
+
+      * `copy=` repeated - the copies ticked on the list, or the single
+        one on a copy's own page;
+      * the copy list's own filters, which print everything the librarian
+        is currently looking at rather than only the page on screen.
+
+    Every id is read back from the database, so a hand-made request prints
+    labels for the copies that exist and silently nothing for the rest -
+    there is no way to have this render a code of the caller's choosing.
+
+    Behind the same roles as the rest of copy management: printing a label
+    is an inventory job, and the list only offers it to those roles.
+    """
+
+    ids = [
+        int(value)
+        for value in request.GET.getlist("copy")
+        if value.isdigit()
+    ]
+
+    if ids:
+        copies = BookCopy.objects.filter(id__in=ids)
+        scope = "selected"
+
+    elif request.GET.get("all") == "1":
+        # Everything the filters describe, which is what the link beside
+        # the result count asks for.
+        copies = filtered_copies(request).queryset
+        scope = "filtered"
+
+    else:
+        # Neither: an empty sheet and a note saying how to fill it. The
+        # two intents are marked rather than guessed, so a request that
+        # ticked nothing prints nothing instead of printing the catalogue.
+        copies = BookCopy.objects.none()
+        scope = "empty"
+
+    copies = copies.select_related(
+        "volume__book__author",
+        "shelf__location",
+    ).order_by("copy_code")
+
+    total = copies.count()
+    copies = labelled(list(copies[:LABEL_LIMIT]))
+
+    return render(
+        request,
+        "library/book_copy_labels.html",
+        {
+            "copies": copies,
+            "total": total,
+            "shown": len(copies),
+            "capped": total > LABEL_LIMIT,
+            "limit": LABEL_LIMIT,
+            "scope": scope,
+            "printed_on": timezone.now(),
+        },
     )
 
 
@@ -5388,12 +7264,30 @@ def book_copy_detail(request, copy_id):
         "-issue_date"
     )
 
+    # When this copy was last accounted for, and whether it turned up.
+    # Two queries, on the page about that one copy - deliberately not on
+    # the copy list, where the same question would be a cost per row.
+    last_check, last_check_found = inventory.last_completed_check(copy)
+
+    # How the copy got to where it is: read from the loans, the activity
+    # log and the stock checks, never stored. Four queries whatever the
+    # length of it, and paginated because a copy lent for twenty years has
+    # a long one.
+    timeline = history.copy_timeline(copy)
+
+    history_pages = Paginator(timeline, PAGE_SIZE)
+    history_page = history_pages.get_page(request.GET.get("history"))
+
     context = {
         "copy": copy,
         "active_loan": active_loan,
         "loan_history": loan_history,
         "from_page": from_page,
         "can_edit": can_edit_library(request.user),
+        "last_check": last_check,
+        "last_check_found": last_check_found,
+        "history": history_page,
+        "history_total": history_pages.count,
     }
 
     if is_modal_request(request):
@@ -5783,6 +7677,15 @@ def book_copy_edit(request, copy_id):
 
         if not error_message:
 
+            # What it was, read before it is overwritten. The move views
+            # have always recorded a shelf change as "from A to B"; this
+            # one recorded only the result, which said where the copy
+            # ended up and nothing about where it had been. Captured here
+            # so the copy's history can say both.
+            was_shelf = copy.shelf
+            was_status = copy.status
+            was_details = (copy.acquisition_date, copy.notes)
+
             # `book_copies.shelf_id` is nullable, and a copy that has
             # arrived but not been placed yet is a real state the list can
             # find, so clearing the shelf is allowed.
@@ -5801,16 +7704,53 @@ def book_copy_edit(request, copy_id):
             cache.delete(BOOK_COPY_CACHE_KEY)
             cache.delete(DASHBOARD_CACHE_KEY)
 
-            create_activity_log(
-                user=request.user,
-                action="UPDATE",
-                entity_type="BookCopy",
-                entity_id=copy.id,
-                description=(
-                    f"{copy.copy_code} updated — "
-                    f"{shelf if shelf else 'no shelf'}, {status}"
-                ),
-            )
+            # One entry per thing that actually moved, and none at all for
+            # a value that was resubmitted unchanged - an edit that only
+            # touched the notes should not read as a shelf change in the
+            # history, and saving the form without altering anything
+            # should not read as anything.
+            #
+            # Only from here on. Nothing reconstructs the changes made
+            # before this recorded them; a copy's timeline says what is
+            # known rather than guessing what is not.
+            if copy.shelf_id != (was_shelf.id if was_shelf else None):
+                create_activity_log(
+                    user=request.user,
+                    action="UPDATE",
+                    entity_type="BookCopy",
+                    entity_id=copy.id,
+                    description=(
+                        f"{copy.copy_code} moved from "
+                        f"{was_shelf if was_shelf else 'no shelf'} "
+                        f"to {shelf if shelf else 'no shelf'}"
+                    ),
+                )
+
+            if copy.status != was_status:
+                create_activity_log(
+                    user=request.user,
+                    action="UPDATE",
+                    entity_type="BookCopy",
+                    entity_id=copy.id,
+                    description=(
+                        f"{copy.copy_code} status changed from "
+                        f"{was_status} to {copy.status}"
+                    ),
+                )
+
+            # The rest of the form. Recorded generally, because a note or
+            # an acquisition date is not a movement and spelling out its
+            # before and after would put the note's whole text in the
+            # history twice. Still attributed and still dated, which is
+            # what an edit needs to be answerable for.
+            if (copy.acquisition_date, copy.notes) != was_details:
+                create_activity_log(
+                    user=request.user,
+                    action="UPDATE",
+                    entity_type="BookCopy",
+                    entity_id=copy.id,
+                    description="%s details updated" % copy.copy_code,
+                )
 
             if from_page == "shelf" and copy.shelf_id:
                 return redirect("shelf_detail", shelf_id=copy.shelf_id)
@@ -5923,6 +7863,145 @@ def book_copy_delete(request, copy_id):
             "loan_history_exists": loan_history_exists,
             "from_page": from_page,
         }
+    )
+
+
+# How many matching copies the issue form offers at once. A librarian
+# picking a copy is looking for one they can name; a hundred rows is not an
+# answer, it is the problem the search was meant to solve.
+COPY_LOOKUP_LIMIT = 25
+
+
+def issuable_copies():
+    """The copies that may be issued, decided in one place.
+
+    Marked Available - which the return workflow is what clears, and which
+    `unique_active_loan_per_copy` backs - and belonging to a book that is
+    still in the catalogue. Withdrawn copies fail the first test and
+    archived books the second, so the form and the POST that follows it
+    cannot disagree about what is lendable.
+    """
+
+    return BookCopy.objects.filter(
+        status=BookCopy.STATUS_AVAILABLE,
+        volume__book__archived_at__isnull=True,
+    )
+
+
+def copy_selection_url(request, copy_ids, clear_search=False):
+    """This page with `copies` set to `copy_ids`, keeping the rest.
+
+    The chosen copies live in the query string rather than in checkboxes,
+    so searching again for the next one cannot lose the ones already
+    picked - and the whole half-built issue is a URL, which survives a
+    reload and can be handed to a colleague.
+
+    `clear_search` drops the search term as well, which is what a scan
+    wants: the code has been dealt with, and leaving it in the box would
+    mean the next scan appends to it.
+    """
+
+    params = request.GET.copy()
+
+    for key in INTERNAL_PARAMS:
+        params.pop(key, None)
+
+    if clear_search:
+        params.pop("q", None)
+
+    params.setlist("copies", [str(value) for value in copy_ids])
+
+    return "?" + params.urlencode()
+
+
+# What a whole copy code typed into the issue form turned out to mean.
+# `copy` is None when the text was not a copy code at all, which is what
+# lets the same field still search for a book title.
+ScanOutcome = namedtuple("ScanOutcome", "copy message level add")
+
+
+def copy_for_code(code):
+    """The one copy carrying this exact code, or None.
+
+    The targeted lookup every scan runs, named once so nothing has to write
+    it again. `copy_code` is unique in the database
+    (`book_copies_copy_code_key`), so this matches at most one row and its
+    cost does not grow with the catalogue - which is the whole reason a
+    scan is answered by a lookup rather than by a search.
+
+    Matched case-insensitively, the same way the code generator checks for
+    collisions, because a label read by a scanner and a label typed by hand
+    should not be two different codes.
+    """
+
+    if not code:
+        return None
+
+    return BookCopy.objects.filter(
+        copy_code__iexact=code
+    ).select_related("volume__book").first()
+
+
+def scan_issue_outcome(query, chosen_ids):
+    """Resolve a whole copy code typed or scanned into the issue form.
+
+    A barcode or QR scanner acting as a keyboard types a complete code and
+    presses Enter. What should follow is the copy in the basket - not a
+    table with one row in it and another click to make. So a code that
+    names a copy is answered here, and anything else falls through to the
+    ordinary search below.
+
+    Every refusal is `issuable_copies()`, the one rule the form and the
+    POST already share, so scanning cannot add a copy that picking it from
+    the results could not: a copy already out, one withdrawn from
+    circulation, or one whose book has been archived is refused with the
+    reason rather than silently listed as nothing.
+
+    Nothing is written here and nothing is trusted afterwards - the POST
+    re-checks every copy under a lock, which is what makes this a
+    convenience rather than a way in.
+    """
+
+    copy = copy_for_code(query)
+
+    if copy is None:
+        # Not a code. Let the search have it.
+        return ScanOutcome(None, "", messages.INFO, False)
+
+    if copy.id in chosen_ids:
+        return ScanOutcome(
+            copy,
+            "%s is already in the list." % copy.copy_code,
+            messages.INFO,
+            False,
+        )
+
+    if not issuable_copies().filter(pk=copy.pk).exists():
+
+        if copy.status == BookCopy.STATUS_ISSUED:
+            reason = "is already out on loan"
+
+        elif copy.status != BookCopy.STATUS_AVAILABLE:
+            reason = (
+                "is marked %s and is out of circulation" % copy.status.lower()
+            )
+
+        else:
+            # Available, so what fails the rule is the book above it.
+            reason = "belongs to a book that has been archived"
+
+        return ScanOutcome(
+            copy,
+            "%s %s, so it cannot be issued." % (copy.copy_code, reason),
+            messages.WARNING,
+            False,
+        )
+
+    return ScanOutcome(
+        copy,
+        "%s added. Scan the next one." % copy.copy_code,
+        messages.SUCCESS,
+        True,
     )
 
 
@@ -6092,27 +8171,145 @@ def loan_add(request):
     copies succeed or none are issued, enforced by transaction + select_for_update.
     """
 
-    copies = BookCopy.objects.select_related(
-        "volume__book"
-    ).filter(
-        status="Available"
-    ).order_by(
-        "copy_code"
+    # Which copies the librarian has picked so far, and what they are
+    # searching for now. Nothing is listed until something is asked for:
+    # this page used to render every available copy in the library, which
+    # was several hundred rows of table for a form whose answer is one or
+    # two of them.
+    query = (request.GET.get("q") or "").strip()
+
+    chosen_ids = [
+        int(value)
+        for value in request.GET.getlist("copies")
+        if value.isdigit()
+    ]
+
+    lendable = issuable_copies().select_related(
+        # The author too: the match rows name it so the librarian can tell
+        # two books with similar titles apart, and without it that was a
+        # query per row.
+        "volume__book__author",
+        "shelf__location",
     )
 
-    borrowers = Borrower.objects.filter(
-        is_active=True
-    ).order_by(
-        "name"
+    # Re-read rather than trusted: a copy chosen a minute ago may have been
+    # issued to somebody else since, and it drops out here if so.
+    chosen = list(
+        lendable.filter(id__in=chosen_ids).order_by("copy_code")
+    ) if chosen_ids else []
+
+    chosen_ids = [copy.id for copy in chosen]
+
+    # A whole code is resolved before anything is searched for, because
+    # that is what a scanner sends. The answer comes back as a redirect
+    # rather than a rendered page, which is what empties the search box and
+    # leaves the cursor ready for the next scan - and keeps the borrower
+    # and the basket, since both travel in the URL being redirected to.
+    #
+    # A message rather than a rewritten page, so a refusal is as visible as
+    # a success and neither costs the librarian their basket.
+    if request.method == "GET" and query:
+
+        scan = scan_issue_outcome(query, chosen_ids)
+
+        if scan.copy is not None:
+
+            messages.add_message(request, scan.level, scan.message)
+
+            # Only a copy that actually went in redirects. That is what
+            # empties the box and leaves the cursor ready for the next one,
+            # and the new basket has to reach the URL for a reload to keep
+            # it.
+            #
+            # A refusal or a repeat stays on this page instead, with the
+            # code still in the box: the librarian has a book in their
+            # hand and needs to see which one was turned down. Nothing was
+            # added, so there is no new state to put in the URL.
+            if scan.add:
+                return redirect(
+                    request.path
+                    + copy_selection_url(
+                        request,
+                        chosen_ids + [scan.copy.id],
+                        clear_search=True,
+                    )
+                )
+
+    matches = list(
+        lendable.filter(
+            Q(copy_code__icontains=query)
+            | Q(volume__book__title__icontains=query)
+            | Q(volume__book__author__name__icontains=query)
+        ).exclude(
+            id__in=chosen_ids
+        ).order_by("copy_code")[:COPY_LOOKUP_LIMIT + 1]
+    ) if query else []
+
+    more_matches = len(matches) > COPY_LOOKUP_LIMIT
+    matches = matches[:COPY_LOOKUP_LIMIT]
+
+    for copy in matches:
+        copy.add_url = copy_selection_url(request, chosen_ids + [copy.id])
+
+    for copy in chosen:
+        copy.remove_url = copy_selection_url(
+            request,
+            [value for value in chosen_ids if value != copy.id],
+        )
+
+    # Who is waiting for the books in the basket, so the form can say
+    # before the librarian tries. The rule itself is applied in the POST -
+    # this is the same answer shown early, not the place it is decided.
+    # One query for the whole basket.
+    queues = reservations.queues_for_copies(chosen)
+
+    for copy in chosen:
+        copy.queue_front, copy.queue_length = queues.get(
+            copy.volume.book_id, (None, 0)
+        )
+
+    # The borrower is chosen through the searchable dropdown, which asks
+    # `borrower_list` for its suggestions as you type. So this page no
+    # longer loads every active borrower to fill a <select> - it only needs
+    # the name of the one already chosen, to show it back.
+    borrower_id = (
+        request.POST.get("borrower")
+        or request.GET.get("borrower")
+        or ""
     )
 
-    users = User.objects.all().order_by(
-        "full_name"
-    )
+    if request.method == "GET":
+
+        # A borrower in the query string is a link from somewhere else - the
+        # borrower's own page offers one. Resolved against the same rule the
+        # POST below enforces, so an inactive borrower's id arrives with
+        # nothing chosen: the alternative is a form that can be filled in
+        # completely and then refused at the last step. The policy itself is
+        # unchanged; this only decides what a link may preselect.
+        preselected = (
+            Borrower.objects.filter(
+                id=borrower_id, is_active=True
+            ).only("id", "name").first()
+            if str(borrower_id).isdigit()
+            else None
+        )
+
+        borrower_id = str(preselected.id) if preselected else ""
+        borrower_name = preselected.name if preselected else ""
+
+    else:
+        # A posted id keeps the plain lookup: that path reports the refusal
+        # itself, and the name is wanted to show back with the message.
+        borrower_name = selected_name(Borrower, borrower_id)
 
     error_message = ""
     today = timezone.now().date()
-    default_due_date = (today + timedelta(days=DEFAULT_LOAN_PERIOD_DAYS)).isoformat()
+
+    # The configured loan period fills the date field in. Offered, not
+    # imposed: the librarian may still type a different date, which is
+    # behaviour that predates the policy and is left exactly as it was.
+    active_policy = policy.load()
+    default_due_date = active_policy.due_date_for(today).isoformat()
 
     if request.method == "POST":
 
@@ -6120,7 +8317,6 @@ def loan_add(request):
         copy_ids = request.POST.getlist("copies")
         issue_date_str = request.POST.get("issue_date", "").strip()
         due_date_str = request.POST.get("due_date", "").strip()
-        issued_by_id = request.POST.get("issued_by", "").strip()
         notes = request.POST.get("notes", "").strip()
 
         # --- Validate borrower ---
@@ -6145,15 +8341,28 @@ def loan_add(request):
                 with transaction.atomic():
                     for copy_id in copy_ids:
                         try:
+                            # Locked on its own row - no join, so nothing
+                            # about FOR UPDATE and outer joins arises - then
+                            # checked against the one lendable rule, which
+                            # is what excludes a withdrawn copy or one whose
+                            # book has since been archived.
                             copy = BookCopy.objects.select_for_update().get(
                                 id=int(copy_id),
                                 status="Available",
                             )
+
+                            if not issuable_copies().filter(
+                                pk=copy.pk
+                            ).exists():
+                                raise BookCopy.DoesNotExist
+
                             selected_copies.append(copy)
                         except (ValueError, BookCopy.DoesNotExist):
                             error_message = (
                                 "One or more selected copies are no longer "
-                                "available. Please review and try again."
+                                "available to issue. They may have just been "
+                                "issued to someone else, withdrawn, or their "
+                                "book archived. Please review and try again."
                             )
                             selected_copies = []
                             break
@@ -6192,23 +8401,67 @@ def loan_add(request):
             if due_date > max_due:
                 error_message = "Due date cannot be more than one year after the issue date."
 
-        # --- Validate issued_by ---
-        issued_by = None
-        if not error_message and issued_by_id:
-            try:
-                issued_by = User.objects.get(id=int(issued_by_id))
-            except (ValueError, User.DoesNotExist):
-                error_message = "Invalid user selected for 'Issued By'."
+        # --- Who issued it ---
+        # Whoever is signed in, not whoever a dropdown named. The record of
+        # whose hands the book passed through is not the borrower's to
+        # choose, and it was previously possible to attribute a loan to any
+        # member of staff by posting their id.
+        issued_by = request.user
 
         # --- Create loans (atomic) ---
         if not error_message:
             try:
                 with transaction.atomic():
+
+                    # The borrower's row is taken first and held for the
+                    # rest of the transaction, so the counts the policy
+                    # reads cannot change underneath it. Without this,
+                    # two requests for the same borrower could each see
+                    # room for one more book and each issue one.
+                    #
+                    # Always before the copies, never after, so two
+                    # baskets sharing a borrower cannot end up holding
+                    # half of each other's rows.
+                    borrower = Borrower.objects.select_for_update().get(
+                        id=borrower.id
+                    )
+
+                    # The whole basket at once. Checked here rather than
+                    # before the transaction because a check outside it is
+                    # advice, not a rule: the answer can change between
+                    # asking and writing, and a posted form is not
+                    # obliged to have asked at all.
+                    refusal = policy.refuse_issue(
+                        active_policy,
+                        borrower,
+                        len(selected_copies),
+                        today,
+                    )
+
+                    if refusal:
+                        raise PolicyRefused(refusal)
+
+                    # And whether somebody is ahead of them in a queue for
+                    # any of these books. Inside the transaction with the
+                    # rest, so a form posted straight at this view is held
+                    # to it exactly as the page is - the button being
+                    # hidden is a courtesy, not the rule.
+                    #
+                    # Read after the borrower is locked and before any copy
+                    # is, so it adds no new lock order.
+                    queued = reservations.refuse_issue_for_copies(
+                        selected_copies, borrower.id
+                    )
+
+                    if queued:
+                        raise PolicyRefused(queued)
+
                     for copy in selected_copies:
                         copy = BookCopy.objects.select_for_update().get(
                             id=copy.id
                         )
-                        if copy.status != "Available":
+                        if copy.status != "Available" or not issuable_copies(
+                        ).filter(pk=copy.pk).exists():
                             raise IntegrityError(
                                 f"Copy {copy.copy_code} is no longer available."
                             )
@@ -6237,6 +8490,35 @@ def loan_add(request):
                             ),
                         )
 
+                        # If this borrower was waiting for this book, they
+                        # are not any more. Only their own reservation:
+                        # issuing to somebody further down the queue leaves
+                        # everyone in front of them exactly where they were.
+                        #
+                        # Inside the same transaction as the loan, with the
+                        # borrower already locked above, so it cannot half
+                        # happen and adds no new lock order.
+                        fulfilled = reservations.fulfil_for(
+                            copy.volume.book_id, borrower.id, request.user
+                        )
+
+                        if fulfilled is not None:
+                            create_activity_log(
+                                user=request.user,
+                                action="FULFIL",
+                                entity_type="Reservation",
+                                entity_id=copy.volume.book_id,
+                                description=(
+                                    "%s's reservation for %s fulfilled by "
+                                    "%s"
+                                    % (
+                                        borrower.name,
+                                        copy.volume.book.title,
+                                        copy.copy_code,
+                                    )
+                                ),
+                            )
+
                 cache.delete(LOAN_CACHE_KEY)
                 cache.delete(BOOK_COPY_CACHE_KEY)
                 cache.delete(DASHBOARD_CACHE_KEY)
@@ -6254,6 +8536,11 @@ def loan_add(request):
 
                 return redirect("loan_list")
 
+            except PolicyRefused as refused:
+                # Nothing was written: the transaction rolled back with the
+                # loans, the copy statuses and the log entries in it.
+                error_message = str(refused)
+
             except IntegrityError:
                 error_message = (
                     "One or more copies became unavailable during processing. "
@@ -6264,12 +8551,27 @@ def loan_add(request):
         request,
         "library/loan_add.html",
         {
-            "copies": copies,
-            "borrowers": borrowers,
-            "users": users,
+            "chosen": chosen,
+            "chosen_ids": chosen_ids,
+            "matches": matches,
+            "more_matches": more_matches,
+            "lookup_limit": COPY_LOOKUP_LIMIT,
+            "query": query,
+            "borrower_id": borrower_id,
+            "borrower_name": borrower_name,
             "error_message": error_message,
             "default_issue_date": today.isoformat(),
             "default_due_date": default_due_date,
+            # Somebody other than the chosen borrower is at the head of a
+            # queue for something in the basket, so this issue will be
+            # refused. Shown on the form and enforced in the POST - the
+            # same rule said twice, in the place it can be read and the
+            # place it cannot be avoided.
+            "queue_blocks": [
+                copy for copy in chosen
+                if copy.queue_front
+                and str(copy.queue_front.borrower_id) != str(borrower_id)
+            ],
         }
     )
 
@@ -6489,10 +8791,6 @@ def loan_return(request, loan_id):
         id=loan_id
     )
 
-    users = User.objects.filter(
-        is_active=True
-    )
-
     next_url = request.GET.get("next") or request.POST.get("next") or ""
 
     error_message = ""
@@ -6501,10 +8799,6 @@ def loan_return(request, loan_id):
 
         return_date = request.POST.get(
             "return_date"
-        )
-
-        returned_to_id = request.POST.get(
-            "returned_to"
         )
 
         notes = request.POST.get(
@@ -6539,9 +8833,10 @@ def loan_return(request, loan_id):
 
             loan.return_date = parsed_return_date
 
-            loan.returned_to_id = (
-                returned_to_id or None
-            )
+            # The member of staff taking the book back is the one signed
+            # in, for the same reason `issued_by` is set that way on the
+            # issue side.
+            loan.returned_to = request.user
 
             if notes:
                 loan.notes = notes
@@ -6579,14 +8874,25 @@ def loan_return(request, loan_id):
                 safe_redirect_target(request, "loan_list")
             )
 
+    # Whether anyone is waiting for this book. Shown to whoever is taking
+    # it back, and nothing more: no copy is assigned, no message is sent,
+    # and the return itself is unchanged. What to do about the queue is the
+    # librarian's call, which is why this is a sentence and not a workflow.
+    waiting_front = reservations.queue_front(loan.copy.volume.book)
+    waiting_count = (
+        reservations.active_count(loan.copy.volume.book)
+        if waiting_front else 0
+    )
+
     return render(
         request,
         "library/loan_return.html",
         {
             "loan": loan,
-            "users": users,
             "error_message": error_message,
             "next_url": next_url,
+            "waiting_front": waiting_front,
+            "waiting_count": waiting_count,
         }
     )
 @role_required("Admin", "Librarian")
@@ -6647,7 +8953,13 @@ def loan_delete(request, loan_id):
 # Circulation dashboard: quick access point for issue, return, and active loans.
 # Counts are calculated efficiently using database annotations rather than loading
 # Loan objects into memory.
-@role_required("Admin", "Librarian")
+# Issue and return are the Assistant's daily work: `loan_add` has always
+# been open to all three roles and test_permissions asserts it
+# (test_assistant_can_add_loan), while only `loan_delete` is restricted.
+# The circulation pages that front that workflow were stricter than the
+# workflow itself, so an Assistant could return a book but not reach the
+# page for finding which loan to return. They now match. Deleting a loan
+# and renewing one stay Admin/Librarian - neither moves a book.
 def circulation_dashboard(request):
 
     today = timezone.now().date()
@@ -6675,42 +8987,126 @@ def circulation_dashboard(request):
 
 # Return lookup by copy code. Allows staff to scan/enter a copy code directly
 # and be taken to the return form for the active loan on that copy.
-@role_required("Admin", "Librarian")
-def loan_return_lookup(request):
+# Open to all three roles, like `loan_return` itself: this is the step that
+# finds the loan being returned, and restricting it while allowing the
+# return made the workflow unreachable for an Assistant.
+# How many active loans the return search lists before asking for a
+# narrower term. Same shape, and the same reasoning, as the issue form's cap.
+RETURN_LOOKUP_LIMIT = 25
 
-    copy_code = request.GET.get("copy_code", "").strip()
-    error_message = ""
+
+def active_loan_for_code(copy_code):
+    """The one active loan on this exact copy code, or None.
+
+    A targeted lookup, and the only thing a scan ever runs. `copy_code` is
+    unique in the database and `unique_active_loan_per_copy` allows one
+    unreturned loan per copy, so this can match at most one row - there is
+    nothing here to search through and nothing that grows with the
+    catalogue or with how long the library has been lending.
+    """
+
+    return Loan.objects.select_related(
+        "copy__volume__book__author",
+        "borrower",
+        "issued_by",
+    ).filter(
+        copy__copy_code__iexact=copy_code,
+        return_date__isnull=True,
+    ).first()
+
+
+def active_loans_matching(term):
+    """Active loans whose book title or author matches `term`.
+
+    For the half of the field that is not a scan: someone at the desk with
+    a book in their hand and no readable label.
+
+    Only what is actually out. The filter is on the loans, so a returned
+    loan, a copy sitting on its shelf and a copy that was never lent are
+    absent by construction rather than removed afterwards - and the cost is
+    bounded by how much is out on loan today, not by the size of the
+    catalogue or of the history.
+
+    One row per loan, and a copy can hold only one active loan, so nothing
+    can appear twice and no `distinct()` is needed. Ordered by due date, so
+    whatever is most overdue is at the top of the list to be dealt with.
+    """
+
+    return list(
+        Loan.objects.filter(
+            return_date__isnull=True,
+        ).filter(
+            models.Q(copy__volume__book__title__icontains=term)
+            | models.Q(copy__volume__book__author__name__icontains=term)
+        ).select_related(
+            "copy__volume__book__author",
+            "borrower",
+        ).order_by(
+            "due_date", "copy__copy_code"
+        )[:RETURN_LOOKUP_LIMIT + 1]
+    )
+
+
+def loan_return_lookup(request):
+    """Find what to bring back: by its code, or by book or author.
+
+    One field, two behaviours, in that order. A code is resolved on its own
+    first - that is what a barcode or QR scanner sends, it can only ever
+    name one copy, and it costs one indexed lookup. Only text that is not a
+    known code is searched for, so the scan path never runs a search at
+    all.
+
+    Nothing here returns anything. Both answers lead into `loan_return`,
+    which owns that workflow and is unchanged.
+    """
+
+    term = request.GET.get("copy_code", "").strip()
+
     loan = None
+    matches = []
+    more_matches = False
+    error_message = ""
     today = timezone.now().date()
 
-    if copy_code:
-        # Find the active loan for this copy code, if any.
-        loan = Loan.objects.select_related(
-            "copy__volume__book",
-            "borrower",
-            "issued_by",
-        ).filter(
-            copy__copy_code__iexact=copy_code,
-            return_date__isnull=True,
-        ).first()
+    if term:
+
+        loan = active_loan_for_code(term)
 
         if loan is not None:
-            # Calculate days_overdue for display.
-            loan.days_overdue = 0
-            if loan.due_date < today:
-                loan.days_overdue = (today - loan.due_date).days
+            # The overdue rule, from the one place that states it.
+            describe_loans([loan], today)
 
-        elif not BookCopy.objects.filter(copy_code__iexact=copy_code).exists():
-            error_message = "No book book copy found with that code."
         else:
-            error_message = "This copy is not currently on loan."
+            matches = active_loans_matching(term)
+            more_matches = len(matches) > RETURN_LOOKUP_LIMIT
+            matches = describe_loans(matches[:RETURN_LOOKUP_LIMIT], today)
+
+            if not matches:
+
+                if BookCopy.objects.filter(
+                    copy_code__iexact=term
+                ).exists():
+                    error_message = (
+                        "That copy is not out on loan, so there is nothing "
+                        "to return. It may have been brought back already."
+                    )
+
+                else:
+                    error_message = (
+                        "No copy found with that code, and nothing on loan "
+                        "matches \u201c%s\u201d. Check the label, or try "
+                        "the book or the author." % term
+                    )
 
     return render(
         request,
         "library/loan_return_lookup.html",
         {
-            "copy_code": copy_code,
+            "copy_code": term,
             "loan": loan,
+            "matches": matches,
+            "more_matches": more_matches,
+            "lookup_limit": RETURN_LOOKUP_LIMIT,
             "error_message": error_message,
         }
     )
@@ -6720,6 +9116,13 @@ def loan_return_lookup(request):
 # the current due date. Returned loans cannot be renewed.
 @role_required("Admin", "Librarian")
 def loan_renew(request, loan_id):
+    """Extend a loan by the configured period, up to the renewal limit.
+
+    Who may renew is unchanged - Admin and Librarian, per the decorator
+    above - and so is the shape of the page. What is new is that the period
+    and the number of renewals allowed come from the policy rather than
+    from a constant and from nowhere.
+    """
 
     loan = get_object_or_404(
         Loan.objects.select_related(
@@ -6730,38 +9133,65 @@ def loan_renew(request, loan_id):
         id=loan_id,
     )
 
+    active_policy = policy.load()
+
     error_message = ""
-    new_due_date = None
+    renewals_used = policy.renewals_used(loan)
 
-    if loan.return_date is not None:
-        error_message = "This loan has already been returned and cannot be renewed."
+    # Both refusals in one place, so the page and the POST cannot disagree
+    # about why: a returned loan, or one that has had its renewals.
+    error_message = policy.refuse_renewal(active_policy, loan)
 
-    elif request.method == "POST":
-        # Calculate new due date: extend from current due date by the default period.
-        new_due_date = loan.due_date + timedelta(days=DEFAULT_LOAN_PERIOD_DAYS)
+    new_due_date = (
+        None
+        if loan.return_date is not None
+        else active_policy.due_date_for(loan.due_date)
+    )
 
-        loan.due_date = new_due_date
-        loan.save(update_fields=["due_date"])
+    if not error_message and request.method == "POST":
 
-        cache.delete(LOAN_CACHE_KEY)
-        cache.delete(DASHBOARD_CACHE_KEY)
+        try:
+            with transaction.atomic():
 
-        create_activity_log(
-            user=request.user,
-            action="RENEW",
-            entity_type="Loan",
-            entity_id=loan.id,
-            description=(
-                f"{loan.copy.copy_code} renewed. "
-                f"New due date: {new_due_date.isoformat()}"
-            ),
-        )
+                # Re-read under a lock and re-check, because the count and
+                # the act it counts have to be one event. Two simultaneous
+                # renewals of the same loan would otherwise both read the
+                # same tally and both be allowed - which is how a limit of
+                # one becomes two.
+                locked = Loan.objects.select_for_update().get(id=loan.id)
 
-        return redirect("loan_detail", loan_id=loan.id)
+                refusal = policy.refuse_renewal(active_policy, locked)
 
-    else:
-        # GET: show what the new due date would be.
-        new_due_date = loan.due_date + timedelta(days=DEFAULT_LOAN_PERIOD_DAYS)
+                if refusal:
+                    raise PolicyRefused(refusal)
+
+                new_due_date = active_policy.due_date_for(locked.due_date)
+
+                locked.due_date = new_due_date
+                locked.save(update_fields=["due_date"])
+
+                # Inside the transaction with the due date it records, so
+                # the renewal and the count of renewals cannot come apart.
+                create_activity_log(
+                    user=request.user,
+                    action="RENEW",
+                    entity_type="Loan",
+                    entity_id=locked.id,
+                    description=(
+                        f"{loan.copy.copy_code} renewed. "
+                        f"New due date: {new_due_date.isoformat()}"
+                    ),
+                )
+
+        except PolicyRefused as refused:
+            error_message = str(refused)
+            renewals_used = policy.renewals_used(loan)
+
+        else:
+            cache.delete(LOAN_CACHE_KEY)
+            cache.delete(DASHBOARD_CACHE_KEY)
+
+            return redirect("loan_detail", loan_id=loan.id)
 
     return render(
         request,
@@ -6770,6 +9200,13 @@ def loan_renew(request, loan_id):
             "loan": loan,
             "new_due_date": new_due_date,
             "error_message": error_message,
+            "renewals_used": renewals_used,
+            "renewal_limit": (
+                active_policy.max_renewals
+                if active_policy.limits_renewals
+                else 0
+            ),
+            "loan_period_days": active_policy.loan_period_days,
         }
     )
 
@@ -6895,6 +9332,33 @@ def borrower_list(request):
 
     elif activity == "no_overdue":
         borrowers_query = borrowers_query.filter(overdue_loans=0)
+
+    # The searchable dropdown on the issue form asks this view for its
+    # suggestions, the same way the Author, Category and Publisher lists
+    # already serve theirs. It answers before the annotations are paid for
+    # and before paging: a suggestion list needs a name and an id, not a
+    # loan count.
+    if is_combobox_request(request):
+
+        return combobox_options_response(
+            request,
+            items=list(
+                Borrower.objects.filter(is_active=True).filter(
+                    models.Q(name__icontains=search)
+                    | models.Q(phone__icontains=search)
+                    | models.Q(registration_no__icontains=search)
+                ).only(
+                    "id", "name", "phone", "registration_no",
+                ).order_by("name")[:COMBOBOX_LIMIT + 1]
+            ) if search else list(
+                Borrower.objects.filter(is_active=True).only(
+                    "id", "name", "phone", "registration_no",
+                ).order_by("name")[:COMBOBOX_LIMIT + 1]
+            ),
+            search=search,
+            entity_label="borrower",
+            add_url=reverse("borrower_add"),
+        )
 
     # Deliberately not cached any more. The rows now carry live loan and
     # overdue counts, and a five-minute-old count of what someone is holding
@@ -7096,12 +9560,13 @@ def borrower_detail(request, borrower_id):
 
     today = timezone.now().date()
 
+    # Only what the two tables actually name. `issued_by` and `returned_to`
+    # were joined here as well and read nowhere, which is two joins to the
+    # users table on every row of a history that only grows.
     loans = Loan.objects.filter(
         borrower=borrower
     ).select_related(
         "copy__volume__book",
-        "issued_by",
-        "returned_to",
     )
 
     # What they are holding now. Short by nature, so shown whole.
@@ -7140,6 +9605,9 @@ def borrower_detail(request, borrower_id):
             ),
             "page_ellipsis": Paginator.ELLIPSIS,
             "can_delete": can_edit_library(request.user),
+            # What they are waiting for, with their place in each queue.
+            # One query, and a borrower waits for a handful of books.
+            "reservations": reservations.active_for_borrower(borrower),
         }
     )
 
@@ -7873,12 +10341,36 @@ def library_home(request):
             timeout=300
         )
 
+    # Outside the cached block above: these are lists of records, not
+    # counts, and they are cheap - five rows each, with the joins the rows
+    # actually name.
+    #
+    # `-id` as well as the date, because `issue_date` and `return_date` are
+    # DateFields: without a tiebreaker, everything that happened today came
+    # back in whatever order the database felt like, so "most recent" was
+    # not reliably most recent.
     recent_loans = Loan.objects.select_related(
         "copy__volume__book",
         "borrower",
         "issued_by",
     ).order_by(
-        "-issue_date"
+        "-issue_date",
+        "-id",
+    )[:5]
+
+    # The other half of recent circulation. Taken from the loans themselves
+    # rather than from the activity log: `return_date` and `returned_to` are
+    # the record of a return, and reading the log instead would mean parsing
+    # a description to find out which book it was.
+    recent_returns = Loan.objects.filter(
+        return_date__isnull=False
+    ).select_related(
+        "copy__volume__book",
+        "borrower",
+        "returned_to",
+    ).order_by(
+        "-return_date",
+        "-id",
     )[:5]
 
     recent_logs = list(
@@ -7893,7 +10385,14 @@ def library_home(request):
         log.target_url = activity_log_target(log)
 
     dashboard_stats["recent_loans"] = recent_loans
+    dashboard_stats["recent_returns"] = recent_returns
     dashboard_stats["recent_logs"] = recent_logs
+
+    # Which quick actions to offer. Issuing, returning and adding a borrower
+    # are open to all three roles; adding a book is not, so offering it to
+    # an Assistant would be offering a 403. The decorators on those views
+    # are the enforcement - this only decides what is worth showing.
+    dashboard_stats["can_edit"] = can_edit_library(request.user)
 
     return render(
         request,

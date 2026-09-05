@@ -57,6 +57,35 @@ Expected context: everything `book_copy_list` provides.
 
         <p class="text-body-secondary mb-0">
             Found <strong>{{ paginator.count }}</strong> cop{{ paginator.count|pluralize:"y,ies" }}.
+
+            {% comment %}
+              Labels for the whole result set, not just the page on screen.
+              It sits inside the results because the number it quotes is
+              this number: outside, a filter change would swap the count
+              and leave the link describing the previous one.
+
+              The query string it carries is the one the list is showing,
+              and the label sheet reads it with the same `filtered_copies`
+              this list does - so the two cannot come to disagree about
+              what the filters mean.
+
+              Inside the results container, so it states the shell's region
+              rather than inheriting a target aimed at the table.
+
+              Only for the roles that manage copies, which is what the view
+              enforces too.
+            {% endcomment %}
+            {% if can_edit and paginator.count %}
+                <a
+                    href="{% url 'book_copy_labels' %}?all=1&amp;{{ pagination_query }}"
+                    class="ms-2 text-decoration-none"
+                    hx-target="#mainContent"
+                    hx-swap="innerHTML"
+                >
+                    <i class="bi bi-upc me-1" aria-hidden="true"></i>
+                    Print labels for all of them
+                </a>
+            {% endif %}
         </p>
 
         <div class="d-flex align-items-center gap-2">
@@ -222,8 +251,12 @@ Expected context: everything `book_copy_list` provides.
                                             class="btn btn-sm btn-outline-warning"
                                             title="Edit"
                                             aria-label="Edit copy {{ copy.copy_code }}"
-                                            hx-push-url="false"
-                                            hx-vals='{"partial": ""}'
+                                            {# Inside the results container, which declares the target and
+                                               swap for the fragment requests around it - inherited by
+                                               anything within, this link included. It is going somewhere
+                                               else, so it names the shell's region instead. #}
+                                            hx-target="#mainContent"
+                                            hx-swap="innerHTML"
                                         >
                                             <i class="bi bi-pencil"></i>
                                         </a>
@@ -232,8 +265,12 @@ Expected context: everything `book_copy_list` provides.
                                             class="btn btn-sm btn-outline-primary"
                                             title="Move"
                                             aria-label="Move copy {{ copy.copy_code }}"
-                                            hx-push-url="false"
-                                            hx-vals='{"partial": ""}'
+                                            {# Inside the results container, which declares the target and
+                                               swap for the fragment requests around it - inherited by
+                                               anything within, this link included. It is going somewhere
+                                               else, so it names the shell's region instead. #}
+                                            hx-target="#mainContent"
+                                            hx-swap="innerHTML"
                                         >
                                             <i class="bi bi-arrow-left-right"></i>
                                         </a>
@@ -243,8 +280,12 @@ Expected context: everything `book_copy_list` provides.
                                             class="btn btn-sm btn-outline-secondary"
                                             title="Open"
                                             aria-label="Open copy {{ copy.copy_code }}"
-                                            hx-push-url="false"
-                                            hx-vals='{"partial": ""}'
+                                            {# Inside the results container, which declares the target and
+                                               swap for the fragment requests around it - inherited by
+                                               anything within, this link included. It is going somewhere
+                                               else, so it names the shell's region instead. #}
+                                            hx-target="#mainContent"
+                                            hx-swap="innerHTML"
                                         >
                                             <i class="bi bi-box-arrow-up-right"></i>
                                         </a>

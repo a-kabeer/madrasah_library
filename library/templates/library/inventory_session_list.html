@@ -1,0 +1,112 @@
+{% extends layout %}
+
+{% block title %}
+    Stock Check | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    Stock Check
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-0">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Stock Check</h2>
+            <p class="text-body-secondary mb-0">
+                Counting the shelves against the record. Nothing here
+                changes a copy — what is not found is reported, and what to
+                do about it stays your decision.
+            </p>
+        </div>
+
+        <a
+            href="{% url 'inventory_session_start' %}"
+            class="btn btn-primary"
+        >
+            <i class="bi bi-plus-lg me-1"></i> Start a Check
+        </a>
+    </div>
+
+    {% if sessions %}
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>Check</th>
+                            <th>Covers</th>
+                            <th>Found</th>
+                            <th>Started</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for session in sessions %}
+                            <tr
+                                class="book-row"
+                                data-row-url="{% url 'inventory_session_detail' session.id %}"
+                                tabindex="0"
+                                role="button"
+                                aria-label="Open {{ session.name }}"
+                            >
+                                <td>
+                                    <a
+                                        href="{% url 'inventory_session_detail' session.id %}"
+                                        class="fw-semibold text-decoration-none"
+                                        data-row-primary
+                                    >{{ session.name }}</a>
+                                </td>
+                                <td class="text-body-secondary">
+                                    {{ session.scope_label }}
+                                </td>
+                                <td>
+                                    <span class="badge text-bg-secondary">
+                                        {{ session.found_count }}
+                                    </span>
+                                </td>
+                                <td class="text-body-secondary">
+                                    {{ session.started_at|date:"j M Y" }}
+                                    {% if session.started_by %}
+                                        <span class="d-block small">
+                                            {{ session.started_by.full_name|default:session.started_by.username }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if session.is_open %}
+                                        <span class="badge text-bg-info">
+                                            In Progress
+                                        </span>
+                                    {% else %}
+                                        <span class="badge text-bg-success">
+                                            Completed
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% include "library/partials/pagination.html" with page_obj=sessions %}
+
+    {% else %}
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center text-body-secondary py-5">
+                <i class="bi bi-clipboard-check fs-1 d-block mb-2" aria-hidden="true"></i>
+                <p class="mb-1 fw-semibold">No stock check has been run yet.</p>
+                <p class="mb-0 small">
+                    Start one for a shelf, a location, or the whole library.
+                </p>
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

@@ -110,6 +110,9 @@ TEMPLATES = [
                 # Organisation branding (name, logo, colours). Must stay
                 # available for anonymous users too — the login page uses it.
                 "library.context_processors.branding",
+                # `layout`: the whole shell, or just the main-content
+                # region when an HTMX navigation asks for it.
+                "library.context_processors.navigation",
             ],
         },
     },

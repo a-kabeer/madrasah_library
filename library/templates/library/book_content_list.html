@@ -1,121 +1,197 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Book Contents</title>
-</head>
-<body>
+{% extends layout %}
 
-{% include "library/_account_bar.html" %}
+{% block title %}
+    Book Contents | {{ branding.display_name }}
+{% endblock %}
 
-    <p>
-    <a href="{% url 'library_home' %}">← Back to Home</a>
-</p>
+{% block page_title %}
+    Book Contents
+{% endblock %}
 
-<h1>Book Contents</h1>
+{% block breadcrumbs %}
+    <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item">
+                <a href="{% url 'book_list' %}">Books</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                Contents
+            </li>
+        </ol>
+    </nav>
+{% endblock %}
 
-<form method="get">
+{% block content %}
 
-    <input
-        type="text"
-        name="search"
-        value="{{ search }}"
-        placeholder="Search contents..."
-    >
+<div class="container-fluid px-0">
 
-    <label for="volume">Volume:</label>
-
-    <select name="volume" id="volume">
-        <option value="">All Volumes</option>
-
-        {% for volume in volumes %}
-            <option
-                value="{{ volume.id }}"
-                {% if volume_id == volume.id|stringformat:"s" %}selected{% endif %}
-            >
-                {{ volume.book.title }} - Volume {{ volume.volume_number }}
-            </option>
-        {% endfor %}
-    </select>
-
-    <label for="content_type">Content Type:</label>
-
-    <select name="content_type" id="content_type">
-        <option value="">All Types</option>
-
-        {% for item in content_types %}
-            <option
-                value="{{ item }}"
-                {% if content_type == item %}selected{% endif %}
-            >
-                {{ item }}
-            </option>
-        {% endfor %}
-    </select>
-
-    <button type="submit">Search</button>
-
-    {% if search or volume_id or content_type %}
-        <a href="{% url 'book_content_list' %}">
-            Clear
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h2 class="fw-bold mb-1">Book Contents</h2>
+            <p class="text-body-secondary mb-0">
+                Chapters, sections and other entries inside a volume.
+            </p>
+        </div>
+        <a href="{% url 'book_content_add' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Add Content
         </a>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+
+                <div class="col-12 col-lg-4">
+                    <label for="contentSearch" class="form-label fw-semibold">
+                        Search
+                    </label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="contentSearch"
+                        name="search"
+                        value="{{ search }}"
+                        placeholder="Search contents..."
+                    >
+                </div>
+
+                <div class="col-12 col-lg-4">
+                    <label for="volume" class="form-label fw-semibold">
+                        Volume
+                    </label>
+                    <select class="form-select" name="volume" id="volume">
+                        <option value="">All Volumes</option>
+                        {% for volume in volumes %}
+                            <option
+                                value="{{ volume.id }}"
+                                {% if volume_id == volume.id|stringformat:"s" %}selected{% endif %}
+                            >
+                                {{ volume.book.title }} - Volume {{ volume.volume_number }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-12 col-lg-2">
+                    <label for="content_type" class="form-label fw-semibold">
+                        Content Type
+                    </label>
+                    <select class="form-select" name="content_type" id="content_type">
+                        <option value="">All Types</option>
+                        {% for item in content_types %}
+                            <option
+                                value="{{ item }}"
+                                {% if content_type == item %}selected{% endif %}
+                            >
+                                {{ item }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-12 col-lg-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1"></i> Search
+                    </button>
+                    {% if search or volume_id or content_type %}
+                        <a href="{% url 'book_content_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg"></i>
+                            <span class="visually-hidden">Clear</span>
+                        </a>
+                    {% endif %}
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    {% comment %}
+      Only while filtered, as before.
+    {% endcomment %}
+    {% if search or volume_id or content_type %}
+        <p class="text-body-secondary mb-3">
+            Found <strong>{{ contents.paginator.count }}</strong>
+            content item{{ contents.paginator.count|pluralize }}.
+        </p>
     {% endif %}
 
-</form>
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>ID</th>
+                        <th>Volume</th>
+                        <th>Content</th>
+                        <th>Parent</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for content in contents %}
+                        <tr>
+                            <td class="text-body-secondary">{{ content.id }}</td>
+                            <td>
+                                <a href="{% url 'book_volume_detail' content.volume.id %}"
+                                   class="text-decoration-none">
+                                    {{ content.volume.book.title }}
+                                </a>
+                                <span class="d-block small text-body-secondary">
+                                    {{ content.volume.title }}
+                                </span>
+                            </td>
+                            <td class="fw-semibold">{{ content.title }}</td>
+                            <td class="text-body-secondary">
+                                {% if content.parent %}
+                                    {{ content.parent.title }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1">
+                                    <a
+                                        href="{% url 'book_content_detail' content.id %}"
+                                        class="btn btn-sm btn-outline-secondary"
+                                        title="View Details"
+                                    >
+                                        <i class="bi bi-box-arrow-up-right"></i>
+                                    </a>
+                                    <a
+                                        href="{% url 'book_content_edit' content.id %}"
+                                        class="btn btn-sm btn-outline-warning"
+                                        title="Edit"
+                                    >
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a
+                                        href="{% url 'book_content_delete' content.id %}"
+                                        class="btn btn-sm btn-outline-danger"
+                                        title="Delete"
+                                    >
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-body-secondary py-4">
+                                No contents found.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-{% if search or volume_id or content_type %}
-    <p>
-        Found {{ contents.paginator.count }} content item(s).
-    </p>
-{% endif %}
+    {% comment %}
+      `_pagination.html` still: this view supplies neither
+      `pagination_query` nor the elided range the Bootstrap partial wants.
+    {% endcomment %}
+    {% include "library/_pagination.html" with page_obj=contents %}
 
-<a href="{% url 'book_content_add' %}">
-    Add Content
-</a>
+</div>
 
-<ul>
-    {% for content in contents %}
-        <li>
-
-            ID: {{ content.id }}
-
-            - Volume: {{ content.volume.book.title }}
-
-            - {{ content.volume.title }}
-
-            - Content: {{ content.title }}
-
-            {% if content.parent %}
-                - Parent: {{ content.parent.title }}
-            {% endif %}
-
-            |
-
-            <a href="{% url 'book_content_detail' content.id %}">
-    View Details
-</a>
-
-            |
-
-            <a href="{% url 'book_content_edit' content.id %}">
-                Edit
-            </a>
-
-            |
-
-            <a href="{% url 'book_content_delete' content.id %}">
-                Delete
-            </a>
-
-        </li>
-
-    {% empty %}
-
-        <li>No contents found.</li>
-
-    {% endfor %}
-</ul>
-
-{% include "library/_pagination.html" with page_obj=contents %}
-
-</body>
-</html>
+{% endblock %}

@@ -1,0 +1,140 @@
+{% extends layout %}
+
+{% block title %}
+    Circulation | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    Circulation
+{% endblock %}
+
+{% block breadcrumbs %}
+    <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item">
+                <a href="{% url 'reports_home' %}">Reports</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Circulation</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-0">
+
+    {% include "library/partials/report_header.html" with report_title="Circulation" report_blurb="What went out and came back over a period." %}
+
+    {% comment %}
+      The filters. A plain GET form, so every state of this report is a URL
+      - which is what makes it bookmarkable, shareable, and the same thing
+      the CSV export reads. Hidden when printing: the values that were
+      applied are already in the line above, and the controls that set them
+      are not what anyone wants on paper.
+    {% endcomment %}
+    <form method="get" class="card shadow-sm border-0 mb-4 print-hidden">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+
+                <div class="col-6 col-md-3">
+                    <label for="startDate" class="form-label small mb-1">From</label>
+                    <input type="date" class="form-control form-control-sm"
+                           id="startDate" name="start" value="{{ start }}">
+                </div>
+                <div class="col-6 col-md-3">
+                    <label for="endDate" class="form-label small mb-1">To</label>
+                    <input type="date" class="form-control form-control-sm"
+                           id="endDate" name="end" value="{{ end }}">
+                </div>
+                <div class="col-12 col-md-3">
+                    <label for="filterLocation" class="form-label small mb-1">Location</label>
+                    <select class="form-select form-select-sm" id="filterLocation" name="location">
+                        <option value="">All locations</option>
+                        {% for place in locations %}
+                            <option value="{{ place.id }}"
+                                {% if location_id == place.id|stringformat:"s" %}selected{% endif %}
+                            >{{ place.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label for="filterTitle" class="form-label small mb-1">Book title</label>
+                    <input type="search" class="form-control form-control-sm"
+                           id="filterTitle" name="title" value="{{ title_filter }}"
+                           placeholder="Any title">
+                </div>
+                <div class="col-12 col-md-auto">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-funnel me-1"></i> Apply
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% if tallies %}
+        <div class="row g-3 mb-4">
+            {% for label, value in tallies_shown %}
+                <div class="col-6 col-lg-2">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body">
+                            <p class="text-body-secondary small mb-1">{{ label }}</p>
+                            <p class="fs-4 fw-bold mb-0">{{ value }}</p>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>Copy</th><th>Book</th><th>Borrower</th>
+                            <th>Issued</th><th>Due</th><th>Returned</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for loan in loans %}
+                            <tr>
+                                <td>{{ loan.copy.copy_code }}</td>
+                                <td>
+                                    {{ loan.copy.volume.book.title }}
+                                    {% if loan.copy.volume.book.author %}
+                                        <span class="d-block small text-body-secondary">
+                                            {{ loan.copy.volume.book.author.name }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ loan.borrower.name }}</td>
+                                <td>{{ loan.issue_date }}</td>
+                                <td>{{ loan.due_date }}</td>
+                                <td>
+                                    {% if loan.return_date %}
+                                        {{ loan.return_date }}
+                                    {% else %}
+                                        <span class="text-body-secondary">Still out</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-body-secondary py-4">
+                                    Nothing was issued or returned in this period.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="print-hidden">
+            {% include "library/partials/pagination.html" with page_obj=loans %}
+        </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

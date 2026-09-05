@@ -1,4 +1,11 @@
-{% extends "library/base.html" %}
+{% extends layout %}
+{% comment %}
+  `layout` rather than base.html by name: an ordinary request renders the
+  whole application shell, an HTMX navigation renders only the main-content
+  region. One template, one URL, one view behind both. `{% extends %}` has
+  to be the very first tag, so this note sits under it.
+  See library/context_processors.py.
+{% endcomment %}
 
 {% block title %}
     Locations | {{ branding.display_name }}
@@ -125,6 +132,7 @@
                                 <div class="d-inline-flex gap-1" data-row-actions>
                                     <a
                                         href="{% url 'location_detail' location.id %}"
+                                        data-row-primary
                                         class="btn btn-sm btn-outline-secondary"
                                         title="Open"
                                         aria-label="Open {{ location.name }}"

@@ -1,0 +1,131 @@
+{% extends layout %}
+
+{% block title %}
+    Withdraw Copy | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    Withdraw Copy
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-0">
+
+    <div class="mb-3">
+        <a href="{% url 'book_copy_detail' copy.id %}" class="small text-decoration-none">
+            <i class="bi bi-arrow-left me-1"></i> Back to the copy
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-7">
+
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center p-5">
+
+                    {% if already %}
+
+                        <div class="mb-4">
+                            <i class="bi bi-box-arrow-right text-secondary" style="font-size: 3rem;"></i>
+                        </div>
+
+                        <h4 class="fw-bold mb-3">Already out of circulation</h4>
+
+                        <p class="text-body-secondary mb-4">
+                            <strong class="text-body">{{ copy.copy_code }}</strong>
+                            is marked <strong class="text-body">{{ copy.status }}</strong>,
+                            so it is not being offered for issue.
+                        </p>
+
+                        <a href="{% url 'book_copy_edit' copy.id %}" class="btn btn-outline-secondary">
+                            Change its status
+                        </a>
+
+                    {% elif blocker %}
+
+                        {% comment %}
+                          The loan is the record of where the book
+                          physically is. Marking the copy withdrawn under
+                          an open loan would leave the two disagreeing.
+                        {% endcomment %}
+                        <div class="mb-4">
+                            <i class="bi bi-shield-exclamation text-warning" style="font-size: 3rem;"></i>
+                        </div>
+
+                        <h4 class="fw-bold mb-3">This copy cannot be withdrawn yet</h4>
+
+                        <p class="text-body-secondary mb-4">{{ blocker }}</p>
+
+                        <div class="d-flex justify-content-center flex-wrap gap-2">
+                            <a href="{% url 'loan_return' active_loan.id %}" class="btn btn-success">
+                                <i class="bi bi-arrow-return-left me-1"></i> Take it back
+                            </a>
+                            <a href="{% url 'book_copy_detail' copy.id %}" class="btn btn-outline-secondary">
+                                Back to the copy
+                            </a>
+                        </div>
+
+                    {% else %}
+
+                        <div class="mb-4">
+                            <i class="bi bi-box-arrow-right text-warning" style="font-size: 3rem;"></i>
+                        </div>
+
+                        <h4 class="fw-bold mb-3">Withdraw this copy?</h4>
+
+                        <p class="text-body-secondary mb-4">
+                            <strong class="text-body">{{ copy.copy_code }}</strong>
+                            — {{ copy.volume.book.title }}
+                        </p>
+
+                        <ul class="list-unstyled text-start small text-body-secondary mb-4 mx-auto"
+                            style="max-width: 26rem;">
+                            <li class="mb-2">
+                                <i class="bi bi-check2 text-success me-2"></i>
+                                The copy and its code stay on record, and so
+                                do all {{ loan_count }} loan{{ loan_count|pluralize }}
+                                against it.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-x-lg text-danger me-2"></i>
+                                It stops being offered for issue and stops
+                                counting as available.
+                            </li>
+                            <li>
+                                {% comment %}
+                                  Named rather than hidden: the status is
+                                  one the copy list and its filters already
+                                  understand, so nothing about this copy
+                                  becomes a special case.
+                                {% endcomment %}
+                                <i class="bi bi-tag me-2"></i>
+                                Its status becomes
+                                <strong class="text-body">{{ withdrawn_status }}</strong>,
+                                which you can change again from Edit Copy.
+                            </li>
+                        </ul>
+
+                        <div class="d-flex justify-content-center gap-2">
+                            <a href="{% url 'book_copy_detail' copy.id %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i> Cancel
+                            </a>
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="bi bi-box-arrow-right me-1"></i> Withdraw Copy
+                                </button>
+                            </form>
+                        </div>
+
+                    {% endif %}
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,4 +1,11 @@
-{% extends "library/base.html" %}
+{% extends layout %}
+{% comment %}
+  `layout` rather than base.html by name: an ordinary request renders the
+  whole application shell, an HTMX navigation renders only the main-content
+  region. One template, one URL, one view behind both. `{% extends %}` has
+  to be the very first tag, so this note sits under it.
+  See library/context_processors.py.
+{% endcomment %}
 
 {% block title %}
     Borrowers | {{ branding.display_name }}
@@ -175,7 +182,16 @@
                             aria-label="Open {{ borrower.name }}"
                         >
                             <td>
-                                <span class="fw-semibold">{{ borrower.name }}</span>
+                                {% comment %}
+                                  The name is the link as well as the row, so
+                                  it reads as one and can be opened in a new
+                                  tab. Same destination either way; the row
+                                  handler stands aside inside an <a>.
+                                {% endcomment %}
+                                <a
+                                    href="{% url 'borrower_detail' borrower.id %}"
+                                    class="fw-semibold text-decoration-none"
+                                >{{ borrower.name }}</a>
                                 <span class="d-block small text-body-secondary">
                                     {{ borrower.phone }}{% if borrower.department %} · {{ borrower.department }}{% endif %}
                                 </span>
@@ -216,6 +232,7 @@
                                     <a
                                         href="{% url 'borrower_detail' borrower.id %}"
                                         class="btn btn-sm btn-outline-secondary"
+                                        data-row-primary
                                         title="Open"
                                         aria-label="Open {{ borrower.name }}"
                                     >
