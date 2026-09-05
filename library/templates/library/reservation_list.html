@@ -1,0 +1,136 @@
+{% extends layout %}
+
+{% block title %}
+    Reservations | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    Reservations
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-0">
+
+    <div class="mb-4">
+        <h2 class="fw-bold mb-1">Reservations</h2>
+        <p class="text-body-secondary mb-0">
+            Who is waiting, and since when. A reservation is on the book,
+            not on a copy — nothing here is held back on a shelf, and
+            nothing happens on its own when one comes in.
+        </p>
+    </div>
+
+    {% comment %}
+      The status filter, as plain links rather than a form: there are
+      three of them and they are the whole control.
+    {% endcomment %}
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        {% for value, label in statuses %}
+            <a
+                href="?status={{ value }}"
+                class="btn btn-sm {% if status == value %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+            >{{ label }}</a>
+        {% endfor %}
+
+        <span class="text-body-secondary small ms-2">
+            {{ active_total }} waiting in all.
+        </span>
+    </div>
+
+    {% if reservations %}
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>Borrower</th>
+                            <th>Book</th>
+                            <th>Asked</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reservation in reservations %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'borrower_detail' reservation.borrower_id %}"
+                                       class="fw-semibold text-decoration-none">
+                                        {{ reservation.borrower.name }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="{% url 'book_detail' reservation.book_id %}?tab=reservations"
+                                       class="text-decoration-none">
+                                        {{ reservation.book.title }}
+                                    </a>
+                                    {% if reservation.book.author %}
+                                        <span class="d-block small text-body-secondary">
+                                            {{ reservation.book.author.name }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-body-secondary">
+                                    {{ reservation.created_at|date:"j M Y" }}
+                                </td>
+                                <td>
+                                    {% if reservation.is_active %}
+                                        <span class="badge text-bg-info">Waiting</span>
+                                    {% elif reservation.status == "Fulfilled" %}
+                                        <span class="badge text-bg-success">Fulfilled</span>
+                                    {% else %}
+                                        <span class="badge text-bg-secondary">Cancelled</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if reservation.is_active %}
+                                        {% comment %}
+                                          A POST, because it changes the
+                                          queue. The `next` brings the
+                                          librarian back to this list
+                                          rather than to the borrower.
+                                        {% endcomment %}
+                                        <form
+                                            method="post"
+                                            action="{% url 'reservation_cancel' reservation.id %}"
+                                            class="d-inline"
+                                        >
+                                            {% csrf_token %}
+                                            <input type="hidden" name="next"
+                                                   value="{{ request.get_full_path }}">
+                                            <button type="submit"
+                                                    class="btn btn-sm btn-outline-danger">
+                                                Cancel
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span class="text-body-secondary small">
+                                            {{ reservation.closed_at|date:"j M Y" }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% include "library/partials/pagination.html" with page_obj=reservations %}
+
+    {% else %}
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center text-body-secondary py-5">
+                <i class="bi bi-bookmark-star fs-1 d-block mb-2" aria-hidden="true"></i>
+                <p class="mb-1 fw-semibold">Nobody is on this list.</p>
+                <p class="mb-0 small">
+                    A borrower joins a queue from the book's own page.
+                </p>
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

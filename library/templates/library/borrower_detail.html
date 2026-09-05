@@ -304,6 +304,110 @@
 
     </div>
 
+    {% comment %}
+      What they are waiting for. Its own section, kept apart from the loans
+      above: a reservation is not a loan and holds nothing - no copy is set
+      aside, and being first in a queue is not the same as having the book.
+    {% endcomment %}
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h5 class="mb-0 fw-bold">
+                <i class="bi bi-bookmark-star me-2"></i>Reservations
+            </h5>
+        </div>
+
+        {% if reservations %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>Book</th>
+                            <th>Asked</th>
+                            <th>Status</th>
+                            <th>Position</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reservation in reservations %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'book_detail' reservation.book_id %}?tab=reservations"
+                                       class="fw-semibold text-decoration-none">
+                                        {{ reservation.book.title }}
+                                    </a>
+                                    {% if reservation.book.author %}
+                                        <span class="d-block small text-body-secondary">
+                                            {{ reservation.book.author.name }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-body-secondary">
+                                    {{ reservation.created_at|date:"j M Y" }}
+                                </td>
+                                <td>
+                                    {% if reservation.is_active %}
+                                        <span class="badge text-bg-info">Waiting</span>
+                                    {% elif reservation.status == "Fulfilled" %}
+                                        <span class="badge text-bg-success">Fulfilled</span>
+                                    {% else %}
+                                        <span class="badge text-bg-secondary">Cancelled</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% comment %}
+                                      `ahead` is how many active
+                                      reservations for the same book were
+                                      made first, so the position is one
+                                      more than that. Only meaningful while
+                                      they are still waiting.
+                                    {% endcomment %}
+                                    {% if reservation.is_active %}
+                                        <span class="fw-semibold">
+                                            {{ reservation.ahead|add:1 }}
+                                        </span>
+                                        {% if reservation.ahead == 0 %}
+                                            <span class="d-block small text-success">
+                                                Next in line
+                                            </span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-body-secondary">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if reservation.is_active %}
+                                        <form
+                                            method="post"
+                                            action="{% url 'reservation_cancel' reservation.id %}"
+                                            class="d-inline"
+                                        >
+                                            {% csrf_token %}
+                                            <input type="hidden" name="next"
+                                                   value="{{ request.get_full_path }}">
+                                            <button type="submit"
+                                                    class="btn btn-sm btn-outline-danger">
+                                                Cancel
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span class="text-body-secondary small">
+                                            {{ reservation.closed_at|date:"j M Y" }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="card-body text-body-secondary">
+                This borrower is not waiting for anything.
+            </div>
+        {% endif %}
+    </div>
+
     <!-- Loan history -->
     <div class="card shadow-sm border-0 mt-4">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">

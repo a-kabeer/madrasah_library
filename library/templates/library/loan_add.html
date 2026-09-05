@@ -258,6 +258,35 @@
                         </p>
                     {% endif %}
 
+    {% comment %}
+      Somebody is ahead of the chosen borrower in a queue, so this cannot
+      be issued. Said here so the librarian sees it before they try, and
+      refused again in the view - the button below is a courtesy and the
+      server is the rule.
+    {% endcomment %}
+    {% if queue_blocks %}
+        <div class="alert alert-danger" role="alert">
+            <strong>
+                <i class="bi bi-bookmark-star me-1" aria-hidden="true"></i>
+                Somebody is first in the queue.
+            </strong>
+            <ul class="mb-0 mt-2 small">
+                {% for copy in queue_blocks %}
+                    <li>
+                        <strong>{{ copy.volume.book.title }}</strong> —
+                        {{ copy.queue_front.borrower.name }} is first of
+                        {{ copy.queue_length }}, waiting since
+                        {{ copy.queue_front.created_at|date:"j M Y" }}.
+                    </li>
+                {% endfor %}
+            </ul>
+            <span class="d-block small mt-2">
+                Issue to them instead, or cancel their reservation on the
+                book's page if it should not stand.
+            </span>
+        </div>
+    {% endif %}
+
                     <p class="text-body-secondary small mb-1">
                         Copies ({{ chosen|length }})
                     </p>
@@ -325,7 +354,7 @@
                     <button
                         type="submit"
                         class="btn btn-primary"
-                        {% if not chosen or not borrower_id %}disabled{% endif %}
+                        {% if not chosen or not borrower_id or queue_blocks %}disabled{% endif %}
                     >
                         <i class="bi bi-box-arrow-right me-1"></i>
                         Issue {{ chosen|length }} cop{{ chosen|length|pluralize:"y,ies" }}

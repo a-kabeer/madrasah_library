@@ -34,6 +34,7 @@ from .models import (
     Author,
     InventoryScan,
     InventorySession,
+    Reservation,
     Category,
     Publisher,
     Location,
@@ -57,6 +58,7 @@ from . import history
 from . import inventory
 from . import policy
 from . import reports
+from . import reservations
 from .context_processors import clear_branding_cache, is_main_nav_request
 from .permissions import can_edit_library, role_required
 
@@ -140,7 +142,9 @@ COPY_STATE_ORDER = (
 COPY_STATE_ALWAYS_SHOWN = ("available", "issued", "overdue")
 
 # The panes on the book detail page. `tab` only marks one active.
-BOOK_DETAIL_TABS = ("overview", "volumes", "copies", "contents", "loans")
+BOOK_DETAIL_TABS = (
+    "overview", "volumes", "copies", "contents", "loans", "reservations",
+)
 
 COPY_SORT_FIELDS = {
     "code": "copy_code",
@@ -267,6 +271,7 @@ ACTIVITY_LOG_DETAIL_ROUTES = {
     "Loan": "loan_detail",
     "Location": "location_detail",
     "Publisher": "publisher_detail",
+    "Reservation": "book_detail",
     "Shelf": "shelf_detail",
 }
 
@@ -2221,6 +2226,156 @@ def report_popular(request):
         "library/report_popular.html",
         report_context(request, dates, books=books),
     )
+
+
+# ==========================================================================
+# RESERVATIONS
+#
+# A queue of borrowers waiting for a book. Nothing here holds a copy back,
+# and nothing happens automatically when one is returned - see
+# library/reservations.py.
+# ==========================================================================
+
+
+def reservation_list(request):
+    """Everyone currently waiting, and what for.
+
+    Grouped by nothing: it is one list, oldest first, because the question
+    a librarian brings to it is "who has been waiting longest".
+    """
+
+    status = (request.GET.get("status") or "").strip()
+
+    if status not in dict(Reservation.STATUS_CHOICES):
+        status = Reservation.STATUS_ACTIVE
+
+    waiting = Reservation.objects.filter(
+        status=status
+    ).select_related(
+        "borrower", "book__author"
+    ).order_by("created_at", "id")
+
+    paginator = Paginator(waiting, PAGE_SIZE)
+    page = paginator.get_page(request.GET.get("page"))
+
+    return render(
+        request,
+        "library/reservation_list.html",
+        {
+            "reservations": page,
+            "paginator": paginator,
+            "pagination_query": query_with(request, page=None),
+            "status": status,
+            "statuses": Reservation.STATUS_CHOICES,
+            "active_total": Reservation.objects.filter(
+                status=Reservation.STATUS_ACTIVE
+            ).count(),
+        },
+    )
+
+
+def reservation_add(request):
+    """Put a borrower in a book's queue.
+
+    A POST from the book's own page, which is where the queue is on
+    screen. The borrower comes from the same searchable control the issue
+    form uses, so there is one way of naming a borrower in this
+    application.
+    """
+
+    book_id = request.POST.get("book", "") if request.method == "POST" else ""
+
+    book = get_object_or_404(Book, id=book_id) if book_id.isdigit() else None
+
+    if request.method != "POST" or book is None:
+        return redirect("book_list")
+
+    landing = redirect(
+        "%s?tab=reservations" % reverse("book_detail", args=[book.id])
+    )
+
+    borrower_id = request.POST.get("borrower", "").strip()
+
+    borrower = Borrower.objects.filter(
+        id=borrower_id
+    ).first() if borrower_id.isdigit() else None
+
+    if borrower is None:
+        messages.error(request, "Choose who is waiting for this book.")
+        return landing
+
+    reservation, error = reservations.reserve(book, borrower)
+
+    if error:
+        messages.warning(request, error)
+        return landing
+
+    create_activity_log(
+        user=request.user,
+        action="RESERVE",
+        entity_type="Reservation",
+        entity_id=book.id,
+        description=(
+            "%s reserved %s" % (borrower.name, book.title)
+        ),
+    )
+
+    messages.success(
+        request,
+        "%s is in the queue for %s." % (borrower.name, book.title),
+    )
+
+    return landing
+
+
+def reservation_cancel(request, reservation_id):
+    """Take a borrower out of a queue.
+
+    Cancelling closes that reservation and nothing else: the people behind
+    move up because they were always behind, not because anything was
+    renumbered.
+    """
+
+    reservation = get_object_or_404(
+        Reservation.objects.select_related("borrower", "book"),
+        id=reservation_id,
+    )
+
+    landing = redirect(
+        safe_redirect_target(
+            request, reverse("borrower_detail", args=[reservation.borrower_id])
+        )
+    )
+
+    if request.method != "POST":
+        return landing
+
+    if reservations.close(
+        reservation, Reservation.STATUS_CANCELLED, request.user
+    ):
+        create_activity_log(
+            user=request.user,
+            action="CANCEL",
+            entity_type="Reservation",
+            entity_id=reservation.book_id,
+            description=(
+                "%s cancelled their reservation for %s"
+                % (reservation.borrower.name, reservation.book.title)
+            ),
+        )
+
+        messages.success(
+            request,
+            "%s is no longer waiting for %s."
+            % (reservation.borrower.name, reservation.book.title),
+        )
+
+    else:
+        messages.info(
+            request, "That reservation had already been closed."
+        )
+
+    return landing
 
 
 #Category View
@@ -5685,6 +5840,20 @@ def book_detail(request, book_id):
             "paginator": paginator,
             "tab": tab,
             "can_edit": can_edit_library(request.user),
+            # Who is waiting for this book. The count is worth having on
+            # every tab - it belongs beside the availability summary - and
+            # the queue itself only when it is being looked at.
+            "reservation_count": reservations.active_count(book),
+            "reservation_queue": (
+                reservations.active_for_book(book)
+                if tab == "reservations" else []
+            ),
+            # Off the tally above, which is already built from the
+            # copies this page fetched - so saying "some are on the shelf"
+            # costs no query, and it is the derived state the availability
+            # summary shows rather than a second opinion from the status
+            # column.
+            "copies_available_now": tally.get("available", 0),
         }
     )
 
@@ -8088,6 +8257,17 @@ def loan_add(request):
             [value for value in chosen_ids if value != copy.id],
         )
 
+    # Who is waiting for the books in the basket, so the form can say
+    # before the librarian tries. The rule itself is applied in the POST -
+    # this is the same answer shown early, not the place it is decided.
+    # One query for the whole basket.
+    queues = reservations.queues_for_copies(chosen)
+
+    for copy in chosen:
+        copy.queue_front, copy.queue_length = queues.get(
+            copy.volume.book_id, (None, 0)
+        )
+
     # The borrower is chosen through the searchable dropdown, which asks
     # `borrower_list` for its suggestions as you type. So this page no
     # longer loads every active borrower to fill a <select> - it only needs
@@ -8261,6 +8441,21 @@ def loan_add(request):
                     if refusal:
                         raise PolicyRefused(refusal)
 
+                    # And whether somebody is ahead of them in a queue for
+                    # any of these books. Inside the transaction with the
+                    # rest, so a form posted straight at this view is held
+                    # to it exactly as the page is - the button being
+                    # hidden is a courtesy, not the rule.
+                    #
+                    # Read after the borrower is locked and before any copy
+                    # is, so it adds no new lock order.
+                    queued = reservations.refuse_issue_for_copies(
+                        selected_copies, borrower.id
+                    )
+
+                    if queued:
+                        raise PolicyRefused(queued)
+
                     for copy in selected_copies:
                         copy = BookCopy.objects.select_for_update().get(
                             id=copy.id
@@ -8294,6 +8489,35 @@ def loan_add(request):
                                 f"Due: {due_date.isoformat()}"
                             ),
                         )
+
+                        # If this borrower was waiting for this book, they
+                        # are not any more. Only their own reservation:
+                        # issuing to somebody further down the queue leaves
+                        # everyone in front of them exactly where they were.
+                        #
+                        # Inside the same transaction as the loan, with the
+                        # borrower already locked above, so it cannot half
+                        # happen and adds no new lock order.
+                        fulfilled = reservations.fulfil_for(
+                            copy.volume.book_id, borrower.id, request.user
+                        )
+
+                        if fulfilled is not None:
+                            create_activity_log(
+                                user=request.user,
+                                action="FULFIL",
+                                entity_type="Reservation",
+                                entity_id=copy.volume.book_id,
+                                description=(
+                                    "%s's reservation for %s fulfilled by "
+                                    "%s"
+                                    % (
+                                        borrower.name,
+                                        copy.volume.book.title,
+                                        copy.copy_code,
+                                    )
+                                ),
+                            )
 
                 cache.delete(LOAN_CACHE_KEY)
                 cache.delete(BOOK_COPY_CACHE_KEY)
@@ -8338,6 +8562,16 @@ def loan_add(request):
             "error_message": error_message,
             "default_issue_date": today.isoformat(),
             "default_due_date": default_due_date,
+            # Somebody other than the chosen borrower is at the head of a
+            # queue for something in the basket, so this issue will be
+            # refused. Shown on the form and enforced in the POST - the
+            # same rule said twice, in the place it can be read and the
+            # place it cannot be avoided.
+            "queue_blocks": [
+                copy for copy in chosen
+                if copy.queue_front
+                and str(copy.queue_front.borrower_id) != str(borrower_id)
+            ],
         }
     )
 
@@ -8640,6 +8874,16 @@ def loan_return(request, loan_id):
                 safe_redirect_target(request, "loan_list")
             )
 
+    # Whether anyone is waiting for this book. Shown to whoever is taking
+    # it back, and nothing more: no copy is assigned, no message is sent,
+    # and the return itself is unchanged. What to do about the queue is the
+    # librarian's call, which is why this is a sentence and not a workflow.
+    waiting_front = reservations.queue_front(loan.copy.volume.book)
+    waiting_count = (
+        reservations.active_count(loan.copy.volume.book)
+        if waiting_front else 0
+    )
+
     return render(
         request,
         "library/loan_return.html",
@@ -8647,6 +8891,8 @@ def loan_return(request, loan_id):
             "loan": loan,
             "error_message": error_message,
             "next_url": next_url,
+            "waiting_front": waiting_front,
+            "waiting_count": waiting_count,
         }
     )
 @role_required("Admin", "Librarian")
@@ -9359,6 +9605,9 @@ def borrower_detail(request, borrower_id):
             ),
             "page_ellipsis": Paginator.ELLIPSIS,
             "can_delete": can_edit_library(request.user),
+            # What they are waiting for, with their place in each queue.
+            # One query, and a borrower waits for a handful of books.
+            "reservations": reservations.active_for_borrower(borrower),
         }
     )
 

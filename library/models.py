@@ -958,3 +958,74 @@ class InventoryScan(models.Model):
 
     def __str__(self):
         return "%s (%s)" % (self.copy_code, self.outcome)
+
+
+class Reservation(models.Model):
+    """A borrower waiting for a book, in the order they asked.
+
+    A hold on the *book*, never on a particular copy. Which physical copy
+    someone ends up with is decided when a librarian hands one over, and
+    tying a reservation to a copy would mean the queue could be blocked by
+    one volume sitting on a trolley while three others were on the shelf.
+
+    Deliberately thin. There is no expiry, no priority, no notification and
+    no shelf reserved: a queue, a position in it, and a record of how each
+    one ended. Everything else a library might want from holds is a
+    decision someone at the desk makes, and the point of this is to tell
+    them who asked first.
+
+    `unique_active_reservation` in the database is what stops one borrower
+    holding two places in the same queue - not a check in Python, which two
+    simultaneous requests could both pass.
+    """
+
+    STATUS_ACTIVE = "Active"
+    STATUS_FULFILLED = "Fulfilled"
+    STATUS_CANCELLED = "Cancelled"
+
+    # Mirrors the `check_reservation_status` CHECK constraint in Postgres.
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, "Waiting"),
+        (STATUS_FULFILLED, "Fulfilled"),
+        (STATUS_CANCELLED, "Cancelled"),
+    ]
+
+    id = models.AutoField(primary_key=True)
+
+    borrower = models.ForeignKey(
+        Borrower,
+        on_delete=models.DO_NOTHING,
+        db_column="borrower_id",
+        related_name="reservations",
+    )
+
+    book = models.ForeignKey(
+        Book,
+        on_delete=models.DO_NOTHING,
+        db_column="book_id",
+        related_name="reservations",
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_ACTIVE,
+    )
+
+    created_at = models.DateTimeField()
+
+    # When it stopped being active, whichever way it ended. One column
+    # rather than two, because a reservation ends once and the status says
+    # how; two nullable dates would allow a row claiming both.
+    closed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "reservations"
+
+    def __str__(self):
+        return "%s waiting for %s" % (self.borrower.name, self.book.title)
+
+    @property
+    def is_active(self):
+        return self.status == self.STATUS_ACTIVE

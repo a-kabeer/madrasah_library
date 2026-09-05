@@ -980,3 +980,47 @@ CREATE UNIQUE INDEX unique_found_copy_per_session
 
 CREATE INDEX idx_inventory_scans_session
     ON public.inventory_scans (session_id);
+
+
+--
+-- Name: reservations; Type: TABLE; Schema: public; Owner: postgres
+--
+-- A borrower waiting for a book, in the order they asked (see
+-- library.models.Reservation). `unique_active_reservation` below is what
+-- stops one borrower holding two places in the same queue.
+--
+
+CREATE TABLE public.reservations (
+    id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    borrower_id integer NOT NULL REFERENCES public.borrowers(id),
+    book_id integer NOT NULL REFERENCES public.books(id),
+    status character varying(20) DEFAULT 'Active'::character varying NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    closed_at timestamp with time zone,
+
+    CONSTRAINT check_reservation_status CHECK (
+        status IN ('Active', 'Fulfilled', 'Cancelled')
+    ),
+
+    CONSTRAINT check_reservation_closed CHECK (
+        (status = 'Active' AND closed_at IS NULL)
+        OR (status <> 'Active' AND closed_at IS NOT NULL)
+    )
+);
+
+
+ALTER TABLE public.reservations OWNER TO postgres;
+
+
+CREATE UNIQUE INDEX unique_active_reservation
+    ON public.reservations (borrower_id, book_id)
+    WHERE status = 'Active';
+
+
+CREATE INDEX idx_reservations_book_queue
+    ON public.reservations (book_id, created_at, id)
+    WHERE status = 'Active';
+
+
+CREATE INDEX idx_reservations_borrower
+    ON public.reservations (borrower_id, created_at);

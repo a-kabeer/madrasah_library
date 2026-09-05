@@ -320,6 +320,25 @@
             {% endif %}
 
 
+            {% comment %}
+              Who is waiting for what. In CIRCULATION because that is the
+              desk it belongs to - it is answered when a book comes back,
+              not when the catalogue is being tidied.
+            {% endcomment %}
+            <a
+                href="{% url 'reservation_list' %}"
+                class="nav-link-custom"
+            >
+
+                <i class="bi bi-bookmark-star"></i>
+
+                <span>
+                    Reservations
+                </span>
+
+            </a>
+
+
             <a
                 href="{% url 'loan_list' %}?status=active"
                 class="nav-link-custom"

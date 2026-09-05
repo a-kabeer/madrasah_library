@@ -355,6 +355,26 @@ path(
 # Reports. One home, six reports, and `?format=csv` on each of them -
 # which reads the same validated filters the page did, so the export and
 # the report can never be two different answers.
+# Reservations. A queue of borrowers waiting for a book - never for a
+# particular copy, and nothing here holds one back.
+path(
+    "reservations/",
+    views.reservation_list,
+    name="reservation_list",
+),
+
+path(
+    "reservations/add/",
+    views.reservation_add,
+    name="reservation_add",
+),
+
+path(
+    "reservations/<int:reservation_id>/cancel/",
+    views.reservation_cancel,
+    name="reservation_cancel",
+),
+
 path("reports/", views.reports_home, name="reports_home"),
 
 path(
