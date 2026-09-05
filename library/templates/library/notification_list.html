@@ -1,0 +1,168 @@
+{% extends layout %}
+
+{% block title %}
+    Notifications | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    Notifications
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-0">
+
+    <div class="mb-4">
+        <h2 class="fw-bold mb-1">Notifications</h2>
+        <p class="text-body-secondary mb-0">
+            Yours alone, newest first. A notification is something to act
+            on — a reserved book back on the shelf, a stock check that
+            finished with copies unaccounted for. What happened and who
+            did it is the
+            <a href="{% url 'activity_log_list' %}">activity log</a>,
+            which is a different question and a different page.
+        </p>
+    </div>
+
+    {% comment %}
+      The filter, as two links rather than a form: there are two of them
+      and they are the whole control — the same shape the reservation
+      list's status filter uses.
+    {% endcomment %}
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+
+        <a
+            href="?"
+            class="btn btn-sm {% if not unread_only %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+        >All</a>
+
+        <a
+            href="?unread=1"
+            class="btn btn-sm {% if unread_only %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+        >Unread</a>
+
+        {% if unread_count %}
+            <form
+                method="post"
+                action="{% url 'notification_read_all' %}"
+                class="ms-auto"
+            >
+                {% csrf_token %}
+                <input type="hidden" name="next"
+                       value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-sm btn-outline-secondary">
+                    Mark all read
+                </button>
+            </form>
+
+            <span class="text-body-secondary small">
+                {{ unread_count }}{% if unread_count >= unread_cap %}+{% endif %}
+                unread
+            </span>
+        {% else %}
+            <span class="ms-auto text-body-secondary small">
+                Nothing unread.
+            </span>
+        {% endif %}
+
+    </div>
+
+    {% if notifications %}
+
+        <div class="card shadow-sm border-0">
+
+            <ul class="notification-list notification-list-page list-unstyled mb-0">
+
+                {% for note in notifications %}
+
+                    <li class="notification-item {% if not note.is_read %}notification-item-unread{% endif %}">
+
+                        <div class="notification-item-body">
+
+                            {% comment %}
+                              A link and nothing more: following it changes
+                              no state, so it is a plain GET. Marking read
+                              is the button beside it, which posts.
+
+                              The destination keeps its own permission
+                              rules — a stock-check notification links to a
+                              page only Admin and Librarian may open, and
+                              opening it is still that view's decision.
+                            {% endcomment %}
+                            {% if note.safe_destination %}
+                                <a href="{{ note.safe_destination }}"
+                                   class="notification-title">
+                                    {{ note.title }}
+                                </a>
+                            {% else %}
+                                <span class="notification-title">
+                                    {{ note.title }}
+                                </span>
+                            {% endif %}
+
+                            {% if note.message %}
+                                <span class="notification-message">
+                                    {{ note.message }}
+                                </span>
+                            {% endif %}
+
+                            <span class="notification-when">
+                                {{ note.created_at|date:"j M Y, H:i" }}
+                                {% if note.is_read %}
+                                    · read {{ note.read_at|date:"j M Y, H:i" }}
+                                {% endif %}
+                            </span>
+
+                        </div>
+
+                        {% if not note.is_read %}
+                            <form
+                                method="post"
+                                action="{% url 'notification_read' note.id %}"
+                                class="notification-item-action"
+                            >
+                                {% csrf_token %}
+                                <input type="hidden" name="next"
+                                       value="{{ request.get_full_path }}">
+                                <button type="submit"
+                                        class="btn btn-sm btn-outline-secondary">
+                                    Mark read
+                                </button>
+                            </form>
+                        {% endif %}
+
+                    </li>
+
+                {% endfor %}
+
+            </ul>
+
+        </div>
+
+        {% include "library/partials/pagination.html" with page_obj=notifications %}
+
+    {% else %}
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center text-body-secondary py-5">
+                <i class="bi bi-bell fs-1 d-block mb-2" aria-hidden="true"></i>
+                <p class="mb-1 fw-semibold">
+                    {% if unread_only %}
+                        Nothing unread.
+                    {% else %}
+                        Nothing here yet.
+                    {% endif %}
+                </p>
+                <p class="mb-0 small">
+                    Notifications arrive when a reserved book comes back,
+                    or when a stock check finishes with copies
+                    unaccounted for.
+                </p>
+            </div>
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

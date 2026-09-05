@@ -352,6 +352,33 @@ path(
     name="inventory_session_complete",
 ),
 
+# Notifications. Everything here is scoped to the signed-in user by the
+# views themselves: there is no recipient in any of these URLs, and the
+# two that change state answer only to POST.
+path(
+    "notifications/",
+    views.notification_list,
+    name="notification_list",
+),
+
+path(
+    "notifications/panel/",
+    views.notification_panel,
+    name="notification_panel",
+),
+
+path(
+    "notifications/<int:notification_id>/read/",
+    views.notification_read,
+    name="notification_read",
+),
+
+path(
+    "notifications/read-all/",
+    views.notification_read_all,
+    name="notification_read_all",
+),
+
 # Reports. One home, six reports, and `?format=csv` on each of them -
 # which reads the same validated filters the page did, so the export and
 # the report can never be two different answers.

@@ -694,6 +694,19 @@
 
             <div class="topbar-right">
 
+                {% comment %}
+                  The notification indicator. Only for a signed-in user:
+                  there is nobody to have notifications otherwise, and the
+                  login page renders this same shell's head.
+
+                  It is in the topbar rather than the sidebar because it is
+                  about now rather than about where to go, and because the
+                  sidebar collapses on a phone.
+                {% endcomment %}
+                {% if request.user.is_authenticated %}
+                    {% include "library/partials/notification_bell.html" %}
+                {% endif %}
+
                 {% include "library/partials/theme_selector.html" %}
 
                 <!-- User Area -->

@@ -1,0 +1,18 @@
+{% comment %}
+The number on the bell, rendered the same way in both places it appears:
+in the shell on a full page load, and in the panel's out-of-band refresh
+after something is marked read. One template, so the two cannot drift.
+
+Expects `unread_count` and `unread_cap`. Nothing at all when there is
+nothing unread - an empty badge is a dot the eye has to interpret.
+{% endcomment %}
+
+{% if unread_count %}
+    <span
+        class="badge rounded-pill text-bg-danger notification-badge"
+        data-unread-count="{{ unread_count }}"
+    >
+        {{ unread_count }}{% if unread_count >= unread_cap %}+{% endif %}
+        <span class="visually-hidden">unread notifications</span>
+    </span>
+{% endif %}

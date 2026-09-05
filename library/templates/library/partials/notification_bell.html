@@ -1,0 +1,91 @@
+{% comment %}
+The notification indicator, in the topbar beside the appearance menu.
+
+Reuses the dropdown pattern the theme selector and the user menu already
+use, so it needs no CSS of its own beyond the badge and the panel's width.
+
+Three things worth knowing about the wiring:
+
+  * `hx-target` is stated explicitly. The whole shell is inside
+    `hx-boost="true" hx-target="#mainContent"`, and htmx takes the nearest
+    target it can find - without this one, opening the panel would swap it
+    into the page.
+
+  * `hx-trigger="click once"` fetches the panel the first time it is
+    opened and not again on every open. The badge beside the bell is
+    rendered server-side on each full page load, so a user who has not
+    opened the panel still sees the right number; the panel itself
+    refreshes whenever anything is marked read, which is the only moment
+    its contents change from under it.
+
+  * `{% load %}`ed rather than context-processed, so the count query runs
+    only where this is included - base.html, which is a full page load.
+    An HTMX navigation answers with the main-content region and never
+    reaches here.
+{% endcomment %}
+
+{% load notification_tags %}
+
+{% unread_notification_count as unread_total %}
+{% notification_unread_cap as unread_cap %}
+
+<div class="dropdown">
+
+    <button
+        type="button"
+        class="btn theme-toggle notification-toggle"
+        id="notificationToggle"
+        data-bs-toggle="dropdown"
+        data-bs-auto-close="outside"
+        aria-expanded="false"
+        aria-label="Notifications"
+        title="Notifications"
+        hx-get="{% url 'notification_panel' %}"
+        hx-target="#notificationPanelBody"
+        hx-swap="innerHTML"
+        hx-trigger="click once"
+    >
+
+        <i class="bi bi-bell" aria-hidden="true"></i>
+
+        {% comment %}
+          The badge is its own element with a stable id, because the panel
+          refreshes it out of band after a mark-read. It is always present
+          (empty when there is nothing unread) so htmx has something to
+          swap.
+        {% endcomment %}
+        <span id="notificationBadge" class="notification-badge-slot">
+            {% include "library/partials/notification_badge.html" with unread_count=unread_total unread_cap=unread_cap %}
+        </span>
+
+    </button>
+
+    <div class="dropdown-menu dropdown-menu-end notification-menu p-0">
+
+        <div id="notificationPanelBody">
+
+            {% comment %}
+              What is on screen before the panel arrives. Never a list -
+              the point of fetching it is that the shell does not pay for
+              one on every page load.
+
+              The link is here as well as in the panel so that the bell
+              still leads somewhere when the script never arrives: without
+              htmx this placeholder is all there is, and a dead-end
+              dropdown would be worse than no dropdown.
+            {% endcomment %}
+            <div class="p-3 text-body-secondary small">
+                <span class="spinner-border spinner-border-sm me-2"
+                      role="status" aria-hidden="true"></span>
+                Loading notifications&hellip;
+
+                <a class="d-block mt-2" href="{% url 'notification_list' %}">
+                    All notifications
+                </a>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>

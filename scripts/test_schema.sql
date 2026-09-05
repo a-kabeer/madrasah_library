@@ -1024,3 +1024,47 @@ CREATE INDEX idx_reservations_book_queue
 
 CREATE INDEX idx_reservations_borrower
     ON public.reservations (borrower_id, created_at);
+
+
+--
+-- Name: notifications; Type: TABLE; Schema: public; Owner: postgres
+--
+-- One actionable message for one member of staff (see
+-- library.models.Notification). Everything it displays is written into the
+-- row, so it keeps saying what it said after the record that caused it
+-- changes state. `unique_notification_event` below is what makes creation
+-- idempotent: one row per recipient per transition, whatever a refresh, a
+-- retry or two simultaneous requests do.
+--
+
+CREATE TABLE public.notifications (
+    id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    recipient_id integer NOT NULL REFERENCES public.users(id),
+    event_type character varying(50) NOT NULL,
+    event_key character varying(200) NOT NULL,
+    title character varying(255) NOT NULL,
+    message text DEFAULT ''::text NOT NULL,
+    url character varying(500) DEFAULT ''::character varying NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    read_at timestamp with time zone,
+
+    CONSTRAINT check_notification_event_type CHECK (
+        event_type IN ('reservation_ready', 'stock_check_missing')
+    )
+);
+
+
+ALTER TABLE public.notifications OWNER TO postgres;
+
+
+CREATE UNIQUE INDEX unique_notification_event
+    ON public.notifications (recipient_id, event_key);
+
+
+CREATE INDEX idx_notifications_recipient_newest
+    ON public.notifications (recipient_id, created_at DESC, id DESC);
+
+
+CREATE INDEX idx_notifications_unread
+    ON public.notifications (recipient_id, created_at DESC, id DESC)
+    WHERE read_at IS NULL;
