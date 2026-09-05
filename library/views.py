@@ -56,6 +56,7 @@ from . import barcode
 from . import excel as book_excel
 from . import history
 from . import inventory
+from . import notifications
 from . import policy
 from . import reports
 from . import reservations
@@ -1793,6 +1794,18 @@ def inventory_session_complete(request, session_id):
                 description="Stock check completed: %s" % locked.name,
             )
 
+            # Only when something is actually unaccounted for, and only
+            # once - completing is already guarded by the lock above, and
+            # the session's own id keys the notification. Counted in the
+            # database, from the same expected-minus-found set the report
+            # below is drawn from.
+            notifications.announce_stock_check(
+                locked,
+                inventory.expected_copies(locked).exclude(
+                    id__in=inventory.found_copy_ids(locked)
+                ).count(),
+            )
+
             messages.success(
                 request,
                 "Stock check complete. What was not found is listed below "
@@ -2363,6 +2376,13 @@ def reservation_cancel(request, reservation_id):
                 % (reservation.borrower.name, reservation.book.title)
             ),
         )
+
+        # Cancelling advances the queue, so the person behind may now be
+        # at the front with a copy on the shelf. Nothing is sent about the
+        # cancellation itself: the only person it is news to is the
+        # borrower, who has no account here, and it is already on the
+        # reservation list and in the activity log for the desk.
+        notifications.announce_ready(reservation.book)
 
         messages.success(
             request,
@@ -8519,6 +8539,14 @@ def loan_add(request):
                                 ),
                             )
 
+                            # The queue just advanced. If another copy of
+                            # the same book is still on the shelf, whoever
+                            # is now at the front can be served too - and
+                            # is told once, under their own reservation's
+                            # key. Task 16 decides who that is; this only
+                            # reads the answer.
+                            notifications.announce_ready(copy.volume.book)
+
                 cache.delete(LOAN_CACHE_KEY)
                 cache.delete(BOOK_COPY_CACHE_KEY)
                 cache.delete(DASHBOARD_CACHE_KEY)
@@ -8831,21 +8859,59 @@ def loan_return(request, loan_id):
 
         if not error_message:
 
-            loan.return_date = parsed_return_date
+            # The return, the copy going back on the shelf, the log entry
+            # and the notification for whoever is now at the front of the
+            # queue are one transition: all of it happened, or none of it
+            # did.
+            #
+            # Locked and re-read first, the same shape as
+            # `reservations.close` and `inventory_session_complete`. The
+            # `return_date is None` above is read outside any transaction,
+            # so a double-clicked button or a retried request could both
+            # pass it; this is where that is actually decided, and the
+            # second one finds the loan already returned and writes
+            # nothing rather than moving the return date.
+            with transaction.atomic():
 
-            # The member of staff taking the book back is the one signed
-            # in, for the same reason `issued_by` is set that way on the
-            # issue side.
-            loan.returned_to = request.user
+                locked = Loan.objects.select_for_update().filter(
+                    id=loan.id,
+                    return_date__isnull=True,
+                ).first()
 
-            if notes:
-                loan.notes = notes
+                if locked is not None:
 
-            loan.save()
+                    locked.return_date = parsed_return_date
 
-            loan.copy.status = "Available"
+                    # The member of staff taking the book back is the one
+                    # signed in, for the same reason `issued_by` is set
+                    # that way on the issue side.
+                    locked.returned_to = request.user
 
-            loan.copy.save()
+                    if notes:
+                        locked.notes = notes
+
+                    locked.save()
+
+                    loan.copy.status = "Available"
+
+                    loan.copy.save()
+
+                    create_activity_log(
+                        user=locked.returned_to,
+                        action="RETURN",
+                        entity_type="BookCopy",
+                        entity_id=locked.copy_id,
+                        description=(
+                            f"{loan.copy.copy_code} "
+                            f"{loan.borrower.name} سے واپس وصول کی گئی"
+                        ),
+                    )
+
+                    # A copy is on the shelf again, so whoever is at the
+                    # front of this book's queue can be served now. The
+                    # queue itself is untouched: nothing is assigned and
+                    # no copy is set aside - this only tells the desk.
+                    notifications.announce_ready(loan.copy.volume.book)
 
             cache.delete(
                 LOAN_CACHE_KEY
@@ -8857,17 +8923,6 @@ def loan_return(request, loan_id):
 
             cache.delete(
                 DASHBOARD_CACHE_KEY
-            )
-
-            create_activity_log(
-                user=loan.returned_to,
-                action="RETURN",
-                entity_type="BookCopy",
-                entity_id=loan.copy_id,
-                description=(
-                    f"{loan.copy.copy_code} "
-                    f"{loan.borrower.name} سے واپس وصول کی گئی"
-                ),
             )
 
             return redirect(
@@ -10398,4 +10453,137 @@ def library_home(request):
         request,
         "library/dashboard.html",
         dashboard_stats
+    )
+
+
+# ==========================================================================
+# NOTIFICATIONS
+#
+# Everything below reads and writes exactly one person's notifications: the
+# signed-in one. There is no view here that takes a recipient from the
+# request, and no query that does not start from `request.user`, so a
+# forged id addresses nothing rather than somebody else's row - and an id
+# that belongs to another user is indistinguishable from one that does not
+# exist at all, which is the point.
+#
+# Reading a notification is not access to what it points at. The link is an
+# ordinary link, and the view behind it still applies its own
+# `role_required` - so a destination that has since become inaccessible
+# answers 403 exactly as it would if the link had been typed.
+# ==========================================================================
+
+
+def notification_panel_response(request):
+    """The panel fragment, with the shell's badge refreshed alongside it.
+
+    One template for every answer this section gives - opening the panel,
+    marking one read, marking them all read - so the panel a user is
+    looking at is always the panel the server just decided on, and there is
+    no second rendering path to keep in step.
+    """
+
+    return render(
+        request,
+        "library/partials/notification_panel.html",
+        {
+            "notifications": notifications.recent(request.user),
+            "unread_count": notifications.unread_count(request.user),
+            "unread_cap": notifications.UNREAD_CAP,
+        },
+    )
+
+
+def notification_panel(request):
+    """What the bell opens: the newest few, and nothing more.
+
+    Bounded by `PANEL_LIMIT` in the database, not sliced in Python, so a
+    user with ten thousand notifications pays the same as one with three.
+    Nothing is joined: a notification carries its own title, message and
+    destination, so there is no linked record to fetch per row and no N+1
+    to avoid.
+    """
+
+    return notification_panel_response(request)
+
+
+def notification_read(request, notification_id):
+    """Mark one notification read.
+
+    POST only. A GET does nothing at all - not because marking one read is
+    dangerous, but because a state change on a GET is a state change any
+    prefetch, crawler or Back button can make on the user's behalf.
+
+    Harmless to repeat: `mark_read` is a conditional UPDATE scoped to this
+    recipient and to what is still unread, so the second request matches
+    nothing. The answer is the same either way, so nothing about it says
+    whether the id existed, was already read, or belongs to somebody else.
+    """
+
+    if request.method != "POST":
+        return redirect("notification_list")
+
+    notifications.mark_read(request.user, notification_id)
+
+    if request.headers.get("HX-Request") == "true":
+        return notification_panel_response(request)
+
+    return redirect(safe_redirect_target(request, reverse("notification_list")))
+
+
+def notification_read_all(request):
+    """Mark everything this user has unread as read.
+
+    One UPDATE over the partial index, scoped to `request.user` - it cannot
+    reach another recipient's rows, and running it twice moves nothing the
+    second time.
+    """
+
+    if request.method != "POST":
+        return redirect("notification_list")
+
+    notifications.mark_all_read(request.user)
+
+    if request.headers.get("HX-Request") == "true":
+        return notification_panel_response(request)
+
+    return redirect(safe_redirect_target(request, reverse("notification_list")))
+
+
+def notification_list(request):
+    """The whole history for one person, a page at a time.
+
+    Filtered, ordered and paginated in the database. `-created_at, -id`,
+    the same ordering the panel uses: the timestamp alone would leave the
+    several rows one fan-out writes in whatever order the database felt
+    like, and a list that reshuffles between two page loads is not a list.
+    """
+
+    unread_only = request.GET.get("unread") == "1"
+
+    rows = notifications.unread_filter(
+        notifications.for_user(request.user), unread_only
+    )
+
+    paginator = Paginator(rows, PAGE_SIZE)
+    page = paginator.get_page(request.GET.get("page"))
+
+    return render(
+        request,
+        "library/notification_list.html",
+        {
+            "notifications": page,
+            "paginator": paginator,
+            "pagination_query": query_with(request, page=None),
+            "elided_page_range": list(
+                paginator.get_elided_page_range(
+                    page.number,
+                    on_each_side=1,
+                    on_ends=1,
+                )
+            ),
+            "page_ellipsis": Paginator.ELLIPSIS,
+            "unread_only": unread_only,
+            "unread_count": notifications.unread_count(request.user),
+            "unread_cap": notifications.UNREAD_CAP,
+        },
     )

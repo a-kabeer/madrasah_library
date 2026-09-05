@@ -1,0 +1,158 @@
+{% comment %}
+The bell's panel: the newest few notifications, and the two things that can
+be done with them.
+
+Bounded by the view, not here. `notifications.recent()` asks the database
+for `PANEL_LIMIT` rows and nothing joins to them - a notification carries
+its own title, message and destination - so this list costs one query
+whatever the size of the history and however many records it refers to.
+
+Every state change is a real <form> with a real CSRF token and a real
+action, carrying `hx-post` so it swaps this panel in place. That is the
+same shape the copy list and the delete modals use, and it means the
+buttons still work as ordinary form submissions when the script is absent.
+
+`hx-target` is stated on each one for the reason the bell states it: the
+shell boosts everything inside it towards #mainContent, and a form without
+its own target would swap this panel into the page.
+{% endcomment %}
+
+<div class="notification-panel">
+
+    <div class="notification-panel-head">
+
+        <span class="fw-semibold">Notifications</span>
+
+        {% if unread_count %}
+            <form
+                method="post"
+                action="{% url 'notification_read_all' %}"
+                hx-post="{% url 'notification_read_all' %}"
+                hx-target="#notificationPanelBody"
+                hx-swap="innerHTML"
+                hx-disinherit="*"
+                class="ms-auto"
+            >
+                {% csrf_token %}
+                <input type="hidden" name="next"
+                       value="{{ request.get_full_path }}">
+                <button type="submit" class="btn btn-link btn-sm p-0">
+                    Mark all read
+                </button>
+            </form>
+        {% else %}
+            <span class="ms-auto text-body-secondary small">
+                Nothing unread
+            </span>
+        {% endif %}
+
+    </div>
+
+    {% if notifications %}
+
+        <ul class="notification-list list-unstyled mb-0">
+
+            {% for note in notifications %}
+
+                <li class="notification-item {% if not note.is_read %}notification-item-unread{% endif %}">
+
+                    <div class="notification-item-body">
+
+                        {% comment %}
+                          An ordinary link, and only a link: following it
+                          changes nothing, so it is safe on a GET, safe to
+                          prefetch and safe to middle-click. Marking read
+                          is the button beside it, which is a POST.
+
+                          `safe_destination` is empty for anything that is
+                          not a path inside this application, in which case
+                          the notification is still shown - it just is not
+                          a link. And a destination that has since become
+                          inaccessible is still the destination: the view
+                          behind it applies its own permission check, so a
+                          stock-check link answers 403 for an Assistant
+                          exactly as typing the URL would.
+                        {% endcomment %}
+                        {% if note.safe_destination %}
+                            <a href="{{ note.safe_destination }}"
+                               class="notification-title">
+                                {{ note.title }}
+                            </a>
+                        {% else %}
+                            <span class="notification-title">
+                                {{ note.title }}
+                            </span>
+                        {% endif %}
+
+                        {% if note.message %}
+                            <span class="notification-message">
+                                {{ note.message }}
+                            </span>
+                        {% endif %}
+
+                        <span class="notification-when">
+                            {{ note.created_at|date:"j M Y, H:i" }}
+                        </span>
+
+                    </div>
+
+                    {% if not note.is_read %}
+                        <form
+                            method="post"
+                            action="{% url 'notification_read' note.id %}"
+                            hx-post="{% url 'notification_read' note.id %}"
+                            hx-target="#notificationPanelBody"
+                            hx-swap="innerHTML"
+                            hx-disinherit="*"
+                            class="notification-item-action"
+                        >
+                            {% csrf_token %}
+                            <input type="hidden" name="next"
+                                   value="{{ request.get_full_path }}">
+                            <button
+                                type="submit"
+                                class="btn btn-sm btn-link p-0"
+                                title="Mark as read"
+                            >
+                                <i class="bi bi-check2" aria-hidden="true"></i>
+                                <span class="visually-hidden">
+                                    Mark "{{ note.title }}" as read
+                                </span>
+                            </button>
+                        </form>
+                    {% endif %}
+
+                </li>
+
+            {% endfor %}
+
+        </ul>
+
+    {% else %}
+
+        <p class="notification-empty">
+            Nothing here yet. Notifications arrive when a reserved book
+            comes back, or when a stock check finishes with copies
+            unaccounted for.
+        </p>
+
+    {% endif %}
+
+    <div class="notification-panel-foot">
+        <a href="{% url 'notification_list' %}">All notifications</a>
+    </div>
+
+</div>
+
+
+{% comment %}
+The shell's badge, replaced out of band. It lives in the topbar, outside
+the element this fragment is swapped into, so it would otherwise keep
+showing the count from whenever the page was last loaded whole.
+
+Top-level in the response on purpose: that is where htmx looks for
+`hx-swap-oob`.
+{% endcomment %}
+<span id="notificationBadge" class="notification-badge-slot" hx-swap-oob="true">
+    {% include "library/partials/notification_badge.html" %}
+</span>
