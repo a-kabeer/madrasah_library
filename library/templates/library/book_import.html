@@ -1,4 +1,4 @@
-{% extends "library/base.html" %}
+{% extends layout %}
 
 {% block title %}
     Import Books | {{ branding.display_name }}
@@ -24,11 +24,15 @@
             </p>
         </div>
         <div class="d-flex flex-wrap gap-2">
-            <a href="{% url 'book_import_template' %}" class="btn btn-outline-primary">
+            {# A file, not a page: a background fetch would swap a
+               spreadsheet into the layout. #}
+            <a href="{% url 'book_import_template' %}" hx-boost="false" class="btn btn-outline-primary">
                 <i class="bi bi-file-earmark-arrow-down me-1"></i>
                 Download Template
             </a>
-            <a href="{% url 'book_export' %}" class="btn btn-outline-secondary">
+            {# A file, not a page: a background fetch would swap a
+               spreadsheet into the layout. #}
+            <a href="{% url 'book_export' %}" hx-boost="false" class="btn btn-outline-secondary">
                 <i class="bi bi-box-arrow-up me-1"></i> Export Books
             </a>
         </div>
@@ -59,7 +63,8 @@
         <div class="card shadow-sm border-0">
             <div class="card-body">
 
-                <form method="post" enctype="multipart/form-data">
+                {# Left an ordinary submit: this one posts a file. #}
+                <form method="post" enctype="multipart/form-data" hx-boost="false">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="upload">
 
@@ -382,7 +387,9 @@
                         <i class="bi bi-exclamation-triangle me-2"></i>
                         Not imported
                     </h5>
-                    <a href="{% url 'book_import_errors' %}" class="btn btn-sm btn-outline-danger">
+                    {# A file, not a page: a background fetch would swap a
+                       spreadsheet into the layout. #}
+                    <a href="{% url 'book_import_errors' %}" hx-boost="false" class="btn btn-sm btn-outline-danger">
                         <i class="bi bi-file-earmark-arrow-down me-1"></i>
                         Download error report
                     </a>

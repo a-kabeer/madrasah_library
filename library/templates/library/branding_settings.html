@@ -1,4 +1,4 @@
-{% extends "library/base.html" %}
+{% extends layout %}
 
 {% block title %}
     Branding | {{ branding.display_name }}
@@ -31,7 +31,8 @@
                 </div>
             {% endif %}
 
-            <form method="post" enctype="multipart/form-data">
+            {# Left an ordinary submit: this one posts a file. #}
+            <form method="post" enctype="multipart/form-data" hx-boost="false">
                 {% csrf_token %}
 
                 <!-- Identity -->
@@ -243,6 +244,135 @@
                 </div>
 
             </form>
+
+            {% comment %}
+              The borrowing rules. Its own form, not more fields on the one
+              above: these are separate state, and saving the colours must
+              not blank a lending rule. HTML forms cannot nest, so it sits
+              after that one closes.
+
+              Admin only, like the rest of this page - the decorator on the
+              view is what enforces it, not this template.
+            {% endcomment %}
+            <div class="card shadow-sm border-0 mt-5" id="borrowingPolicy">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-journal-check me-2"></i>Borrowing Policy
+                    </h5>
+                </div>
+                <div class="card-body">
+
+                    <p class="text-body-secondary">
+                        The lending rules for the whole library. They are
+                        enforced when a book is issued or renewed, whatever
+                        the form on screen allows.
+                    </p>
+
+                    {% if policy_error %}
+                        <div class="alert alert-danger d-flex align-items-center" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                            <div>{{ policy_error }}</div>
+                        </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="section" value="policy">
+
+                        <div class="row g-3">
+
+                            <div class="col-12 col-md-4">
+                                <label for="formLoanPeriod" class="form-label fw-semibold">
+                                    Loan period (days)
+                                </label>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="formLoanPeriod"
+                                    name="loan_period_days"
+                                    value="{{ settings_obj.loan_period_days|default_if_none:'' }}"
+                                    min="{{ policy_defaults.loan_period_min }}"
+                                    max="{{ policy_defaults.loan_period_max }}"
+                                    placeholder="{{ policy_defaults.loan_period_days }}"
+                                >
+                                <div class="form-text">
+                                    Fills in the due date on the issue form.
+                                    Blank means
+                                    {{ policy_defaults.loan_period_days }} days.
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-4">
+                                <label for="formMaxLoans" class="form-label fw-semibold">
+                                    Maximum books per borrower
+                                </label>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="formMaxLoans"
+                                    name="max_active_loans"
+                                    value="{{ settings_obj.max_active_loans|default_if_none:'' }}"
+                                    min="{{ policy_defaults.limit_min }}"
+                                    max="{{ policy_defaults.limit_max }}"
+                                    placeholder="0"
+                                >
+                                <div class="form-text">
+                                    How many a borrower may hold at once.
+                                    Blank or 0 means no limit. Returned books
+                                    do not count.
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-4">
+                                <label for="formMaxRenewals" class="form-label fw-semibold">
+                                    Renewal limit
+                                </label>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="formMaxRenewals"
+                                    name="max_renewals"
+                                    value="{{ settings_obj.max_renewals|default_if_none:'' }}"
+                                    min="{{ policy_defaults.limit_min }}"
+                                    max="{{ policy_defaults.limit_max }}"
+                                    placeholder="0"
+                                >
+                                <div class="form-text">
+                                    How many times one loan may be extended.
+                                    Blank or 0 means no limit.
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="form-check mt-4">
+                            <input
+                                type="checkbox"
+                                class="form-check-input"
+                                id="formBlockOverdue"
+                                name="block_when_overdue"
+                                {% if settings_obj.block_when_overdue %}checked{% endif %}
+                            >
+                            <label class="form-check-label" for="formBlockOverdue">
+                                Stop borrowing while anything is overdue
+                            </label>
+                            <div class="form-text">
+                                A borrower holding an overdue book cannot take
+                                another out until it comes back. Off by
+                                default.
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Save Policy
+                            </button>
+                        </div>
+
+                    </form>
+
+                </div>
+            </div>
 
             <p class="text-body-secondary small mt-4 mb-0">
                 <i class="bi bi-exclamation-triangle me-1"></i>

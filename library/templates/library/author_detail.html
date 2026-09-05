@@ -1,12 +1,22 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>{{ author.name }}</title>
-</head>
-<body>
+{% extends layout %}
 
-{% include "library/_account_bar.html" %}
+{% block title %}
+    {{ author.name }} | {{ branding.display_name }}
+{% endblock %}
 
+{% block page_title %}
+    {{ author.name }}
+{% endblock %}
+
+{% block content %}
+
+{% comment %}
+  Inside the shared shell so this page can be reached without a full
+  reload, but otherwise as it was: the markup below is the same one this
+  template always had. Restyling it to match the rest of the app is a
+  separate job.
+{% endcomment %}
+<div class="container-fluid px-0 legacy-page">
 <p>
     <a href="{% url 'author_list' %}">
         ← Back to Authors
@@ -51,6 +61,6 @@
         Delete Author
     </a>
 </p>
+</div>
 
-</body>
-</html>
+{% endblock %}

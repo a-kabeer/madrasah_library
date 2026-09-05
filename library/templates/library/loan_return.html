@@ -1,4 +1,4 @@
-{% extends "library/base.html" %}
+{% extends layout %}
 
 {% block title %}Return Book | {{ branding.display_name }}{% endblock %}
 
@@ -77,14 +77,15 @@
                             <label for="return_date" class="form-label fw-semibold">Return Date</label>
                             <input type="date" class="form-control" id="return_date" name="return_date" value="{% now 'Y-m-d' %}" required>
                         </div>
+                        {% comment %}
+                          Stated, not chosen — the same rule the issue page
+                          follows for "Issued By".
+                        {% endcomment %}
                         <div class="mb-3">
-                            <label for="returned_to" class="form-label fw-semibold">Returned To</label>
-                            <select class="form-select" id="returned_to" name="returned_to">
-                                <option value="">— Select user —</option>
-                                {% for user in users %}
-                                <option value="{{ user.id }}">{{ user.full_name|default:user.username }}</option>
-                                {% endfor %}
-                            </select>
+                            <label class="form-label fw-semibold">Returned To</label>
+                            <p class="form-control-plaintext mb-0">
+                                {{ request.user.full_name|default:request.user.username }}
+                            </p>
                         </div>
                         <div class="mb-3">
                             <label for="notes" class="form-label fw-semibold">Notes</label>

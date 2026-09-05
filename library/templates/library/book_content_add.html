@@ -1,247 +1,188 @@
-<!DOCTYPE html>
-<html>
+{% extends layout %}
 
-<head>
-    <title>Add Book Content</title>
-</head>
+{% block title %}
+    Add Book Content | {{ branding.display_name }}
+{% endblock %}
 
-<body>
+{% block page_title %}
+    Add Book Content
+{% endblock %}
 
-{% include "library/_account_bar.html" %}
+{% block content %}
 
-    <!-- Back Link -->
+<div class="container-fluid px-0">
 
-    <p>
-
+    <div class="mb-3">
+        {% comment %}
+          Arriving from a volume keeps that volume fixed, so back goes there
+          rather than to the whole contents list.
+        {% endcomment %}
         {% if selected_volume %}
-
-            <a href="{% url 'book_volume_detail' selected_volume.id %}">
-                ← Back to Volume
+            <a href="{% url 'book_volume_detail' selected_volume.id %}" class="small text-decoration-none">
+                <i class="bi bi-arrow-left me-1"></i> Back to Volume
             </a>
-
         {% else %}
-
-            <a href="{% url 'book_content_list' %}">
-                ← Back to Contents
+            <a href="{% url 'book_content_list' %}" class="small text-decoration-none">
+                <i class="bi bi-arrow-left me-1"></i> Back to Contents
             </a>
-
         {% endif %}
+    </div>
 
-    </p>
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
 
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-plus-square me-2"></i>Add Book Content
+                    </h5>
+                </div>
+                <div class="card-body">
 
-    <h1>Add Book Content</h1>
+                    {% if error_message %}
+                        <div class="alert alert-danger d-flex align-items-start" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2 mt-1" aria-hidden="true"></i>
+                            <div>{{ error_message }}</div>
+                        </div>
+                    {% endif %}
 
+                    <form method="post">
+                        {% csrf_token %}
 
-    <!-- Error Message -->
+                        <div class="row g-3">
 
-    {% if error_message %}
+                            <div class="col-12">
+                                {% if selected_volume %}
+                                    {% comment %}
+                                      Fixed, and stated rather than offered:
+                                      the volume came in on the URL.
+                                    {% endcomment %}
+                                    <label class="form-label fw-semibold">Volume</label>
+                                    <p class="form-control-plaintext mb-0">
+                                        {{ selected_volume.book.title }}
+                                        - Volume {{ selected_volume.volume_number }}
+                                        - {{ selected_volume.title }}
+                                    </p>
+                                    <input
+                                        type="hidden"
+                                        name="volume"
+                                        value="{{ selected_volume.id }}"
+                                    >
+                                {% else %}
+                                    <label for="volume" class="form-label fw-semibold">
+                                        Volume <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select" name="volume" id="volume" required>
+                                        <option value="">Select Volume</option>
+                                        {% for volume in volumes %}
+                                            <option
+                                                value="{{ volume.id }}"
+                                                {% if volume.id == form_data.volume_id %}selected{% endif %}
+                                            >
+                                                {{ volume.book.title }}
+                                                - Volume {{ volume.volume_number }}
+                                                - {{ volume.title }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                {% endif %}
+                            </div>
 
-        <p>
-            <strong>
-                {{ error_message }}
-            </strong>
-        </p>
+                            <div class="col-12">
+                                <label for="parent" class="form-label fw-semibold">
+                                    Parent
+                                </label>
+                                <select class="form-select" name="parent" id="parent">
+                                    <option value="">No Parent</option>
+                                    {% for parent in parents %}
+                                        <option
+                                            value="{{ parent.id }}"
+                                            {% if parent.id == form_data.parent_id %}selected{% endif %}
+                                        >
+                                            {{ parent.title }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
 
-    {% endif %}
+                            <div class="col-12">
+                                <label for="title" class="form-label fw-semibold">
+                                    Title <span class="text-danger">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="title"
+                                    name="title"
+                                    value="{{ form_data.title }}"
+                                    required
+                                >
+                            </div>
 
+                            <div class="col-12 col-sm-4">
+                                <label for="content_type" class="form-label fw-semibold">
+                                    Content Type
+                                </label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="content_type"
+                                    name="content_type"
+                                    value="{{ form_data.content_type }}"
+                                >
+                            </div>
 
-    <form method="post">
+                            <div class="col-12 col-sm-4">
+                                <label for="page_number" class="form-label fw-semibold">
+                                    Page Number
+                                </label>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="page_number"
+                                    name="page_number"
+                                    value="{{ form_data.page_number }}"
+                                >
+                            </div>
 
-        {% csrf_token %}
+                            <div class="col-12 col-sm-4">
+                                <label for="sort_order" class="form-label fw-semibold">
+                                    Sort Order
+                                </label>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="sort_order"
+                                    name="sort_order"
+                                    value="{{ form_data.sort_order }}"
+                                >
+                            </div>
 
+                        </div>
 
-        <!-- Volume -->
-
-        <p>
-
-            {% if selected_volume %}
-
-                <strong>Volume:</strong>
-
-                {{ selected_volume.book.title }}
-
-                - Volume {{ selected_volume.volume_number }}
-
-                - {{ selected_volume.title }}
-
-
-                <input
-                    type="hidden"
-                    name="volume"
-                    value="{{ selected_volume.id }}"
-                >
-
-            {% else %}
-
-                <label for="volume">
-                    Volume:
-                </label>
-
-
-                <select
-                    name="volume"
-                    id="volume"
-                    required
-                >
-
-                    <option value="">
-                        Select Volume
-                    </option>
-
-
-                    {% for volume in volumes %}
-
-                        <option
-                            value="{{ volume.id }}"
-
-                            {% if volume.id == form_data.volume_id %}
-                                selected
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Add Content
+                            </button>
+                            {% if selected_volume %}
+                                <a href="{% url 'book_volume_detail' selected_volume.id %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-lg me-1"></i> Cancel
+                                </a>
+                            {% else %}
+                                <a href="{% url 'book_content_list' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-lg me-1"></i> Cancel
+                                </a>
                             {% endif %}
-                        >
+                        </div>
 
-                            {{ volume.book.title }}
+                    </form>
 
-                            - Volume {{ volume.volume_number }}
+                </div>
+            </div>
 
-                            - {{ volume.title }}
+        </div>
+    </div>
 
-                        </option>
+</div>
 
-                    {% endfor %}
-
-                </select>
-
-            {% endif %}
-
-        </p>
-
-
-        <!-- Parent -->
-
-        <p>
-
-            <label for="parent">
-                Parent:
-            </label>
-
-
-            <select
-                name="parent"
-                id="parent"
-            >
-
-                <option value="">
-                    No Parent
-                </option>
-
-
-                {% for parent in parents %}
-
-                    <option
-                        value="{{ parent.id }}"
-
-                        {% if parent.id == form_data.parent_id %}
-                            selected
-                        {% endif %}
-                    >
-
-                        {{ parent.title }}
-
-                    </option>
-
-                {% endfor %}
-
-            </select>
-
-        </p>
-
-
-        <!-- Title -->
-
-        <p>
-
-            <label for="title">
-                Title:
-            </label>
-
-
-            <input
-                type="text"
-                name="title"
-                id="title"
-                value="{{ form_data.title }}"
-                required
-            >
-
-        </p>
-
-
-        <!-- Content Type -->
-
-        <p>
-
-            <label for="content_type">
-                Content Type:
-            </label>
-
-
-            <input
-                type="text"
-                name="content_type"
-                id="content_type"
-                value="{{ form_data.content_type }}"
-            >
-
-        </p>
-
-
-        <!-- Page Number -->
-
-        <p>
-
-            <label for="page_number">
-                Page Number:
-            </label>
-
-
-            <input
-                type="number"
-                name="page_number"
-                id="page_number"
-                value="{{ form_data.page_number }}"
-            >
-
-        </p>
-
-
-        <!-- Sort Order -->
-
-        <p>
-
-            <label for="sort_order">
-                Sort Order:
-            </label>
-
-
-            <input
-                type="number"
-                name="sort_order"
-                id="sort_order"
-                value="{{ form_data.sort_order }}"
-            >
-
-        </p>
-
-
-        <!-- Submit -->
-
-        <button type="submit">
-            Add Content
-        </button>
-
-    </form>
-
-</body>
-
-</html>
+{% endblock %}

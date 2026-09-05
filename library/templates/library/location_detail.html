@@ -1,4 +1,11 @@
-{% extends "library/base.html" %}
+{% extends layout %}
+{% comment %}
+  `layout` rather than base.html by name: an ordinary request renders the
+  whole application shell, an HTMX navigation renders only the main-content
+  region. One template, one URL, one view behind both. `{% extends %}` has
+  to be the very first tag, so this note sits under it.
+  See library/context_processors.py.
+{% endcomment %}
 
 {% block title %}
     {{ location.name }} | {{ branding.display_name }}
@@ -12,7 +19,9 @@
     <nav aria-label="Breadcrumb">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
-                <a href="{% url 'location_list' %}">Locations</a>
+                <a
+                    href="{% url 'location_list' %}"
+                >Locations</a>
             </li>
             <li class="breadcrumb-item active" aria-current="page">
                 {{ location.name }}
@@ -28,7 +37,10 @@
     <!-- Page Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
         <div>
-            <a href="{% url 'location_list' %}" class="small text-decoration-none">
+            <a
+                href="{% url 'location_list' %}"
+                class="small text-decoration-none"
+            >
                 <i class="bi bi-arrow-left me-1"></i> Locations
             </a>
             <h2 class="fw-bold mb-1 mt-1">{{ location.name }}</h2>
@@ -133,6 +145,7 @@
                                     <a
                                         href="{% url 'shelf_detail' shelf.id %}"
                                         class="btn btn-sm btn-outline-secondary"
+                                        data-row-primary
                                         title="Open"
                                         aria-label="Open shelf {{ shelf.shelf_code }}"
                                     >

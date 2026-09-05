@@ -196,6 +196,18 @@ path(
 ),
 
 path(
+    "books/<int:book_id>/archive/",
+    views.book_archive,
+    name="book_archive",
+),
+
+path(
+    "books/<int:book_id>/restore/",
+    views.book_restore,
+    name="book_restore",
+),
+
+path(
     "books/<int:book_id>/delete/",
     views.book_delete,
     name="book_delete",
@@ -297,6 +309,86 @@ path(
     "book-copies/move/",
     views.book_copy_bulk_move,
     name="book_copy_bulk_move",
+),
+
+# Printable labels. A GET, so a sheet can be reloaded, bookmarked and
+# printed again: `?copy=` repeated for a selection, or the copy list's own
+# filters for everything currently being looked at.
+path(
+    "book-copies/labels/",
+    views.book_copy_labels,
+    name="book_copy_labels",
+),
+
+# Stock checks. Counting the shelves against the record: the session is
+# the job, the scans are what was picked up, and neither writes to a copy.
+path(
+    "stock-check/",
+    views.inventory_session_list,
+    name="inventory_session_list",
+),
+
+path(
+    "stock-check/start/",
+    views.inventory_session_start,
+    name="inventory_session_start",
+),
+
+path(
+    "stock-check/<int:session_id>/",
+    views.inventory_session_detail,
+    name="inventory_session_detail",
+),
+
+path(
+    "stock-check/<int:session_id>/scan/",
+    views.inventory_session_scan,
+    name="inventory_session_scan",
+),
+
+path(
+    "stock-check/<int:session_id>/complete/",
+    views.inventory_session_complete,
+    name="inventory_session_complete",
+),
+
+# Reports. One home, six reports, and `?format=csv` on each of them -
+# which reads the same validated filters the page did, so the export and
+# the report can never be two different answers.
+path("reports/", views.reports_home, name="reports_home"),
+
+path(
+    "reports/circulation/",
+    views.report_circulation,
+    name="report_circulation",
+),
+
+path("reports/overdue/", views.report_overdue, name="report_overdue"),
+
+path(
+    "reports/inventory/",
+    views.report_inventory,
+    name="report_inventory",
+),
+
+path(
+    "reports/condition/",
+    views.report_condition,
+    name="report_condition",
+),
+
+path(
+    "reports/borrowers/",
+    views.report_borrowers,
+    name="report_borrowers",
+),
+
+path("reports/popular/", views.report_popular, name="report_popular"),
+
+path(
+    "book-copies/<int:copy_id>/withdraw/",
+    views.book_copy_withdraw,
+    name="book_copy_withdraw",
 ),
 
 path(

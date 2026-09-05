@@ -1,0 +1,89 @@
+{% comment %}
+The camera scanner, shared by the issue and return pages.
+
+Nothing here runs by itself. app.js looks for a [data-scan-open] button,
+decides whether this device can scan at all, and only then reveals the
+button and wires it to this dialog. On a device that cannot, the button
+stays hidden and the field beside it is exactly the text input it always
+was — which is also what a desktop sees.
+
+Include once per page, and give the trigger button
+`data-scan-target="<input id>"` so the decoded value knows where to go.
+
+Expected context: nothing.
+{% endcomment %}
+
+<div
+    class="modal fade"
+    id="barcodeScanner"
+    tabindex="-1"
+    aria-labelledby="barcodeScannerLabel"
+    aria-hidden="true"
+    data-scan-dialog
+>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="barcodeScannerLabel">
+                    <i class="bi bi-upc-scan me-2" aria-hidden="true"></i>
+                    Scan a copy code
+                </h5>
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+            </div>
+
+            <div class="modal-body">
+
+                {% comment %}
+                  `playsinline` matters: without it iOS takes the video
+                  fullscreen and the dialog disappears behind it. `muted`
+                  is what allows autoplay at all.
+                {% endcomment %}
+                <video
+                    data-scan-video
+                    class="w-100 rounded bg-dark"
+                    style="max-height: 60vh; object-fit: cover;"
+                    playsinline
+                    muted
+                ></video>
+
+                <p class="text-body-secondary small mb-0 mt-3" data-scan-status>
+                    Point the camera at the barcode on the book.
+                </p>
+
+                {% comment %}
+                  Where a refusal is explained. A camera the librarian has
+                  blocked, or a device with no scanner, is an ordinary
+                  situation and not an error worth a stack trace - the
+                  message says what to do instead.
+                {% endcomment %}
+                <div
+                    class="alert alert-warning d-flex align-items-start mt-3 mb-0"
+                    role="alert"
+                    data-scan-error
+                    hidden
+                >
+                    <i class="bi bi-exclamation-triangle-fill me-2 mt-1" aria-hidden="true"></i>
+                    <div data-scan-error-text></div>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    data-bs-dismiss="modal"
+                >
+                    Type it instead
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>

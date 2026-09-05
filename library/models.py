@@ -154,12 +154,31 @@ class Book(models.Model):
         blank=True,
     )
 
+    # When this book left the active catalogue, or NULL while it is still
+    # in it. Added in migration 0004.
+    #
+    # A timestamp rather than a boolean, because "when" is the question
+    # anyone asking about an archived book actually has, and NULL/not-NULL
+    # answers "whether" just as well. Archiving is never destructive:
+    # volumes, copies, loans and every other record stay exactly as they
+    # were, and restoring is only clearing this one value.
+    archived_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
     class Meta:
         managed = False
         db_table = "books"
 
     def __str__(self):
         return self.title
+
+    @property
+    def is_archived(self):
+        """Whether this book has been taken out of the active catalogue."""
+
+        return self.archived_at is not None
     
 class BookVolume(models.Model):
     id = models.AutoField(primary_key=True)
@@ -663,6 +682,35 @@ class OrganizationSettings(models.Model):
         default="",
     )
 
+    # --- Borrowing policy ---
+    #
+    # The lending rules, on the row this installation already configures
+    # itself through. All four are nullable and NULL means "nobody has
+    # said", which reads as the default in library/policy.py rather than as
+    # zero - so an install that predates these columns lends exactly as it
+    # did. That module is the only thing that should read them; everything
+    # else asks it.
+
+    loan_period_days = models.IntegerField(
+        null=True,
+        blank=True,
+    )
+
+    max_active_loans = models.IntegerField(
+        null=True,
+        blank=True,
+    )
+
+    max_renewals = models.IntegerField(
+        null=True,
+        blank=True,
+    )
+
+    block_when_overdue = models.BooleanField(
+        null=True,
+        blank=True,
+    )
+
     updated_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -735,3 +783,178 @@ class OrganizationSettings(models.Model):
             or self.accent_color
         )
 
+
+
+class InventorySession(models.Model):
+    """One physical stock check: a scope, a period, and who did it.
+
+    Counting the shelves is a job with a beginning and an end, and it is
+    normal for it to span days - so it is a record rather than a screen
+    state. What it holds is deliberately thin: the scope it covers, when it
+    started, and when it was declared finished. Everything else about it -
+    how much was expected, how much was found, what is missing - is derived
+    from `book_copies` and from the scans, so a session can never disagree
+    with the shelves it was counting.
+
+    Nothing here changes a copy. A stock check reports; the librarian
+    decides. Marking something Missing stays the existing copy-management
+    action, which is why this table has no status column for copies in it.
+    """
+
+    SCOPE_LIBRARY = "library"
+    SCOPE_LOCATION = "location"
+    SCOPE_SHELF = "shelf"
+
+    # Mirrors the `check_inventory_scope` CHECK constraint in Postgres.
+    SCOPE_CHOICES = [
+        (SCOPE_LIBRARY, "Entire library"),
+        (SCOPE_LOCATION, "One location"),
+        (SCOPE_SHELF, "One shelf"),
+    ]
+
+    STATUS_IN_PROGRESS = "In Progress"
+    STATUS_COMPLETED = "Completed"
+
+    # Mirrors `check_inventory_status`.
+    STATUS_CHOICES = [
+        (STATUS_IN_PROGRESS, "In Progress"),
+        (STATUS_COMPLETED, "Completed"),
+    ]
+
+    id = models.AutoField(primary_key=True)
+
+    name = models.CharField(max_length=255)
+
+    scope = models.CharField(max_length=20, choices=SCOPE_CHOICES)
+
+    # Exactly one of these is set, and only for the matching scope - the
+    # database enforces that rather than trusting the form.
+    location = models.ForeignKey(
+        Location,
+        on_delete=models.DO_NOTHING,
+        db_column="location_id",
+        null=True,
+        blank=True,
+    )
+
+    shelf = models.ForeignKey(
+        Shelf,
+        on_delete=models.DO_NOTHING,
+        db_column="shelf_id",
+        null=True,
+        blank=True,
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_IN_PROGRESS,
+    )
+
+    started_by = models.ForeignKey(
+        User,
+        on_delete=models.DO_NOTHING,
+        db_column="started_by",
+        null=True,
+        blank=True,
+        related_name="inventory_sessions",
+    )
+
+    started_at = models.DateTimeField()
+
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        managed = False
+        db_table = "inventory_sessions"
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def is_open(self):
+        return self.status == self.STATUS_IN_PROGRESS
+
+    @property
+    def scope_label(self):
+        """What this session covers, in words."""
+
+        if self.scope == self.SCOPE_SHELF:
+            return "Shelf %s" % self.shelf.shelf_code
+
+        if self.scope == self.SCOPE_LOCATION:
+            return self.location.name
+
+        return "Entire library"
+
+
+class InventoryScan(models.Model):
+    """One code read during a stock check, and what it turned out to be.
+
+    Every read is kept, not just the successful ones: a duplicate says the
+    same book was picked up twice, and an outside-scope read says a copy is
+    somewhere it does not belong. Both are findings, and neither is
+    recoverable from a table of successes.
+
+    `copy_code` is stored alongside the copy it resolved to, so a read of a
+    code that matches nothing is still on the record - there is no row in
+    `book_copies` to point at, and "we scanned something unrecognisable"
+    is worth knowing.
+
+    A copy can be Found at most once per session. That is a partial unique
+    index in the database, not a check in Python, so two people scanning
+    the same shelf at the same moment cannot both count it.
+    """
+
+    OUTCOME_FOUND = "found"
+    OUTCOME_DUPLICATE = "duplicate"
+    OUTCOME_OUTSIDE = "outside"
+    OUTCOME_UNKNOWN = "unknown"
+
+    # Mirrors `check_inventory_scan_outcome`.
+    OUTCOME_CHOICES = [
+        (OUTCOME_FOUND, "Found"),
+        (OUTCOME_DUPLICATE, "Already scanned"),
+        (OUTCOME_OUTSIDE, "Outside this session"),
+        (OUTCOME_UNKNOWN, "Unknown code"),
+    ]
+
+    id = models.AutoField(primary_key=True)
+
+    session = models.ForeignKey(
+        InventorySession,
+        on_delete=models.CASCADE,
+        db_column="session_id",
+        related_name="scans",
+    )
+
+    copy = models.ForeignKey(
+        BookCopy,
+        on_delete=models.DO_NOTHING,
+        db_column="copy_id",
+        null=True,
+        blank=True,
+        related_name="inventory_scans",
+    )
+
+    copy_code = models.CharField(max_length=50)
+
+    outcome = models.CharField(max_length=20, choices=OUTCOME_CHOICES)
+
+    scanned_by = models.ForeignKey(
+        User,
+        on_delete=models.DO_NOTHING,
+        db_column="scanned_by",
+        null=True,
+        blank=True,
+        related_name="inventory_scans",
+    )
+
+    scanned_at = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = "inventory_scans"
+
+    def __str__(self):
+        return "%s (%s)" % (self.copy_code, self.outcome)

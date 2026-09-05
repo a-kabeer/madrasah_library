@@ -1,4 +1,4 @@
-{% extends "library/base.html" %}
+{% extends layout %}
 
 {% block title %}
     {{ copy.copy_code }} | {{ branding.display_name }}
@@ -42,8 +42,28 @@
                         <a href="{% url 'book_copy_edit' copy.id %}" class="btn btn-warning">
                             <i class="bi bi-pencil me-1"></i> Edit
                         </a>
-                        <a href="{% url 'book_copy_move' copy.id %}" class="btn btn-outline-primary">
+                        {% comment %}
+                      One label for this copy, on the same sheet layout the
+                      list prints in bulk.
+                    {% endcomment %}
+                    <a
+                        href="{% url 'book_copy_labels' %}?copy={{ copy.id }}"
+                        class="btn btn-outline-primary"
+                    >
+                        <i class="bi bi-upc me-1"></i> Print Label
+                    </a>
+
+                    <a href="{% url 'book_copy_move' copy.id %}" class="btn btn-outline-primary">
                             <i class="bi bi-arrow-left-right me-1"></i> Move
+                        </a>
+                        {% comment %}
+                          Withdrawing keeps the copy and its loan history
+                          and takes it out of circulation; deleting is
+                          still there for a copy that was recorded by
+                          mistake and has no history to lose.
+                        {% endcomment %}
+                        <a href="{% url 'book_copy_withdraw' copy.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-box-arrow-right me-1"></i> Withdraw
                         </a>
                         <a href="{% url 'book_copy_delete' copy.id %}" class="btn btn-outline-danger">
                             <i class="bi bi-trash me-1"></i> Delete
@@ -119,8 +139,40 @@
                         </dd>
 
                         <dt class="col-5 col-sm-3 fw-normal text-body-secondary">Notes</dt>
-                        <dd class="col-7 col-sm-9 mb-0">
+                        <dd class="col-7 col-sm-9">
                             {{ copy.notes|default:"—"|linebreaksbr }}
+                        </dd>
+
+                        {% comment %}
+                          When this copy was last physically accounted for.
+                          Only from a completed check whose scope actually
+                          covered it - a check of another shelf says
+                          nothing about this book either way.
+
+                          A report, not a status: "not found" here does not
+                          make the copy Missing, and the status above is
+                          still the operational answer.
+                        {% endcomment %}
+                        <dt class="col-5 col-sm-3 fw-normal text-body-secondary">
+                            Last stock check
+                        </dt>
+                        <dd class="col-7 col-sm-9 mb-0">
+                            {% if last_check %}
+                                <a href="{% url 'inventory_session_detail' last_check.id %}"
+                                   class="text-decoration-none">{{ last_check.name }}</a>
+                                <span class="d-block small">
+                                    {% if last_check_found %}
+                                        <span class="badge text-bg-success">Found</span>
+                                    {% else %}
+                                        <span class="badge text-bg-warning">Not found</span>
+                                    {% endif %}
+                                    {{ last_check.completed_at|date:"j M Y" }}
+                                </span>
+                            {% else %}
+                                <span class="text-body-secondary">
+                                    Never counted
+                                </span>
+                            {% endif %}
                         </dd>
 
                     </dl>
@@ -232,6 +284,101 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            {% comment %}
+              History. Read-only, and read from the records that already
+              hold it - the loans, the activity log, the stock checks -
+              rather than from a table of its own.
+
+              Separate from everything above it on purpose: the panels
+              above say where this copy is now, and this says how it got
+              there. Neither is the other's source.
+            {% endcomment %}
+            <div class="card shadow-sm border-0 mt-4">
+                <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-clock-history me-2"></i>History
+                    </h5>
+                    {% if history_total %}
+                        <span class="text-body-secondary small">
+                            {{ history_total }} event{{ history_total|pluralize }}
+                        </span>
+                    {% endif %}
+                </div>
+
+                {% if history %}
+                    <ul class="list-group list-group-flush">
+                        {% for event in history %}
+                            <li class="list-group-item">
+                                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                                    <div>
+                                        <span class="badge text-bg-{{ event.tone }}">
+                                            {{ event.label }}
+                                        </span>
+
+                                        {% if event.borrower %}
+                                            <a href="{% url 'borrower_detail' event.borrower.id %}"
+                                               class="ms-1 text-decoration-none">{{ event.borrower.name }}</a>
+                                        {% endif %}
+
+                                        {% if event.detail %}
+                                            <span class="d-block small text-body-secondary mt-1">
+                                                {{ event.detail }}
+                                            </span>
+                                        {% endif %}
+
+                                        {% if event.user %}
+                                            <span class="d-block small text-body-secondary">
+                                                by {{ event.user.full_name|default:event.user.username }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="text-end text-body-secondary small">
+                                        {{ event.when|date:"j M Y" }}
+                                        {% if event.url %}
+                                            <a href="{{ event.url }}"
+                                               class="d-block text-decoration-none">Open</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+
+                    {% comment %}
+                      Its own page parameter, so paging the history does
+                      not disturb anything else this page is showing.
+                    {% endcomment %}
+                    {% if history.has_other_pages %}
+                        <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <span class="text-body-secondary small">
+                                Page {{ history.number }} of
+                                {{ history.paginator.num_pages }}
+                            </span>
+                            <div class="btn-group btn-group-sm">
+                                {% if history.has_previous %}
+                                    <a class="btn btn-outline-secondary"
+                                       href="?history={{ history.previous_page_number }}">Newer</a>
+                                {% endif %}
+                                {% if history.has_next %}
+                                    <a class="btn btn-outline-secondary"
+                                       href="?history={{ history.next_page_number }}">Older</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                {% else %}
+                    <div class="card-body text-center text-body-secondary py-4">
+                        <p class="mb-1 fw-semibold">Nothing has happened to this copy yet.</p>
+                        <p class="mb-0 small">
+                            Issues, returns, renewals, moves, status changes
+                            and stock checks appear here as they happen.
+                        </p>
+                    </div>
+                {% endif %}
             </div>
 
         </div>

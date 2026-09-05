@@ -1,4 +1,11 @@
-{% extends "library/base.html" %}
+{% extends layout %}
+{% comment %}
+  `layout` rather than base.html by name: an ordinary request renders the
+  whole application shell, an HTMX navigation renders only the main-content
+  region. One template, one URL, one view behind both. `{% extends %}` has
+  to be the very first tag, so this note sits under it.
+  See library/context_processors.py.
+{% endcomment %}
 
 {% block title %}
     {{ borrower.name }} | {{ branding.display_name }}
@@ -12,7 +19,9 @@
     <nav aria-label="Breadcrumb">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
-                <a href="{% url 'borrower_list' %}">Borrowers</a>
+                <a
+                    href="{% url 'borrower_list' %}"
+                >Borrowers</a>
             </li>
             <li class="breadcrumb-item active" aria-current="page">
                 {{ borrower.name }}
@@ -28,7 +37,10 @@
     <!-- Page Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
         <div>
-            <a href="{% url 'borrower_list' %}" class="small text-decoration-none">
+            <a
+                href="{% url 'borrower_list' %}"
+                class="small text-decoration-none"
+            >
                 <i class="bi bi-arrow-left me-1"></i> Borrowers
             </a>
             <h2 class="fw-bold mb-1 mt-1">{{ borrower.name }}</h2>
@@ -173,9 +185,41 @@
                     <h5 class="mb-0 fw-bold">
                         <i class="bi bi-arrow-left-right me-2"></i>Currently out
                     </h5>
-                    <a href="{% url 'loan_add' %}" class="btn btn-sm btn-primary">
-                        <i class="bi bi-plus-lg me-1"></i> Issue a book
-                    </a>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% if active_count %}
+                            {% comment %}
+                              The same loan list the sidebar reaches, filtered
+                              to this borrower with the parameters it already
+                              accepts. Offered only when there is something to
+                              look at.
+                            {% endcomment %}
+                            <a
+                                href="{% url 'loan_list' %}?borrower={{ borrower.id }}&amp;status=active"
+                                class="btn btn-sm btn-outline-secondary"
+                            >
+                                <i class="bi bi-list-ul me-1"></i> Active loans
+                            </a>
+                        {% endif %}
+
+                        {% comment %}
+                          Straight into the existing issue form with this
+                          borrower already chosen - `?borrower=` is the step
+                          that form already works in, so this is a link into
+                          it rather than a second way of doing it.
+
+                          Not offered while the borrower is inactive: only an
+                          active borrower can be issued to, so the button
+                          would lead to a refusal. The alert above says why.
+                        {% endcomment %}
+                        {% if borrower.is_active %}
+                            <a
+                                href="{% url 'circulation_issue' %}?borrower={{ borrower.id }}"
+                                class="btn btn-sm btn-primary"
+                            >
+                                <i class="bi bi-plus-lg me-1"></i> Issue a book
+                            </a>
+                        {% endif %}
+                    </div>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">

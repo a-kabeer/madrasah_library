@@ -1,0 +1,132 @@
+{% extends layout %}
+
+{% block title %}
+    Archive Book | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    Archive Book
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-0">
+
+    <div class="mb-3">
+        <a href="{% url 'book_detail' book.id %}" class="small text-decoration-none">
+            <i class="bi bi-arrow-left me-1"></i> Back to the book
+        </a>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-7">
+
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center p-5">
+
+                    {% if book.is_archived %}
+
+                        <div class="mb-4">
+                            <i class="bi bi-archive-fill text-secondary" style="font-size: 3rem;"></i>
+                        </div>
+
+                        <h4 class="fw-bold mb-3">Already archived</h4>
+
+                        <p class="text-body-secondary mb-4">
+                            <strong class="text-body">{{ book.title }}</strong>
+                            left the active catalogue on
+                            {{ book.archived_at|date:"j M Y" }}.
+                        </p>
+
+                        <a href="{% url 'book_detail' book.id %}" class="btn btn-outline-secondary">
+                            Back to the book
+                        </a>
+
+                    {% elif blocker %}
+
+                        {% comment %}
+                          A book cannot leave the catalogue while somebody
+                          is holding a copy of it — the same rule copy
+                          withdrawal follows.
+                        {% endcomment %}
+                        <div class="mb-4">
+                            <i class="bi bi-shield-exclamation text-warning" style="font-size: 3rem;"></i>
+                        </div>
+
+                        <h4 class="fw-bold mb-3">This book cannot be archived yet</h4>
+
+                        <p class="text-body-secondary mb-4">{{ blocker }}</p>
+
+                        <div class="d-flex justify-content-center flex-wrap gap-2">
+                            <a href="{% url 'book_detail' book.id %}?tab=copies" class="btn btn-primary">
+                                <i class="bi bi-stack me-1"></i> See its copies
+                            </a>
+                            <a href="{% url 'book_detail' book.id %}" class="btn btn-outline-secondary">
+                                Back to the book
+                            </a>
+                        </div>
+
+                    {% else %}
+
+                        <div class="mb-4">
+                            <i class="bi bi-archive text-secondary" style="font-size: 3rem;"></i>
+                        </div>
+
+                        <h4 class="fw-bold mb-3">Archive this book?</h4>
+
+                        <p class="text-body-secondary mb-4">
+                            <strong class="text-body">{{ book.title }}</strong>
+                            will be taken out of the active catalogue.
+                        </p>
+
+                        {% comment %}
+                          Said plainly, because "archive" is the word people
+                          are most likely to mistake for "delete".
+                        {% endcomment %}
+                        <ul class="list-unstyled text-start small text-body-secondary mb-4 mx-auto"
+                            style="max-width: 26rem;">
+                            <li class="mb-2">
+                                <i class="bi bi-check2 text-success me-2"></i>
+                                Its {{ copy_count }} cop{{ copy_count|pluralize:"y,ies" }},
+                                their copy codes and their shelves are kept
+                                exactly as they are.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-check2 text-success me-2"></i>
+                                All {{ loan_count }} loan{{ loan_count|pluralize }}
+                                on record stay readable.
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-x-lg text-danger me-2"></i>
+                                It stops appearing in the catalogue, and its
+                                copies stop being offered for issue.
+                            </li>
+                            <li>
+                                <i class="bi bi-arrow-counterclockwise text-primary me-2"></i>
+                                You can restore it at any time.
+                            </li>
+                        </ul>
+
+                        <div class="d-flex justify-content-center gap-2">
+                            <a href="{% url 'book_detail' book.id %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i> Cancel
+                            </a>
+                            <form method="post" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="bi bi-archive me-1"></i> Archive Book
+                                </button>
+                            </form>
+                        </div>
+
+                    {% endif %}
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

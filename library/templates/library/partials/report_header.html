@@ -1,0 +1,69 @@
+{% comment %}
+  The top of every report: title, what it was filtered by, and the two
+  things you can do with it.
+
+  Split the way printing splits it. The controls are `print-hidden`, so
+  the paper gets the title, the period, the filters that were applied and
+  the generation date - which is what makes a printed report answerable
+  for six months afterwards - and none of the buttons that produced it.
+
+  `report_title`, `report_blurb` and the filter form are passed in by the
+  page including this.
+{% endcomment %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+
+    <div>
+        <h2 class="fw-bold mb-1">{{ report_title }}</h2>
+        {% if report_blurb %}
+            <p class="text-body-secondary mb-0 print-hidden">
+                {{ report_blurb }}
+            </p>
+        {% endif %}
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 print-hidden">
+        <button
+            type="button"
+            class="btn btn-outline-secondary"
+            onclick="window.print()"
+        >
+            <i class="bi bi-printer me-1"></i> Print
+        </button>
+
+        {% comment %}
+          The export carries the filters that are in force, because it is
+          the same records - not a second query that could answer
+          differently.
+        {% endcomment %}
+        <a href="?{{ export_query }}" class="btn btn-outline-secondary"
+           hx-boost="false">
+            <i class="bi bi-filetype-csv me-1"></i> Export CSV
+        </a>
+    </div>
+
+</div>
+
+{% comment %}
+  What this report is of. On screen it repeats the form below; on paper it
+  is the only record of it, so it prints.
+{% endcomment %}
+<p class="text-body-secondary small mb-3">
+    {% if dates.start %}
+        {{ dates.start }} to {{ dates.end }}
+    {% endif %}
+    {% if applied_filters %}
+        · {{ applied_filters }}
+    {% endif %}
+    <span class="print-only d-block">
+        {{ branding.display_name }} —
+        generated {{ printed_on|date:"j M Y, H:i" }}
+    </span>
+</p>
+
+{% if error %}
+    <div class="alert alert-danger d-flex align-items-center" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
+        <div>{{ error }}</div>
+    </div>
+{% endif %}

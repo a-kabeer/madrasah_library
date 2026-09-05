@@ -1,17 +1,22 @@
-<!DOCTYPE html>
+{% extends layout %}
 
-<html>
+{% block title %}
+    Edit User | {{ branding.display_name }}
+{% endblock %}
 
-<head>
+{% block page_title %}
+    Edit User
+{% endblock %}
 
-    <title>Edit User</title>
+{% block content %}
 
-</head>
-
-<body>
-
-{% include "library/_account_bar.html" %}
-
+{% comment %}
+  Inside the shared shell so this page can be reached without a full
+  reload, but otherwise as it was: the markup below is the same one this
+  template always had. Restyling it to match the rest of the app is a
+  separate job.
+{% endcomment %}
+<div class="container-fluid px-0 legacy-page">
 <h1>Edit User</h1>
 
 {% if error %}
@@ -138,7 +143,6 @@
     ← Back to Users
 
 </a>
+</div>
 
-</body>
-
-</html>
+{% endblock %}

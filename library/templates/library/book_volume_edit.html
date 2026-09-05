@@ -1,76 +1,134 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Edit Book Volume</title>
-</head>
-<body>
+{% extends layout %}
 
-{% include "library/_account_bar.html" %}
+{% block title %}
+    Edit Book Volume | {{ branding.display_name }}
+{% endblock %}
 
-<h1>Edit Book Volume</h1>
+{% block page_title %}
+    Edit Book Volume
+{% endblock %}
 
-<form method="post">
-    {% csrf_token %}
-    <input type="hidden" name="from" value="{{ from_page }}">
+{% block content %}
 
-    <label>Book:</label>
+<div class="container-fluid px-0">
 
-    <select name="book" required>
+    <div class="mb-3">
+        {% if from_page == "detail" %}
+            <a href="{% url 'book_volume_detail' volume.id %}" class="small text-decoration-none">
+                <i class="bi bi-arrow-left me-1"></i> Back to Volume
+            </a>
+        {% else %}
+            <a href="{% url 'book_volume_list' %}" class="small text-decoration-none">
+                <i class="bi bi-arrow-left me-1"></i> Back to Volumes
+            </a>
+        {% endif %}
+    </div>
 
-        {% for book in books %}
-            <option
-                value="{{ book.id }}"
-                {% if book.id == volume.book_id %}
-                    selected
-                {% endif %}
-            >
-                {{ book.title }}
-            </option>
-        {% endfor %}
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
 
-    </select>
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-pencil me-2"></i>Edit Book Volume
+                    </h5>
+                </div>
+                <div class="card-body">
 
-    <br><br>
+                    {% comment %}
+                      Same alert the add page uses. Before this existed a
+                      rejected save just re-rendered the form with nothing
+                      said, which read as the button not working.
+                    {% endcomment %}
+                    {% if error %}
+                        <div class="alert alert-danger d-flex align-items-start" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2 mt-1" aria-hidden="true"></i>
+                            <div>{{ error }}</div>
+                        </div>
+                    {% endif %}
 
-    <label>Volume Number:</label>
+                    <form method="post">
+                        {% csrf_token %}
 
-    <input
-        type="number"
-        name="volume_number"
-        min="1"
-        value="{{ volume.volume_number }}"
-        required
-    >
+                        {% comment %}
+                          Where to return to after saving. The view reads it,
+                          so it stays a hidden field rather than a query
+                          parameter.
+                        {% endcomment %}
+                        <input type="hidden" name="from" value="{{ from_page }}">
 
-    <br><br>
+                        <div class="row g-3">
 
-    <label>Title:</label>
+                            <div class="col-12">
+                                <label for="book" class="form-label fw-semibold">
+                                    Book <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" name="book" id="book" required>
+                                    {% for book in books %}
+                                        <option
+                                            value="{{ book.id }}"
+                                            {% if book.id == volume.book_id %}selected{% endif %}
+                                        >
+                                            {{ book.title }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
 
-    <input
-        type="text"
-        name="title"
-        value="{{ volume.title }}"
-        required
-    >
+                            <div class="col-12 col-sm-4">
+                                <label for="volume_number" class="form-label fw-semibold">
+                                    Volume Number <span class="text-danger">*</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="volume_number"
+                                    name="volume_number"
+                                    min="1"
+                                    value="{{ volume.volume_number }}"
+                                    required
+                                >
+                            </div>
 
-    <br><br>
+                            <div class="col-12 col-sm-8">
+                                <label for="title" class="form-label fw-semibold">
+                                    Title <span class="text-danger">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="title"
+                                    name="title"
+                                    value="{{ volume.title }}"
+                                    required
+                                >
+                            </div>
 
-    <button type="submit">
-        Update Volume
-    </button>
-</form>
+                        </div>
 
-<br>
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i> Update Volume
+                            </button>
+                            {% if from_page == "detail" %}
+                                <a href="{% url 'book_volume_detail' volume.id %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-lg me-1"></i> Cancel
+                                </a>
+                            {% else %}
+                                <a href="{% url 'book_volume_list' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-lg me-1"></i> Cancel
+                                </a>
+                            {% endif %}
+                        </div>
 
-{% if from_page == "detail" %}
-    <a href="{% url 'book_volume_detail' volume.id %}">
-        Back to Volume
-    </a>
-{% else %}
-    <a href="{% url 'book_volume_list' %}">
-        Back to Volumes
-    </a>
-{% endif %}
+                    </form>
 
-</body>
-</html>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

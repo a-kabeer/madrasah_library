@@ -1,4 +1,4 @@
-{% extends "library/base.html" %}
+{% extends layout %}
 
 {% block title %}Return Book | {{ branding.display_name }}{% endblock %}
 
@@ -15,7 +15,9 @@
             </ol>
         </nav>
         <h2 class="fw-bold mb-1">Return Book</h2>
-        <p class="text-body-secondary mb-0">Scan or enter a copy code to find the active loan.</p>
+        <p class="text-body-secondary mb-0">
+            Scan the label, or search for the book if the label will not read.
+        </p>
     </div>
 
     <div class="row">
@@ -25,7 +27,9 @@
                 <div class="card-body">
                     <form method="get" action="{% url 'circulation_return_lookup' %}">
                         <div class="mb-3">
-                            <label for="copy_code" class="form-label fw-semibold">Copy Code</label>
+                            <label for="copy_code" class="form-label fw-semibold">
+                                Scan copy code or search by book / author
+                            </label>
                             <div class="input-group input-group-lg">
                                 <span class="input-group-text">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
@@ -38,13 +42,39 @@
                                     id="copy_code"
                                     name="copy_code"
                                     value="{{ copy_code }}"
-                                    placeholder="Scan or type copy code (e.g. LIB-000001)"
+                                    placeholder="LIB-000001, or a book or author name"
+                                    {% comment %}
+                                      Where a scanner types, so the cursor
+                                      starts here and app.js puts it back
+                                      after each lookup.
+                                    {% endcomment %}
                                     autofocus
                                     autocomplete="off"
                                 >
                                 <button class="btn btn-primary" type="submit">Find</button>
+                                {% comment %}
+                                  The same scanner the issue page uses, on
+                                  the same terms: hidden until app.js
+                                  decides the device can scan, so a desktop
+                                  and a browser without the decoder see the
+                                  field exactly as it was.
+                                {% endcomment %}
+                                <button
+                                    class="btn btn-outline-primary"
+                                    type="button"
+                                    data-scan-open
+                                    data-scan-target="copy_code"
+                                    hidden
+                                >
+                                    <i class="bi bi-upc-scan"></i>
+                                    <span class="visually-hidden">Scan a barcode</span>
+                                </button>
                             </div>
-                            <div class="form-text">Enter the copy code from the book barcode or label.</div>
+                            <div class="form-text">
+                                A whole copy code goes straight to that
+                                loan. Anything else searches what is out on
+                                loan now by book title or author.
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -53,6 +83,79 @@
             {% if error_message %}
             <div class="alert alert-warning" role="alert">
                 <strong>{{ error_message }}</strong>
+            </div>
+            {% endif %}
+
+            {% comment %}
+              What the search found, when the text was not a copy code.
+              Only loans that are actually out: a returned loan, a copy on
+              its shelf and a copy never lent are all absent because the
+              query is over the loans themselves.
+
+              Every row leads into `loan_return`, the same workflow the
+              single hit below uses. Nothing about returning a book is
+              decided here.
+            {% endcomment %}
+            {% if matches %}
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="mb-0">Out on loan now</h5>
+                    <span class="text-body-secondary small">
+                        {% if more_matches %}
+                            first {{ lookup_limit }} — narrow the search
+                        {% else %}
+                            {{ matches|length }} found
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-secondary">
+                            <tr>
+                                <th>Copy</th>
+                                <th>Book</th>
+                                <th>Borrower</th>
+                                <th>Due</th>
+                                <th class="text-end">Take back</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for match in matches %}
+                                <tr {% if match.days_overdue %}class="table-danger"{% endif %}>
+                                    <td class="fw-semibold">
+                                        {{ match.copy.copy_code }}
+                                    </td>
+                                    <td>
+                                        {{ match.copy.volume.book.title }}
+                                        <span class="d-block small">
+                                            {{ match.copy.volume.book.author.name }}
+                                            {% if match.copy.volume.volume_number != 1 or match.copy.volume.title %}
+                                                — Volume {{ match.copy.volume.volume_number }}{% if match.copy.volume.title %} · {{ match.copy.volume.title }}{% endif %}
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                    <td>{{ match.borrower.name }}</td>
+                                    <td>
+                                        {{ match.due_date }}
+                                        {% if match.days_overdue %}
+                                            <span class="d-block small text-danger">
+                                                {{ match.days_overdue }} day{{ match.days_overdue|pluralize }} late
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">
+                                        <a
+                                            href="{% url 'loan_return' match.id %}?next={% url 'circulation_return_lookup' %}"
+                                            class="btn btn-sm btn-success"
+                                        >
+                                            Return
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
             {% endif %}
 

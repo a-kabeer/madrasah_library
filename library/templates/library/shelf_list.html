@@ -1,4 +1,4 @@
-{% extends "library/base.html" %}
+{% extends layout %}
 
 {% block title %}
     Shelves | {{ branding.display_name }}
@@ -143,6 +143,7 @@
                                     <a
                                         href="{% url 'shelf_detail' shelf.id %}"
                                         class="btn btn-sm btn-outline-secondary"
+                                        data-row-primary
                                         title="Open"
                                         aria-label="Open shelf {{ shelf.shelf_code }}"
                                     >

@@ -1,83 +1,76 @@
-<!DOCTYPE html>
+{% extends layout %}
 
-<html>
+{% block title %}
+    Delete Book Content | {{ branding.display_name }}
+{% endblock %}
 
-<head>
-    <title>Delete Book Content</title>
-</head>
+{% block page_title %}
+    Delete Book Content
+{% endblock %}
 
-<body>
+{% block content %}
 
-{% include "library/_account_bar.html" %}
+<div class="container-fluid px-0">
 
-    <p>
+    <div class="mb-3">
+        {% if from_page == "volume" %}
+            <a href="{% url 'book_volume_detail' volume_id %}" class="small text-decoration-none">
+                <i class="bi bi-arrow-left me-1"></i> Back to Volume
+            </a>
+        {% else %}
+            <a href="{% url 'book_content_list' %}" class="small text-decoration-none">
+                <i class="bi bi-arrow-left me-1"></i> Back to Contents
+            </a>
+        {% endif %}
+    </div>
 
-    {% if from_page == "volume" %}
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-7">
 
-        <a href="{% url 'book_volume_detail' volume_id %}">
-            ← Back to Volume
-        </a>
+            <div class="card shadow-sm border-0">
+                <div class="card-body text-center p-5">
 
-    {% else %}
+                    <div class="mb-4">
+                        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
+                    </div>
 
-        <a href="{% url 'book_content_list' %}">
-            ← Back to Contents
-        </a>
+                    <h4 class="fw-bold mb-3">Delete Book Content?</h4>
 
-    {% endif %}
+                    <p class="text-body-secondary mb-2">
+                        Are you sure you want to delete:<br>
+                        <strong class="text-body">{{ content.title }}</strong>
+                    </p>
 
-</p>
+                    <p class="text-body-secondary mb-4">
+                        {{ content.volume.book.title }}
+                        - Volume {{ content.volume.volume_number }}
+                        - {{ content.volume.title }}
+                    </p>
 
-    <h1>Delete Book Content</h1>
+                    <div class="d-flex justify-content-center gap-2">
+                        {% if from_page == "volume" %}
+                            <a href="{% url 'book_volume_detail' volume_id %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i> Cancel
+                            </a>
+                        {% else %}
+                            <a href="{% url 'book_content_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i> Cancel
+                            </a>
+                        {% endif %}
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash me-1"></i> Yes, Delete Content
+                            </button>
+                        </form>
+                    </div>
 
-    <p>
-        Are you sure you want to delete:
-    </p>
+                </div>
+            </div>
 
-    <h2>
-        {{ content.title }}
-    </h2>
+        </div>
+    </div>
 
-    <p>
+</div>
 
-        <strong>Volume:</strong>
-
-        {{ content.volume.book.title }}
-
-        - Volume {{ content.volume.volume_number }}
-
-        - {{ content.volume.title }}
-
-    </p>
-
-    <hr>
-
-    <form method="post">
-
-        {% csrf_token %}
-
-        <button type="submit">
-            Yes, Delete Content
-        </button>
-
-    </form>
-
-    <br>
-
-    {% if from_page == "volume" %}
-
-        <a href="{% url 'book_volume_detail' volume_id %}">
-            Cancel
-        </a>
-
-    {% else %}
-
-        <a href="{% url 'book_content_list' %}">
-            Cancel
-        </a>
-
-    {% endif %}
-
-</body>
-
-</html>
+{% endblock %}

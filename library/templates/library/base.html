@@ -167,7 +167,37 @@
 {% endcomment %}
 {% block body %}
 
-<div class="app-wrapper">
+{% comment %}
+  SPA-style navigation for the whole application.
+
+  `hx-boost` has htmx intercept ordinary links and form submits inside this
+  element and fetch them in the background instead, swapping the answer
+  into the main-content region and pushing the URL. Every page now writes
+  `{% extends layout %}`, so the server answers such a request with just
+  that region: one URL, one view, one template, two amounts of page.
+
+  Chosen over marking up each link because it needs no per-link change and
+  cannot fall out of step - an `href` added later is boosted with
+  everything else. And it is only an interception: with JavaScript off, or
+  where a link opts out, the same href is an ordinary navigation, so direct
+  URLs, refresh, middle-click and Back keep working.
+
+  The `hx-target` here is the outermost declaration, so anything carrying
+  its own - the book list's fragments, the comboboxes, the modals - is
+  untouched, since htmx takes the nearest one. Only links and forms with no
+  htmx attributes at all pick this up, which is the set meant to navigate.
+
+  Opted out with `hx-boost="false"` where a background fetch is the wrong
+  thing: file downloads, file uploads, and signing out.
+
+  This element sits inside `{% block body %}`, which the login page
+  replaces wholesale, so nothing on the sign-in page is boosted.
+{% endcomment %}
+<div
+    class="app-wrapper"
+    hx-boost="true"
+    hx-target="#mainContent"
+>
 
 
     <!-- Mobile Sidebar Overlay -->
@@ -215,6 +245,20 @@
 
         <nav class="sidebar-nav" aria-label="Primary">
 
+            {% comment %}
+              Grouped the way circulation work actually runs, rather than one
+              entry per database table. Book Copies, Volumes and Contents are
+              deliberately absent: they are reached through a book, not
+              browsed on their own. Their URLs, views and permissions are
+              untouched and still work when typed in — see `data-nav-prefix`
+              on Books below, which keeps Catalog lit while you are on one.
+            {% endcomment %}
+
+            {% comment %}
+              Plain hrefs throughout. The shell boosts them, and the href is
+              what makes each one shareable, middle-clickable and still
+              working when the script never arrives.
+            {% endcomment %}
             <a
                 href="{% url 'library_home' %}"
                 class="nav-link-custom"
@@ -232,14 +276,107 @@
 
             <div class="nav-section-title">
 
-                LIBRARY
+                CIRCULATION
 
             </div>
 
 
             <a
+                href="{% url 'circulation_issue' %}"
+                class="nav-link-custom"
+            >
+
+                <i class="bi bi-box-arrow-right"></i>
+
+                <span>
+                    Issue Books
+                </span>
+
+            </a>
+
+
+            {% comment %}
+              `loan_return_lookup` carries
+              @role_required("Admin", "Librarian"), so an Assistant is
+              refused it. Hiding the link only avoids offering a door that
+              answers 403 — the view is what enforces it, exactly as with
+              Branding further down.
+            {% endcomment %}
+            {% if request.user.role == "Admin" or request.user.role == "Librarian" %}
+
+                <a
+                    href="{% url 'circulation_return_lookup' %}"
+                    class="nav-link-custom"
+                >
+
+                    <i class="bi bi-box-arrow-in-left"></i>
+
+                    <span>
+                        Return Books
+                    </span>
+
+                </a>
+
+            {% endif %}
+
+
+            <a
+                href="{% url 'loan_list' %}?status=active"
+                class="nav-link-custom"
+            >
+
+                <i class="bi bi-arrow-left-right"></i>
+
+                <span>
+                    Active Loans
+                </span>
+
+            </a>
+
+
+            {% comment %}
+              Same path as Active Loans, separated only by the filter, so
+              prefix matching alone would light the wrong one. `data-nav-query`
+              makes this entry match only while that filter is in force, and
+              step aside otherwise.
+            {% endcomment %}
+            <a
+                href="{% url 'loan_list' %}?status=overdue"
+                class="nav-link-custom"
+                data-nav-query="status=overdue"
+            >
+
+                <i class="bi bi-clock-history"></i>
+
+                <span>
+                    Overdue
+                </span>
+
+            </a>
+
+
+            <div class="nav-section-title">
+
+                CATALOG
+
+            </div>
+
+
+            {% comment %}
+              Volumes and Contents live under a book and have no entry of
+              their own, so opening one of their URLs directly leaves Books
+              lit rather than nothing at all.
+
+              Book Copies is deliberately not in this list any more: it has
+              its own entry under INVENTORY, and both would match
+              /library/book-copies/ at the same length - `markActive` keeps
+              the first it finds, which is this one, so Books would stay lit
+              while the librarian was looking at the copy list.
+            {% endcomment %}
+            <a
                 href="{% url 'book_list' %}"
                 class="nav-link-custom"
+                data-nav-prefix="{% url 'book_volume_list' %},{% url 'book_content_list' %}"
             >
 
                 <i class="bi bi-book"></i>
@@ -252,28 +389,42 @@
 
 
             <a
-                href="{% url 'book_copy_list' %}"
+                href="{% url 'author_list' %}"
                 class="nav-link-custom"
             >
 
-                <i class="bi bi-collection"></i>
+                <i class="bi bi-person-lines-fill"></i>
 
                 <span>
-                    Book Copies
+                    Authors
                 </span>
 
             </a>
 
 
             <a
-                href="{% url 'book_content_list' %}"
+                href="{% url 'category_list' %}"
                 class="nav-link-custom"
             >
 
-                <i class="bi bi-file-earmark-text"></i>
+                <i class="bi bi-tags"></i>
 
                 <span>
-                    Contents
+                    Categories
+                </span>
+
+            </a>
+
+
+            <a
+                href="{% url 'publisher_list' %}"
+                class="nav-link-custom"
+            >
+
+                <i class="bi bi-building"></i>
+
+                <span>
+                    Publishers
                 </span>
 
             </a>
@@ -302,28 +453,7 @@
 
             <div class="nav-section-title">
 
-                CIRCULATION
-
-            </div>
-
-
-            <a
-                href="{% url 'loan_list' %}"
-                class="nav-link-custom"
-            >
-
-                <i class="bi bi-arrow-left-right"></i>
-
-                <span>
-                    Loans
-                </span>
-
-            </a>
-
-
-            <div class="nav-section-title">
-
-                MANAGEMENT
+                INVENTORY
 
             </div>
 
@@ -337,6 +467,29 @@
 
                 <span>
                     Locations
+                </span>
+
+            </a>
+
+
+            {% comment %}
+              The copies themselves. Reached through a book as well, but
+              worth browsing on its own: "which copies are damaged" and
+              "what is on this shelf" are questions about the stock rather
+              than about a title.
+
+              A plain href like every other entry, so the shell boosts it
+              and it swaps the main content rather than reloading.
+            {% endcomment %}
+            <a
+                href="{% url 'book_copy_list' %}"
+                class="nav-link-custom"
+            >
+
+                <i class="bi bi-collection"></i>
+
+                <span>
+                    Book Copies
                 </span>
 
             </a>
@@ -356,25 +509,54 @@
             </a>
 
 
-            <a
-                href="{% url 'user_list' %}"
-                class="nav-link-custom"
-            >
+            {% comment %}
+              Counting the shelves against the record. In this group
+              because that is what it is about, and only for the roles that
+              may run one - the views enforce the same rule.
+            {% endcomment %}
+            {% if request.user.role == "Admin" or request.user.role == "Librarian" %}
+                <a
+                    href="{% url 'inventory_session_list' %}"
+                    class="nav-link-custom"
+                >
 
-                <i class="bi bi-person-gear"></i>
+                    <i class="bi bi-clipboard-check"></i>
 
-                <span>
-                    Users
-                </span>
+                    <span>
+                        Stock Check
+                    </span>
 
-            </a>
+                </a>
+            {% endif %}
+
+
+            <div class="nav-section-title">
+
+                ADMINISTRATION
+
+            </div>
 
 
             {% comment %}
-              Branding is Admin-only. Hiding the link is convenience, not
-              security — the view enforces it with @role_required("Admin").
+              Users and Branding are both Admin-only on the server
+              (@role_required("Admin")). Hiding the links is convenience,
+              not security.
             {% endcomment %}
             {% if request.user.role == "Admin" %}
+
+                <a
+                    href="{% url 'user_list' %}"
+                    class="nav-link-custom"
+                >
+
+                    <i class="bi bi-person-gear"></i>
+
+                    <span>
+                        Users
+                    </span>
+
+                </a>
+
 
                 <a
                     href="{% url 'branding_settings' %}"
@@ -384,12 +566,46 @@
                     <i class="bi bi-palette"></i>
 
                     <span>
-                        Branding
+                        Settings / Branding
                     </span>
 
                 </a>
 
             {% endif %}
+
+
+            {% comment %}
+              One entry, not six. The reports themselves are cards on the
+              page it opens - putting each of them in the sidebar would
+              make the longest group in the navigation the one nobody uses
+              daily.
+            {% endcomment %}
+            <a
+                href="{% url 'reports_home' %}"
+                class="nav-link-custom"
+            >
+
+                <i class="bi bi-file-earmark-bar-graph"></i>
+
+                <span>
+                    Reports
+                </span>
+
+            </a>
+
+
+            <a
+                href="{% url 'activity_log_list' %}"
+                class="nav-link-custom"
+            >
+
+                <i class="bi bi-journal-text"></i>
+
+                <span>
+                    Activity Log
+                </span>
+
+            </a>
 
 
         </nav>
@@ -425,7 +641,13 @@
 
                 <div class="page-heading">
 
-                    <h1>
+                    {% comment %}
+                      Both ids below are swap targets: the heading and the
+                      breadcrumbs sit outside the main-content region, so a
+                      navigation replaces them out of band. Renaming either
+                      one means renaming it in main_layout.html too.
+                    {% endcomment %}
+                    <h1 id="pageHeading">
 
                         {% block page_title %}
 
@@ -442,7 +664,7 @@
 
             <!-- Center: breadcrumbs (optional, overridable) -->
 
-            <div class="topbar-center">
+            <div class="topbar-center" id="pageBreadcrumbs">
 
                 {% block breadcrumbs %}{% endblock %}
 
@@ -533,6 +755,8 @@
                                 <a
                                     class="dropdown-item text-danger"
                                     href="{% url 'logout' %}"
+                                    {# Signing out replaces the whole shell, not a region of it. #}
+                                    hx-boost="false"
                                 >
 
                                     <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
@@ -557,32 +781,14 @@
 
         <!-- Page Content -->
 
-        <main class="main-content">
+        {% comment %}
+          The one swap target. A converted page's main-content layout
+          replaces this element's contents and nothing else; the sidebar,
+          topbar, modals, toasts and footer are shared chrome and stay put.
+        {% endcomment %}
+        <main class="main-content swap-busy" id="mainContent">
 
-            {% if messages %}
-
-                {% for message in messages %}
-
-                    <div
-                        class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show"
-                        role="alert"
-                    >
-
-                        {{ message }}
-
-                        <button
-                            type="button"
-                            class="btn-close"
-                            data-bs-dismiss="alert"
-                            aria-label="Close"
-                        ></button>
-
-                    </div>
-
-                {% endfor %}
-
-            {% endif %}
-
+            {% include "library/partials/page_messages.html" %}
 
             {% block content %}
             {% endblock %}
@@ -739,6 +945,23 @@
     aria-live="polite"
     aria-atomic="true"
 ></div>
+
+
+{% comment %}
+  The barcode scanner, alongside the other dialogs rather than inside the
+  two pages that open it.
+
+  It used to be included by those pages, which was fine while every link
+  reloaded: the dialog arrived and left with the page. Now that the main
+  content is swapped in place, a dialog living inside it is a dialog that
+  can be removed from the document while Bootstrap is still closing it -
+  leaving the backdrop behind over an otherwise working page. Up here it is
+  one stable element for the life of the session, like #globalModal.
+
+  Only the buttons that open it are page-local, and app.js finds those by
+  delegation, so a page swapped in later opens this same dialog.
+{% endcomment %}
+{% include "library/partials/barcode_scanner.html" %}
 
 
 <!-- HTMX -->

@@ -1,0 +1,34 @@
+{% comment %}
+The books a rejected submission collided with.
+
+Sits under the error message on both the Add and Edit forms, page and
+dialog alike. The message says what happened; this says which record it
+happened against, because "already exists" is only useful if you can get
+to the thing that already exists.
+
+Rendered as plain links rather than a dialog trigger: the form is often
+itself in a dialog, and opening a second one over it would trap the
+reader.
+{% endcomment %}
+
+{% if duplicates %}
+
+    <ul class="list-unstyled mb-0 mt-2 small">
+
+        {% for match in duplicates %}
+
+            <li>
+                <a href="{% url 'book_detail' match.id %}" target="_blank" rel="noopener">
+                    <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>
+                    {{ match.title }}
+                </a>
+                <span class="text-body-secondary">
+                    — {{ match.author.name }}
+                </span>
+            </li>
+
+        {% endfor %}
+
+    </ul>
+
+{% endif %}

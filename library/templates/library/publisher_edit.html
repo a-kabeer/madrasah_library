@@ -1,12 +1,22 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Edit Publisher</title>
-</head>
-<body>
+{% extends layout %}
 
-{% include "library/_account_bar.html" %}
+{% block title %}
+    Edit Publisher | {{ branding.display_name }}
+{% endblock %}
 
+{% block page_title %}
+    Edit Publisher
+{% endblock %}
+
+{% block content %}
+
+{% comment %}
+  Inside the shared shell so this page can be reached without a full
+  reload, but otherwise as it was: the markup below is the same one this
+  template always had. Restyling it to match the rest of the app is a
+  separate job.
+{% endcomment %}
+<div class="container-fluid px-0 legacy-page">
 <p>
     <a href="{% url 'publisher_list' %}">
         ← Back to Publishers
@@ -55,6 +65,6 @@
     </button>
 
 </form>
+</div>
 
-</body>
-</html>
+{% endblock %}

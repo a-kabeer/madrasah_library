@@ -130,12 +130,33 @@ class SearchTests(BookListModeTestCase):
 
         self.assertEqual(self.titles(response), ["Ihya Ulum al-Din"])
 
-    def test_search_does_not_match_the_author_name(self):
-        # Title only: author has its own mode, so folding it in here would
-        # make one control quietly overlap another.
-        response = self.get(search="Jalaluddin Rumi")
+    def test_search_matches_the_author_name(self):
+        # One box for both: a librarian looking for a book knows the title
+        # or the author and should not have to say which first. This
+        # replaced a title-only search, which made finding by author mean
+        # switching mode.
+        response = self.get(search="Jalaluddin Rumi", page_size=100)
 
-        self.assertEqual(response.context["paginator"].count, 0)
+        # Both of Rumi's books, and neither of anyone else's.
+        self.assertEqual(
+            self.titles(response), ["Divan e Shams", "Masnavi"]
+        )
+
+    def test_search_matches_part_of_an_author_name(self):
+        response = self.get(search="Ghazali", page_size=100)
+
+        self.assertEqual(self.titles(response), ["Ihya Ulum al-Din"])
+
+    def test_searching_an_author_does_not_multiply_the_rows(self):
+        # `author` is a forward many-to-one and NOT NULL, so the join
+        # cannot duplicate a book - which is why no .distinct() is needed,
+        # and why the nulls-last ordering still works.
+        response = self.get(search="Rumi", page_size=100)
+
+        ids = [b.id for b in response.context["books"]]
+
+        self.assertEqual(len(ids), len(set(ids)))
+        self.assertEqual(response.context["paginator"].count, len(ids))
 
     def test_search_does_not_match_category_or_publisher(self):
         for term in ("Poetry", "Fiqh", "Darul Ishaat"):
@@ -149,16 +170,19 @@ class SearchTests(BookListModeTestCase):
             with self.subTest(term=term):
                 self.assertEqual(self.titles(self.get(search=term)), ["Masnavi"])
 
-    def test_search_matches_a_title_containing_an_author_name(self):
-        # "Rumi" appears in this title, so it matches on the title alone —
-        # not because the author is also called Rumi.
+    def test_search_matches_on_either_side(self):
+        # "Rumi" is in this book's title and is also the Masnavi's author,
+        # so one term finds both - once each.
         book = make_book(title="Rumi Anthology", author=self.ghazali)
 
         response = self.get(search="Rumi", page_size=100)
 
-        ids = [b.id for b in response.context["books"]]
+        ids = sorted(b.id for b in response.context["books"])
 
-        self.assertEqual(ids, [book.id])
+        # The anthology on its title, and Rumi's two on their author.
+        self.assertEqual(
+            ids, sorted([book.id, self.masnavi.id, self.divan.id])
+        )
 
     def test_search_with_no_match_reports_zero(self):
         response = self.get(search="Nothing Like This")
@@ -423,10 +447,11 @@ class BookDetailModalTests(BookListModeTestCase):
         self.assertIn("shelves", copy_queries[0]["sql"])
         self.assertIn("locations", copy_queries[0]["sql"])
 
-    def test_a_multi_volume_page_does_not_pay_for_the_copies_query(self):
-        # It lists volumes and their counts, not the copies themselves, so
-        # it must not fetch them. (A single-volume book deliberately does
-        # show its copies — see the copy navigation tests.)
+    def test_a_multi_volume_page_fetches_its_copies_exactly_once(self):
+        # The page now shows the copies themselves — the availability
+        # summary, the Copies tab and the shelf breakdown are all read off
+        # one list — so the guarantee is no longer "it must not fetch
+        # them" but "it must not fetch them twice, or once per volume".
         for number in (1, 2):
             volume = make_volume(book=self.masnavi, volume_number=number)
             make_copy(volume=volume, copy_code="C-%d" % number)
@@ -439,9 +464,35 @@ class BookDetailModalTests(BookListModeTestCase):
             if "book_copies" in q["sql"]
         ]
 
-        # The per-volume count joins book_copies, but only to count them.
-        self.assertEqual(len(rows), 1)
-        self.assertIn("COUNT", rows[0]["sql"].upper())
+        # Several queries mention book_copies - the per-volume count, the
+        # loan history joining through it, that page's COUNT - but only one
+        # selects copy rows. Matched on the FROM clause, since every other
+        # one reaches book_copies through a join.
+        fetching = [q for q in rows if 'FROM "book_copies"' in q["sql"]]
+        self.assertEqual(len(fetching), 1)
+
+        # And it brings the shelf and location with it, so rendering a
+        # copy's placement costs nothing further.
+        self.assertIn("shelves", fetching[0]["sql"])
+        self.assertIn("locations", fetching[0]["sql"])
+
+    def test_the_detail_page_costs_the_same_however_many_copies(self):
+        first = make_volume(book=self.masnavi, volume_number=1)
+        second = make_volume(book=self.masnavi, volume_number=2)
+
+        for number in range(4):
+            make_copy(volume=first, copy_code="C-A%d" % number)
+
+        with CaptureQueriesContext(connection) as few:
+            self.client.get(self.detail_url)
+
+        for number in range(20):
+            make_copy(volume=second, copy_code="C-B%d" % number)
+
+        with CaptureQueriesContext(connection) as many:
+            self.client.get(self.detail_url)
+
+        self.assertEqual(len(many), len(few))
 
 
 class BookListRowTests(BookListModeTestCase):

@@ -181,7 +181,8 @@ CREATE TABLE public.books (
     author_id integer NOT NULL,
     category_id integer,
     publisher_id integer,
-    cover_image character varying(255)
+    cover_image character varying(255),
+    archived_at timestamp with time zone
 );
 
 
@@ -419,6 +420,10 @@ CREATE TABLE public.organization_settings (
     contact_phone character varying(50) DEFAULT ''::character varying NOT NULL,
     footer_text text DEFAULT ''::text NOT NULL,
     updated_at timestamp with time zone,
+    loan_period_days integer,
+    max_active_loans integer,
+    max_renewals integer,
+    block_when_overdue boolean,
     CONSTRAINT organization_settings_pkey PRIMARY KEY (id),
     CONSTRAINT organization_settings_singleton CHECK ((id = 1))
 );
@@ -671,6 +676,13 @@ CREATE INDEX idx_books_author_id ON public.books USING btree (author_id);
 
 
 --
+-- Name: idx_books_archived_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_books_archived_at ON public.books USING btree (archived_at) WHERE (archived_at IS NOT NULL);
+
+
+--
 -- Name: idx_books_category_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -893,3 +905,78 @@ ALTER TABLE ONLY public.book_volumes
 
 \unrestrict eTUL6e4u3IQ8waGc0rWNRl670EvCK1kWYaYTyEbzAeMsO4fEAiHFw79f9D7wjo1
 
+
+
+--
+-- Name: inventory_sessions; Type: TABLE; Schema: public; Owner: postgres
+--
+-- One physical stock check (see library.models.InventorySession). The
+-- CHECKs are the rules: a session covers something coherent, and it is
+-- Completed exactly when it has a completion time.
+--
+
+CREATE TABLE public.inventory_sessions (
+    id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name character varying(255) NOT NULL,
+    scope character varying(20) NOT NULL,
+    location_id integer REFERENCES public.locations(id),
+    shelf_id integer REFERENCES public.shelves(id),
+    status character varying(20) DEFAULT 'In Progress'::character varying NOT NULL,
+    started_by integer REFERENCES public.users(id),
+    started_at timestamp with time zone NOT NULL,
+    completed_at timestamp with time zone,
+
+    CONSTRAINT check_inventory_scope CHECK (
+        (scope = 'library' AND location_id IS NULL AND shelf_id IS NULL)
+        OR (scope = 'location' AND location_id IS NOT NULL AND shelf_id IS NULL)
+        OR (scope = 'shelf' AND shelf_id IS NOT NULL AND location_id IS NULL)
+    ),
+
+    CONSTRAINT check_inventory_status CHECK (
+        (status = 'In Progress' AND completed_at IS NULL)
+        OR (status = 'Completed' AND completed_at IS NOT NULL)
+    )
+);
+
+
+ALTER TABLE public.inventory_sessions OWNER TO postgres;
+
+
+--
+-- Name: inventory_scans; Type: TABLE; Schema: public; Owner: postgres
+--
+-- Every code read during a stock check, successful or not (see
+-- library.models.InventoryScan). `unique_found_copy_per_session` below is
+-- what stops a repeated scan raising the Found count.
+--
+
+CREATE TABLE public.inventory_scans (
+    id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    session_id integer NOT NULL
+        REFERENCES public.inventory_sessions(id) ON DELETE CASCADE,
+    copy_id integer REFERENCES public.book_copies(id),
+    copy_code character varying(50) NOT NULL,
+    outcome character varying(20) NOT NULL,
+    scanned_by integer REFERENCES public.users(id),
+    scanned_at timestamp with time zone NOT NULL,
+
+    CONSTRAINT check_inventory_scan_outcome CHECK (
+        outcome IN ('found', 'duplicate', 'outside', 'unknown')
+    ),
+
+    CONSTRAINT check_inventory_scan_copy CHECK (
+        (copy_id IS NOT NULL) OR (outcome = 'unknown')
+    )
+);
+
+
+ALTER TABLE public.inventory_scans OWNER TO postgres;
+
+
+CREATE UNIQUE INDEX unique_found_copy_per_session
+    ON public.inventory_scans (session_id, copy_id)
+    WHERE outcome = 'found';
+
+
+CREATE INDEX idx_inventory_scans_session
+    ON public.inventory_scans (session_id);

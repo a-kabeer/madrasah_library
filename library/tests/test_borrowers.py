@@ -408,6 +408,200 @@ class BorrowerProfileTests(BorrowerTestCase):
             response, reverse("borrower_delete", args=[self.borrower.id])
         )
 
+    def test_what_is_out_is_only_this_borrower_s(self):
+        other = make_borrower(name="Someone Else", phone="0301-7")
+        theirs = make_loan(copy=self.a_copy("PR-9"), borrower=other)
+
+        response = self.get()
+
+        self.assertEqual(
+            {loan.id for loan in response.context["current_loans"]},
+            {self.out.id, self.late.id},
+        )
+        self.assertNotIn(
+            theirs.id,
+            {loan.id for loan in response.context["current_loans"]},
+        )
+
+    def test_the_history_is_only_this_borrower_s(self):
+        other = make_borrower(name="Someone Else", phone="0301-8")
+        theirs = make_loan(copy=self.a_copy("PR-8"), borrower=other)
+
+        response = self.get()
+
+        listed = {loan.id for loan in response.context["loans"]}
+
+        self.assertEqual(
+            listed, {self.out.id, self.late.id, self.returned.id}
+        )
+        self.assertNotIn(theirs.id, listed)
+
+
+class ProfileQuickActionTests(BorrowerTestCase):
+    """Edit, issue, and the loans list - through the routes that exist.
+
+    None of these is a second way of doing the thing: each is a link into a
+    workflow that already owns it, carrying the borrower along.
+    """
+
+    def setUp(self):
+        super().setUp()
+
+        self.borrower = make_borrower(name="Bilal", phone="0302-1")
+        self.copy = self.a_copy("QA-1")
+
+    def get(self, borrower=None):
+        return self.client.get(
+            reverse("borrower_detail", args=[(borrower or self.borrower).id])
+        )
+
+    def test_the_profile_offers_editing(self):
+        self.assertContains(
+            self.get(), reverse("borrower_edit", args=[self.borrower.id])
+        )
+
+    def test_the_issue_link_carries_this_borrower(self):
+        self.assertContains(
+            self.get(),
+            "%s?borrower=%d"
+            % (reverse("circulation_issue"), self.borrower.id),
+        )
+
+    def test_following_it_arrives_with_the_borrower_chosen(self):
+        response = self.client.get(
+            reverse("circulation_issue"), {"borrower": self.borrower.id}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.context["borrower_id"], str(self.borrower.id)
+        )
+        self.assertEqual(response.context["borrower_name"], "Bilal")
+
+    def test_the_active_loans_link_is_offered_once_there_are_some(self):
+        without = self.get()
+
+        self.assertNotContains(
+            without, "borrower=%d&amp;status=active" % self.borrower.id
+        )
+
+        make_loan(copy=self.copy, borrower=self.borrower)
+
+        self.assertContains(
+            self.get(),
+            "borrower=%d&amp;status=active" % self.borrower.id,
+        )
+
+    def test_the_active_loans_link_shows_only_this_borrower(self):
+        mine = make_loan(copy=self.copy, borrower=self.borrower)
+
+        other = make_borrower(name="Not Bilal", phone="0302-2")
+        theirs = make_loan(copy=self.a_copy("QA-2"), borrower=other)
+
+        response = self.client.get(
+            reverse("loan_list"),
+            {"borrower": self.borrower.id, "status": "active"},
+        )
+
+        listed = {loan.id for loan in response.context["loans"]}
+
+        self.assertIn(mine.id, listed)
+        self.assertNotIn(theirs.id, listed)
+
+    def test_an_assistant_is_offered_the_same_three(self):
+        # All three roles issue and return, and all three edit a borrower,
+        # so nothing here is hidden from an Assistant. The check is that the
+        # page and the views agree - an offered action that answers 403 is
+        # the failure this guards.
+        make_loan(copy=self.copy, borrower=self.borrower)
+        self.as_assistant()
+
+        response = self.get()
+
+        for name, url in (
+            ("edit", reverse("borrower_edit", args=[self.borrower.id])),
+            ("issue", reverse("circulation_issue")),
+            ("loans", reverse("loan_list")),
+        ):
+            with self.subTest(action=name):
+                self.assertContains(response, url)
+                self.assertEqual(self.client.get(url).status_code, 200)
+
+
+class InactiveBorrowerIssueTests(BorrowerTestCase):
+    """An inactive borrower stays out of the issue workflow."""
+
+    def setUp(self):
+        super().setUp()
+
+        self.borrower = make_borrower(
+            name="Suspended", phone="0303-1", is_active=False
+        )
+        self.copy = self.a_copy("IN-1")
+
+    def test_the_profile_says_so_and_offers_no_issue_link(self):
+        response = self.client.get(
+            reverse("borrower_detail", args=[self.borrower.id])
+        )
+
+        self.assertContains(response, "Inactive")
+        self.assertContains(response, "cannot receive new loans")
+        self.assertNotContains(
+            response,
+            "%s?borrower=%d"
+            % (reverse("circulation_issue"), self.borrower.id),
+        )
+
+    def test_a_link_cannot_preselect_them_either(self):
+        # The button is not offered, but the URL can still be typed or kept
+        # from before the borrower was deactivated. Nothing is chosen, so
+        # the form cannot be filled in and then refused at the last step.
+        response = self.client.get(
+            reverse("circulation_issue"), {"borrower": self.borrower.id}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["borrower_id"], "")
+        self.assertEqual(response.context["borrower_name"], "")
+
+    def test_and_the_view_still_refuses_the_loan_itself(self):
+        # The rule this all follows from, unchanged.
+        response = self.client.post(
+            reverse("circulation_issue"),
+            {
+                "borrower": self.borrower.id,
+                "copies": [self.copy.id],
+                "issue_date": self.today.isoformat(),
+                "due_date": (self.today + timedelta(days=7)).isoformat(),
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "inactive borrower")
+        self.assertFalse(
+            Loan.objects.filter(borrower=self.borrower).exists()
+        )
+
+    def test_an_active_borrower_is_preselected_normally(self):
+        active = make_borrower(name="Allowed", phone="0303-2")
+
+        response = self.client.get(
+            reverse("circulation_issue"), {"borrower": active.id}
+        )
+
+        self.assertEqual(response.context["borrower_name"], "Allowed")
+
+    def test_a_nonsense_borrower_parameter_is_not_a_crash(self):
+        for value in ("abc", "", "-1", "999999"):
+            with self.subTest(value=value):
+
+                response = self.client.get(
+                    reverse("circulation_issue"), {"borrower": value}
+                )
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.context["borrower_name"], "")
+
 
 class AddAndEditTests(BorrowerTestCase):
 
@@ -705,12 +899,19 @@ class DeactivateAndDeleteTests(BorrowerTestCase):
             name="Suspended", phone="0377-9", is_active=False
         )
 
-        response = self.client.get(reverse("loan_add"))
-
-        self.assertNotIn(
-            borrower.id,
-            [b.id for b in response.context["borrowers"]],
+        # The issue form asks `borrower_list` for suggestions as you type
+        # rather than loading every borrower, so this is where "not
+        # offered" is now decided.
+        response = self.client.get(
+            reverse("borrower_list"),
+            {"search": "Suspended", "combobox": "1", "allow_create": "0"},
+            HTTP_HX_REQUEST="true",
         )
+
+        # The search term is echoed back in the fragment, so the option's
+        # own attributes are what say they were not suggested.
+        self.assertNotContains(response, 'data-id="%d"' % borrower.id)
+        self.assertNotContains(response, 'data-name="Suspended"')
 
     def test_an_assistant_cannot_delete(self):
         self.as_assistant()

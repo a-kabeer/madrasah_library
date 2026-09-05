@@ -1,90 +1,177 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Book Volumes</title>
-</head>
-<body>
+{% extends layout %}
 
-{% include "library/_account_bar.html" %}
-<p>
-    <a href="{% url 'library_home' %}">← Back to Home</a>
-</p>
-<h1>Book Volumes</h1>
+{% block title %}
+    Book Volumes | {{ branding.display_name }}
+{% endblock %}
 
-<form method="get">
+{% block page_title %}
+    Book Volumes
+{% endblock %}
 
-    <input
-        type="text"
-        name="search"
-        value="{{ search }}"
-        placeholder="Search book volumes..."
-    >
+{% block breadcrumbs %}
+    <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item">
+                <a href="{% url 'book_list' %}">Books</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                Volumes
+            </li>
+        </ol>
+    </nav>
+{% endblock %}
 
-    <label for="book">Book:</label>
+{% block content %}
 
-    <select name="book" id="book">
-        <option value="">All Books</option>
+<div class="container-fluid px-0">
 
-        {% for book in books %}
-            <option
-                value="{{ book.id }}"
-                {% if book_id == book.id|stringformat:"s" %}selected{% endif %}
-            >
-                {{ book.title }}
-            </option>
-        {% endfor %}
-    </select>
-
-    <button type="submit">Search</button>
-
-    {% if search or book_id %}
-        <a href="{% url 'book_volume_list' %}">
-            Clear
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h2 class="fw-bold mb-1">Book Volumes</h2>
+            <p class="text-body-secondary mb-0">
+                Every volume in the catalogue, across all books.
+            </p>
+        </div>
+        {% comment %}
+          Offered to everyone, as before. `book_volume_add` carries
+          @role_required("Admin", "Librarian") and is what enforces it.
+        {% endcomment %}
+        <a href="{% url 'book_volume_add' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Add Volume
         </a>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+
+                <div class="col-12 col-lg-5">
+                    <label for="volumeSearch" class="form-label fw-semibold">
+                        Search
+                    </label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="volumeSearch"
+                        name="search"
+                        value="{{ search }}"
+                        placeholder="Search book volumes..."
+                    >
+                </div>
+
+                <div class="col-12 col-lg-5">
+                    <label for="book" class="form-label fw-semibold">
+                        Book
+                    </label>
+                    <select class="form-select" name="book" id="book">
+                        <option value="">All Books</option>
+                        {% for book in books %}
+                            <option
+                                value="{{ book.id }}"
+                                {% if book_id == book.id|stringformat:"s" %}selected{% endif %}
+                            >
+                                {{ book.title }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-12 col-lg-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1"></i> Search
+                    </button>
+                    {% if search or book_id %}
+                        <a href="{% url 'book_volume_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg"></i>
+                            <span class="visually-hidden">Clear</span>
+                        </a>
+                    {% endif %}
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    {% comment %}
+      Shown only while filtered, as before: the unfiltered list is the whole
+      catalogue and the count adds nothing there.
+    {% endcomment %}
+    {% if search or book_id %}
+        <p class="text-body-secondary mb-3">
+            Found <strong>{{ volumes.paginator.count }}</strong>
+            volume{{ volumes.paginator.count|pluralize }}.
+        </p>
     {% endif %}
 
-</form>
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>ID</th>
+                        <th>Book</th>
+                        <th>Volume</th>
+                        <th>Title</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for volume in volumes %}
+                        <tr>
+                            <td class="text-body-secondary">{{ volume.id }}</td>
+                            <td>
+                                <a href="{% url 'book_detail' volume.book.id %}"
+                                   class="fw-semibold text-decoration-none">
+                                    {{ volume.book.title }}
+                                </a>
+                            </td>
+                            <td>Volume {{ volume.volume_number }}</td>
+                            <td>{{ volume.title }}</td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-1">
+                                    <a
+                                        href="{% url 'book_volume_detail' volume.id %}"
+                                        class="btn btn-sm btn-outline-secondary"
+                                        title="View Details"
+                                    >
+                                        <i class="bi bi-box-arrow-up-right"></i>
+                                    </a>
+                                    <a
+                                        href="{% url 'book_volume_edit' volume.id %}"
+                                        class="btn btn-sm btn-outline-warning"
+                                        title="Edit"
+                                    >
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a
+                                        href="{% url 'book_volume_delete' volume.id %}"
+                                        class="btn btn-sm btn-outline-danger"
+                                        title="Delete"
+                                    >
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-body-secondary py-4">
+                                No volumes found.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-{% if search or book_id %}
-    <p>
-        Found {{ volumes.paginator.count }} volume(s).
-    </p>
-{% endif %}
+    {% comment %}
+      Still `_pagination.html`: the Bootstrap partial expects
+      `pagination_query`, `elided_page_range` and `page_ellipsis`, which this
+      view does not supply — and views are out of scope here.
+    {% endcomment %}
+    {% include "library/_pagination.html" with page_obj=volumes %}
 
-<a href="{% url 'book_volume_add' %}">
-    Add Volume
-</a>
+</div>
 
-<ul>
-    {% for volume in volumes %}
-        <li>
-            ID: {{ volume.id }}
-            - Book: {{ volume.book.title }}
-            - Volume {{ volume.volume_number }}
-            - {{ volume.title }}
-
-            <a href="{% url 'book_volume_detail' volume.id %}">
-    View Details
-</a>
-
-|
-
-<a href="{% url 'book_volume_edit' volume.id %}">
-    Edit
-</a>
-
-|
-
-<a href="{% url 'book_volume_delete' volume.id %}">
-    Delete
-</a>
-        </li>
-    {% empty %}
-        <li>No volumes found.</li>
-    {% endfor %}
-</ul>
-
-{% include "library/_pagination.html" with page_obj=volumes %}
-
-</body>
-</html>
+{% endblock %}

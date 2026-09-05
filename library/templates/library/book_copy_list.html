@@ -1,4 +1,4 @@
-{% extends "library/base.html" %}
+{% extends layout %}
 
 {% block title %}
     Book Copies | {{ branding.display_name }}
@@ -204,6 +204,28 @@
 
                 <button type="submit" class="btn btn-primary btn-sm">
                     <i class="bi bi-arrow-left-right me-1"></i> Move Copies
+                </button>
+
+                {% comment %}
+                  The second thing to do with a selection. `type="button"`
+                  so it does not submit the move form it sits in, and a GET
+                  carrying the ticked ids - which is what makes the sheet a
+                  URL that can be reloaded and printed again.
+
+                  The same `hx-include` the move above uses, so both act on
+                  exactly what is ticked. Stated here rather than
+                  inherited: the form disinherits everything.
+                {% endcomment %}
+                <button
+                    type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    hx-get="{% url 'book_copy_labels' %}"
+                    hx-include="[data-copy-checkbox]:checked"
+                    hx-target="#mainContent"
+                    hx-swap="innerHTML"
+                    hx-push-url="true"
+                >
+                    <i class="bi bi-upc me-1"></i> Print Labels
                 </button>
 
                 <button
