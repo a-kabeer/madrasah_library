@@ -1,0 +1,35 @@
+{% extends "public/base.html" %}
+
+{% comment %}
+The public catalogue's own "not found".
+
+Its own rather than the project's `404.html`, which extends the staff
+shell's document and offers a way back to the dashboard and the staff book
+list — two doors a visitor cannot open. This one offers the catalogue.
+
+It is also the answer for a book that has been archived, which is what
+keeps a crafted id from telling anybody that a hidden record exists: the
+archived and the never-existent are indistinguishable from out here.
+{% endcomment %}
+
+{% block title %}Not found | {{ branding.display_name }}{% endblock %}
+
+{% block content %}
+
+<div class="public-empty">
+
+    <i class="bi bi-compass fs-1 d-block mb-2" aria-hidden="true"></i>
+
+    <p class="fw-semibold mb-1">That book is not in the catalogue.</p>
+
+    <p class="mb-3 small">
+        It may never have been, or it may no longer be listed.
+    </p>
+
+    <a href="{% url 'public_book_list' %}" class="btn btn-primary">
+        Browse the catalogue
+    </a>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends "public/base.html" %}
+
+{% block title %}{{ book.title }} | {{ branding.display_name }}{% endblock %}
+
+{% block content %}
+
+<p class="mb-3">
+    <a href="{% url 'public_book_list' %}" class="text-decoration-none">
+        <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>
+        Back to the catalogue
+    </a>
+</p>
+
+{% comment %}
+  Only what a catalogue card holds. There is no copy list, no shelf, no
+  location, no copy code, no loan, no borrower and no history on this page —
+  and none of it in the response either, because the view never fetched any
+  of it. See library/public_views.py.
+{% endcomment %}
+
+<article class="public-book">
+
+    {% comment %}
+      No cover image, for the reason the list gives: uploaded files are
+      served by a view that `LoginRequiredMiddleware` protects, so one
+      linked from here would answer a visitor with a redirect to the
+      sign-in page. Publishing the media directory is a decision about the
+      installation rather than part of this page.
+    {% endcomment %}
+    <div class="public-book-cover">
+        <span class="public-result-nocover" aria-hidden="true">
+            <i class="bi bi-book"></i>
+        </span>
+    </div>
+
+    <div class="public-book-body">
+
+        <h1 class="public-heading mb-1">{{ book.title }}</h1>
+
+        <p class="public-book-author mb-3">{{ book.author.name }}</p>
+
+        <p>
+            <span class="badge text-bg-{{ book.availability.tone }}">
+                {{ book.availability.label }}
+            </span>
+            <span class="d-block text-body-secondary small mt-1">
+                {{ book.availability.detail }}
+            </span>
+        </p>
+
+        <dl class="row mb-0">
+
+            <dt class="col-sm-3 text-body-secondary fw-normal">Author</dt>
+            <dd class="col-sm-9">
+                {% comment %}
+                  A link back into the list, which is how the author filter
+                  is reached — there is no dropdown of every author.
+                {% endcomment %}
+                <a href="{% url 'public_book_list' %}?author={{ book.author_id }}">
+                    {{ book.author.name }}
+                </a>
+            </dd>
+
+            {% if book.publisher %}
+                <dt class="col-sm-3 text-body-secondary fw-normal">Publisher</dt>
+                <dd class="col-sm-9">
+                    <a href="{% url 'public_book_list' %}?publisher={{ book.publisher_id }}">
+                        {{ book.publisher.name }}
+                    </a>
+                </dd>
+            {% endif %}
+
+            {% if book.category %}
+                <dt class="col-sm-3 text-body-secondary fw-normal">Category</dt>
+                <dd class="col-sm-9">
+                    <a href="{% url 'public_book_list' %}?category={{ book.category_id }}">
+                        {{ book.category.name }}
+                    </a>
+                </dd>
+            {% endif %}
+
+            {% if volumes %}
+                <dt class="col-sm-3 text-body-secondary fw-normal">
+                    Volume{{ volumes|length|pluralize }}
+                </dt>
+                <dd class="col-sm-9">
+                    <ul class="list-unstyled mb-0">
+                        {% for volume in volumes %}
+                            <li>
+                                Volume {{ volume.volume_number }}{% if volume.title %} — {{ volume.title }}{% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </dd>
+            {% endif %}
+
+        </dl>
+
+        <p class="text-body-secondary small mt-4 mb-0">
+            To borrow this book, ask at the library desk.
+        </p>
+
+    </div>
+
+</article>
+
+{% endblock %}

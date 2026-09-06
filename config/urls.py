@@ -24,7 +24,18 @@ from django.views.static import serve
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+
+    # The staff application. Everything under here needs a login -
+    # `LoginRequiredMiddleware` requires one by default and only the views
+    # marked `@login_not_required` are exempt, of which there is exactly
+    # one in this tree (the sign-in page itself).
     path("library/", include("library.urls")),
+
+    # The public catalogue: read-only, anonymous, and mounted apart from
+    # the staff application so the two share no route. Its views carry
+    # `@login_not_required` individually - see library/public_views.py for
+    # why the exemption is per-view rather than by URL prefix.
+    path("catalog/", include("library.public_urls")),
 ]
 
 

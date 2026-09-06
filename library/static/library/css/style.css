@@ -1488,6 +1488,316 @@ a.notification-title:hover {
 }
 
 /* =========================================================================
+   PUBLIC CATALOGUE
+
+   The read-only surface at /catalog/. It shares this stylesheet and the
+   organisation's colours with the staff application and nothing else - no
+   sidebar, no topbar, no dialogs - so everything it needs is here, and
+   none of it touches a class the staff shell uses.
+
+   Fixed light: the public document sets `data-bs-theme="light"` and ships
+   no theme script, because a visitor has no stored preference to honour.
+   ========================================================================= */
+
+.public-body {
+    background: var(--bs-body-bg);
+
+    min-height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+}
+
+.public-container {
+    width: 100%;
+    max-width: 60rem;
+
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.public-header {
+    border-bottom: 1px solid var(--bs-border-color);
+
+    padding: 1rem 0;
+}
+
+.public-header .public-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.public-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    color: var(--bs-body-color);
+    text-decoration: none;
+
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+.public-brand i {
+    font-size: 1.5rem;
+
+    color: var(--bs-primary);
+}
+
+.public-logo {
+    max-height: 2.25rem;
+    max-width: 2.75rem;
+
+    object-fit: contain;
+}
+
+.public-brand-text {
+    display: flex;
+    flex-direction: column;
+
+    line-height: 1.2;
+
+    min-width: 0;
+}
+
+/* Smaller and quieter: the same institution, not a second one. `isolate`
+   keeps the Arabic from reordering the Latin beside it. */
+.public-brand-arabic {
+    font-size: 0.8rem;
+    font-weight: 500;
+
+    color: var(--bs-secondary-color);
+
+    unicode-bidi: isolate;
+}
+
+.public-tagline {
+    margin-left: auto;
+
+    color: var(--bs-secondary-color);
+    font-size: 0.9rem;
+}
+
+.public-main {
+    flex: 1 0 auto;
+
+    padding-top: 1.5rem;
+    padding-bottom: 3rem;
+}
+
+.public-heading {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.public-footer {
+    border-top: 1px solid var(--bs-border-color);
+
+    padding: 1.25rem 0;
+
+    color: var(--bs-secondary-color);
+    font-size: 0.9rem;
+}
+
+
+/* --- Search and filters --------------------------------------------- */
+
+.public-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+
+    margin: 1.25rem 0;
+    padding: 1rem;
+
+    background: var(--bs-tertiary-bg);
+    border-radius: 0.5rem;
+}
+
+.public-filter-field {
+    display: flex;
+    flex-direction: column;
+
+    min-width: 10rem;
+}
+
+/* The search box takes whatever is left, so the two selects keep their
+   own width and the row still collapses to one column on a phone. */
+.public-filter-grow {
+    flex: 1 1 16rem;
+}
+
+.public-filter-field .form-label {
+    margin-bottom: 0.25rem;
+}
+
+.public-filter-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.public-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+
+/* --- Results ---------------------------------------------------------- */
+
+.public-results {
+    margin: 0;
+}
+
+.public-result {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    padding: 0.85rem 0;
+
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.public-result:last-child {
+    border-bottom: 0;
+}
+
+.public-result-cover {
+    width: 2.75rem;
+    height: 3.75rem;
+
+    flex-shrink: 0;
+
+    object-fit: cover;
+
+    border-radius: 0.25rem;
+}
+
+.public-result-nocover {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: var(--bs-tertiary-bg);
+    color: var(--bs-secondary-color);
+
+    font-size: 1.25rem;
+}
+
+.public-result-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+
+    flex: 1 1 auto;
+
+    min-width: 0;
+}
+
+.public-result-title {
+    font-weight: 600;
+
+    color: var(--bs-body-color);
+    text-decoration: none;
+}
+
+.public-result-title:hover {
+    color: var(--bs-primary);
+    text-decoration: underline;
+}
+
+.public-result-meta {
+    color: var(--bs-secondary-color);
+    font-size: 0.85rem;
+}
+
+.public-result-availability {
+    flex-shrink: 0;
+
+    white-space: nowrap;
+}
+
+.public-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+
+    margin-top: 1.5rem;
+}
+
+.public-empty {
+    text-align: center;
+
+    color: var(--bs-secondary-color);
+
+    padding: 3rem 1rem;
+}
+
+
+/* --- One book --------------------------------------------------------- */
+
+.public-book {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+
+    align-items: flex-start;
+}
+
+.public-book-cover {
+    flex: 0 0 auto;
+
+    width: 9rem;
+}
+
+.public-book-cover img,
+.public-book-cover .public-result-nocover {
+    width: 9rem;
+    height: 12rem;
+
+    object-fit: cover;
+
+    border-radius: 0.375rem;
+}
+
+.public-book-body {
+    flex: 1 1 20rem;
+
+    min-width: 0;
+}
+
+.public-book-author {
+    color: var(--bs-secondary-color);
+    font-size: 1.05rem;
+}
+
+
+@media (max-width: 575.98px) {
+
+    .public-result {
+        flex-wrap: wrap;
+    }
+
+    .public-result-availability {
+        margin-left: 3.75rem;
+    }
+
+    .public-tagline {
+        margin-left: 0;
+        width: 100%;
+    }
+
+}
+
+
+/* =========================================================================
    PRINTING
 
    The application is a screen: a sidebar, a topbar, buttons that do
