@@ -1,0 +1,108 @@
+{% comment %}
+Add or Edit an author, a category or a publisher, served into #formModal.
+
+One template behind all six of those, because they are one form: a name,
+and — for a publisher — a city. Which of the six this is comes in as
+`label`, `editing` and `has_city`, so there is nothing here that knows
+about any particular one of the three.
+
+The form posts to `action` with `?modal=1` and swaps itself. That is what
+keeps a rejected name in the dialog with the reason beside it, instead of
+throwing the dialog away and the typing with it. A successful post answers
+with no content at all and an event, which closes the dialog and redraws
+the list behind it — see `lookup_saved_response`.
+
+`hx-disinherit="*"` stops anything nested picking these up, and stops the
+shell's own `hx-boost` reaching down: without it the Cancel button and any
+link inside would try to navigate the main-content region from inside a
+dialog.
+
+Expected context: kind, label, action, editing, error, name, city,
+has_city.
+{% endcomment %}
+
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    {% if editing %}
+        <i class="bi bi-pencil me-2" aria-hidden="true"></i>Edit {{ label }}
+    {% else %}
+        <i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Add {{ label }}
+    {% endif %}
+</h5>
+
+<form
+    id="lookupForm"
+    hx-post="{{ action }}?modal=1"
+    hx-target="#lookupForm"
+    hx-swap="outerHTML"
+    hx-disabled-elt="find button[type=submit]"
+    hx-disinherit="*"
+>
+    {% csrf_token %}
+
+    {% if error %}
+        <div class="alert alert-danger d-flex align-items-start" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
+            <div>{{ error }}</div>
+        </div>
+    {% endif %}
+
+    <div class="mb-3">
+        <label for="lookupName" class="form-label fw-semibold">
+            {{ label }} Name
+        </label>
+        {% comment %}
+          autofocus so the dialog is ready to type into. app.js focuses it
+          after the swap; the attribute is what tells it which field.
+        {% endcomment %}
+        <input
+            type="text"
+            class="form-control"
+            id="lookupName"
+            name="name"
+            value="{{ name }}"
+            maxlength="255"
+            autocomplete="off"
+            autofocus
+            required
+        >
+    </div>
+
+    {% if has_city %}
+        <div class="mb-3">
+            <label for="lookupCity" class="form-label fw-semibold">
+                City <span class="text-body-secondary fw-normal">(optional)</span>
+            </label>
+            <input
+                type="text"
+                class="form-control"
+                id="lookupCity"
+                name="city"
+                value="{{ city }}"
+                maxlength="100"
+                autocomplete="off"
+            >
+            <div class="form-text">
+                Where the publisher is based. Shown under the name in the
+                list, and searchable.
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
+
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
+            {% if editing %}Save Changes{% else %}Add {{ label }}{% endif %}
+        </button>
+
+        <button
+            type="button"
+            class="btn btn-outline-secondary ms-auto"
+            data-bs-dismiss="modal"
+        >
+            Cancel
+        </button>
+
+    </div>
+
+</form>

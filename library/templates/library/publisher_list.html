@@ -1,4 +1,15 @@
 {% extends layout %}
+{% comment %}
+  `layout` rather than base.html by name: an ordinary request renders the
+  whole application shell, an HTMX navigation renders only the main-content
+  region. One template, one URL, one view behind both. `{% extends %}` has
+  to be the very first tag, so this note sits under it.
+  See library/context_processors.py.
+
+  Everything below the blocks is shared with the other two lookup lists -
+  Authors, Categories and Publishers are one page with a different noun in
+  it. Only the words and the routes differ, and they are passed in.
+{% endcomment %}
 
 {% block title %}
     Publishers | {{ branding.display_name }}
@@ -10,78 +21,11 @@
 
 {% block content %}
 
-{% comment %}
-  Inside the shared shell so this page can be reached without a full
-  reload, but otherwise as it was: the markup below is the same one this
-  template always had. Restyling it to match the rest of the app is a
-  separate job.
-{% endcomment %}
-<div class="container-fluid px-0 legacy-page">
-<a href="{% url 'library_home' %}">
-    ← Back to Home
-</a>
-<h1>Publishers</h1>
-<form method="get">
+<div class="container-fluid px-0">
 
-    <input
-        type="text"
-        name="search"
-        value="{{ search }}"
-        placeholder="Search publishers..."
-    >
+    {% url 'publisher_list' as publisher_list_url %}
+    {% include "library/partials/lookup_list.html" with rows=publishers heading="Publishers" blurb="Who printed what. Open a name to see the books that came from them." noun="publisher" noun_plural="publishers" list_url=publisher_list_url search_placeholder="Search publishers by name or city..." row_link_title="Books from" add_route="publisher_add" edit_route="publisher_edit" delete_route="publisher_delete" pagination_label="Publisher list pages" %}
 
-    <button type="submit">Search</button>
-
-    {% if search %}
-        <a href="{% url 'publisher_list' %}">
-            Clear
-        </a>
-    {% endif %}
-
-</form>
-
-{% if search %}
-    <p>
-        Search results for:
-        <strong>{{ search }}</strong>
-    </p>
-
-    <p>
-        Found {{ publishers|length }} publisher(s).
-    </p>
-{% endif %}
-
-<a href="{% url 'publisher_add' %}">
-    Add Publisher
-</a>
-
-<ul>
-    {% for publisher in publishers %}
-        <li>
-            ID: {{ publisher.id }}
-            - {{ publisher.name }}
-            {% if publisher.city %}
-                - {{ publisher.city }}
-            {% endif %}
-
-            <a href="{% url 'publisher_detail' publisher.id %}">
-                View Details
-            </a>
-
-            <a href="{% url 'publisher_edit' publisher.id %}">
-                Edit
-            </a>
-
-            <a href="{% url 'publisher_delete' publisher.id %}">
-                Delete
-            </a>
-        </li>
-    {% empty %}
-        <li>No publishers found.</li>
-    {% endfor %}
-</ul>
-
-{% include "library/_pagination.html" with page_obj=publishers %}
 </div>
 
 {% endblock %}

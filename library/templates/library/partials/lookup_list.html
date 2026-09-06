@@ -1,0 +1,346 @@
+{% comment %}
+The Authors, Categories and Publishers page - one page, three nouns.
+
+All three are the same thing with a different word in it: search one name
+column, sort it, page it, and open a name to see the books filed under it.
+So they share this file rather than each keeping a copy of it, and behind
+it they share the book list's own utilities - `resolve_sort`,
+`sort_ordering`, `sortable_columns`, `resolve_page_size` and
+`partials/pagination.html`. Nothing here is a second implementation of any
+of that.
+
+There is no View action and no detail page. A name links to the book list
+filtered to it, which is the only thing such a page ever showed.
+
+Add, Edit and Delete open dialogs rather than pages, through the same
+`[data-form-modal]` hook and the same #formModal the book list uses. The
+hrefs are real endpoints, so the links are still middle-clickable and the
+markup still says where each one goes.
+
+Navigation needs no script of its own: the search form, the sort links and
+the paging links are ordinary GET markup inside the shell's `hx-boost`
+region, which fetches them in the background and swaps the main-content
+region. The rows-per-page <select> is the one exception, because a select
+is not a link; it names the same region a boosted link would.
+
+Every link carries the rest of the table's state. The search form restates
+the sort in hidden fields, the sort links keep the search, and the paging
+links keep both plus the rows-per-page - so any view of the list is still
+a URL worth copying.
+
+Expected context:
+  rows              the Page of lookup rows, each carrying `books_url`
+  paginator         for the total count
+  heading, blurb    the page's own title and one-line description
+  noun/noun_plural  "author" / "authors", for the labels
+  list_url          this page's own URL, for Clear
+  row_link_title    "Books by" / "Books in" / "Books from"
+  add_route         URL names for the three dialogs
+  edit_route
+  delete_route
+  can_edit          whether any of them is offered
+  search_placeholder
+  search, columns, sort, direction, page_size, page_size_options,
+  page_size_url, pagination_query, elided_page_range, page_ellipsis
+{% endcomment %}
+
+    <!-- Page Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h2 class="fw-bold mb-1">{{ heading }}</h2>
+            <p class="text-body-secondary mb-0">{{ blurb }}</p>
+        </div>
+        {% if can_edit %}
+            {% comment %}
+              A real link to a real endpoint, intercepted by the same hook
+              the book list's Add uses so the dialog opens instead of a
+              page. `?modal=1` on the hx-get is what asks the view for the
+              fragment rather than a redirect back here.
+            {% endcomment %}
+            <a
+                href="{% url add_route %}"
+                class="btn btn-primary"
+                data-form-modal
+                hx-get="{% url add_route %}?modal=1"
+                hx-target="#formModal .modal-body"
+                hx-swap="innerHTML"
+            >
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
+                Add {{ noun|title }}
+            </a>
+        {% endif %}
+    </div>
+
+    <!-- Search -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+
+            {% comment %}
+              A real GET form, so pressing Enter in the box searches - the
+              button is a convenience, not the only way.
+
+              The sorting rides along in hidden fields. This is a plain GET
+              form, so whatever it does not carry is dropped from the URL,
+              and without these a search would silently reset the column
+              the user had just chosen. `page` is deliberately absent: a
+              new search belongs on page 1.
+            {% endcomment %}
+            <form method="get" class="d-flex flex-wrap gap-2">
+
+                <input type="hidden" name="sort" value="{{ sort }}">
+                <input type="hidden" name="direction" value="{{ direction }}">
+                <input type="hidden" name="page_size" value="{{ page_size }}">
+
+                <input
+                    type="search"
+                    class="form-control"
+                    name="search"
+                    value="{{ search }}"
+                    placeholder="{{ search_placeholder }}"
+                    style="max-width: 26rem;"
+                    aria-label="{{ search_placeholder }}"
+                >
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-search me-1" aria-hidden="true"></i> Search
+                </button>
+
+                {% if search %}
+                    <a href="{{ list_url }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-lg me-1" aria-hidden="true"></i> Clear
+                    </a>
+                {% endif %}
+
+            </form>
+
+        </div>
+    </div>
+
+    <!-- Result count and rows-per-page -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+
+        <p class="text-body-secondary mb-0">
+            Found <strong>{{ paginator.count }}</strong>
+            {% if paginator.count == 1 %}{{ noun }}{% else %}{{ noun_plural }}{% endif %}{% if search %}
+                matching <strong>{{ search }}</strong>{% endif %}.
+        </p>
+
+        <div class="d-flex align-items-center gap-2">
+
+            <label for="pageSize" class="text-body-secondary small mb-0">
+                Show
+            </label>
+
+            {% comment %}
+              `page_size_url` already carries the search and the sorting,
+              with `page` dropped so a size change returns to page 1 and
+              `page_size` dropped so the value this select sends is the only
+              one in the query. Naming #mainContent makes it a navigation
+              of the same region a boosted link would replace, which is why
+              the address bar and the Back button stay in step.
+            {% endcomment %}
+            <select
+                class="form-select form-select-sm w-auto"
+                id="pageSize"
+                name="page_size"
+                hx-get="{{ page_size_url }}"
+                hx-trigger="change"
+                hx-include="this"
+                hx-target="#mainContent"
+                hx-swap="innerHTML"
+                hx-push-url="true"
+                aria-label="Rows per page"
+            >
+                {% for option in page_size_options %}
+                    <option
+                        value="{{ option.value }}"
+                        {% if option.active %}selected{% endif %}
+                    >
+                        {{ option.value }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <span class="text-body-secondary small">per page</span>
+
+        </div>
+
+    </div>
+
+    <!-- Results -->
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-secondary">
+                    <tr>
+
+                        {% for column in columns %}
+                            <th
+                                {% if column.active %}
+                                    aria-sort="{% if column.direction == 'asc' %}ascending{% else %}descending{% endif %}"
+                                {% endif %}
+                            >
+                                <a href="{{ column.url }}" class="table-sort">
+                                    {{ column.label }}
+                                    {% if column.active %}
+                                        <i class="bi {% if column.direction == 'asc' %}bi-sort-up{% else %}bi-sort-down{% endif %}" aria-hidden="true"></i>
+                                    {% else %}
+                                        <i class="bi bi-arrow-down-up table-sort-idle" aria-hidden="true"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                        {% endfor %}
+
+                        {% comment %}
+                          Only for those who can use it. With nothing in it
+                          the column would be an empty heading over an
+                          empty strip, so it goes altogether.
+                        {% endcomment %}
+                        {% if can_edit %}
+                            <th class="text-end">Actions</th>
+                        {% endif %}
+
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                        {% comment %}
+                          The whole row opens the books filed under it, the
+                          same pattern the book, copy and location lists
+                          use. `data-row-primary` marks the link the row's
+                          click handler goes through, so the navigation is
+                          the shell's boosted one and there is no second
+                          copy of it in JavaScript. The dialogs sit inside
+                          [data-row-actions], which is what keeps the row
+                          handler off them.
+                        {% endcomment %}
+                        <tr
+                            class="book-row"
+                            data-row-url="{{ row.books_url }}"
+                            tabindex="0"
+                            role="button"
+                            aria-label="{{ row_link_title }} {{ row.name }}"
+                        >
+
+                            <td>
+                                <a
+                                    href="{{ row.books_url }}"
+                                    data-row-primary
+                                    class="fw-semibold text-decoration-none"
+                                >
+                                    {{ row.name }}
+                                </a>
+                                {% comment %}
+                                  Publishers carry a city and the other two
+                                  have no such field, so this is simply
+                                  empty for them rather than needing a flag
+                                  passed in to say so.
+                                {% endcomment %}
+                                {% if row.city %}
+                                    <span class="d-block small text-body-secondary">
+                                        {{ row.city }}
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            {% comment %}
+                              Annotated on the list's own query, so this
+                              costs no query per row. Archived books are
+                              not counted, which is what the link opens.
+                            {% endcomment %}
+                            <td>
+                                {% if row.book_count %}
+                                    <span class="badge text-bg-secondary">
+                                        {{ row.book_count }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-body-secondary small">
+                                        No books
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            {% if can_edit %}
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-1" data-row-actions>
+                                        <a
+                                            href="{% url edit_route row.id %}"
+                                            class="btn btn-sm btn-outline-warning"
+                                            title="Edit"
+                                            aria-label="Edit {{ row.name }}"
+                                            data-form-modal
+                                            hx-get="{% url edit_route row.id %}?modal=1"
+                                            hx-target="#formModal .modal-body"
+                                            hx-swap="innerHTML"
+                                        >
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a
+                                            href="{% url delete_route row.id %}"
+                                            class="btn btn-sm btn-outline-danger"
+                                            title="Delete"
+                                            aria-label="Delete {{ row.name }}"
+                                            data-form-modal
+                                            hx-get="{% url delete_route row.id %}?modal=1"
+                                            hx-target="#formModal .modal-body"
+                                            hx-swap="innerHTML"
+                                        >
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            {% endif %}
+
+                        </tr>
+                    {% empty %}
+                        {% comment %}
+                          Two empty states, because they call for different
+                          things: a search that found nothing needs a way
+                          back to the whole list, while an empty list needs
+                          the way to add the first one.
+                        {% endcomment %}
+                        <tr>
+                            <td colspan="{% if can_edit %}3{% else %}2{% endif %}"
+                                class="text-center text-body-secondary py-4">
+                                {% if search %}
+                                    No {{ noun_plural }} match
+                                    <strong>{{ search }}</strong>.
+                                    <a href="{{ list_url }}" class="d-block small mt-2">
+                                        Clear the search
+                                    </a>
+                                {% else %}
+                                    No {{ noun_plural }} yet.
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% include "library/partials/pagination.html" with page_obj=rows pagination_label=pagination_label %}
+
+    {% comment %}
+      Redraws the page after a dialog adds, renames or deletes something,
+      keeping whatever search, sorting, page and page size are in force -
+      it re-requests the current URL rather than a fresh one.
+
+      Naming #mainContent means the answer is the same region a boosted
+      link gets, so there is no second rendering path. This element is
+      inside that region and is therefore replaced by the swap it asked
+      for, which is fine: the reply brings a fresh one, exactly as a
+      boosted link brings a fresh copy of itself.
+
+      `refresh` is not needed here and no history entry is wanted either -
+      nothing navigated, so the Back button should not gain a step.
+    {% endcomment %}
+    <div
+        id="lookupListRefresh"
+        hx-get="{{ request.get_full_path }}"
+        hx-trigger="listChanged from:body"
+        hx-target="#mainContent"
+        hx-swap="innerHTML show:none"
+        hx-push-url="false"
+        hidden
+    ></div>

@@ -607,33 +607,14 @@ class NavigatedPageSweepTests(TestCase):
             "shelf edit": reverse("shelf_edit", args=[self.shelf.id]),
             "shelf delete": reverse("shelf_delete", args=[self.shelf.id]),
 
+            # Authors, Categories and Publishers have one page each now.
+            # Their Add, Edit and Delete are dialogs served into the shell's
+            # existing modal, not pages of their own, so they are not
+            # navigations and have nothing to answer a navigation with -
+            # see test_lookup_lists.py.
             "author list": reverse("author_list"),
-            "author add": reverse("author_add"),
-            "author detail": reverse("author_detail", args=[self.author.id]),
-            "author edit": reverse("author_edit", args=[self.author.id]),
-            "author delete": reverse("author_delete", args=[self.author.id]),
-
             "category list": reverse("category_list"),
-            "category add": reverse("category_add"),
-            "category detail": reverse(
-                "category_detail", args=[self.category.id]
-            ),
-            "category edit": reverse("category_edit", args=[self.category.id]),
-            "category delete": reverse(
-                "category_delete", args=[self.category.id]
-            ),
-
             "publisher list": reverse("publisher_list"),
-            "publisher add": reverse("publisher_add"),
-            "publisher detail": reverse(
-                "publisher_detail", args=[self.publisher.id]
-            ),
-            "publisher edit": reverse(
-                "publisher_edit", args=[self.publisher.id]
-            ),
-            "publisher delete": reverse(
-                "publisher_delete", args=[self.publisher.id]
-            ),
 
             "user list": reverse("user_list"),
             "user add": reverse("user_add"),

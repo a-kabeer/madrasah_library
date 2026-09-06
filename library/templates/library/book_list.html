@@ -64,6 +64,10 @@
       whatever search, filters, sorting, page and page size are in force —
       it re-requests the current URL rather than a fresh one.
 
+      `listChanged` is the signal every list answers to, not this one's
+      own: the dialogs that fire it are shared, and a dialog should not
+      have to know which list opened it.
+
       It sits outside #bookResults so the swap cannot remove it, and
       `refresh` tells the view not to push a history entry: nothing
       navigated, so the back button should not gain a step.
@@ -72,7 +76,7 @@
         id="bookListRefresh"
         hx-get="{{ request.get_full_path }}"
         hx-vals='{"partial": "results", "refresh": "1"}'
-        hx-trigger="bookListChanged from:body"
+        hx-trigger="listChanged from:body"
         hx-target="#bookResults"
         hx-swap="innerHTML show:none"
         hx-push-url="false"

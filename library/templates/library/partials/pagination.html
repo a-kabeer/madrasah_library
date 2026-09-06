@@ -21,13 +21,16 @@ Expected context:
                      active search, filters, sorting and rows-per-page
   elided_page_range  Paginator.get_elided_page_range() as a list
   page_ellipsis      Paginator.ELLIPSIS, to spot the gaps in that range
+  pagination_label   optional; what this set of pages is called, for the
+                     screen-reader label. The default is what every caller
+                     said before it was a parameter.
 {% endcomment %}
 
 {% if page_obj.paginator.num_pages > 1 %}
 
     <nav
         class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3"
-        aria-label="Book list pages"
+        aria-label="{{ pagination_label|default:'Book list pages' }}"
     >
 
         <p class="text-body-secondary small mb-0">
