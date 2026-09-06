@@ -55,6 +55,7 @@ from .models import (
 from django.utils.safestring import mark_safe
 
 from . import acquisitions
+from . import analytics as analytics_module
 from . import barcode
 from . import excel as book_excel
 from . import history
@@ -11107,3 +11108,83 @@ def suggestion_review(request, suggestion_id):
     messages.success(request, "Suggestion marked %s." % to_status)
 
     return landing
+
+
+# ==========================================================================
+# ANALYTICS
+#
+# Read-only insights over the records the rest of the application already
+# keeps - see library/analytics.py for what counts as what, and why. There
+# is no POST here, nothing is written, and no number is stored: everything
+# on the page is computed from the live rows at the moment it is drawn.
+#
+# Admin and Librarian, which is the same line `can_edit_library` draws
+# through the catalogue: these are figures a library acts on, and an
+# Assistant does not make those decisions.
+# ==========================================================================
+
+
+@role_required("Admin", "Librarian")
+def analytics(request):
+    """Everything on one page, each section its own bounded query.
+
+    The filters are the whole of the input: a period and, optionally, a
+    category. Neither is trusted - an unrecognised period falls back to the
+    default and a category id nobody has is dropped - and which one is in
+    force is stated on the page, so a fallback is never silent.
+
+    One `Period` is built and handed to every section, so nothing here can
+    disagree with anything else about which window it is describing.
+
+    The query count is fixed. Every ranking is limited in SQL, every tally
+    is a conditional aggregate, and the only loop is over a fixed number of
+    recent stock checks - so this page costs the same on a library with
+    four hundred loans as on one with four hundred thousand.
+    """
+
+    period = analytics_module.Period(
+        analytics_module.resolve_period(request.GET.get("period")),
+        timezone.localdate(),
+        category_id=analytics_module.resolve_category(
+            request.GET.get("category")
+        ),
+    )
+
+    trend = analytics_module.borrowing_trend(period)
+
+    return render(
+        request,
+        "library/analytics.html",
+        {
+            "period": period,
+            "periods": [
+                (key, analytics_module.PERIOD_LABELS[key])
+                for key in analytics_module.PERIODS
+            ],
+            "categories": Category.objects.order_by("name"),
+
+            "loans": analytics_module.loan_summary(period),
+            "collection": analytics_module.collection_summary(period),
+
+            "trend": trend,
+            "trend_format": analytics_module.TREND_FORMATS[period.grain],
+            # The busiest bucket, so each row's bar is a share of the peak
+            # rather than of whichever bucket happened to come first.
+            "trend_max": max([row["loans"] for row in trend] or [0]),
+
+            "most_borrowed": analytics_module.most_borrowed(period),
+            "underused": analytics_module.underused(period),
+            "never_borrowed": analytics_module.never_borrowed_list(period),
+
+            "top_borrowers": analytics_module.most_active_borrowers(period),
+            "category_usage": analytics_module.category_usage(period),
+
+            "duration": analytics_module.loan_duration(period),
+
+            "attention": analytics_module.collection_attention(period),
+            "stock_checks": analytics_module.recent_stock_check_findings(),
+
+            "top_n": analytics_module.TOP_N,
+            "recent_sessions": analytics_module.RECENT_SESSIONS,
+        },
+    )

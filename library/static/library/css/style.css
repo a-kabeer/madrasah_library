@@ -1488,6 +1488,195 @@ a.notification-title:hover {
 }
 
 /* =========================================================================
+   ANALYTICS
+
+   One long page of tiles and tables. Everything is a Bootstrap variable so
+   both themes and any brand colour follow, and every measure is fluid so
+   the whole page collapses to one column on a phone without a breakpoint
+   per section.
+   ========================================================================= */
+
+.analytics-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+
+    background: var(--bs-tertiary-bg);
+    border-radius: 0.5rem;
+}
+
+.analytics-filter {
+    display: flex;
+    flex-direction: column;
+
+    min-width: 11rem;
+    flex: 1 1 11rem;
+}
+
+.analytics-filter .form-label {
+    margin-bottom: 0.25rem;
+}
+
+.analytics-filter-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Which window is in force. Its own line at every width, so it is never
+   squeezed out beside the controls. */
+.analytics-window {
+    flex: 1 0 100%;
+
+    margin: 0;
+
+    color: var(--bs-secondary-color);
+    font-size: 0.85rem;
+}
+
+.analytics-heading {
+    font-size: 1.05rem;
+    font-weight: 700;
+
+    margin: 2rem 0 0.75rem;
+}
+
+.analytics-subheading {
+    font-size: 0.95rem;
+    font-weight: 600;
+
+    margin: 1.5rem 0 0.75rem;
+}
+
+/* The qualifier beside a heading - "top 10 in the period" - which is part
+   of what the heading means rather than decoration. */
+.analytics-note {
+    font-size: 0.8rem;
+    font-weight: 400;
+
+    color: var(--bs-secondary-color);
+}
+
+.analytics-empty {
+    padding: 1.25rem;
+
+    background: var(--bs-tertiary-bg);
+    border-radius: 0.5rem;
+
+    color: var(--bs-secondary-color);
+    font-size: 0.9rem;
+}
+
+
+/* --- Tiles ------------------------------------------------------------ */
+
+/* `auto-fit` with a minimum rather than a column count, so five tiles wrap
+   to whatever fits and a 375px screen gets one column with no media query
+   of its own. */
+.analytics-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+    gap: 0.75rem;
+
+    margin-bottom: 0.5rem;
+}
+
+.analytics-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+
+    padding: 0.85rem 1rem;
+
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+}
+
+/* A tinted edge, not a red number: these are counts to look at, not
+   alarms, and colouring the figure itself would read as a judgement. */
+.analytics-kpi-warn {
+    box-shadow: inset 0.2rem 0 0 var(--bs-warning);
+}
+
+.analytics-kpi-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+
+    line-height: 1.1;
+}
+
+.analytics-kpi-label {
+    font-size: 0.8rem;
+
+    color: var(--bs-secondary-color);
+}
+
+.analytics-kpi-label a {
+    color: inherit;
+}
+
+
+/* --- Tables ----------------------------------------------------------- */
+
+.analytics-table {
+    font-size: 0.9rem;
+}
+
+.analytics-rank {
+    width: 2.5rem;
+
+    color: var(--bs-secondary-color);
+}
+
+/* The trend bar. Given room only where there is room: on a narrow screen
+   the numbers are the point and the bar is dropped entirely. */
+.analytics-bar-column {
+    width: 40%;
+
+    display: none;
+}
+
+.analytics-bar {
+    display: block;
+
+    height: 0.5rem;
+    min-width: 1px;
+
+    background: var(--bs-primary);
+    border-radius: 0.25rem;
+}
+
+@media (min-width: 576px) {
+
+    .analytics-bar-column {
+        display: table-cell;
+    }
+
+}
+
+
+/* Two sections side by side where there is width for it, stacked where
+   there is not. */
+.analytics-pair {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+@media (min-width: 992px) {
+
+    .analytics-pair {
+        grid-template-columns: 1fr 1fr;
+    }
+
+}
+
+
+/* =========================================================================
    PUBLIC CATALOGUE
 
    The read-only surface at /catalog/. It shares this stylesheet and the

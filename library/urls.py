@@ -430,6 +430,15 @@ path(
     name="reservation_cancel",
 ),
 
+# Insights over the records the rest of the application keeps. Read-only,
+# no POST, and Admin/Librarian only - the decorator on the view is the
+# enforcement, not the sidebar entry.
+path(
+    "analytics/",
+    views.analytics,
+    name="analytics",
+),
+
 path("reports/", views.reports_home, name="reports_home"),
 
 path(

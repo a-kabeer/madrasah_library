@@ -643,6 +643,32 @@
 
 
             {% comment %}
+              Insights, beside Reports because they are read from the same
+              records - but a different question: Reports prints what
+              happened between two dates, Analytics says what to do about
+              the collection.
+
+              Admin and Librarian only, matching `@role_required` on the
+              view. Hiding it from an Assistant is convenience; the
+              decorator is what refuses them.
+            {% endcomment %}
+            {% if request.user.role == "Admin" or request.user.role == "Librarian" %}
+                <a
+                    href="{% url 'analytics' %}"
+                    class="nav-link-custom"
+                >
+
+                    <i class="bi bi-graph-up-arrow"></i>
+
+                    <span>
+                        Analytics
+                    </span>
+
+                </a>
+            {% endif %}
+
+
+            {% comment %}
               One entry, not six. The reports themselves are cards on the
               page it opens - putting each of them in the sidebar would
               make the longest group in the navigation the one nobody uses
