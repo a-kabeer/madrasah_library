@@ -1,0 +1,210 @@
+{% extends layout %}
+
+{% block title %}
+    Suggest a Book | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    Suggest a Book
+{% endblock %}
+
+{% block breadcrumbs %}
+    <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item">
+                <a href="{% url 'suggestion_list' %}">Suggestions</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">New</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-0">
+
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-lightbulb me-2" aria-hidden="true"></i>
+                        Suggest a Book
+                    </h5>
+                </div>
+                <div class="card-body">
+
+                    <p class="text-body-secondary">
+                        Write down what you know. Only the title is
+                        required — a suggestion is a note for whoever
+                        decides what the library buys, not a catalogue
+                        entry, so an approximate author or a half-remembered
+                        ISBN is still worth having.
+                    </p>
+
+                    {% if error %}
+                        <div class="alert alert-warning d-flex align-items-start" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
+                            <div>
+                                {{ error }}
+
+                                {% comment %}
+                                  What was matched, and a way past it. The
+                                  match is exact on a normalised title — the
+                                  same comparison Add Book refuses a
+                                  duplicate on — but a suggestion is somebody
+                                  typing from memory, so this warns and lets
+                                  them through rather than refusing outright.
+                                {% endcomment %}
+                                {% if matches %}
+                                    <ul class="mb-0 mt-2 small">
+                                        {% for match in matches %}
+                                            <li>
+                                                <a href="{% url 'book_detail' match.id %}">
+                                                    {{ match.title }}
+                                                </a>
+                                                {% if match.author %}
+                                                    — {{ match.author.name }}
+                                                {% endif %}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="suggestionTitle" class="form-label fw-semibold">
+                                Title <span class="text-danger">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="suggestionTitle"
+                                name="title"
+                                value="{{ form.title }}"
+                                maxlength="500"
+                                required
+                            >
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label for="suggestionAuthor" class="form-label fw-semibold">
+                                    Author
+                                </label>
+                                {% comment %}
+                                  Free text, and deliberately not the
+                                  catalogue's author picker: naming an
+                                  author here must never add one. If the
+                                  name matches somebody already catalogued,
+                                  the Add Book form fills them in later —
+                                  and if it does not, nothing is created.
+                                {% endcomment %}
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="suggestionAuthor"
+                                    name="author_name"
+                                    value="{{ form.author_name }}"
+                                    maxlength="255"
+                                >
+                                <div class="form-text">
+                                    As you know it. No author record is
+                                    created from this.
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="suggestionPublisher" class="form-label fw-semibold">
+                                    Publisher
+                                </label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="suggestionPublisher"
+                                    name="publisher_name"
+                                    value="{{ form.publisher_name }}"
+                                    maxlength="255"
+                                >
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="suggestionIsbn" class="form-label fw-semibold">
+                                    ISBN
+                                </label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="suggestionIsbn"
+                                    name="isbn"
+                                    value="{{ form.isbn }}"
+                                    maxlength="32"
+                                >
+                                <div class="form-text">
+                                    Copied off the cover is fine.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label for="suggestionNotes" class="form-label fw-semibold">
+                                Why this book
+                            </label>
+                            <textarea
+                                class="form-control"
+                                id="suggestionNotes"
+                                name="notes"
+                                rows="3"
+                            >{{ form.notes }}</textarea>
+                        </div>
+
+                        {% comment %}
+                          Only offered once the duplicate warning has
+                          actually been shown, so nobody can pre-tick past a
+                          check they were never given. It is one submission's
+                          confirmation and is not remembered.
+                        {% endcomment %}
+                        {% if matches %}
+                            <div class="form-check mt-3">
+                                <input
+                                    type="checkbox"
+                                    class="form-check-input"
+                                    id="suggestionConfirm"
+                                    name="confirm_duplicate"
+                                    value="1"
+                                >
+                                <label class="form-check-label" for="suggestionConfirm">
+                                    I have looked, and this is a different
+                                    book — suggest it anyway.
+                                </label>
+                            </div>
+                        {% endif %}
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
+                                Suggest it
+                            </button>
+                            <a href="{% url 'suggestion_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1" aria-hidden="true"></i>
+                                Cancel
+                            </a>
+                        </div>
+
+                    </form>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

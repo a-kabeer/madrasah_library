@@ -253,6 +253,40 @@ body {
     font-size: 1.5rem;
 }
 
+/* The institution's name, and its name in Arabic under it when one is
+   configured. A column so the two stack; `min-width: 0` so a long name
+   truncates rather than pushing the brand bar wider than the sidebar. */
+.brand-name {
+    display: flex;
+    flex-direction: column;
+
+    min-width: 0;
+
+    line-height: 1.2;
+}
+
+.brand-name-primary {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Smaller and quieter: it is the same name, not a second one. `isolate`
+   keeps the Arabic from reordering the Latin around it. */
+.brand-name-arabic {
+    font-size: 0.8rem;
+    font-weight: 500;
+
+    color: var(--sidebar-text);
+
+    unicode-bidi: isolate;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
 /* Uploaded organisation logo, shown in place of the fallback glyph.
    Bounded so any aspect ratio fits the brand bar without pushing it. */
 .brand-logo {
@@ -1452,6 +1486,505 @@ a.notification-title:hover {
     }
 
 }
+
+/* =========================================================================
+   ANALYTICS
+
+   One long page of tiles and tables. Everything is a Bootstrap variable so
+   both themes and any brand colour follow, and every measure is fluid so
+   the whole page collapses to one column on a phone without a breakpoint
+   per section.
+   ========================================================================= */
+
+.analytics-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+
+    background: var(--bs-tertiary-bg);
+    border-radius: 0.5rem;
+}
+
+.analytics-filter {
+    display: flex;
+    flex-direction: column;
+
+    min-width: 11rem;
+    flex: 1 1 11rem;
+}
+
+.analytics-filter .form-label {
+    margin-bottom: 0.25rem;
+}
+
+.analytics-filter-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Which window is in force. Its own line at every width, so it is never
+   squeezed out beside the controls. */
+.analytics-window {
+    flex: 1 0 100%;
+
+    margin: 0;
+
+    color: var(--bs-secondary-color);
+    font-size: 0.85rem;
+}
+
+.analytics-heading {
+    font-size: 1.05rem;
+    font-weight: 700;
+
+    margin: 2rem 0 0.75rem;
+}
+
+.analytics-subheading {
+    font-size: 0.95rem;
+    font-weight: 600;
+
+    margin: 1.5rem 0 0.75rem;
+}
+
+/* The qualifier beside a heading - "top 10 in the period" - which is part
+   of what the heading means rather than decoration. */
+.analytics-note {
+    font-size: 0.8rem;
+    font-weight: 400;
+
+    color: var(--bs-secondary-color);
+}
+
+.analytics-empty {
+    padding: 1.25rem;
+
+    background: var(--bs-tertiary-bg);
+    border-radius: 0.5rem;
+
+    color: var(--bs-secondary-color);
+    font-size: 0.9rem;
+}
+
+
+/* --- Tiles ------------------------------------------------------------ */
+
+/* `auto-fit` with a minimum rather than a column count, so five tiles wrap
+   to whatever fits and a 375px screen gets one column with no media query
+   of its own. */
+.analytics-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+    gap: 0.75rem;
+
+    margin-bottom: 0.5rem;
+}
+
+.analytics-kpi {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+
+    padding: 0.85rem 1rem;
+
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+}
+
+/* A tinted edge, not a red number: these are counts to look at, not
+   alarms, and colouring the figure itself would read as a judgement. */
+.analytics-kpi-warn {
+    box-shadow: inset 0.2rem 0 0 var(--bs-warning);
+}
+
+.analytics-kpi-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+
+    line-height: 1.1;
+}
+
+.analytics-kpi-label {
+    font-size: 0.8rem;
+
+    color: var(--bs-secondary-color);
+}
+
+.analytics-kpi-label a {
+    color: inherit;
+}
+
+
+/* --- Tables ----------------------------------------------------------- */
+
+.analytics-table {
+    font-size: 0.9rem;
+}
+
+.analytics-rank {
+    width: 2.5rem;
+
+    color: var(--bs-secondary-color);
+}
+
+/* The trend bar. Given room only where there is room: on a narrow screen
+   the numbers are the point and the bar is dropped entirely. */
+.analytics-bar-column {
+    width: 40%;
+
+    display: none;
+}
+
+.analytics-bar {
+    display: block;
+
+    height: 0.5rem;
+    min-width: 1px;
+
+    background: var(--bs-primary);
+    border-radius: 0.25rem;
+}
+
+@media (min-width: 576px) {
+
+    .analytics-bar-column {
+        display: table-cell;
+    }
+
+}
+
+
+/* Two sections side by side where there is width for it, stacked where
+   there is not. */
+.analytics-pair {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+@media (min-width: 992px) {
+
+    .analytics-pair {
+        grid-template-columns: 1fr 1fr;
+    }
+
+}
+
+
+/* =========================================================================
+   PUBLIC CATALOGUE
+
+   The read-only surface at /catalog/. It shares this stylesheet and the
+   organisation's colours with the staff application and nothing else - no
+   sidebar, no topbar, no dialogs - so everything it needs is here, and
+   none of it touches a class the staff shell uses.
+
+   Fixed light: the public document sets `data-bs-theme="light"` and ships
+   no theme script, because a visitor has no stored preference to honour.
+   ========================================================================= */
+
+.public-body {
+    background: var(--bs-body-bg);
+
+    min-height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+}
+
+.public-container {
+    width: 100%;
+    max-width: 60rem;
+
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.public-header {
+    border-bottom: 1px solid var(--bs-border-color);
+
+    padding: 1rem 0;
+}
+
+.public-header .public-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.public-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+
+    color: var(--bs-body-color);
+    text-decoration: none;
+
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+.public-brand i {
+    font-size: 1.5rem;
+
+    color: var(--bs-primary);
+}
+
+.public-logo {
+    max-height: 2.25rem;
+    max-width: 2.75rem;
+
+    object-fit: contain;
+}
+
+.public-brand-text {
+    display: flex;
+    flex-direction: column;
+
+    line-height: 1.2;
+
+    min-width: 0;
+}
+
+/* Smaller and quieter: the same institution, not a second one. `isolate`
+   keeps the Arabic from reordering the Latin beside it. */
+.public-brand-arabic {
+    font-size: 0.8rem;
+    font-weight: 500;
+
+    color: var(--bs-secondary-color);
+
+    unicode-bidi: isolate;
+}
+
+.public-tagline {
+    margin-left: auto;
+
+    color: var(--bs-secondary-color);
+    font-size: 0.9rem;
+}
+
+.public-main {
+    flex: 1 0 auto;
+
+    padding-top: 1.5rem;
+    padding-bottom: 3rem;
+}
+
+.public-heading {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.public-footer {
+    border-top: 1px solid var(--bs-border-color);
+
+    padding: 1.25rem 0;
+
+    color: var(--bs-secondary-color);
+    font-size: 0.9rem;
+}
+
+
+/* --- Search and filters --------------------------------------------- */
+
+.public-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+
+    margin: 1.25rem 0;
+    padding: 1rem;
+
+    background: var(--bs-tertiary-bg);
+    border-radius: 0.5rem;
+}
+
+.public-filter-field {
+    display: flex;
+    flex-direction: column;
+
+    min-width: 10rem;
+}
+
+/* The search box takes whatever is left, so the two selects keep their
+   own width and the row still collapses to one column on a phone. */
+.public-filter-grow {
+    flex: 1 1 16rem;
+}
+
+.public-filter-field .form-label {
+    margin-bottom: 0.25rem;
+}
+
+.public-filter-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.public-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+
+/* --- Results ---------------------------------------------------------- */
+
+.public-results {
+    margin: 0;
+}
+
+.public-result {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    padding: 0.85rem 0;
+
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.public-result:last-child {
+    border-bottom: 0;
+}
+
+.public-result-cover {
+    width: 2.75rem;
+    height: 3.75rem;
+
+    flex-shrink: 0;
+
+    object-fit: cover;
+
+    border-radius: 0.25rem;
+}
+
+.public-result-nocover {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: var(--bs-tertiary-bg);
+    color: var(--bs-secondary-color);
+
+    font-size: 1.25rem;
+}
+
+.public-result-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+
+    flex: 1 1 auto;
+
+    min-width: 0;
+}
+
+.public-result-title {
+    font-weight: 600;
+
+    color: var(--bs-body-color);
+    text-decoration: none;
+}
+
+.public-result-title:hover {
+    color: var(--bs-primary);
+    text-decoration: underline;
+}
+
+.public-result-meta {
+    color: var(--bs-secondary-color);
+    font-size: 0.85rem;
+}
+
+.public-result-availability {
+    flex-shrink: 0;
+
+    white-space: nowrap;
+}
+
+.public-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+
+    margin-top: 1.5rem;
+}
+
+.public-empty {
+    text-align: center;
+
+    color: var(--bs-secondary-color);
+
+    padding: 3rem 1rem;
+}
+
+
+/* --- One book --------------------------------------------------------- */
+
+.public-book {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+
+    align-items: flex-start;
+}
+
+.public-book-cover {
+    flex: 0 0 auto;
+
+    width: 9rem;
+}
+
+.public-book-cover img,
+.public-book-cover .public-result-nocover {
+    width: 9rem;
+    height: 12rem;
+
+    object-fit: cover;
+
+    border-radius: 0.375rem;
+}
+
+.public-book-body {
+    flex: 1 1 20rem;
+
+    min-width: 0;
+}
+
+.public-book-author {
+    color: var(--bs-secondary-color);
+    font-size: 1.05rem;
+}
+
+
+@media (max-width: 575.98px) {
+
+    .public-result {
+        flex-wrap: wrap;
+    }
+
+    .public-result-availability {
+        margin-left: 3.75rem;
+    }
+
+    .public-tagline {
+        margin-left: 0;
+        width: 100%;
+    }
+
+}
+
 
 /* =========================================================================
    PRINTING

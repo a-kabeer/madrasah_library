@@ -1,0 +1,24 @@
+{% comment %}
+The institution's identity for a printed sheet: its name, its name in
+Arabic, and whatever contact details it has configured.
+
+One template, included by every printed output, so the report header and
+the label sheet cannot end up describing the same institution differently.
+Everything it reads is on `branding`, which the context processor has
+already loaded and cached for this request - there is no query here.
+
+Deliberately inline and with no block-level markup of its own, so it drops
+into whatever line its caller already had without changing that line's
+layout.
+
+Nothing appears that has not been configured: `display_name` falls back to
+the application's own name, and each of the rest is skipped when blank. On
+an installation that has never opened the settings page this renders
+exactly the one name it rendered before these fields existed.
+
+`dir="rtl" lang="ar"` on the Arabic span isolates it from the Latin either
+side, so a mixed line does not reorder itself around the separators.
+{% endcomment %}
+{% spaceless %}
+{{ branding.display_name }}{% if branding.name_arabic %} · <span dir="rtl" lang="ar">{{ branding.name_arabic }}</span>{% endif %}{% if branding.print_contact_line %} · {{ branding.print_contact_line }}{% endif %}
+{% endspaceless %}

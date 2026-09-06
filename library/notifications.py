@@ -39,13 +39,14 @@ When a notification is created
 ------------------------------
 
 Only inside an authoritative state transition, never while a page is being
-drawn. Four of them, each of which was already the moment the library's
+drawn. Five of them, each of which was already the moment the library's
 mind changed:
 
   * a copy is returned          `loan_return`
   * a reservation is fulfilled  `loan_add`, after `reservations.fulfil_for`
   * a reservation is cancelled  `reservation_cancel`
   * a stock check is completed  `inventory_session_complete`
+  * a book is suggested         `suggestion_add`
 
 The first three all ask the same question - is somebody now at the front of
 a queue with a copy on the shelf? - which is why they all call
@@ -271,6 +272,52 @@ def announce_stock_check(session, missing_count):
     )
 
 
+def announce_suggestion(suggestion, *, submitted_by=None):
+    """Tell the people who may review it that a book has been suggested.
+
+    Admin and Librarian only, because they are exactly the roles that may
+    approve, reject or mark a suggestion acquired - an Assistant may write
+    one and read the list, but there is nothing here for them to do, and a
+    notification with no action in it is a notification not worth having.
+
+    The person who wrote it is left out. They know: they have just been
+    redirected to the suggestion they made, and telling somebody their own
+    news is how a notification list stops being read.
+
+    Keyed to the suggestion, so the same one is announced once - a retried
+    POST that somehow wrote a second row would still announce only the
+    first, and nothing announces it again afterwards.
+    """
+
+    recipients = staff_recipients(roles=("Admin", "Librarian"))
+
+    if submitted_by is not None:
+        recipients = recipients.exclude(id=submitted_by.id)
+
+    described = suggestion.title
+
+    if suggestion.author_name:
+        described = "%s — %s" % (described, suggestion.author_name)
+
+    return notify(
+        recipients,
+        event_type=Notification.EVENT_SUGGESTION_SUBMITTED,
+        event_key=(
+            "%s:%d"
+            % (Notification.EVENT_SUGGESTION_SUBMITTED, suggestion.id)
+        ),
+        title="A book has been suggested",
+        message=(
+            "%s. Suggested by %s."
+            % (
+                described,
+                submitted_by.full_name if submitted_by else "a member of staff",
+            )
+        ),
+        url=reverse("suggestion_detail", args=[suggestion.id]),
+    )
+
+
 # --------------------------------------------------------------------------
 # Reading
 #
@@ -365,6 +412,7 @@ __all__ = [
     "UNREAD_CAP",
     "announce_ready",
     "announce_stock_check",
+    "announce_suggestion",
     "for_user",
     "has_available_copy",
     "mark_all_read",

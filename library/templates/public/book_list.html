@@ -1,0 +1,213 @@
+{% extends "public/base.html" %}
+
+{% block title %}Catalogue | {{ branding.display_name }}{% endblock %}
+
+{% block content %}
+
+<h1 class="public-heading">Catalogue</h1>
+
+<p class="text-body-secondary">
+    Search the library's books by title or author. Availability is what is
+    on the shelf right now.
+</p>
+
+
+{% comment %}
+  One ordinary GET form. No JavaScript, no htmx, no submit handler: pressing
+  Enter or the button navigates, which is what makes search work with
+  scripting off. The controls that are not in the form — the author and
+  publisher chips, the pagination — are ordinary links carrying the same
+  parameters.
+{% endcomment %}
+<form method="get" class="public-filters" role="search">
+
+    <div class="public-filter-field public-filter-grow">
+        <label for="catalogSearch" class="form-label small fw-semibold">
+            Title or author
+        </label>
+        <input
+            type="search"
+            class="form-control"
+            id="catalogSearch"
+            name="search"
+            value="{{ search }}"
+            placeholder="e.g. Fath al-Bari, or Ibn Hajar"
+        >
+    </div>
+
+    <div class="public-filter-field">
+        <label for="catalogCategory" class="form-label small fw-semibold">
+            Category
+        </label>
+        <select class="form-select" id="catalogCategory" name="category">
+            <option value="">All categories</option>
+            {% for category in categories %}
+                <option
+                    value="{{ category.id }}"
+                    {% if category.id|stringformat:"s" == category_id %}selected{% endif %}
+                >{{ category.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="public-filter-field">
+        <label for="catalogAvailability" class="form-label small fw-semibold">
+            Availability
+        </label>
+        <select class="form-select" id="catalogAvailability" name="availability">
+            <option value="">Any</option>
+            {% for value, label in availability_filters %}
+                <option
+                    value="{{ value }}"
+                    {% if availability == value %}selected{% endif %}
+                >{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    {% comment %}
+      Author and publisher are filtered by following a link from a book
+      rather than by picking from a dropdown: a library has a handful of
+      categories but may have thousands of authors, and a select of those
+      would grow with the catalogue. Carried through the form as hidden
+      fields so searching does not silently drop the filter you are inside.
+    {% endcomment %}
+    {% if author_id %}
+        <input type="hidden" name="author" value="{{ author_id }}">
+    {% endif %}
+
+    {% if publisher_id %}
+        <input type="hidden" name="publisher" value="{{ publisher_id }}">
+    {% endif %}
+
+    <div class="public-filter-actions">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-search me-1" aria-hidden="true"></i> Search
+        </button>
+
+        {% if has_filters %}
+            {# The reset: a plain link back to the unfiltered list. #}
+            <a href="{% url 'public_book_list' %}" class="btn btn-outline-secondary">
+                Clear
+            </a>
+        {% endif %}
+    </div>
+
+</form>
+
+
+{% comment %}
+  What is in force, and how to drop just that one. Only rendered for the
+  two filters that have no control of their own above.
+{% endcomment %}
+{% if author_name or publisher_name %}
+    <p class="public-chips">
+        {% if author_name %}
+            <span class="badge text-bg-light border">
+                Author: {{ author_name }}
+                <a
+                    href="?{% if search %}search={{ search|urlencode }}&{% endif %}{% if category_id %}category={{ category_id }}&{% endif %}{% if publisher_id %}publisher={{ publisher_id }}&{% endif %}{% if availability %}availability={{ availability|urlencode }}{% endif %}"
+                    class="ms-1 text-decoration-none"
+                    aria-label="Remove the author filter"
+                >&times;</a>
+            </span>
+        {% endif %}
+
+        {% if publisher_name %}
+            <span class="badge text-bg-light border">
+                Publisher: {{ publisher_name }}
+                <a
+                    href="?{% if search %}search={{ search|urlencode }}&{% endif %}{% if category_id %}category={{ category_id }}&{% endif %}{% if author_id %}author={{ author_id }}&{% endif %}{% if availability %}availability={{ availability|urlencode }}{% endif %}"
+                    class="ms-1 text-decoration-none"
+                    aria-label="Remove the publisher filter"
+                >&times;</a>
+            </span>
+        {% endif %}
+    </p>
+{% endif %}
+
+
+{% if books %}
+
+    <p class="text-body-secondary small">
+        {{ paginator.count }} book{{ paginator.count|pluralize }} found.
+    </p>
+
+    <ul class="public-results list-unstyled">
+
+        {% for book in books %}
+            <li class="public-result">
+
+                {% comment %}
+                  No cover image. `MEDIA_URL` is served by
+                  `django.views.static.serve`, which is an ordinary view and
+                  therefore behind `LoginRequiredMiddleware` like every
+                  other one - so an `<img src="/media/...">` here would
+                  redirect a visitor to the sign-in page and render as a
+                  broken image. Widening the authentication exemption to
+                  cover uploaded files is a decision about what the
+                  installation publishes, not part of building a catalogue,
+                  so this shows the same glyph a book with no cover has
+                  always shown.
+                {% endcomment %}
+                <span class="public-result-cover public-result-nocover"
+                      aria-hidden="true">
+                    <i class="bi bi-book"></i>
+                </span>
+
+                <span class="public-result-body">
+
+                    <a
+                        href="{% url 'public_book_detail' book.id %}"
+                        class="public-result-title"
+                    >{{ book.title }}</a>
+
+                    <span class="public-result-meta">
+                        {{ book.author.name }}
+                        {% if book.publisher %}
+                            · {{ book.publisher.name }}
+                        {% endif %}
+                        {% if book.category %}
+                            · {{ book.category.name }}
+                        {% endif %}
+                    </span>
+
+                </span>
+
+                {% comment %}
+                  Counted by the query that fetched the row, not by a
+                  query of its own — see `annotate_copy_counts`.
+                {% endcomment %}
+                <span class="badge text-bg-{{ book.availability.tone }} public-result-availability">
+                    {{ book.availability.label }}
+                </span>
+
+            </li>
+        {% endfor %}
+
+    </ul>
+
+    {% include "public/pagination.html" %}
+
+{% else %}
+
+    <div class="public-empty">
+        <i class="bi bi-search fs-1 d-block mb-2" aria-hidden="true"></i>
+        <p class="fw-semibold mb-1">
+            {% if has_filters %}
+                Nothing matches that.
+            {% else %}
+                There are no books in the catalogue yet.
+            {% endif %}
+        </p>
+        {% if has_filters %}
+            <p class="mb-0 small">
+                Try a shorter search, or
+                <a href="{% url 'public_book_list' %}">start again</a>.
+            </p>
+        {% endif %}
+    </div>
+
+{% endif %}
+
+{% endblock %}

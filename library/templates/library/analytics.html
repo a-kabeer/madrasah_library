@@ -1,0 +1,636 @@
+{% extends layout %}
+
+{% block title %}
+    Analytics | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    Analytics
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-0">
+
+    <div class="mb-4">
+        <h2 class="fw-bold mb-1">Library Insights</h2>
+        <p class="text-body-secondary mb-0">
+            What the records say about how the library is being used.
+            Read-only, computed live — nothing here is stored, and nothing
+            here changes a record. For a printable account of one period,
+            see <a href="{% url 'reports_home' %}">Reports</a>.
+        </p>
+    </div>
+
+
+    {% comment %}
+      The two filters, as an ordinary GET form. Submitting navigates, so
+      the page is a URL: shareable, bookmarkable, and the same thing the
+      drill-down links below carry.
+    {% endcomment %}
+    <form method="get" class="analytics-filters">
+
+        <div class="analytics-filter">
+            <label for="analyticsPeriod" class="form-label small fw-semibold">
+                Period
+            </label>
+            <select class="form-select" id="analyticsPeriod" name="period">
+                {% for key, label in periods %}
+                    <option value="{{ key }}"
+                        {% if period.key == key %}selected{% endif %}
+                    >{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="analytics-filter">
+            <label for="analyticsCategory" class="form-label small fw-semibold">
+                Category
+            </label>
+            <select class="form-select" id="analyticsCategory" name="category">
+                <option value="">All categories</option>
+                {% for category in categories %}
+                    <option value="{{ category.id }}"
+                        {% if period.category_id == category.id|stringformat:"s" %}selected{% endif %}
+                    >{{ category.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="analytics-filter-actions">
+            <button type="submit" class="btn btn-primary">Apply</button>
+
+            {% if period.key != "90d" or period.category_id %}
+                <a href="{% url 'analytics' %}" class="btn btn-outline-secondary">
+                    Reset
+                </a>
+            {% endif %}
+        </div>
+
+        {% comment %}
+          Which window is in force, said plainly. An unrecognised period
+          falls back to the default rather than erroring, so this line is
+          what stops that being silent.
+        {% endcomment %}
+        <p class="analytics-window">
+            {% if period.is_all_time %}
+                Every loan on record.
+            {% else %}
+                {{ period.start|date:"j M Y" }} to {{ period.end|date:"j M Y" }}
+            {% endif %}
+        </p>
+
+    </form>
+
+
+    <!-- ================= KPIs ================= -->
+
+    <h3 class="analytics-heading">Loans</h3>
+
+    <div class="analytics-kpis">
+
+        {% comment %}
+          Two scopes, and each tile says which. "Issued" and "Returned" are
+          about the period; "Out now" and "Overdue now" are the position
+          today, because how many books are out is not a question about a
+          date range. Same split as the circulation report.
+        {% endcomment %}
+
+        <div class="analytics-kpi">
+            <span class="analytics-kpi-value">{{ loans.issued }}</span>
+            <span class="analytics-kpi-label">Issued in period</span>
+        </div>
+
+        <div class="analytics-kpi">
+            <span class="analytics-kpi-value">{{ loans.returned }}</span>
+            <span class="analytics-kpi-label">Returned in period</span>
+        </div>
+
+        <div class="analytics-kpi">
+            <span class="analytics-kpi-value">{{ loans.active }}</span>
+            <span class="analytics-kpi-label">Out now</span>
+        </div>
+
+        <div class="analytics-kpi {% if loans.overdue %}analytics-kpi-warn{% endif %}">
+            <span class="analytics-kpi-value">{{ loans.overdue }}</span>
+            <span class="analytics-kpi-label">
+                <a href="{% url 'loan_list' %}?status=overdue">Overdue now</a>
+            </span>
+        </div>
+
+        <div class="analytics-kpi {% if loans.overdue %}analytics-kpi-warn{% endif %}">
+            <span class="analytics-kpi-value">{{ loans.overdue_percent }}%</span>
+            <span class="analytics-kpi-label">
+                Of what is out
+            </span>
+        </div>
+
+    </div>
+
+
+    <h3 class="analytics-heading">Borrowing</h3>
+
+    <div class="analytics-kpis">
+
+        <div class="analytics-kpi">
+            <span class="analytics-kpi-value">{{ loans.borrowers }}</span>
+            <span class="analytics-kpi-label">Borrowers in period</span>
+        </div>
+
+        <div class="analytics-kpi">
+            <span class="analytics-kpi-value">{{ loans.loans_per_borrower }}</span>
+            <span class="analytics-kpi-label">Books each, on average</span>
+        </div>
+
+    </div>
+
+
+    <h3 class="analytics-heading">Collection</h3>
+
+    <div class="analytics-kpis">
+
+        <div class="analytics-kpi">
+            <span class="analytics-kpi-value">{{ collection.total_books }}</span>
+            <span class="analytics-kpi-label">Books in the catalogue</span>
+        </div>
+
+        <div class="analytics-kpi">
+            <span class="analytics-kpi-value">{{ collection.borrowed_books }}</span>
+            <span class="analytics-kpi-label">Borrowed in period</span>
+        </div>
+
+        <div class="analytics-kpi {% if collection.never_borrowed %}analytics-kpi-warn{% endif %}">
+            <span class="analytics-kpi-value">{{ collection.never_borrowed }}</span>
+            <span class="analytics-kpi-label">Never borrowed, ever</span>
+        </div>
+
+    </div>
+
+
+    <!-- ================= Trend ================= -->
+
+    <h3 class="analytics-heading">
+        Borrowing trend
+        <span class="analytics-note">by {{ period.grain }}</span>
+    </h3>
+
+    {% comment %}
+      A table, not a chart. This project has no charting library and adding
+      one for a page of counts would be a dependency for a decoration —
+      the numbers are the finding, and the bar beside each is drawn with a
+      div.
+    {% endcomment %}
+    {% comment %}
+      Gated on the busiest bucket rather than on the list: a period with no
+      borrowing at all still produces a bucket per week, and fourteen rows
+      of nought is noise rather than a trend. Empty buckets *within* a
+      period that saw borrowing are the point and are kept.
+    {% endcomment %}
+    {% if trend_max %}
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0 analytics-table">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>Period</th>
+                            <th class="text-end">Loans</th>
+                            <th class="analytics-bar-column"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in trend %}
+                            <tr>
+                                <td>{{ row.bucket|date:trend_format }}</td>
+                                <td class="text-end fw-semibold">{{ row.loans }}</td>
+                                <td class="analytics-bar-column">
+                                    {% comment %}
+                                      Width as a share of the busiest
+                                      bucket, so the column reads at a
+                                      glance without a chart library.
+                                    {% endcomment %}
+                                    <span
+                                        class="analytics-bar"
+                                        style="width: {% widthratio row.loans trend_max 100 %}%"
+                                        aria-hidden="true"
+                                    ></span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% else %}
+        <p class="analytics-empty">No loans in this period.</p>
+    {% endif %}
+
+
+    <!-- ================= Books ================= -->
+
+    <h3 class="analytics-heading">
+        Most borrowed
+        <span class="analytics-note">top {{ top_n }} in the period</span>
+    </h3>
+
+    {% if most_borrowed %}
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 analytics-table">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th class="analytics-rank">#</th>
+                            <th>Book</th>
+                            <th>Author</th>
+                            <th>Category</th>
+                            <th class="text-end">Loans</th>
+                            <th class="text-end">Out now</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for book in most_borrowed %}
+                            <tr>
+                                <td class="analytics-rank">{{ forloop.counter }}</td>
+                                <td>
+                                    <a href="{% url 'book_detail' book.id %}"
+                                       class="fw-semibold text-decoration-none">
+                                        {{ book.title }}</a>
+                                    {% if book.is_archived %}
+                                        <span class="badge text-bg-secondary ms-1">Archived</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-body-secondary">{{ book.author.name }}</td>
+                                <td class="text-body-secondary">
+                                    {{ book.category.name|default:"—" }}
+                                </td>
+                                <td class="text-end fw-semibold">{{ book.loans }}</td>
+                                <td class="text-end text-body-secondary">{{ book.out_now }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% else %}
+        <p class="analytics-empty">Nothing was borrowed in this period.</p>
+    {% endif %}
+
+
+    <div class="analytics-pair">
+
+        <div>
+            <h3 class="analytics-heading">
+                Underused
+                <span class="analytics-note">fewest loans in the period</span>
+            </h3>
+
+            <p class="text-body-secondary small">
+                Books in the catalogue with at least one copy on the
+                premises. A nought here means nobody borrowed it during
+                this period — it may still have a history.
+            </p>
+
+            {% if underused %}
+                <div class="card shadow-sm border-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 analytics-table">
+                            <thead class="table-secondary">
+                                <tr>
+                                    <th>Book</th>
+                                    <th>Category</th>
+                                    <th class="text-end">Loans</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for book in underused %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'book_detail' book.id %}"
+                                               class="text-decoration-none">{{ book.title }}</a>
+                                            <span class="d-block small text-body-secondary">
+                                                {{ book.author.name }}
+                                            </span>
+                                        </td>
+                                        <td class="text-body-secondary">
+                                            {{ book.category.name|default:"—" }}
+                                        </td>
+                                        <td class="text-end fw-semibold">{{ book.loans }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% else %}
+                <p class="analytics-empty">No books with copies to rank.</p>
+            {% endif %}
+        </div>
+
+        <div>
+            <h3 class="analytics-heading">
+                Never borrowed
+                <span class="analytics-note">not once, ever</span>
+            </h3>
+
+            <p class="text-body-secondary small">
+                Not the same as the list beside it: no loan has ever
+                existed for any copy of these, whatever the period says.
+            </p>
+
+            {% if never_borrowed %}
+                <div class="card shadow-sm border-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 analytics-table">
+                            <thead class="table-secondary">
+                                <tr>
+                                    <th>Book</th>
+                                    <th>Category</th>
+                                    <th class="text-end">Copies</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for book in never_borrowed %}
+                                    <tr>
+                                        <td>
+                                            <a href="{% url 'book_detail' book.id %}"
+                                               class="text-decoration-none">{{ book.title }}</a>
+                                            <span class="d-block small text-body-secondary">
+                                                {{ book.author.name }}
+                                            </span>
+                                        </td>
+                                        <td class="text-body-secondary">
+                                            {{ book.category.name|default:"—" }}
+                                        </td>
+                                        <td class="text-end fw-semibold">{{ book.copies }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% else %}
+                <p class="analytics-empty">
+                    Every book with a copy has been borrowed at least once.
+                </p>
+            {% endif %}
+        </div>
+
+    </div>
+
+
+    <!-- ================= Borrowers ================= -->
+
+    <h3 class="analytics-heading">
+        Most active borrowers
+        <span class="analytics-note">top {{ top_n }} in the period</span>
+    </h3>
+
+    {% if top_borrowers %}
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 analytics-table">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th class="analytics-rank">#</th>
+                            <th>Borrower</th>
+                            <th>Registration</th>
+                            <th class="text-end">Loans</th>
+                            <th class="text-end">Out now</th>
+                            <th class="text-end">Overdue now</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for borrower in top_borrowers %}
+                            <tr>
+                                <td class="analytics-rank">{{ forloop.counter }}</td>
+                                <td>
+                                    <a href="{% url 'borrower_detail' borrower.id %}"
+                                       class="fw-semibold text-decoration-none">
+                                        {{ borrower.name }}</a>
+                                    {% if not borrower.is_active %}
+                                        <span class="badge text-bg-secondary ms-1">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-body-secondary">
+                                    {{ borrower.registration_no|default:"—" }}
+                                </td>
+                                <td class="text-end fw-semibold">{{ borrower.loans }}</td>
+                                <td class="text-end text-body-secondary">{{ borrower.out_now }}</td>
+                                <td class="text-end {% if borrower.overdue_now %}text-danger fw-semibold{% else %}text-body-secondary{% endif %}">
+                                    {{ borrower.overdue_now }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% else %}
+        <p class="analytics-empty">Nobody borrowed anything in this period.</p>
+    {% endif %}
+
+
+    <!-- ================= Categories ================= -->
+
+    <div class="analytics-pair">
+
+        <div>
+            <h3 class="analytics-heading">Category usage</h3>
+
+            {% if category_usage %}
+                <div class="card shadow-sm border-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 analytics-table">
+                            <thead class="table-secondary">
+                                <tr>
+                                    <th>Category</th>
+                                    <th class="text-end">Books</th>
+                                    <th class="text-end">Loans</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in category_usage %}
+                                    <tr>
+                                        <td>
+                                            {% comment %}
+                                              Narrows this same page to
+                                              that category, keeping the
+                                              period.
+                                            {% endcomment %}
+                                            <a href="?period={{ period.key }}&category={{ row.id }}"
+                                               class="text-decoration-none">{{ row.name }}</a>
+                                        </td>
+                                        <td class="text-end text-body-secondary">{{ row.books }}</td>
+                                        <td class="text-end fw-semibold">{{ row.loans }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <p class="text-body-secondary small mt-2">
+                    Books is how many distinct titles were borrowed;
+                    Loans is how many times. Categories nobody borrowed
+                    from are left out.
+                </p>
+            {% else %}
+                <p class="analytics-empty">No category saw a loan in this period.</p>
+            {% endif %}
+        </div>
+
+        <div>
+            <h3 class="analytics-heading">
+                How long a loan lasts
+                <span class="analytics-note">returned in the period</span>
+            </h3>
+
+            {% comment %}
+              Gated on the count rather than on the figures themselves: a
+              same-day return is nought days, which is a real answer, and
+              `|default` would render it as "no data".
+            {% endcomment %}
+            <div class="analytics-kpis">
+
+                <div class="analytics-kpi">
+                    <span class="analytics-kpi-value">
+                        {% if duration.returned %}{{ duration.average }}{% else %}&mdash;{% endif %}
+                    </span>
+                    <span class="analytics-kpi-label">Average days</span>
+                </div>
+
+                <div class="analytics-kpi">
+                    <span class="analytics-kpi-value">
+                        {% if duration.returned %}{{ duration.shortest }}{% else %}&mdash;{% endif %}
+                    </span>
+                    <span class="analytics-kpi-label">Shortest</span>
+                </div>
+
+                <div class="analytics-kpi">
+                    <span class="analytics-kpi-value">
+                        {% if duration.returned %}{{ duration.longest }}{% else %}&mdash;{% endif %}
+                    </span>
+                    <span class="analytics-kpi-label">Longest</span>
+                </div>
+
+            </div>
+
+            <p class="text-body-secondary small">
+                {% if duration.returned %}
+                    From {{ duration.returned }} loan{{ duration.returned|pluralize }}
+                    returned in this period. Books still out have no
+                    duration yet and are not counted.
+                {% else %}
+                    Nothing was returned in this period, so there is
+                    nothing to measure.
+                {% endif %}
+            </p>
+        </div>
+
+    </div>
+
+
+    <!-- ================= Collection attention ================= -->
+
+    <h3 class="analytics-heading">Collection attention</h3>
+
+    <p class="text-body-secondary small">
+        Copies that are not on the shelf in usable condition. Counts, not a
+        score — each links to the records behind it, and nothing here
+        changes a copy's status.
+    </p>
+
+    <div class="analytics-kpis">
+
+        {% comment %}
+          The four conditions the copy list already filters by, so each
+          number links to exactly the rows it counted.
+        {% endcomment %}
+
+        <div class="analytics-kpi {% if attention.lost %}analytics-kpi-warn{% endif %}">
+            <span class="analytics-kpi-value">{{ attention.lost }}</span>
+            <span class="analytics-kpi-label">
+                <a href="{% url 'book_copy_list' %}?status=lost">Lost</a>
+            </span>
+        </div>
+
+        <div class="analytics-kpi {% if attention.damaged %}analytics-kpi-warn{% endif %}">
+            <span class="analytics-kpi-value">{{ attention.damaged }}</span>
+            <span class="analytics-kpi-label">
+                <a href="{% url 'book_copy_list' %}?status=damaged">Damaged</a>
+            </span>
+        </div>
+
+        <div class="analytics-kpi {% if attention.missing %}analytics-kpi-warn{% endif %}">
+            <span class="analytics-kpi-value">{{ attention.missing }}</span>
+            <span class="analytics-kpi-label">
+                <a href="{% url 'book_copy_list' %}?status=missing">Missing</a>
+            </span>
+        </div>
+
+        <div class="analytics-kpi">
+            <span class="analytics-kpi-value">{{ attention.transferred }}</span>
+            <span class="analytics-kpi-label">
+                <a href="{% url 'book_copy_list' %}?status=transferred">Withdrawn</a>
+            </span>
+        </div>
+
+    </div>
+
+
+    <h4 class="analytics-subheading">
+        Not found at the last {{ recent_sessions }} stock checks
+    </h4>
+
+    {% if stock_checks %}
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 analytics-table">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>Stock check</th>
+                            <th>Scope</th>
+                            <th>Completed</th>
+                            <th class="text-end">Not found</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in stock_checks %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'inventory_session_detail' row.session.id %}"
+                                       class="text-decoration-none">{{ row.session.name }}</a>
+                                </td>
+                                <td class="text-body-secondary">
+                                    {{ row.session.scope_label }}
+                                </td>
+                                <td class="text-body-secondary">
+                                    {{ row.session.completed_at|date:"j M Y" }}
+                                </td>
+                                <td class="text-end {% if row.missing %}fw-semibold{% else %}text-body-secondary{% endif %}">
+                                    {{ row.missing }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% comment %}
+          Said explicitly, because the honest count and a distinct-copy
+          count are different numbers and a reader is entitled to know
+          which one this is.
+        {% endcomment %}
+        <p class="text-body-secondary small mt-2">
+            One row per finished stock check, counting what that check
+            expected and did not find. A copy unfound at three checks
+            appears in all three — these are findings, not distinct copies.
+            Checks still in progress are not counted, and a scan of
+            something outside a check's scope was never expected by it.
+        </p>
+    {% else %}
+        <p class="analytics-empty">No stock check has been completed yet.</p>
+    {% endif %}
+
+</div>
+
+{% endblock %}

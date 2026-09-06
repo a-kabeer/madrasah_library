@@ -1,0 +1,88 @@
+{% comment %}
+Pagination for the public catalogue.
+
+Its own, rather than `library/partials/pagination.html`: that one takes a
+`swap` flag and puts `hx-get` on every link, and this surface has no htmx
+in it at all. Here each link is only an `href`, which is what makes paging
+work with scripting switched off.
+
+`pagination_query` is the current query string minus `page`, so a search and
+its filters survive being paged through.
+
+Expects: books (the Page), paginator, pagination_query, elided_page_range,
+page_ellipsis.
+{% endcomment %}
+
+{% if paginator.num_pages > 1 %}
+
+    <nav class="public-pagination" aria-label="Catalogue pages">
+
+        <p class="text-body-secondary small mb-0">
+            Showing <strong>{{ books.start_index }}</strong>–<strong>{{ books.end_index }}</strong>
+            of <strong>{{ paginator.count }}</strong>
+        </p>
+
+        <ul class="pagination pagination-sm mb-0">
+
+            <li class="page-item {% if not books.has_previous %}disabled{% endif %}">
+                {% if books.has_previous %}
+                    <a
+                        class="page-link"
+                        href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ books.previous_page_number }}"
+                        rel="prev"
+                    >
+                        <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                        <span class="visually-hidden">Previous page</span>
+                    </a>
+                {% else %}
+                    <span class="page-link" aria-hidden="true">
+                        <i class="bi bi-chevron-left"></i>
+                    </span>
+                {% endif %}
+            </li>
+
+            {% for number in elided_page_range %}
+
+                {% if number == page_ellipsis %}
+                    <li class="page-item disabled">
+                        <span class="page-link">{{ page_ellipsis }}</span>
+                    </li>
+
+                {% elif number == books.number %}
+                    <li class="page-item active" aria-current="page">
+                        <span class="page-link">{{ number }}</span>
+                    </li>
+
+                {% else %}
+                    <li class="page-item">
+                        <a
+                            class="page-link"
+                            href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ number }}"
+                        >{{ number }}</a>
+                    </li>
+                {% endif %}
+
+            {% endfor %}
+
+            <li class="page-item {% if not books.has_next %}disabled{% endif %}">
+                {% if books.has_next %}
+                    <a
+                        class="page-link"
+                        href="?{% if pagination_query %}{{ pagination_query }}&{% endif %}page={{ books.next_page_number }}"
+                        rel="next"
+                    >
+                        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                        <span class="visually-hidden">Next page</span>
+                    </a>
+                {% else %}
+                    <span class="page-link" aria-hidden="true">
+                        <i class="bi bi-chevron-right"></i>
+                    </span>
+                {% endif %}
+            </li>
+
+        </ul>
+
+    </nav>
+
+{% endif %}

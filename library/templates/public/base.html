@@ -1,0 +1,174 @@
+{% load static %}
+
+<!DOCTYPE html>
+
+{% comment %}
+The public catalogue's own document, deliberately not `library/base.html`.
+
+That template is the staff application: it opens a sidebar of management
+links, a notification bell, a user menu and an `hx-boost` wrapper that
+fetches every link in the background into `#mainContent`. None of that
+belongs on a page a stranger opened, and inheriting from it and then hiding
+the parts would leave the hiding as the only thing between a visitor and
+the shape of the staff application. So this is a separate document that
+happens to share a stylesheet.
+
+What is shared: Bootstrap, the project's own style.css, and `branding` from
+the context processor. What is not: the shell, the navigation, the modals,
+the toast area, the barcode scanner, app.js and htmx.
+
+No JavaScript at all. Every link here is an ordinary link and every form an
+ordinary GET form, so search, filtering and pagination work with scripting
+switched off - there is nothing to fall back *to*, because nothing was
+intercepted in the first place. That is also why no element on these pages
+carries `hx-` anything, and why nothing targets `#mainContent`: the id does
+not exist in this document.
+
+Fixed light theme. The staff shell resolves a theme from a signed-in user's
+stored preference and a localStorage mirror; a visitor has neither, and
+running that script here would mean shipping script to a page that needs
+none.
+{% endcomment %}
+
+<html lang="en" data-bs-theme="light">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <meta
+        name="description"
+        content="{{ branding.display_name }} — library catalogue"
+    >
+
+    <title>
+        {% block title %}{{ branding.display_name }}{% endblock %}
+    </title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="{% static 'library/css/style.css' %}{% if asset_version %}?v={{ asset_version }}{% endif %}"
+    >
+
+    {% comment %}
+      The organisation's colours, exactly as the staff shell injects them,
+      so the two surfaces look like one institution.
+    {% endcomment %}
+    {% if branding.has_custom_colors %}
+        <style>
+            :root {
+                --brand-primary: {{ branding.display_primary_color }};
+                --brand-secondary: {{ branding.display_secondary_color }};
+                --brand-accent: {{ branding.display_accent_color }};
+                --bs-primary-rgb: {{ branding.display_primary_rgb }};
+                --brand-on-primary: {{ branding.display_on_primary }};
+            }
+        </style>
+    {% endif %}
+
+</head>
+
+<body class="public-body">
+
+<header class="public-header">
+
+    <div class="public-container">
+
+        {% comment %}
+          The institution, named the way Task 18 names it everywhere else:
+          `display_name` falls back to the application's own name when
+          nothing has been configured, and the Arabic name appears beside
+          it when one has. Both come off `branding`, which the context
+          processor has already loaded and cached - there is no query here.
+
+          `dir="rtl" lang="ar"` isolates the Arabic from the Latin so a
+          mixed line does not reorder itself.
+        {% endcomment %}
+        <a class="public-brand" href="{% url 'public_book_list' %}">
+
+            {% comment %}
+              The glyph, not the uploaded logo. `MEDIA_URL` is served by
+              `django.views.static.serve`, an ordinary view and so behind
+              `LoginRequiredMiddleware` like every other one - an uploaded
+              file linked from here would answer a visitor with a redirect
+              to the sign-in page. (The sign-in page has the same problem
+              with the same logo today; publishing the media directory is a
+              decision about the installation, and not one this task makes.)
+            {% endcomment %}
+            <i class="bi bi-book-half" aria-hidden="true"></i>
+
+            <span class="public-brand-text">
+                <span class="public-brand-name">
+                    {{ branding.display_name }}
+                </span>
+
+                {% if branding.name_arabic %}
+                    <span
+                        class="public-brand-arabic"
+                        dir="rtl"
+                        lang="ar"
+                    >{{ branding.name_arabic }}</span>
+                {% endif %}
+            </span>
+
+        </a>
+
+        <span class="public-tagline">Library catalogue</span>
+
+    </div>
+
+</header>
+
+
+<main class="public-container public-main">
+
+    {% block content %}{% endblock %}
+
+</main>
+
+
+<footer class="public-footer">
+
+    <div class="public-container">
+
+        {% comment %}
+          Only what this installation already shows to people who are not
+          signed in. `footer_text` is on the sign-in page, and the
+          institution's name is everywhere - so both are already public in
+          this application's own terms.
+
+          The stored email, phone, postal address and website are
+          deliberately absent. They appear on the staff shell's footer,
+          behind a login, and on printed sheets handed over deliberately;
+          neither of those is the same as publishing them on the open web,
+          and nothing in this project says an administrator meant them to
+          be. If that changes it is a decision to make on purpose, not a
+          field to render because it happens to be filled in.
+        {% endcomment %}
+        {% if branding.footer_text %}
+            <p class="mb-1">{{ branding.footer_text }}</p>
+        {% endif %}
+
+        <p class="mb-0 small">
+            {{ branding.display_name }}
+        </p>
+
+    </div>
+
+</footer>
+
+</body>
+
+</html>
