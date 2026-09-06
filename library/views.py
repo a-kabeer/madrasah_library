@@ -13,6 +13,7 @@ from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_not_required
 from django.core.exceptions import ValidationError
+from django.core.validators import EmailValidator, URLValidator
 from django.core.files.storage import FileSystemStorage
 from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpResponseBadRequest
@@ -1344,6 +1345,88 @@ def read_policy_form(request, branding):
     return None
 
 
+# Institution types offered in the form as a datalist, never enforced. The
+# column is free text on purpose (see the model), so these are a shortcut
+# for the common answers rather than the set of permitted ones - an
+# institution that is none of them types its own.
+INSTITUTION_TYPE_SUGGESTIONS = (
+    "Madrasah",
+    "Jamia",
+    "Maktab",
+    "School",
+    "College",
+    "University",
+    "Public Library",
+    "Research Institute",
+)
+
+
+def normalize_website(value):
+    """A typed web address, with a scheme if the typist left it out.
+
+    People write "alnoor.edu.pk", not "https://alnoor.edu.pk", and refusing
+    that would be the form being right about a standard rather than useful
+    about an address. Anything that already names a scheme is left exactly
+    as it is - including one this application will not accept, so a typed
+    "ftp://..." is still refused by the validator below rather than quietly
+    turned into something else.
+    """
+
+    value = (value or "").strip()
+
+    if not value or "://" in value:
+        return value
+
+    return "https://%s" % value
+
+
+def validate_institution_fields(email, website):
+    """The first complaint about the institution's contact details, or None.
+
+    Django's own validators rather than a pattern written here: an email
+    address and a URL are two of the things it already knows, and a second
+    opinion about either would eventually disagree with the model field
+    that stores it.
+
+    Both are optional, so a blank value is never checked - "nobody has
+    said" is not "wrong", and the whole point of these fields is that an
+    installation may leave every one of them empty.
+    """
+
+    checks = (
+        (
+            email,
+            EmailValidator(
+                message=(
+                    "Enter a valid email address, e.g. office@example.org."
+                )
+            ),
+        ),
+        (
+            website,
+            URLValidator(
+                schemes=["http", "https"],
+                message=(
+                    "Enter a valid web address, e.g. https://example.org."
+                ),
+            ),
+        ),
+    )
+
+    for value, validator in checks:
+
+        if not value:
+            continue
+
+        try:
+            validator(value)
+
+        except ValidationError as exc:
+            return exc.messages[0]
+
+    return None
+
+
 #Organization branding and borrowing policy
 @role_required("Admin")
 def branding_settings(request):
@@ -1388,6 +1471,17 @@ def branding_settings(request):
         contact_phone = request.POST.get("contact_phone", "").strip()
         footer_text = request.POST.get("footer_text", "").strip()
 
+        # The institution's own details. On this form rather than a third
+        # one, because they are the same state as the name, the logo and
+        # the contact details already here - all of it is one answer to
+        # "who is this installation?", saved and shown together. The
+        # borrowing policy is a separate form because lending rules are a
+        # genuinely different kind of state; this is not.
+        name_arabic = request.POST.get("name_arabic", "").strip()
+        institution_type = request.POST.get("institution_type", "").strip()
+        address = request.POST.get("address", "").strip()
+        website = normalize_website(request.POST.get("website", ""))
+
         logo = request.FILES.get("logo")
         favicon = request.FILES.get("favicon")
 
@@ -1405,6 +1499,13 @@ def branding_settings(request):
 
                 error = exc.messages[0]
                 break
+
+        # Then the two fields Django can check for us, for the same reason
+        # the colours come first: text is cheaper than a file, and a
+        # rejected form should not have written an upload to storage.
+        if error is None:
+
+            error = validate_institution_fields(contact_email, website)
 
         if error is None and logo:
 
@@ -1432,6 +1533,10 @@ def branding_settings(request):
             branding.contact_email = contact_email
             branding.contact_phone = contact_phone
             branding.footer_text = footer_text
+            branding.name_arabic = name_arabic
+            branding.institution_type = institution_type
+            branding.address = address
+            branding.website = website
 
             # Remember the previous files so their storage can be cleaned up
             # once the new state is safely saved. An upload wins over the
@@ -1488,6 +1593,10 @@ def branding_settings(request):
         branding.contact_email = contact_email
         branding.contact_phone = contact_phone
         branding.footer_text = footer_text
+        branding.name_arabic = name_arabic
+        branding.institution_type = institution_type
+        branding.address = address
+        branding.website = website
 
     return render(
         request,
@@ -1496,6 +1605,7 @@ def branding_settings(request):
             "settings_obj": branding,
             "error": error,
             "policy_error": policy_error,
+            "institution_types": INSTITUTION_TYPE_SUGGESTIONS,
             "policy_defaults": {
                 "loan_period_days": policy.DEFAULT_LOAN_PERIOD_DAYS,
                 "loan_period_min": policy.LOAN_PERIOD_MIN,

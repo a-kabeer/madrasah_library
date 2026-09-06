@@ -55,8 +55,14 @@
     {% if applied_filters %}
         · {{ applied_filters }}
     {% endif %}
+    {% comment %}
+      The letterhead. Was the organisation's name and the date; now the
+      whole configured identity, so a report that leaves the building says
+      which institution it came from. Same one line as before on an
+      installation that has configured nothing.
+    {% endcomment %}
     <span class="print-only d-block">
-        {{ branding.display_name }} —
+        {% include "library/partials/institution_print_line.html" %} —
         generated {{ printed_on|date:"j M Y, H:i" }}
     </span>
 </p>

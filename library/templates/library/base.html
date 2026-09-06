@@ -232,8 +232,30 @@
                     <i class="bi bi-book-half" aria-hidden="true"></i>
                 {% endif %}
 
-                <span>
-                    {{ branding.display_name }}
+                {% comment %}
+                  The institution's name, and its name in Arabic underneath
+                  when one is configured. `display_name` is the same value
+                  it has always been - the configured name, falling back to
+                  the application's own - so an installation that has never
+                  opened the settings page reads exactly as before.
+
+                  Both come off `branding`, which the context processor has
+                  already loaded and cached for this request, so the second
+                  line costs no query. `dir="rtl" lang="ar"` isolates the
+                  Arabic from the Latin name above it.
+                {% endcomment %}
+                <span class="brand-name">
+                    <span class="brand-name-primary">
+                        {{ branding.display_name }}
+                    </span>
+
+                    {% if branding.name_arabic %}
+                        <span
+                            class="brand-name-arabic"
+                            dir="rtl"
+                            lang="ar"
+                        >{{ branding.name_arabic }}</span>
+                    {% endif %}
                 </span>
 
             </a>

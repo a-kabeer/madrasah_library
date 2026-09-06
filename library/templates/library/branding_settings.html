@@ -152,6 +152,120 @@
                     </div>
                 </div>
 
+                <!-- Institution -->
+                {% comment %}
+                  A card on this form rather than a form of its own. The
+                  institution's name is the Organisation Name above, its
+                  email and phone are in Contact &amp; Footer below, and all
+                  of it is one row - so it saves together, and there is no
+                  second place to type a name that already has one.
+
+                  Everything here is optional. An installation that fills in
+                  none of it renders exactly as it did before these fields
+                  existed.
+                {% endcomment %}
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-body">
+                        <h5 class="mb-0 fw-bold">
+                            <i class="bi bi-bank me-2"></i>Institution
+                        </h5>
+                    </div>
+                    <div class="card-body">
+
+                        <p class="text-body-secondary">
+                            Who the library belongs to. Shown under the name
+                            in the sidebar, and on printed reports and label
+                            sheets. All optional &mdash; leave anything blank
+                            and it is simply not shown.
+                        </p>
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label for="formNameArabic" class="form-label fw-semibold">
+                                    Name in Arabic
+                                </label>
+                                {% comment %}
+                                  `dir="rtl"` and `lang="ar"` on the input
+                                  itself, so the caret, the selection and the
+                                  punctuation behave the way somebody typing
+                                  Arabic expects rather than the way a
+                                  left-to-right field does.
+                                {% endcomment %}
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="formNameArabic"
+                                    name="name_arabic"
+                                    value="{{ settings_obj.name_arabic }}"
+                                    maxlength="255"
+                                    dir="rtl"
+                                    lang="ar"
+                                >
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="formInstitutionType" class="form-label fw-semibold">
+                                    Type
+                                </label>
+                                {% comment %}
+                                  A datalist, not a select: the suggestions
+                                  are the common answers, and an institution
+                                  that is none of them types its own. The
+                                  column is free text and nothing branches on
+                                  it.
+                                {% endcomment %}
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="formInstitutionType"
+                                    name="institution_type"
+                                    value="{{ settings_obj.institution_type }}"
+                                    maxlength="100"
+                                    list="institutionTypeOptions"
+                                    placeholder="Madrasah"
+                                >
+                                <datalist id="institutionTypeOptions">
+                                    {% for suggestion in institution_types %}
+                                        <option value="{{ suggestion }}"></option>
+                                    {% endfor %}
+                                </datalist>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="formWebsite" class="form-label fw-semibold">
+                                    Website
+                                </label>
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    id="formWebsite"
+                                    name="website"
+                                    value="{{ settings_obj.website }}"
+                                    maxlength="255"
+                                    placeholder="https://example.org"
+                                >
+                                <div class="form-text">
+                                    Typed without <code>https://</code> is
+                                    fine &mdash; it is added for you.
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="formAddress" class="form-label fw-semibold">
+                                    Address
+                                </label>
+                                <textarea
+                                    class="form-control"
+                                    id="formAddress"
+                                    name="address"
+                                    rows="3"
+                                >{{ settings_obj.address }}</textarea>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
                 <!-- Colours -->
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-body">

@@ -253,6 +253,40 @@ body {
     font-size: 1.5rem;
 }
 
+/* The institution's name, and its name in Arabic under it when one is
+   configured. A column so the two stack; `min-width: 0` so a long name
+   truncates rather than pushing the brand bar wider than the sidebar. */
+.brand-name {
+    display: flex;
+    flex-direction: column;
+
+    min-width: 0;
+
+    line-height: 1.2;
+}
+
+.brand-name-primary {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Smaller and quieter: it is the same name, not a second one. `isolate`
+   keeps the Arabic from reordering the Latin around it. */
+.brand-name-arabic {
+    font-size: 0.8rem;
+    font-weight: 500;
+
+    color: var(--sidebar-text);
+
+    unicode-bidi: isolate;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
 /* Uploaded organisation logo, shown in place of the fallback glyph.
    Bounded so any aspect ratio fits the brand bar without pushing it. */
 .brand-logo {

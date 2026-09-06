@@ -682,6 +682,59 @@ class OrganizationSettings(models.Model):
         default="",
     )
 
+    # --- Institution identity ---
+    #
+    # Who this installation belongs to, for the places that have to say so:
+    # the sidebar, a printed report, a sheet of labels.
+    #
+    # Deliberately only what was actually missing. The institution's *name*
+    # is `name` above - the field the sidebar, the page titles, the login
+    # page, the report headers and the label sheets have always read - and
+    # its email and phone are `contact_email` and `contact_phone`. Adding
+    # `institution_name`, `institution_email` and `institution_phone`
+    # beside them would give the library two answers to each of three
+    # questions, and the day they disagreed there would be no way to say
+    # which was right. So there are three new columns and no more.
+    #
+    # All optional, all `blank`/`default=""` rather than nullable: an
+    # install that predates them reads as "nothing said" without a single
+    # row being rewritten, and every display below is written to show
+    # nothing at all rather than an empty label.
+    #
+    # This is one institution, not a hierarchy. There is no branch, no
+    # campus and no second row - `organization_settings` is pinned to one
+    # by a CHECK, which is what makes it a source of truth rather than a
+    # list.
+
+    name_arabic = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+    )
+
+    # Free text rather than a choice list with a CHECK behind it, unlike
+    # every status column in this schema. Nothing branches on this value -
+    # it is printed and never tested - so an enumeration would buy no
+    # correctness and would need a migration the first time an institution
+    # described itself in a way the list did not anticipate. The form
+    # offers the common answers as suggestions instead.
+    institution_type = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+    )
+
+    address = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    website = models.URLField(
+        max_length=255,
+        blank=True,
+        default="",
+    )
+
     # --- Borrowing policy ---
     #
     # The lending rules, on the row this installation already configures
@@ -781,6 +834,61 @@ class OrganizationSettings(models.Model):
             self.primary_color
             or self.secondary_color
             or self.accent_color
+        )
+
+    # The institution's identity, in the shapes the pages that show it
+    # actually want. Properties rather than template logic, so the sidebar
+    # and the two printed outputs cannot drift apart in how they read the
+    # same row - and so a blank field is decided once, here, rather than in
+    # three `{% if %}`s.
+
+    @property
+    def display_address(self):
+        """The postal address on one line, or "".
+
+        Stored as a textarea, so it arrives with the line breaks whoever
+        typed it used. A printed footer has one line to give it, and a
+        run of blank lines in the middle of a letterhead is worse than a
+        comma.
+        """
+
+        parts = [
+            line.strip()
+            for line in self.address.splitlines()
+            if line.strip()
+        ]
+
+        return ", ".join(parts)
+
+    @property
+    def print_contact_line(self):
+        """Address, phone and website for a printed footer, or "".
+
+        Only what has been filled in, in the order a letterhead reads. The
+        email is deliberately absent: it is already in the on-screen page
+        footer, and a sheet of labels is not something anybody replies to.
+        """
+
+        parts = [
+            self.display_address,
+            self.contact_phone.strip(),
+            self.website.strip(),
+        ]
+
+        return " · ".join(part for part in parts if part)
+
+    @property
+    def has_institution_details(self):
+        """Whether anything beyond the name has been configured.
+
+        Lets a template skip a whole block rather than render an empty one.
+        """
+
+        return bool(
+            self.name_arabic
+            or self.institution_type
+            or self.address
+            or self.website
         )
 
 

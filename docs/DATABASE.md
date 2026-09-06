@@ -57,7 +57,7 @@ erDiagram
 | `loans` | Issue/return records | `copy_id`, `borrower_id`, `issue_date`, `due_date`, `return_date`, `issued_by`, `returned_to` |
 | `activity_logs` | Audit trail of CREATE/UPDATE/DELETE/ISSUE/RETURN actions | `user_id` (optional), `action`, `entity_type`, `entity_id`, `description`, `created_at` |
 | `notifications` | Actionable in-app messages addressed to a staff user | `recipient_id`, `event_type`, `event_key` (unique per recipient), `title`, `url`, `created_at`, `read_at` |
-| `organization_settings` | Single-row branding for this installation | `name`, `logo`, `favicon`, `primary_color`/`secondary_color`/`accent_color`, `contact_email`, `contact_phone`, `footer_text`, `updated_at` |
+| `organization_settings` | Single-row branding, institution metadata and borrowing policy for this installation | `name`, `logo`, `favicon`, `primary_color`/`secondary_color`/`accent_color`, `contact_email`, `contact_phone`, `footer_text`, `name_arabic`, `institution_type`, `address`, `website`, `updated_at` |
 
 > **`organization_settings` is a singleton.** A `CHECK (id = 1)` constraint
 > means there can only ever be one row. `OrganizationSettings.load()` returns
@@ -147,6 +147,53 @@ matching their Django declarations. Everything else (`book_copies.*`,
 sides — deletes are blocked at the DB level unless the corresponding view
 checks for dependents first (most do; see `views.py`'s various
 `*_delete` functions).
+
+## Institution metadata
+
+`organization_settings` also carries who the installation belongs to. It is
+the same single row as the branding and the borrowing policy — there is no
+`institutions` table, no branch or campus hierarchy, and no second place to
+configure any of this.
+
+Four columns were added for it (migration `0009`), and deliberately only
+four:
+
+| Column | Purpose |
+|---|---|
+| `name_arabic` | The institution's name in Arabic, shown beside the Latin one. |
+| `institution_type` | Free text — Madrasah, Jamia, School, … See below. |
+| `address` | Postal address, as typed (a textarea, so multi-line). |
+| `website` | The institution's own web address. |
+
+**The institution's name, email and phone were already here.** The name is
+`name` — the column the sidebar, the page titles, the login page, the
+report headers and the label sheets have read since `0003` — and the
+contact details are `contact_email` and `contact_phone`. Adding
+`institution_name`/`institution_email`/`institution_phone` beside them
+would have given the library two answers to each of three questions, with
+nothing to say which was right, so they are reused rather than duplicated.
+
+**`institution_type` is plain text, not a CHECK-constrained enumeration**,
+unlike every status column in this schema. Nothing branches on it — it is
+printed and never tested — so a list would buy no correctness and would
+need a migration the first time an institution described itself in a way
+the list did not anticipate. The settings form offers the common answers as
+a `<datalist>`, which suggests without restricting.
+
+**All four are `NOT NULL DEFAULT ''`**, matching `name`, `contact_email`,
+`contact_phone` and `footer_text` above them. On PostgreSQL 11+ a column
+added with a constant default rewrites no rows, so an existing install
+gains four empty strings and reads exactly as it did. Blank stays valid
+forever: every display reads a property on the model
+(`display_address`, `print_contact_line`, `has_institution_details`) that
+returns `""`/`False` when nothing has been set, so an unconfigured
+installation renders what it always rendered rather than an empty label.
+
+**No query was added anywhere.** The row is already loaded once per request
+and cached by `library.context_processors.get_branding()`, and everything
+that displays this metadata — the sidebar, the report letterhead, the label
+sheet footer — reads that same `branding` object. HTMX fragments, combobox
+endpoints and partial renders gained nothing.
 
 ## Notifications
 
