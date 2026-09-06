@@ -1,0 +1,16 @@
+{% comment %}
+One suggestion's state as a badge. A partial because the list and the
+detail page both show it, and two copies of a colour map is one copy too
+many.
+
+Expects `suggestion`.
+{% endcomment %}
+{% if suggestion.status == "Pending" %}
+    <span class="badge text-bg-warning">Pending</span>
+{% elif suggestion.status == "Approved" %}
+    <span class="badge text-bg-info">Approved</span>
+{% elif suggestion.status == "Acquired" %}
+    <span class="badge text-bg-success">Acquired</span>
+{% else %}
+    <span class="badge text-bg-secondary">Rejected</span>
+{% endif %}

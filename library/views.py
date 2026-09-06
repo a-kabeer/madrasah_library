@@ -46,6 +46,7 @@ from .models import (
     BookCopy,
     Loan,
     Borrower,
+    AcquisitionSuggestion,
     User,
     ActivityLog,
     OrganizationSettings,
@@ -53,6 +54,7 @@ from .models import (
 )
 from django.utils.safestring import mark_safe
 
+from . import acquisitions
 from . import barcode
 from . import excel as book_excel
 from . import history
@@ -4996,6 +4998,33 @@ def normalize_title(value):
     return " ".join((value or "").split()).lower()
 
 
+def normalized_title_expression():
+    """`books.title` reduced in SQL exactly as `normalize_title` reduces it.
+
+    Collapse runs of whitespace, trim the ends, lower the case. Written
+    once and used by everything that compares a title, so the catalogue's
+    duplicate check and the suggestion form's duplicate warning can never
+    end up disagreeing about whether two titles are the same. `lower()` is
+    used on both sides rather than Python's `casefold`, for the same
+    reason.
+    """
+
+    return models.Func(
+        models.Func(
+            models.Func(
+                models.F("title"),
+                models.Value(r"\s+"),
+                models.Value(" "),
+                models.Value("g"),
+                function="regexp_replace",
+            ),
+            function="btrim",
+        ),
+        function="lower",
+        output_field=models.CharField(),
+    )
+
+
 def find_duplicate_books(title, author_id, exclude_id=None):
     """Existing books that are this same book, by title and author.
 
@@ -5023,20 +5052,7 @@ def find_duplicate_books(title, author_id, exclude_id=None):
     matches = Book.objects.filter(
         author_id=author_id
     ).annotate(
-        normalized_title=models.Func(
-            models.Func(
-                models.Func(
-                    models.F("title"),
-                    models.Value(r"\s+"),
-                    models.Value(" "),
-                    models.Value("g"),
-                    function="regexp_replace",
-                ),
-                function="btrim",
-            ),
-            function="lower",
-            output_field=models.CharField(),
-        )
+        normalized_title=normalized_title_expression()
     ).filter(
         normalized_title=normalized
     )
@@ -5060,6 +5076,85 @@ def duplicate_book_error(matches):
     )
 
 
+def suggestion_matches(title, author_name, limit=5):
+    """Books already in the catalogue that a suggestion may duplicate.
+
+    Task 4's comparison and no other. When the suggested author names an
+    author the catalogue already knows, this *is* `find_duplicate_books` -
+    the same exact, normalised title-and-author match that `book_add`
+    refuses a duplicate on. With no author, or an author nobody has
+    catalogued yet, it falls back to the same normalised title against
+    every book, which is the identical comparison with one side left off.
+
+    There is deliberately no second, looser matcher. A suggestion is a note
+    somebody typed, so a fuzzy search over it would produce misses that
+    mean nothing and near-misses nobody could act on - and this warns
+    rather than refuses, so being wrong is expensive in exactly the wrong
+    direction.
+
+    Bounded by `limit` in the database. The warning names a few books; it
+    is not a search results page.
+    """
+
+    normalized = normalize_title(title)
+
+    if not normalized:
+        return []
+
+    author = (
+        Author.objects.filter(name__iexact=author_name.strip()).first()
+        if author_name and author_name.strip()
+        else None
+    )
+
+    if author is not None:
+        return list(find_duplicate_books(title, author.id)[:limit])
+
+    return list(
+        Book.objects.annotate(
+            normalized_title=normalized_title_expression()
+        ).filter(
+            normalized_title=normalized
+        ).select_related("author").order_by("id")[:limit]
+    )
+
+
+def suggestion_prefill(suggestion):
+    """`book_add`'s form_data, filled in from an approved suggestion.
+
+    Only what is safe to fill in, and nothing at all is created. The title
+    is the suggestion's own text and still has to be confirmed. The author
+    and publisher are catalogue records looked up by exact name, and are
+    left blank when nobody of that name is catalogued yet - a suggestion
+    saying "ibn kathir" must not add an `Author` called that, so the
+    librarian picks or creates one in the form, exactly as they would
+    without a suggestion.
+
+    Every value here comes off the stored row, not off the request. The URL
+    carries one integer - which suggestion - so there is no parameter a
+    caller could use to put a value into this form that the form would not
+    have validated anyway.
+    """
+
+    author = Author.objects.filter(
+        name__iexact=suggestion.author_name.strip()
+    ).first() if suggestion.author_name.strip() else None
+
+    publisher = Publisher.objects.filter(
+        name__iexact=suggestion.publisher_name.strip()
+    ).first() if suggestion.publisher_name.strip() else None
+
+    return {
+        "title": suggestion.title,
+        "author": str(author.id) if author else "",
+        "author_name": author.name if author else "",
+        "category": "",
+        "category_name": "",
+        "publisher": str(publisher.id) if publisher else "",
+        "publisher_name": publisher.name if publisher else "",
+    }
+
+
 @role_required("Admin", "Librarian")
 def book_add(request):
     """Add a book, and optionally its volumes and physical copies.
@@ -5078,6 +5173,23 @@ def book_add(request):
     error = None
     duplicates = []
 
+    # The catalogue shortcut from an approved suggestion. One integer in
+    # the query string, and everything it leads to is read from that row -
+    # so it cannot carry a value into the form, and cannot skip a check.
+    #
+    # It rides on the query string rather than a hidden field because the
+    # form has no `action` and therefore posts back to this same URL: the
+    # link survives a validation error and a re-render without the
+    # template knowing anything about suggestions. `?modal=1` already
+    # works exactly this way.
+    #
+    # `open_for_catalogue` answers only for an Approved suggestion, so a
+    # Pending or Rejected one prefills nothing and - the half that matters
+    # - is never marked Acquired further down.
+    suggestion = acquisitions.open_for_catalogue(
+        numeric_param(request, "suggestion")
+    )
+
     form_data = {
         "title": "",
         "author": "",
@@ -5087,6 +5199,9 @@ def book_add(request):
         "publisher": "",
         "publisher_name": "",
     }
+
+    if suggestion is not None and request.method != "POST":
+        form_data = suggestion_prefill(suggestion)
 
     # What the volume / copy half of the form should show. Replaced by
     # whatever was submitted if the form comes back with an error.
@@ -5256,6 +5371,33 @@ def book_add(request):
                     entity_id=book.id,
                     description=f"{book.title} شامل کی گئی",
                 )
+
+                # This book was added through a particular approved
+                # suggestion's shortcut, so that suggestion is now
+                # Acquired. A conditional UPDATE, so it happens once and
+                # only from Approved.
+                #
+                # Adding a book the ordinary way marks nothing: there is
+                # no suggestion on the request, `suggestion` is None, and
+                # this is not reached. Adding a *similar* book without the
+                # shortcut marks nothing either - nothing here compares
+                # titles.
+                if suggestion is not None:
+
+                    acquisitions.mark_acquired(
+                        suggestion.id, user=request.user
+                    )
+
+                    create_activity_log(
+                        user=request.user,
+                        action="UPDATE",
+                        entity_type="AcquisitionSuggestion",
+                        entity_id=suggestion.id,
+                        description=(
+                            "Suggestion '%s' added to the catalogue as %s"
+                            % (suggestion.title, book.title)
+                        ),
+                    )
 
                 for volume in volumes:
                     create_activity_log(
@@ -10697,3 +10839,271 @@ def notification_list(request):
             "unread_cap": notifications.UNREAD_CAP,
         },
     )
+
+
+# ==========================================================================
+# ACQUISITION SUGGESTIONS
+#
+# Books somebody thinks the library should have. A suggestion is a note, not
+# a catalogue record: nothing here creates an Author, a Publisher, a
+# Category, a Book or a BookCopy, and the only route into the catalogue is
+# `book_add` with its own validation, its own duplicate check and its own
+# permissions. See library/acquisitions.py.
+#
+# Everyone may write one and read the list - the person who notices a gap
+# on the shelf is usually the one standing at it. Only Admin and Librarian
+# may decide about one, which is the same line `can_edit_library` already
+# draws through the catalogue.
+# ==========================================================================
+
+
+def can_review_suggestions(user):
+    """True if `user` may approve, reject or mark a suggestion acquired.
+
+    UI gating only, exactly like `can_edit_library`. The security boundary
+    is `@role_required("Admin", "Librarian")` on `suggestion_review`.
+    """
+
+    return can_edit_library(user)
+
+
+def suggestion_list(request):
+    """Every suggestion: what still needs deciding, then what came of the rest.
+
+    Filtered, ordered and paginated in the database. Both people are joined
+    in the same query because every row names the suggester and, once
+    decided, the reviewer - without that a page of twenty-five would cost
+    fifty more queries, which is the whole of the N+1 this page could have.
+    """
+
+    status = (request.GET.get("status") or "").strip()
+
+    if status not in dict(AcquisitionSuggestion.STATUS_CHOICES):
+        status = ""
+
+    search = (request.GET.get("search") or "").strip()
+
+    rows = acquisitions.filtered(
+        acquisitions.all_suggestions(), status=status, search=search
+    )
+
+    paginator = Paginator(rows, PAGE_SIZE)
+    page = paginator.get_page(request.GET.get("page"))
+
+    return render(
+        request,
+        "library/suggestion_list.html",
+        {
+            "suggestions": page,
+            "paginator": paginator,
+            # Everything except `page`, so the filter and the search
+            # survive being paged through.
+            "pagination_query": query_with(request, page=None),
+            "elided_page_range": list(
+                paginator.get_elided_page_range(
+                    page.number,
+                    on_each_side=1,
+                    on_ends=1,
+                )
+            ),
+            "page_ellipsis": Paginator.ELLIPSIS,
+            "status": status,
+            "search": search,
+            "statuses": AcquisitionSuggestion.STATUS_CHOICES,
+            "can_review": can_review_suggestions(request.user),
+        },
+    )
+
+
+def suggestion_add(request):
+    """Write down a book the library should look for.
+
+    Open to every role. Only the title is required; everything else is
+    optional and stored as it was typed, because a suggestion is what
+    somebody knew at the time.
+
+    `suggested_by` is `request.user` and there is no field for it in the
+    form - `acquisitions.create` takes the user as a keyword and has
+    nowhere to put a posted id, so one cannot be honoured by mistake.
+
+    A GET shows the form. A POST that matches something already in the
+    catalogue is refused *once*, with the matches named and a "yes, still
+    add it" to come back with: imperfect matching must not silently block
+    a real suggestion, and it must not be so quiet that the librarian
+    orders a second copy of something on the shelf.
+    """
+
+    error = None
+    matches = []
+
+    form = {
+        "title": "",
+        "author_name": "",
+        "publisher_name": "",
+        "isbn": "",
+        "notes": "",
+    }
+
+    if request.method == "POST":
+
+        form = {
+            name: (request.POST.get(name) or "").strip()
+            for name in form
+        }
+
+        confirmed = request.POST.get("confirm_duplicate") == "1"
+
+        if not form["title"]:
+
+            error = "A title is required — everything else is optional."
+
+        else:
+
+            # Task 4's own comparison, and only when it might refuse: a
+            # confirmed submission does not pay for the query again.
+            matches = (
+                []
+                if confirmed
+                else suggestion_matches(form["title"], form["author_name"])
+            )
+
+            if matches:
+
+                error = (
+                    "The catalogue already has %s under this title. Open "
+                    "the existing record, or confirm below if this really "
+                    "is a different book."
+                    % (
+                        "a book"
+                        if len(matches) == 1
+                        else "%d books" % len(matches)
+                    )
+                )
+
+        if error is None:
+
+            suggestion = acquisitions.create(
+                user=request.user,
+                title=form["title"],
+                author_name=form["author_name"],
+                publisher_name=form["publisher_name"],
+                isbn=form["isbn"],
+                notes=form["notes"],
+            )
+
+            create_activity_log(
+                user=request.user,
+                action="CREATE",
+                entity_type="AcquisitionSuggestion",
+                entity_id=suggestion.id,
+                description="Suggested for acquisition: %s" % suggestion.title,
+            )
+
+            # The people who may decide about it, and not the person who
+            # wrote it. Task 17's own mechanism, keyed to this suggestion,
+            # so it is announced once.
+            notifications.announce_suggestion(
+                suggestion, submitted_by=request.user
+            )
+
+            messages.success(
+                request,
+                "%s has been suggested." % suggestion.title,
+            )
+
+            return redirect("suggestion_detail", suggestion_id=suggestion.id)
+
+    return render(
+        request,
+        "library/suggestion_add.html",
+        {
+            "form": form,
+            "error": error,
+            "matches": matches,
+        },
+    )
+
+
+def suggestion_detail(request, suggestion_id):
+    """One suggestion: what was asked for, and what was decided.
+
+    Read-only. Every action on it is a POST elsewhere, so nothing here
+    changes anything and a refresh costs one query for the row.
+    """
+
+    suggestion = get_object_or_404(
+        AcquisitionSuggestion.objects.select_related(
+            "suggested_by", "reviewed_by"
+        ),
+        id=suggestion_id,
+    )
+
+    return render(
+        request,
+        "library/suggestion_detail.html",
+        {
+            "suggestion": suggestion,
+            # Two separate questions, and they are not the same line.
+            # Deciding about a suggestion is Admin/Librarian; adding the
+            # book is whatever `book_add` already allows, which this does
+            # not widen.
+            "can_review": can_review_suggestions(request.user),
+            "can_catalogue": can_edit_library(request.user),
+            "statuses": AcquisitionSuggestion.STATUS_CHOICES,
+        },
+    )
+
+
+@role_required("Admin", "Librarian")
+def suggestion_review(request, suggestion_id):
+    """Approve, reject, or mark a suggestion acquired.
+
+    POST only, and the transition is decided in the database by
+    `acquisitions.advance` - a conditional UPDATE naming the state the row
+    has to be in. So an arbitrary jump matches no row, a completed
+    suggestion cannot be reopened, and the second of two clicks changes
+    nothing rather than moving the review timestamp.
+
+    The suggestion is not read before the update. There is nothing to read
+    it for: the statement carries the rule, and reading first would only
+    add a window for the row to change in.
+    """
+
+    landing = redirect("suggestion_detail", suggestion_id=suggestion_id)
+
+    if request.method != "POST":
+        return landing
+
+    to_status = (request.POST.get("status") or "").strip()
+
+    if to_status not in dict(AcquisitionSuggestion.STATUS_CHOICES):
+        messages.warning(request, "That is not a state a suggestion can be in.")
+        return landing
+
+    moved = acquisitions.advance(
+        suggestion_id, to_status, user=request.user
+    )
+
+    if not moved:
+        # Either somebody got there first, or this was never a legal move.
+        # The page about to be shown says which state it is actually in,
+        # which is more use than guessing here.
+        messages.info(
+            request,
+            "Nothing changed — that suggestion is no longer waiting for "
+            "this decision.",
+        )
+
+        return landing
+
+    create_activity_log(
+        user=request.user,
+        action="UPDATE",
+        entity_type="AcquisitionSuggestion",
+        entity_id=suggestion_id,
+        description="Suggestion marked %s" % to_status,
+    )
+
+    messages.success(request, "Suggestion marked %s." % to_status)
+
+    return landing

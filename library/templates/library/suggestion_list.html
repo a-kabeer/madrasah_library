@@ -1,0 +1,171 @@
+{% extends layout %}
+
+{% block title %}
+    Suggestions | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    Suggestions
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-0">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Suggested Purchases</h2>
+            <p class="text-body-secondary mb-0">
+                Books worth looking for. A suggestion is a note, not a
+                catalogue record — nothing here is on a shelf, and adding
+                one to the catalogue is still the
+                <a href="{% url 'book_list' %}">Add Book</a> form with its
+                own checks.
+            </p>
+        </div>
+
+        {% comment %}
+          Open to every role: the person who notices a gap on the shelf is
+          usually the one standing at it.
+        {% endcomment %}
+        <a href="{% url 'suggestion_add' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
+            Suggest a book
+        </a>
+    </div>
+
+    {% comment %}
+      Filters. The status links keep the search, and the search form keeps
+      the status, so neither control undoes the other — and `page` is
+      dropped from both, since page 4 of one filter is not page 4 of
+      another.
+    {% endcomment %}
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+
+        <a
+            href="?{% if search %}search={{ search|urlencode }}{% endif %}"
+            class="btn btn-sm {% if not status %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+        >All</a>
+
+        {% for value, label in statuses %}
+            <a
+                href="?status={{ value|urlencode }}{% if search %}&search={{ search|urlencode }}{% endif %}"
+                class="btn btn-sm {% if status == value %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+            >{{ label }}</a>
+        {% endfor %}
+
+        <form method="get" class="d-flex gap-2 ms-auto">
+            {% if status %}
+                <input type="hidden" name="status" value="{{ status }}">
+            {% endif %}
+
+            <label for="suggestionSearch" class="visually-hidden">
+                Search suggestions by title
+            </label>
+            <input
+                type="search"
+                class="form-control form-control-sm"
+                id="suggestionSearch"
+                name="search"
+                value="{{ search }}"
+                placeholder="Search titles"
+            >
+
+            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <span class="visually-hidden">Search</span>
+            </button>
+        </form>
+
+    </div>
+
+    {% if suggestions %}
+
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>Title</th>
+                            <th>Author</th>
+                            <th>Suggested by</th>
+                            <th>Asked</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for suggestion in suggestions %}
+                            <tr>
+                                <td>
+                                    <a
+                                        href="{% url 'suggestion_detail' suggestion.id %}"
+                                        class="fw-semibold text-decoration-none"
+                                    >{{ suggestion.title }}</a>
+
+                                    {% if suggestion.isbn %}
+                                        <span class="d-block small text-body-secondary">
+                                            ISBN {{ suggestion.isbn }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td class="text-body-secondary">
+                                    {{ suggestion.author_name|default:"—" }}
+                                </td>
+
+                                {% comment %}
+                                  Both people came with the row via
+                                  select_related, so naming them here costs
+                                  nothing per row.
+                                {% endcomment %}
+                                <td class="text-body-secondary">
+                                    {% if suggestion.suggested_by %}
+                                        {{ suggestion.suggested_by.full_name }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+
+                                <td class="text-body-secondary">
+                                    {{ suggestion.created_at|date:"j M Y" }}
+                                </td>
+
+                                <td>
+                                    {% include "library/partials/suggestion_status.html" %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% include "library/partials/pagination.html" with page_obj=suggestions %}
+
+    {% else %}
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body text-center text-body-secondary py-5">
+                <i class="bi bi-lightbulb fs-1 d-block mb-2" aria-hidden="true"></i>
+                <p class="mb-1 fw-semibold">
+                    {% if status or search %}
+                        Nothing matches that.
+                    {% else %}
+                        Nothing has been suggested yet.
+                    {% endif %}
+                </p>
+                <p class="mb-0 small">
+                    {% if status or search %}
+                        Try another status, or clear the search.
+                    {% else %}
+                        A title is all it takes — everything else is optional.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

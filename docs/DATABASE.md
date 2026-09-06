@@ -56,6 +56,7 @@ erDiagram
 | `users` | Staff/librarian accounts (not wired to Django auth — see note below) | `username` (unique), `role`, `is_active` |
 | `loans` | Issue/return records | `copy_id`, `borrower_id`, `issue_date`, `due_date`, `return_date`, `issued_by`, `returned_to` |
 | `activity_logs` | Audit trail of CREATE/UPDATE/DELETE/ISSUE/RETURN actions | `user_id` (optional), `action`, `entity_type`, `entity_id`, `description`, `created_at` |
+| `acquisition_suggestions` | Books suggested for purchase, and what came of each | `title`, `author_name`/`publisher_name` (free text), `isbn`, `status`, `suggested_by`, `reviewed_by`, `reviewed_at` |
 | `notifications` | Actionable in-app messages addressed to a staff user | `recipient_id`, `event_type`, `event_key` (unique per recipient), `title`, `url`, `created_at`, `read_at` |
 | `organization_settings` | Single-row branding, institution metadata and borrowing policy for this installation | `name`, `logo`, `favicon`, `primary_color`/`secondary_color`/`accent_color`, `contact_email`, `contact_phone`, `footer_text`, `name_arabic`, `institution_type`, `address`, `website`, `updated_at` |
 
@@ -147,6 +148,73 @@ matching their Django declarations. Everything else (`book_copies.*`,
 sides — deletes are blocked at the DB level unless the corresponding view
 checks for dependents first (most do; see `views.py`'s various
 `*_delete` functions).
+
+## Acquisition suggestions
+
+`acquisition_suggestions` holds books somebody thinks the library should
+have. It is **not** a Book and **not** a purchase order.
+
+| Column | Purpose |
+|---|---|
+| `title` | What was suggested. The only required field. |
+| `author_name`, `publisher_name` | **Free text, no foreign key.** |
+| `isbn` | As copied off a cover. Not validated as an ISBN. |
+| `notes` | Why the book is wanted. |
+| `status` | Pending / Approved / Rejected / Acquired. |
+| `suggested_by`, `reviewed_by` | Nullable `users` references. |
+| `reviewed_at`, `created_at`, `updated_at` | Timestamps. |
+
+**Free text is deliberate.** Resolving "ibn kathir" to an `authors` row on
+the strength of a suggestion would put a record in the catalogue that
+nobody checked, so nothing in this feature creates an `Author`, a
+`Publisher`, a `Category`, a `Book` or a `BookCopy`. The only route into
+the catalogue is `book_add`, with its own validation, its own duplicate
+check and its own `@role_required("Admin", "Librarian")` — the suggestion
+shortcut at most fills that form in.
+
+**There is no supplier, quotation, price, invoice or receiving step.** Those
+are an accounting system; this is a list of books worth looking for.
+
+**States move one way:**
+
+```
+Pending ──▶ Approved ──▶ Acquired
+    └────▶ Rejected
+```
+
+`check_acquisition_status` pins the set, and
+`check_acquisition_reviewed` keeps the status and the review timestamp from
+coming apart (Pending has none; everything else has one) — the same shape as
+`check_reservation_closed`. **Which** state may follow which is not in the
+database: `library/acquisitions.py` names the source state in the `WHERE`
+clause of one conditional `UPDATE`, so an arbitrary jump, a reopened
+decision and the second of two identical POSTs all match no row and write
+nothing — including the review timestamp, which would otherwise creep on
+every refresh.
+
+**`suggested_by` and `reviewed_by` are nullable**, matching
+`loans.issued_by`, `inventory_sessions.started_by` and
+`activity_logs.user_id` rather than `notifications.recipient_id`. An account
+can be removed, and a suggestion outliving its author is better than a
+delete that fails.
+
+**One index**: `idx_acquisition_suggestions_queue` on
+`(status, created_at DESC, id DESC)` — every list this table serves is "the
+suggestions in this state, newest first", with `id` breaking ties so a page
+cannot reshuffle between loads. There is deliberately **no** index on
+`suggested_by`/`reviewed_by`: nothing looks a suggestion up by either (they
+are only joined outwards to `users` by primary key), and an index nothing
+reads is a write nobody needed.
+
+**No link column to `books`.** A suggestion records that it *was* acquired,
+not which row satisfied it. A foreign key would be `NO ACTION` like every
+other FK here and would therefore start blocking `book_delete` — a change to
+existing behaviour bought for a line of display text.
+
+Migration `0010` also **widens** `check_notification_event_type` to admit
+`suggestion_submitted`. That constraint enumerates the notification kinds
+the application can render, so adding a kind means naming it there;
+widening a CHECK cannot invalidate an existing row.
 
 ## Institution metadata
 

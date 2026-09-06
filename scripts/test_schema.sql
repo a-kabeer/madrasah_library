@@ -1053,7 +1053,11 @@ CREATE TABLE public.notifications (
     read_at timestamp with time zone,
 
     CONSTRAINT check_notification_event_type CHECK (
-        event_type IN ('reservation_ready', 'stock_check_missing')
+        event_type IN (
+            'reservation_ready',
+            'stock_check_missing',
+            'suggestion_submitted'
+        )
     )
 );
 
@@ -1072,3 +1076,49 @@ CREATE INDEX idx_notifications_recipient_newest
 CREATE INDEX idx_notifications_unread
     ON public.notifications (recipient_id, created_at DESC, id DESC)
     WHERE read_at IS NULL;
+
+
+--
+-- Name: acquisition_suggestions; Type: TABLE; Schema: public; Owner: postgres
+--
+-- A book somebody thinks the library should have (see
+-- library.models.AcquisitionSuggestion). Never a Book: `author_name` and
+-- `publisher_name` are free text with no foreign key, because resolving
+-- them to catalogue rows would put records nobody checked in the
+-- catalogue. Not a purchase order either - no supplier, price or invoice.
+--
+-- `check_acquisition_status` pins the four states; which one may follow
+-- which is a conditional UPDATE in library/acquisitions.py, so a repeated
+-- POST reopens nothing.
+--
+
+CREATE TABLE public.acquisition_suggestions (
+    id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    title character varying(500) NOT NULL,
+    author_name character varying(255) DEFAULT ''::character varying NOT NULL,
+    publisher_name character varying(255) DEFAULT ''::character varying NOT NULL,
+    isbn character varying(32) DEFAULT ''::character varying NOT NULL,
+    notes text DEFAULT ''::text NOT NULL,
+    status character varying(20) DEFAULT 'Pending'::character varying NOT NULL,
+    suggested_by integer REFERENCES public.users(id),
+    reviewed_by integer REFERENCES public.users(id),
+    reviewed_at timestamp with time zone,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+
+    CONSTRAINT check_acquisition_status CHECK (
+        status IN ('Pending', 'Approved', 'Rejected', 'Acquired')
+    ),
+
+    CONSTRAINT check_acquisition_reviewed CHECK (
+        (status = 'Pending' AND reviewed_at IS NULL)
+        OR (status <> 'Pending' AND reviewed_at IS NOT NULL)
+    )
+);
+
+
+ALTER TABLE public.acquisition_suggestions OWNER TO postgres;
+
+
+CREATE INDEX idx_acquisition_suggestions_queue
+    ON public.acquisition_suggestions (status, created_at DESC, id DESC);

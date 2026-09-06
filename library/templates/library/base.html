@@ -429,6 +429,33 @@
             </a>
 
 
+            {% comment %}
+              Books the library does not have yet. Beside Books because
+              that is the question it answers — what should be on this
+              shelf — and open to every role: the person who notices a gap
+              is usually the one standing at it. Deciding about one is
+              Admin/Librarian, which the page itself enforces.
+
+              A plain link with no `data-nav-*` of its own. `/suggestions/`
+              shares no prefix with `/books/`, so the sidebar's
+              longest-prefix matching keeps the two apart without any
+              wiring, and Books keeps claiming volumes and contents exactly
+              as before.
+            {% endcomment %}
+            <a
+                href="{% url 'suggestion_list' %}"
+                class="nav-link-custom"
+            >
+
+                <i class="bi bi-lightbulb"></i>
+
+                <span>
+                    Suggestions
+                </span>
+
+            </a>
+
+
             <a
                 href="{% url 'author_list' %}"
                 class="nav-link-custom"

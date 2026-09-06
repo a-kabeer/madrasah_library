@@ -352,6 +352,34 @@ path(
     name="inventory_session_complete",
 ),
 
+# Acquisition suggestions. Books somebody thinks the library should have -
+# never a Book, and never a route into the catalogue that skips `book_add`.
+# `/suggestions/` shares no prefix with `/books/`, so the sidebar's
+# longest-prefix matching keeps the two entries apart with no wiring.
+path(
+    "suggestions/",
+    views.suggestion_list,
+    name="suggestion_list",
+),
+
+path(
+    "suggestions/add/",
+    views.suggestion_add,
+    name="suggestion_add",
+),
+
+path(
+    "suggestions/<int:suggestion_id>/",
+    views.suggestion_detail,
+    name="suggestion_detail",
+),
+
+path(
+    "suggestions/<int:suggestion_id>/review/",
+    views.suggestion_review,
+    name="suggestion_review",
+),
+
 # Notifications. Everything here is scoped to the signed-in user by the
 # views themselves: there is no recipient in any of these URLs, and the
 # two that change state answer only to POST.

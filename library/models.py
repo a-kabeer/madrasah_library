@@ -1179,12 +1179,17 @@ class Notification(models.Model):
     # found. The session's own page is the report.
     EVENT_STOCK_CHECK_MISSING = "stock_check_missing"
 
+    # Somebody suggested a book for the library to look for. Only the
+    # people who may decide about it are told.
+    EVENT_SUGGESTION_SUBMITTED = "suggestion_submitted"
+
     # Mirrors the `check_notification_event_type` CHECK constraint in
     # Postgres. Explicit values, not a free-text kind: a notification whose
     # type nothing recognises is one no page can render properly.
     EVENT_CHOICES = [
         (EVENT_RESERVATION_READY, "Reserved book available"),
         (EVENT_STOCK_CHECK_MISSING, "Stock check found copies missing"),
+        (EVENT_SUGGESTION_SUBMITTED, "Book suggested for acquisition"),
     ]
 
     id = models.AutoField(primary_key=True)
@@ -1244,3 +1249,155 @@ class Notification(models.Model):
             return ""
 
         return target
+
+
+class AcquisitionSuggestion(models.Model):
+    """A book somebody thinks the library should have, and what came of it.
+
+    Not a Book, and never allowed to become one by itself. A suggestion is
+    a note in somebody's own words - a title, perhaps an author, perhaps an
+    ISBN off the back of a copy they saw - and none of that is catalogue
+    data. `author_name` and `publisher_name` are free text precisely
+    because turning "ibn kathir" into an `Author` row on the strength of a
+    suggestion would put a record in the catalogue that nobody checked.
+    Nothing here creates an Author, a Publisher, a Category, a Book or a
+    BookCopy; the catalogue is still entered through `book_add`, with its
+    own validation and its own duplicate check.
+
+    Not a purchase order either. There is no supplier, no quotation, no
+    price, no invoice and no receiving step: those are an accounting system,
+    and this is a list of books worth looking for.
+
+    The four states are the whole workflow, and they only ever move one
+    way:
+
+        Pending ──▶ Approved ──▶ Acquired
+            └────▶ Rejected
+
+    `check_acquisition_status` pins the set in the database, and the
+    transitions are enforced by conditional UPDATEs in library/acquisitions
+    .py rather than by a check in Python - so a second click, a retried
+    POST or a URL typed by hand cannot reopen something already decided.
+
+    `suggested_by` and `reviewed_by` are nullable for the same reason every
+    other user reference in this schema is: an account can be removed, and
+    a suggestion outliving the person who made it is better than a delete
+    that fails. The view always writes the signed-in user; NULL only ever
+    means "that account is gone".
+    """
+
+    STATUS_PENDING = "Pending"
+    STATUS_APPROVED = "Approved"
+    STATUS_REJECTED = "Rejected"
+    STATUS_ACQUIRED = "Acquired"
+
+    # Mirrors the `check_acquisition_status` CHECK constraint in Postgres.
+    # Title case, like every other status column in this schema
+    # (`book_copies.status`, `reservations.status`,
+    # `inventory_sessions.status`) rather than the SCREAMING_CASE a fresh
+    # project might pick - there is one convention here and this follows it.
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_APPROVED, "Approved"),
+        (STATUS_REJECTED, "Rejected"),
+        (STATUS_ACQUIRED, "Acquired"),
+    ]
+
+    # Which states may follow which. The one place that says so:
+    # `acquisitions.advance` reads it to build the WHERE clause that
+    # enforces it, and the properties below read it to decide what a page
+    # should offer. Nothing repeats the rule.
+    TRANSITIONS = {
+        STATUS_PENDING: (STATUS_APPROVED, STATUS_REJECTED),
+        STATUS_APPROVED: (STATUS_ACQUIRED,),
+        STATUS_REJECTED: (),
+        STATUS_ACQUIRED: (),
+    }
+
+    id = models.AutoField(primary_key=True)
+
+    # Matches `books.title`, so a suggestion can hold anything the
+    # catalogue could.
+    title = models.CharField(max_length=500)
+
+    author_name = models.CharField(max_length=255, blank=True, default="")
+
+    publisher_name = models.CharField(max_length=255, blank=True, default="")
+
+    # Free text, and deliberately not validated as an ISBN. It is copied
+    # off a cover by somebody who is not buying the book, and refusing a
+    # mistyped check digit would lose the one piece of information that
+    # makes the title findable.
+    isbn = models.CharField(max_length=32, blank=True, default="")
+
+    notes = models.TextField(blank=True, default="")
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+    )
+
+    suggested_by = models.ForeignKey(
+        User,
+        on_delete=models.DO_NOTHING,
+        db_column="suggested_by",
+        null=True,
+        blank=True,
+        related_name="acquisition_suggestions",
+    )
+
+    reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.DO_NOTHING,
+        db_column="reviewed_by",
+        null=True,
+        blank=True,
+        related_name="acquisition_reviews",
+    )
+
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField()
+
+    updated_at = models.DateTimeField()
+
+    class Meta:
+        managed = False
+        db_table = "acquisition_suggestions"
+
+    def __str__(self):
+        return self.title
+
+    @property
+    def is_pending(self):
+        return self.status == self.STATUS_PENDING
+
+    @property
+    def is_approved(self):
+        return self.status == self.STATUS_APPROVED
+
+    @property
+    def is_closed(self):
+        """Whether this suggestion has finished moving.
+
+        Rejected and Acquired both have no transition out of them, so the
+        detail page shows them as a record rather than as a decision.
+        """
+
+        return not self.TRANSITIONS[self.status]
+
+    @property
+    def was_reviewed(self):
+        return self.reviewed_at is not None
+
+    def may_become(self, status):
+        """Whether `status` is a legal next state for this suggestion.
+
+        The one readable form of the table above, for callers that have a
+        target state in hand. Never the enforcement: library/acquisitions
+        .py is, in the database, in one statement - so neither this nor a
+        button drawn from `is_pending`/`is_approved` above is the rule.
+        """
+
+        return status in self.TRANSITIONS[self.status]

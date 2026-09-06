@@ -1,0 +1,244 @@
+{% extends layout %}
+
+{% block title %}
+    {{ suggestion.title }} | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    Suggestion
+{% endblock %}
+
+{% block breadcrumbs %}
+    <nav aria-label="Breadcrumb">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item">
+                <a href="{% url 'suggestion_list' %}">Suggestions</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                {{ suggestion.title }}
+            </li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-0">
+
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+
+            <div class="card shadow-sm border-0 mb-4">
+
+                <div class="card-header bg-body d-flex flex-wrap align-items-center gap-2">
+                    <h5 class="mb-0 fw-bold">{{ suggestion.title }}</h5>
+                    <span class="ms-auto">
+                        {% include "library/partials/suggestion_status.html" %}
+                    </span>
+                </div>
+
+                <div class="card-body">
+
+                    <dl class="row mb-0">
+
+                        <dt class="col-sm-4 text-body-secondary fw-normal">Author</dt>
+                        <dd class="col-sm-8">{{ suggestion.author_name|default:"—" }}</dd>
+
+                        <dt class="col-sm-4 text-body-secondary fw-normal">Publisher</dt>
+                        <dd class="col-sm-8">{{ suggestion.publisher_name|default:"—" }}</dd>
+
+                        <dt class="col-sm-4 text-body-secondary fw-normal">ISBN</dt>
+                        <dd class="col-sm-8">{{ suggestion.isbn|default:"—" }}</dd>
+
+                        <dt class="col-sm-4 text-body-secondary fw-normal">Why this book</dt>
+                        <dd class="col-sm-8">
+                            {% if suggestion.notes %}
+                                {{ suggestion.notes|linebreaksbr }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-4 text-body-secondary fw-normal">Suggested by</dt>
+                        <dd class="col-sm-8">
+                            {% if suggestion.suggested_by %}
+                                {{ suggestion.suggested_by.full_name }}
+                            {% else %}
+                                <span class="text-body-secondary">
+                                    account removed
+                                </span>
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-4 text-body-secondary fw-normal">Asked</dt>
+                        <dd class="col-sm-8">
+                            {{ suggestion.created_at|date:"j M Y, H:i" }}
+                        </dd>
+
+                        {% comment %}
+                          Only once somebody has decided. A Pending
+                          suggestion has no reviewer and no review date, and
+                          the database will not let it have one.
+                        {% endcomment %}
+                        {% if suggestion.was_reviewed %}
+                            <dt class="col-sm-4 text-body-secondary fw-normal">
+                                Decided by
+                            </dt>
+                            <dd class="col-sm-8">
+                                {% if suggestion.reviewed_by %}
+                                    {{ suggestion.reviewed_by.full_name }}
+                                {% else %}
+                                    <span class="text-body-secondary">
+                                        account removed
+                                    </span>
+                                {% endif %}
+                            </dd>
+
+                            <dt class="col-sm-4 text-body-secondary fw-normal">
+                                Decided
+                            </dt>
+                            <dd class="col-sm-8">
+                                {{ suggestion.reviewed_at|date:"j M Y, H:i" }}
+                            </dd>
+                        {% endif %}
+
+                    </dl>
+
+                </div>
+
+            </div>
+
+
+            {% comment %}
+              What can be done, which depends on both the state and the
+              role. The state tests below come off the model's own
+              transition table, so this and the server agree about which
+              moves exist — but it is the server that enforces them, in one
+              conditional UPDATE. A button that is not drawn is a
+              convenience, never the rule.
+            {% endcomment %}
+
+            {% if suggestion.is_pending and can_review %}
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-body">
+                        <h6 class="mb-0 fw-bold">Decide</h6>
+                    </div>
+                    <div class="card-body d-flex flex-wrap gap-2">
+
+                        <form method="post"
+                              action="{% url 'suggestion_review' suggestion.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="status" value="Approved">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
+                                Approve
+                            </button>
+                        </form>
+
+                        <form method="post"
+                              action="{% url 'suggestion_review' suggestion.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="status" value="Rejected">
+                            <button type="submit" class="btn btn-outline-danger">
+                                <i class="bi bi-x-lg me-1" aria-hidden="true"></i>
+                                Reject
+                            </button>
+                        </form>
+
+                        <p class="text-body-secondary small mb-0 ms-auto align-self-center">
+                            Neither can be undone.
+                        </p>
+
+                    </div>
+                </div>
+            {% endif %}
+
+
+            {% if suggestion.is_approved %}
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-body">
+                        <h6 class="mb-0 fw-bold">Approved — next step</h6>
+                    </div>
+                    <div class="card-body">
+
+                        {% comment %}
+                          The catalogue shortcut. It opens the ordinary Add
+                          Book form with what is known filled in; the book
+                          is created there, by that form, with its own
+                          validation and its own duplicate check. Nothing is
+                          created by following this link, and the suggestion
+                          becomes Acquired only once a book has actually
+                          been saved through it.
+
+                          Shown only to whoever may already use Add Book —
+                          this does not widen that permission, and offering
+                          an Assistant a link that answers 403 would be
+                          offering a door that does not open.
+                        {% endcomment %}
+                        {% if can_catalogue %}
+                            <p class="text-body-secondary">
+                                Opens the ordinary Add Book form with what
+                                is known filled in. Nothing is added until
+                                you save it there, and the usual checks
+                                still apply.
+                            </p>
+
+                            <div class="d-flex flex-wrap gap-2">
+                                <a
+                                    href="{% url 'book_add' %}?suggestion={{ suggestion.id }}"
+                                    class="btn btn-primary"
+                                >
+                                    <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
+                                    Add to catalogue
+                                </a>
+
+                                {% if can_review %}
+                                    {% comment %}
+                                      For a book that arrived some other
+                                      way — bought in, donated, already
+                                      catalogued by somebody else.
+                                    {% endcomment %}
+                                    <form method="post"
+                                          action="{% url 'suggestion_review' suggestion.id %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="status"
+                                               value="Acquired">
+                                        <button type="submit"
+                                                class="btn btn-outline-secondary">
+                                            Already acquired
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <p class="text-body-secondary mb-0">
+                                Approved. Adding it to the catalogue is a
+                                librarian's job.
+                            </p>
+                        {% endif %}
+
+                    </div>
+                </div>
+            {% endif %}
+
+
+            {% if suggestion.is_closed %}
+                <p class="text-body-secondary small">
+                    <i class="bi bi-lock me-1" aria-hidden="true"></i>
+                    This suggestion is finished and cannot be changed. If it
+                    should be looked at again, suggest it afresh.
+                </p>
+            {% endif %}
+
+
+            <a href="{% url 'suggestion_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>
+                Back to suggestions
+            </a>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
