@@ -1,4 +1,15 @@
 {% extends layout %}
+{% comment %}
+  `layout` rather than base.html by name: an ordinary request renders the
+  whole application shell, an HTMX navigation renders only the main-content
+  region. One template, one URL, one view behind both. `{% extends %}` has
+  to be the very first tag, so this note sits under it.
+  See library/context_processors.py.
+
+  Everything below the blocks is shared with the other two lookup lists -
+  Authors, Categories and Publishers are one page with a different noun in
+  it. Only the words and the routes differ, and they are passed in.
+{% endcomment %}
 
 {% block title %}
     Authors | {{ branding.display_name }}
@@ -10,72 +21,11 @@
 
 {% block content %}
 
-{% comment %}
-  Inside the shared shell so this page can be reached without a full
-  reload, but otherwise as it was: the markup below is the same one this
-  template always had. Restyling it to match the rest of the app is a
-  separate job.
-{% endcomment %}
-<div class="container-fluid px-0 legacy-page">
-<h1>Authors</h1>
-<form method="get">
+<div class="container-fluid px-0">
 
-    <input
-        type="text"
-        name="search"
-        value="{{ search }}"
-        placeholder="Search authors..."
-    >
+    {% url 'author_list' as author_list_url %}
+    {% include "library/partials/lookup_list.html" with rows=authors heading="Authors" blurb="Everyone the catalogue credits. Open a name to see their books." noun="author" noun_plural="authors" list_url=author_list_url search_placeholder="Search authors..." row_link_title="Books by" add_route="author_add" edit_route="author_edit" delete_route="author_delete" pagination_label="Author list pages" %}
 
-    <button type="submit">Search</button>
-
-    {% if search %}
-        <a href="{% url 'author_list' %}">
-            Clear
-        </a>
-    {% endif %}
-
-</form>
-
-{% if search %}
-    <p>
-        Search results for:
-        <strong>{{ search }}</strong>
-    </p>
-
-    <p>
-        Found {{ authors|length }} author(s).
-    </p>
-{% endif %}
-<a href="{% url 'author_add' %}">
-    Add Author
-</a>
-
-<br><br>
-
-<ul>
-    {% for author in authors %}
-        <li>
-            ID: {{ author.id }} - {{ author.name }}
-
-            <a href="{% url 'author_detail' author.id %}">
-                View Details
-            </a>
-
-            <a href="{% url 'author_edit' author.id %}">
-                Edit
-            </a>
-
-            <a href="{% url 'author_delete' author.id %}">
-                Delete
-            </a>
-        </li>
-    {% empty %}
-        <li>No authors found.</li>
-    {% endfor %}
-</ul>
-
-{% include "library/_pagination.html" with page_obj=authors %}
 </div>
 
 {% endblock %}

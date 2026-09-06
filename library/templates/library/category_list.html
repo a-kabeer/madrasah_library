@@ -1,4 +1,15 @@
 {% extends layout %}
+{% comment %}
+  `layout` rather than base.html by name: an ordinary request renders the
+  whole application shell, an HTMX navigation renders only the main-content
+  region. One template, one URL, one view behind both. `{% extends %}` has
+  to be the very first tag, so this note sits under it.
+  See library/context_processors.py.
+
+  Everything below the blocks is shared with the other two lookup lists -
+  Authors, Categories and Publishers are one page with a different noun in
+  it. Only the words and the routes differ, and they are passed in.
+{% endcomment %}
 
 {% block title %}
     Categories | {{ branding.display_name }}
@@ -10,73 +21,11 @@
 
 {% block content %}
 
-{% comment %}
-  Inside the shared shell so this page can be reached without a full
-  reload, but otherwise as it was: the markup below is the same one this
-  template always had. Restyling it to match the rest of the app is a
-  separate job.
-{% endcomment %}
-<div class="container-fluid px-0 legacy-page">
-<h1>Categories</h1>
-<form method="get">
+<div class="container-fluid px-0">
 
-    <input
-        type="text"
-        name="search"
-        value="{{ search }}"
-        placeholder="Search categories..."
-    >
+    {% url 'category_list' as category_list_url %}
+    {% include "library/partials/lookup_list.html" with rows=categories heading="Categories" blurb="How the catalogue is divided up. Open one to see what is in it." noun="category" noun_plural="categories" list_url=category_list_url search_placeholder="Search categories..." row_link_title="Books in" add_route="category_add" edit_route="category_edit" delete_route="category_delete" pagination_label="Category list pages" %}
 
-    <button type="submit">Search</button>
-
-    {% if search %}
-        <a href="{% url 'category_list' %}">
-            Clear
-        </a>
-    {% endif %}
-
-</form>
-
-{% if search %}
-    <p>
-        Search results for:
-        <strong>{{ search }}</strong>
-    </p>
-
-    <p>
-        Found {{ categories|length }} categor(y/ies).
-    </p>
-{% endif %}
-
-<a href="{% url 'category_add' %}">
-    Add Category
-</a>
-
-<br><br>
-
-<ul>
-    {% for category in categories %}
-        <li>
-            {{ category.name }}
-
-            <a href="{% url 'category_detail' category.id %}">
-                View Details
-            </a>
-
-            <a href="{% url 'category_edit' category.id %}">
-                Edit
-            </a>
-
-            <a href="{% url 'category_delete' category.id %}">
-                Delete
-            </a>
-        </li>
-    {% empty %}
-        <li>No categories found.</li>
-    {% endfor %}
-</ul>
-
-{% include "library/_pagination.html" with page_obj=categories %}
 </div>
 
 {% endblock %}

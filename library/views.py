@@ -205,6 +205,59 @@ BOOK_AVAILABILITY_LABELS = {
 BOOK_LIST_MODES = ("all", "author", "category")
 BOOK_LIST_MODE_DEFAULT = "all"
 
+# The lookup lists - Authors, Categories, Publishers - are one table with a
+# different noun in it: a name, a count of the books filed under it, and a
+# way into those books. One whitelist between the three, so they cannot
+# drift apart in what they will sort by.
+#
+# `book_count` is the annotation `lookup_book_counts` adds, not a column.
+LOOKUP_SORT_FIELDS = {
+    "name": "name",
+    "books": "book_count",
+}
+
+LOOKUP_SORT_DEFAULT = "name"
+
+LOOKUP_NAME_LABELS = {
+    "author": "Author Name",
+    "category": "Category Name",
+    "publisher": "Publisher Name",
+}
+
+LOOKUP_LABELS = {
+    "author": "Author",
+    "category": "Category",
+    "publisher": "Publisher",
+}
+
+# Where a row's name points: the book list, already narrowed to that row
+# and sorted by title.
+#
+# Written out per lookup rather than assembled from one shape, because the
+# three are not the same request. The book list offers Author and Category
+# as browsing modes, so those two select the matching mode and its control
+# shows the filter that is in force; it has no publisher control at all, so
+# that one browses everything with the publisher filter applied and relies
+# on the list's filter chips to say so. `availability=` is sent empty for
+# the same reason - it is the one narrowing that shares that panel.
+#
+# `page_size` is the list's own default, so a link cannot ask for a size
+# the rows-per-page control does not offer.
+LOOKUP_BOOK_QUERIES = {
+    "author": (
+        "mode=author&author={id}"
+        "&sort=title&direction=asc&page_size={size}"
+    ),
+    "category": (
+        "mode=category&category={id}"
+        "&sort=title&direction=asc&page_size={size}"
+    ),
+    "publisher": (
+        "mode=all&publisher={id}&availability="
+        "&sort=title&direction=asc&page_size={size}"
+    ),
+}
+
 # How many suggestions the searchable dropdowns (comboboxes) show at once.
 COMBOBOX_LIMIT = 20
 
@@ -266,18 +319,26 @@ def is_combobox_request(request):
 # OrganizationSettings, whose page is Admin-only — linking it would hand
 # other roles a 403.
 ACTIVITY_LOG_DETAIL_ROUTES = {
-    "Author": "author_detail",
     "Book": "book_detail",
     "BookContent": "book_content_detail",
     "BookCopy": "book_copy_detail",
     "BookVolume": "book_volume_detail",
     "Borrower": "borrower_detail",
-    "Category": "category_detail",
     "Loan": "loan_detail",
     "Location": "location_detail",
-    "Publisher": "publisher_detail",
     "Reservation": "book_detail",
     "Shelf": "shelf_detail",
+}
+
+
+# The three lookups have no page of their own: their name in the list opens
+# the book list filtered to them, and a log entry about one goes to the same
+# place. Kept apart from the routes above because that is a URL with a query
+# string, not a detail page with an id in the path.
+ACTIVITY_LOG_LOOKUP_KINDS = {
+    "Author": "author",
+    "Category": "category",
+    "Publisher": "publisher",
 }
 
 
@@ -294,6 +355,11 @@ def activity_log_target(log):
 
     if log.action == "DELETE":
         return ""
+
+    kind = ACTIVITY_LOG_LOOKUP_KINDS.get(log.entity_type)
+
+    if kind:
+        return lookup_books_url(kind, log.entity_id)
 
     route = ACTIVITY_LOG_DETAIL_ROUTES.get(log.entity_type)
 
@@ -465,6 +531,267 @@ def selected_name(model, pk):
     obj = model.objects.filter(id=pk).first()
 
     return obj.name if obj else ""
+
+
+def lookup_books_url(kind, record_id):
+    """The book list, already narrowed to one author, category or publisher.
+
+    The only place any of the three can be "opened", now that none of them
+    has a page of its own - so the list's rows, the dialogs and the
+    activity log all come through here and cannot point anywhere different
+    from each other.
+    """
+
+    return "%s?%s" % (
+        reverse("book_list"),
+        LOOKUP_BOOK_QUERIES[kind].format(id=record_id, size=PAGE_SIZE),
+    )
+
+
+def lookup_form_modal(
+    request, kind, action, error=None, name="", city=None, editing=False
+):
+    """The Add or Edit dialog for one lookup, whichever of the three it is.
+
+    One template behind all six: an author, a category and a publisher
+    differ by their label and, for the publisher, one extra field. `city`
+    is None for the two that have no such thing, which is what tells the
+    template not to draw it - as opposed to "" for a publisher whose city
+    is simply blank.
+
+    Re-rendered in place when validation fails, so the dialog stays open
+    with the message and whatever was typed.
+    """
+
+    return render(
+        request,
+        "library/partials/lookup_form_modal.html",
+        {
+            "kind": kind,
+            "label": LOOKUP_LABELS[kind],
+            "action": action,
+            "editing": editing,
+            "error": error,
+            "name": name,
+            "city": city or "",
+            "has_city": city is not None,
+        },
+    )
+
+
+def lookup_delete_modal(request, kind, action, name, blocker):
+    """The Delete confirmation for one lookup.
+
+    `blocker` set means the dialog explains why it cannot go and offers no
+    Delete button, rather than letting the click fail against the books
+    that are filed under it.
+    """
+
+    return render(
+        request,
+        "library/partials/lookup_delete_modal.html",
+        {
+            "kind": kind,
+            "label": LOOKUP_LABELS[kind],
+            "action": action,
+            "name": name,
+            "blocker": blocker,
+        },
+    )
+
+
+def lookup_delete_blocker(kind, record_id):
+    """Why this author, category or publisher cannot be deleted, or "".
+
+    All three are refused on the same ground: books are filed under it.
+    `books.author_id` is NO ACTION, so deleting there would abort the
+    statement and return a 500; category and publisher are SET NULL, so it
+    would silently strip the field from every book that had it. Neither
+    belongs behind a confirm button.
+
+    Archived books count. They still hold the foreign key, and they still
+    come back if the book is restored.
+    """
+
+    count = Book.objects.filter(**{"%s_id" % kind: record_id}).count()
+
+    if not count:
+        return ""
+
+    return (
+        "This %s cannot be deleted. %d book%s still filed under it - "
+        "change those books first."
+        % (
+            LOOKUP_LABELS[kind].lower(),
+            count,
+            " is" if count == 1 else "s are",
+        )
+    )
+
+
+def lookup_saved_response(name):
+    """Tell the page a lookup was saved, so it can close up and refresh.
+
+    No content, because the only two things that should change are the
+    dialog (which closes) and the list behind it (which re-requests
+    itself). app.js turns the event into both, and into a toast.
+    """
+
+    response = HttpResponse(status=204)
+
+    response["HX-Trigger"] = json.dumps({"recordSaved": {"name": name}})
+
+    return response
+
+
+def lookup_deleted_response(name):
+    """The same, for one that is gone."""
+
+    response = HttpResponse(status=204)
+
+    response["HX-Trigger"] = json.dumps({"recordDeleted": {"name": name}})
+
+    return response
+
+
+def lookup_book_counts(queryset):
+    """Each lookup row annotated with how many books are filed under it.
+
+    Archived books are left out, so the number agrees with what clicking
+    it opens: the book list shows the active catalogue unless `archived=1`
+    asks otherwise.
+
+    One aggregate over one reverse foreign key - no fan-out to undo with
+    .distinct() - so a page of rows costs the one query it already made,
+    whatever the catalogue holds.
+    """
+
+    return queryset.annotate(
+        book_count=models.Count(
+            "book",
+            filter=models.Q(book__archived_at__isnull=True),
+        ),
+    )
+
+
+def lookup_options(model, cache_key, search, matching):
+    """The suggestions a combobox over one of the lookup models offers.
+
+    Unchanged from what these three views have always done: a search is a
+    query, and the unsearched list is cached whole for five minutes. Every
+    Add/Edit Book page asks for one of these, they are small, and they
+    change rarely, so the cache earns its keep here.
+
+    Deliberately not used for the list page any more. Those rows now carry
+    a live count of the books filed under each one, and a five-minute-old
+    count is worse than no count at all.
+    """
+
+    if search:
+        return list(matching)
+
+    options = cache.get(cache_key)
+
+    if options is None:
+
+        options = list(model.objects.all())
+
+        cache.set(cache_key, options, timeout=300)
+
+    return options
+
+
+def lookup_table(request, queryset, kind):
+    """Sort, page and link one page of a lookup list.
+
+    Returns `(page, context)` - the page separately so each view can name
+    its own rows the way the rest of this project does (`authors`,
+    `categories`, `publishers`) rather than gaining a second name for the
+    same object.
+
+    Everything the three lists have in common lives here, built out of the
+    same utilities the book list uses: `resolve_sort` whitelists the sort
+    key, `sort_ordering` adds the tiebreaker that stops a row appearing on
+    two pages, `resolve_page_size` bounds the rows-per-page, and
+    `sortable_columns` turns the headers into links that carry the rest of
+    the table's state.
+    """
+
+    sort, direction = resolve_sort(
+        request,
+        LOOKUP_SORT_FIELDS,
+        LOOKUP_SORT_DEFAULT,
+    )
+
+    rows = lookup_book_counts(queryset).order_by(
+        *sort_ordering(LOOKUP_SORT_FIELDS, sort, direction)
+    )
+
+    page_size = resolve_page_size(request)
+
+    paginator = Paginator(rows, page_size)
+    page = paginator.get_page(request.GET.get("page"))
+
+    # The book list, already filtered to this row. Set on the objects of
+    # the one page being shown rather than worked out in the template, so
+    # the three pages cannot disagree about which parameters to send.
+    for row in page:
+        row.books_url = lookup_books_url(kind, row.id)
+
+    context = {
+        "paginator": paginator,
+        "columns": sortable_columns(
+            request,
+            [
+                ("name", LOOKUP_NAME_LABELS[kind]),
+                ("books", "Books"),
+            ],
+            LOOKUP_SORT_FIELDS,
+            sort,
+            direction,
+        ),
+        "sort": sort,
+        "direction": direction,
+        "page_size": page_size,
+        "page_size_options": page_size_options(page_size),
+        # Where the rows-per-page control sends its value. `sort` and
+        # `direction` are pinned rather than left to the query string so
+        # this is never a bare "?" - htmx appends to it, and appending to
+        # nothing produces "?&page_size=50" in the address bar. `page` goes
+        # so a size change returns to page 1, and `page_size` so the value
+        # the <select> sends is the only one in the query.
+        "page_size_url": "?" + query_with(
+            request,
+            sort=sort,
+            direction=direction,
+            page=None,
+            page_size=None,
+        ),
+        # Everything except `page`, so a paging link keeps the search, the
+        # sorting and the rows-per-page. The three are pinned for the same
+        # reason as above: they apply whether or not the URL says so, and a
+        # link that states them stays right when it is copied elsewhere.
+        "pagination_query": query_with(
+            request,
+            sort=sort,
+            direction=direction,
+            page_size=page_size,
+            page=None,
+        ),
+        "elided_page_range": list(
+            paginator.get_elided_page_range(
+                page.number,
+                on_each_side=1,
+                on_ends=1,
+            )
+        ),
+        "page_ellipsis": Paginator.ELLIPSIS,
+        # UI gating only: Add, Edit and Delete are enforced by
+        # `role_required` on the views behind them.
+        "can_edit": can_edit_library(request.user),
+    }
+
+    return page, context
 
 
 def describe_size_limit(limit):
@@ -2516,76 +2843,52 @@ def category_list(request):
 
     search = request.GET.get("search", "").strip()
 
+    categories = Category.objects.all()
+
     if search:
-        categories = list(
-            Category.objects.filter(
-                name__icontains=search
-            )
-        )
+        categories = categories.filter(name__icontains=search)
 
-    else:
-        categories = cache.get(CATEGORY_CACHE_KEY)
-
-        if categories is None:
-            categories = list(
-                Category.objects.all()
-            )
-
-            cache.set(
-                CATEGORY_CACHE_KEY,
-                categories,
-                timeout=300
-            )
-
+    # The searchable dropdowns on Add/Edit Book ask this view for their
+    # suggestions. Answered before the book counts and the paging: a
+    # suggestion list wants a name and an id, not a table.
     if is_combobox_request(request):
 
         return combobox_options_response(
             request,
-            items=categories,
+            items=lookup_options(
+                Category,
+                CATEGORY_CACHE_KEY,
+                search,
+                categories,
+            ),
             search=search,
             entity_label="category",
             add_url=reverse("category_add"),
         )
 
-    paginator = Paginator(categories, PAGE_SIZE)
-    categories = paginator.get_page(request.GET.get("page"))
+    page, context = lookup_table(request, categories, "category")
 
     return render(
         request,
         "library/category_list.html",
-        {
-            "categories": categories,
-            "search": search,
-        }
-    )
-
-def category_detail(request, category_id):
-
-    category = get_object_or_404(Category, id=category_id)
-
-    books = Book.objects.filter(
-        category=category
-    ).select_related(
-        "author",
-        "publisher",
-    ).order_by("title")
-
-    return render(
-        request,
-        "library/category_detail.html",
-        {
-            "category": category,
-            "books": books,
-        }
+        dict(context, categories=page, search=search),
     )
 
 #Category Add
 @role_required("Admin", "Librarian")
 def category_add(request):
+    """Add a category, in the list's dialog or from a book form's dropdown.
+
+    Two callers, and they want different answers. The dropdown posts a
+    name and wants the record back so it can select it; the dialog wants
+    the list to redraw behind it. Everything before that point is the
+    same.
+    """
 
     error = None
     name = ""
     from_combobox = is_combobox_request(request)
+    modal = is_form_modal_request(request)
 
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
@@ -2631,16 +2934,28 @@ def category_add(request):
 
                 return combobox_created_response("category", category)
 
+            if modal:
+                return lookup_saved_response(category.name)
+
             return redirect("category_list")
 
-    return render(
-        request,
-        "library/category_add.html",
-        {
-            "error": error,
-            "name": name,
-        }
-    )
+    if modal:
+        return lookup_form_modal(
+            request,
+            "category",
+            reverse("category_add"),
+            error=error,
+            name=name,
+        )
+
+    # There is no page of its own any more - the form is a dialog on the
+    # list. A request that arrives without one goes there, carrying
+    # whatever the validation had to say.
+    if error:
+        messages.error(request, error)
+
+    return redirect("category_list")
+
 
 #Category Edit
 @role_required("Admin", "Librarian")
@@ -2648,10 +2963,29 @@ def category_edit(request, category_id):
 
     category = get_object_or_404(Category, id=category_id)
 
+    modal = is_form_modal_request(request)
+    error = None
+    name = category.name
+
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
 
-        if name:
+        # Checked rather than left to the unique index. Renaming one
+        # category onto another's name used to reach the database and come
+        # back as a 500; the dialog can say so instead.
+        taken = Category.objects.filter(
+            name__iexact=name
+        ).exclude(id=category.id).exists()
+
+        if not name:
+
+            error = "Category name is required."
+
+        elif taken:
+
+            error = "A category with this name already exists."
+
+        else:
             category.name = name
             category.save()
 
@@ -2666,15 +3000,26 @@ def category_edit(request, category_id):
                 description=f"{category.name} updated",
             )
 
+            if modal:
+                return lookup_saved_response(category.name)
+
             return redirect("category_list")
 
-    return render(
-        request,
-        "library/category_edit.html",
-        {
-            "category": category
-        }
-    )
+    if modal:
+        return lookup_form_modal(
+            request,
+            "category",
+            reverse("category_edit", args=[category.id]),
+            error=error,
+            name=name,
+            editing=True,
+        )
+
+    if error:
+        messages.error(request, error)
+
+    return redirect("category_list")
+
 
 #Category Delete
 @role_required("Admin", "Librarian")
@@ -2682,22 +3027,10 @@ def category_delete(request, category_id):
 
     category = get_object_or_404(Category, id=category_id)
 
-    books_exist = Book.objects.filter(
-        category_id=category.id
-    ).exists()
+    modal = is_form_modal_request(request)
+    blocker = lookup_delete_blocker("category", category.id)
 
-    if request.method == "POST":
-
-        if books_exist:
-
-            return render(
-                request,
-                "library/category_delete.html",
-                {
-                    "category": category,
-                    "books_exist": True,
-                }
-            )
+    if request.method == "POST" and not blocker:
 
         deleted_category_id = category.id
         deleted_category_name = category.name
@@ -2715,92 +3048,77 @@ def category_delete(request, category_id):
             description=f"{deleted_category_name} deleted",
         )
 
+        if modal:
+            return lookup_deleted_response(deleted_category_name)
+
         return redirect("category_list")
 
-    return render(
-        request,
-        "library/category_delete.html",
-        {
-            "category": category,
-            "books_exist": books_exist,
-        }
-    )
+    if modal:
+        return lookup_delete_modal(
+            request,
+            "category",
+            reverse("category_delete", args=[category.id]),
+            category.name,
+            blocker,
+        )
+
+    if blocker:
+        messages.error(request, blocker)
+
+    return redirect("category_list")
+
 
 #Author View
 def author_list(request):
 
     search = request.GET.get("search", "").strip()
 
+    authors = Author.objects.all()
+
     if search:
-        authors = list(
-            Author.objects.filter(
-                name__icontains=search
-            )
-        )
+        authors = authors.filter(name__icontains=search)
 
-    else:
-        authors = cache.get(AUTHOR_CACHE_KEY)
-
-        if authors is None:
-            authors = list(
-                Author.objects.all()
-            )
-
-            cache.set(
-                AUTHOR_CACHE_KEY,
-                authors,
-                timeout=300
-            )
-
+    # The searchable dropdowns on Add/Edit Book ask this view for their
+    # suggestions. Answered before the book counts and the paging: a
+    # suggestion list wants a name and an id, not a table.
     if is_combobox_request(request):
 
         return combobox_options_response(
             request,
-            items=authors,
+            items=lookup_options(
+                Author,
+                AUTHOR_CACHE_KEY,
+                search,
+                authors,
+            ),
             search=search,
             entity_label="author",
             add_url=reverse("author_add"),
         )
 
-    paginator = Paginator(authors, PAGE_SIZE)
-    authors = paginator.get_page(request.GET.get("page"))
+    page, context = lookup_table(request, authors, "author")
 
     return render(
         request,
         "library/author_list.html",
-        {
-            "authors": authors,
-            "search": search,
-        }
-    )
-
-def author_detail(request, author_id):
-
-    author = get_object_or_404(Author, id=author_id)
-
-    books = Book.objects.filter(
-        author=author
-    ).select_related(
-        "category",
-        "publisher",
-    ).order_by("title")
-
-    return render(
-        request,
-        "library/author_detail.html",
-        {
-            "author": author,
-            "books": books,
-        }
+        dict(context, authors=page, search=search),
     )
 
 #Author Add
 @role_required("Admin", "Librarian")
 def author_add(request):
+    """Add an author, in the list's dialog or from a book form's dropdown.
+
+    Two callers, and they want different answers. The dropdown posts a
+    name and wants the record back so it can select it; the dialog wants
+    the list to redraw behind it. Everything before that point is the
+    same.
+    """
 
     error = None
     name = ""
     from_combobox = is_combobox_request(request)
+    modal = is_form_modal_request(request)
 
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
@@ -2842,16 +3160,28 @@ def author_add(request):
 
                 return combobox_created_response("author", author)
 
+            if modal:
+                return lookup_saved_response(author.name)
+
             return redirect("author_list")
 
-    return render(
-        request,
-        "library/author_add.html",
-        {
-            "error": error,
-            "name": name,
-        }
-    )
+    if modal:
+        return lookup_form_modal(
+            request,
+            "author",
+            reverse("author_add"),
+            error=error,
+            name=name,
+        )
+
+    # There is no page of its own any more - the form is a dialog on the
+    # list. A request that arrives without one goes there, carrying
+    # whatever the validation had to say.
+    if error:
+        messages.error(request, error)
+
+    return redirect("author_list")
+
 
 #Author Edit
 @role_required("Admin", "Librarian")
@@ -2859,10 +3189,29 @@ def author_edit(request, author_id):
 
     author = get_object_or_404(Author, id=author_id)
 
+    modal = is_form_modal_request(request)
+    error = None
+    name = author.name
+
     if request.method == "POST":
         name = request.POST.get("name", "").strip()
 
-        if name:
+        # Checked rather than left to the unique index. Renaming one
+        # author onto another's name used to reach the database and come
+        # back as a 500; the dialog can say so instead.
+        taken = Author.objects.filter(
+            name__iexact=name
+        ).exclude(id=author.id).exists()
+
+        if not name:
+
+            error = "Author name is required."
+
+        elif taken:
+
+            error = "An author with this name already exists."
+
+        else:
             author.name = name
             author.save()
 
@@ -2877,15 +3226,26 @@ def author_edit(request, author_id):
                 description=f"{author.name} updated",
             )
 
+            if modal:
+                return lookup_saved_response(author.name)
+
             return redirect("author_list")
 
-    return render(
-        request,
-        "library/author_edit.html",
-        {
-            "author": author
-        }
-    )
+    if modal:
+        return lookup_form_modal(
+            request,
+            "author",
+            reverse("author_edit", args=[author.id]),
+            error=error,
+            name=name,
+            editing=True,
+        )
+
+    if error:
+        messages.error(request, error)
+
+    return redirect("author_list")
+
 
 #Author Delete
 @role_required("Admin", "Librarian")
@@ -2893,22 +3253,10 @@ def author_delete(request, author_id):
 
     author = get_object_or_404(Author, id=author_id)
 
-    books_exist = Book.objects.filter(
-        author_id=author.id
-    ).exists()
+    modal = is_form_modal_request(request)
+    blocker = lookup_delete_blocker("author", author.id)
 
-    if request.method == "POST":
-
-        if books_exist:
-
-            return render(
-                request,
-                "library/author_delete.html",
-                {
-                    "author": author,
-                    "books_exist": True,
-                }
-            )
+    if request.method == "POST" and not blocker:
 
         deleted_author_id = author.id
         deleted_author_name = author.name
@@ -2926,285 +3274,220 @@ def author_delete(request, author_id):
             description=f"{deleted_author_name} deleted",
         )
 
+        if modal:
+            return lookup_deleted_response(deleted_author_name)
+
         return redirect("author_list")
 
-    return render(
-        request,
-        "library/author_delete.html",
-        {
-            "author": author,
-            "books_exist": books_exist,
-        }
-    )
+    if modal:
+        return lookup_delete_modal(
+            request,
+            "author",
+            reverse("author_delete", args=[author.id]),
+            author.name,
+            blocker,
+        )
+
+    if blocker:
+        messages.error(request, blocker)
+
+    return redirect("author_list")
+
 
 #Publisher View
 def publisher_list(request):
 
     search = request.GET.get("search", "").strip()
 
+    publishers = Publisher.objects.all()
+
     if search:
-        publishers = list(
-            Publisher.objects.filter(
-                models.Q(name__icontains=search)
-                | models.Q(city__icontains=search)
-            )
+        # City as well as name, which is what this page has always
+        # searched: a publisher is often remembered by where it is.
+        publishers = publishers.filter(
+            models.Q(name__icontains=search)
+            | models.Q(city__icontains=search)
         )
 
-    else:
-        publishers = cache.get(PUBLISHER_CACHE_KEY)
-
-        if publishers is None:
-            publishers = list(
-                Publisher.objects.all()
-            )
-
-            cache.set(
-                PUBLISHER_CACHE_KEY,
-                publishers,
-                timeout=300
-            )
-
+    # The searchable dropdowns on Add/Edit Book ask this view for their
+    # suggestions. Answered before the book counts and the paging: a
+    # suggestion list wants a name and an id, not a table.
     if is_combobox_request(request):
 
         return combobox_options_response(
             request,
-            items=publishers,
+            items=lookup_options(
+                Publisher,
+                PUBLISHER_CACHE_KEY,
+                search,
+                publishers,
+            ),
             search=search,
             entity_label="publisher",
             add_url=reverse("publisher_add"),
         )
 
-    paginator = Paginator(publishers, PAGE_SIZE)
-    publishers = paginator.get_page(request.GET.get("page"))
+    page, context = lookup_table(request, publishers, "publisher")
 
     return render(
         request,
         "library/publisher_list.html",
-        {
-            "publishers": publishers,
-            "search": search,
-        }
-    )
-
-def publisher_detail(request, publisher_id):
-
-    publisher = get_object_or_404(Publisher, id=publisher_id)
-
-    books = Book.objects.filter(
-        publisher=publisher
-    ).select_related(
-        "author",
-        "category",
-    ).order_by("title")
-
-    return render(
-        request,
-        "library/publisher_detail.html",
-        {
-            "publisher": publisher,
-            "books": books,
-        }
+        dict(context, publishers=page, search=search),
     )
 
 #Publisher Add
 @role_required("Admin", "Librarian")
 def publisher_add(request):
+    """Add a publisher, in the list's dialog or from a book form's dropdown.
 
-    form_data = {}
+    The one lookup with a second field. The dropdown can only send a name,
+    so a publisher created that way has no city until somebody edits it.
+    """
+
     from_combobox = is_combobox_request(request)
+    modal = is_form_modal_request(request)
 
-    def render_form(error, form_data):
-        return render(
-            request,
-            "library/publisher_add.html",
-            {
-                "error": error,
-                "form_data": form_data,
-            }
-        )
+    error = None
+    name = ""
+    city = ""
 
     if request.method == "POST":
 
-        name = request.POST.get(
-            "name",
-            ""
-        ).strip()
+        name = request.POST.get("name", "").strip()
+        city = request.POST.get("city", "").strip()
 
-        city = request.POST.get(
-            "city",
-            ""
-        ).strip()
-
-        form_data = {
-            "name": name,
-            "city": city,
-        }
+        duplicate = (
+            Publisher.objects.filter(name__iexact=name).first()
+            if name
+            else None
+        )
 
         if not name:
 
-            return render_form(
-                "Publisher name is required.",
-                form_data,
-            )
+            error = "Publisher name is required."
 
-        duplicate = Publisher.objects.filter(
-            name__iexact=name
-        ).first()
-
-        if duplicate is not None:
+        elif duplicate is not None:
 
             if from_combobox:
 
-                return combobox_created_response(
-                    "publisher",
-                    duplicate,
-                )
+                return combobox_created_response("publisher", duplicate)
 
-            return render_form(
-                (
-                    "A publisher with this name "
-                    "already exists."
-                ),
-                form_data,
+            error = "A publisher with this name already exists."
+
+        else:
+
+            publisher = Publisher.objects.create(
+                name=name,
+                city=city or None,
             )
 
-        publisher = Publisher.objects.create(
+            cache.delete(PUBLISHER_CACHE_KEY)
+            cache.delete(DASHBOARD_CACHE_KEY)
+
+            create_activity_log(
+                user=None,
+                action="CREATE",
+                entity_type="Publisher",
+                entity_id=publisher.id,
+                description=f"{publisher.name} شامل کیا گیا",
+            )
+
+            if from_combobox:
+
+                return combobox_created_response("publisher", publisher)
+
+            if modal:
+                return lookup_saved_response(publisher.name)
+
+            return redirect("publisher_list")
+
+    if modal:
+        return lookup_form_modal(
+            request,
+            "publisher",
+            reverse("publisher_add"),
+            error=error,
             name=name,
-            city=city or None,
+            city=city,
         )
 
-        cache.delete(
-            PUBLISHER_CACHE_KEY
-        )
+    # There is no page of its own any more - the form is a dialog on the
+    # list. A request that arrives without one goes there, carrying
+    # whatever the validation had to say.
+    if error:
+        messages.error(request, error)
 
-        cache.delete(
-            DASHBOARD_CACHE_KEY
-        )
+    return redirect("publisher_list")
 
-        create_activity_log(
-            user=None,
-            action="CREATE",
-            entity_type="Publisher",
-            entity_id=publisher.id,
-            description=(
-                f"{publisher.name} شامل کیا گیا"
-            ),
-        )
-
-        if from_combobox:
-
-            return combobox_created_response(
-                "publisher",
-                publisher,
-            )
-
-        return redirect(
-            "publisher_list"
-        )
-
-    return render_form(None, form_data)
 
 #Publisher Edit
 @role_required("Admin", "Librarian")
 def publisher_edit(request, publisher_id):
 
-    publisher = get_object_or_404(
-        Publisher,
-        id=publisher_id
-    )
+    publisher = get_object_or_404(Publisher, id=publisher_id)
 
-    form_data = {
-        "name": publisher.name,
-        "city": publisher.city or "",
-    }
+    modal = is_form_modal_request(request)
+
+    error = None
+    name = publisher.name
+    city = publisher.city or ""
 
     if request.method == "POST":
 
-        name = request.POST.get(
-            "name",
-            ""
-        ).strip()
+        name = request.POST.get("name", "").strip()
+        city = request.POST.get("city", "").strip()
 
-        city = request.POST.get(
-            "city",
-            ""
-        ).strip()
-
-        form_data = {
-            "name": name,
-            "city": city,
-        }
+        taken = Publisher.objects.filter(
+            name__iexact=name
+        ).exclude(id=publisher.id).exists()
 
         if not name:
 
-            return render(
-                request,
-                "library/publisher_edit.html",
-                {
-                    "publisher": publisher,
-                    "error": (
-                        "Publisher name is required."
-                    ),
-                    "form_data": form_data,
-                }
+            error = "Publisher name is required."
+
+        elif taken:
+
+            error = "A publisher with this name already exists."
+
+        else:
+
+            publisher.name = name
+            publisher.city = city or None
+
+            publisher.save()
+
+            cache.delete(PUBLISHER_CACHE_KEY)
+            cache.delete(DASHBOARD_CACHE_KEY)
+
+            create_activity_log(
+                user=None,
+                action="UPDATE",
+                entity_type="Publisher",
+                entity_id=publisher.id,
+                description=f"{publisher.name} updated",
             )
 
-        duplicate_exists = Publisher.objects.filter(
-            name__iexact=name
-        ).exclude(
-            id=publisher.id
-        ).exists()
+            if modal:
+                return lookup_saved_response(publisher.name)
 
-        if duplicate_exists:
+            return redirect("publisher_list")
 
-            return render(
-                request,
-                "library/publisher_edit.html",
-                {
-                    "publisher": publisher,
-                    "error": (
-                        "A publisher with this name "
-                        "already exists."
-                    ),
-                    "form_data": form_data,
-                }
-            )
-
-        publisher.name = name
-        publisher.city = city or None
-
-        publisher.save()
-
-        cache.delete(
-            PUBLISHER_CACHE_KEY
+    if modal:
+        return lookup_form_modal(
+            request,
+            "publisher",
+            reverse("publisher_edit", args=[publisher.id]),
+            error=error,
+            name=name,
+            city=city,
+            editing=True,
         )
 
-        cache.delete(
-            DASHBOARD_CACHE_KEY
-        )
+    if error:
+        messages.error(request, error)
 
-        create_activity_log(
-            user=None,
-            action="UPDATE",
-            entity_type="Publisher",
-            entity_id=publisher.id,
-            description=(
-                f"{publisher.name} updated"
-            ),
-        )
+    return redirect("publisher_list")
 
-        return redirect(
-            "publisher_list"
-        )
-
-    return render(
-        request,
-        "library/publisher_edit.html",
-        {
-            "publisher": publisher,
-            "form_data": form_data,
-        }
-    )
 
 #Publisher Delete
 @role_required("Admin", "Librarian")
@@ -3212,22 +3495,10 @@ def publisher_delete(request, publisher_id):
 
     publisher = get_object_or_404(Publisher, id=publisher_id)
 
-    books_exist = Book.objects.filter(
-        publisher_id=publisher.id
-    ).exists()
+    modal = is_form_modal_request(request)
+    blocker = lookup_delete_blocker("publisher", publisher.id)
 
-    if request.method == "POST":
-
-        if books_exist:
-
-            return render(
-                request,
-                "library/publisher_delete.html",
-                {
-                    "publisher": publisher,
-                    "books_exist": True,
-                }
-            )
+    if request.method == "POST" and not blocker:
 
         deleted_publisher_id = publisher.id
         deleted_publisher_name = publisher.name
@@ -3245,16 +3516,25 @@ def publisher_delete(request, publisher_id):
             description=f"{deleted_publisher_name} deleted",
         )
 
+        if modal:
+            return lookup_deleted_response(deleted_publisher_name)
+
         return redirect("publisher_list")
 
-    return render(
-        request,
-        "library/publisher_delete.html",
-        {
-            "publisher": publisher,
-            "books_exist": books_exist,
-        }
-    )
+    if modal:
+        return lookup_delete_modal(
+            request,
+            "publisher",
+            reverse("publisher_delete", args=[publisher.id]),
+            publisher.name,
+            blocker,
+        )
+
+    if blocker:
+        messages.error(request, blocker)
+
+    return redirect("publisher_list")
+
 
 #Location View
 def location_list(request):

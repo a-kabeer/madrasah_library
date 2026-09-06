@@ -14,77 +14,51 @@ urlpatterns = [
         name="branding_settings",
     ),
     path("", views.library_home, name="library_home"),
+    # The three lookups: a list, and three endpoints that answer with a
+    # dialog. None of them has a detail page - a name in the list opens the
+    # book list filtered to it, which is the only thing such a page ever
+    # showed.
+    #
+    # The add routes are also what the searchable dropdowns on the book
+    # forms post a new name to, which is why they are not addressed by id.
     path("categories/", views.category_list, name="category_list"),
     path("categories/add/", views.category_add, name="category_add"),
     path(
-    "categories/<int:category_id>/",
-    views.category_detail,
-    name="category_detail",
-),
+        "categories/<int:category_id>/edit/",
+        views.category_edit,
+        name="category_edit",
+    ),
     path(
-    "categories/<int:category_id>/edit/",
-    views.category_edit,
-    name="category_edit",
-),
-    path(
-    "categories/<int:category_id>/delete/",
-    views.category_delete,
-    name="category_delete",
-),
+        "categories/<int:category_id>/delete/",
+        views.category_delete,
+        name="category_delete",
+    ),
+
     path("authors/", views.author_list, name="author_list"),
+    path("authors/add/", views.author_add, name="author_add"),
+    path(
+        "authors/<int:author_id>/edit/",
+        views.author_edit,
+        name="author_edit",
+    ),
+    path(
+        "authors/<int:author_id>/delete/",
+        views.author_delete,
+        name="author_delete",
+    ),
 
+    path("publishers/", views.publisher_list, name="publisher_list"),
+    path("publishers/add/", views.publisher_add, name="publisher_add"),
     path(
-    "authors/add/",
-    views.author_add,
-    name="author_add",
-),
-
+        "publishers/<int:publisher_id>/edit/",
+        views.publisher_edit,
+        name="publisher_edit",
+    ),
     path(
-    "authors/<int:author_id>/",
-    views.author_detail,
-    name="author_detail",
-),
-
-    path(
-    "authors/<int:author_id>/edit/",
-    views.author_edit,
-    name="author_edit",
-),
-
-    path(
-    "authors/<int:author_id>/delete/",
-    views.author_delete,
-    name="author_delete",
-),
-    path(
-    "publishers/",
-    views.publisher_list,
-    name="publisher_list",
-),
-
-    path(
-    "publishers/add/",
-    views.publisher_add,
-    name="publisher_add",
-),
-
-    path(
-    "publishers/<int:publisher_id>/",
-    views.publisher_detail,
-    name="publisher_detail",
-),
-
-    path(
-    "publishers/<int:publisher_id>/edit/",
-    views.publisher_edit,
-    name="publisher_edit",
-),
-
-    path(
-    "publishers/<int:publisher_id>/delete/",
-    views.publisher_delete,
-    name="publisher_delete",
-),
+        "publishers/<int:publisher_id>/delete/",
+        views.publisher_delete,
+        name="publisher_delete",
+    ),
     path(
     "locations/",
     views.location_list,

@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from library.models import ActivityLog
-from library.views import activity_log_target
+from library.views import activity_log_target, lookup_books_url
 
 from .helpers import (
     make_book,
@@ -38,16 +38,13 @@ class ActivityLogTargetTests(TestCase):
 
     def test_entities_with_a_detail_page_are_linked(self):
         expected = {
-            "Author": "author_detail",
             "Book": "book_detail",
             "BookContent": "book_content_detail",
             "BookCopy": "book_copy_detail",
             "BookVolume": "book_volume_detail",
             "Borrower": "borrower_detail",
-            "Category": "category_detail",
             "Loan": "loan_detail",
             "Location": "location_detail",
-            "Publisher": "publisher_detail",
             "Shelf": "shelf_detail",
         }
 
@@ -58,6 +55,21 @@ class ActivityLogTargetTests(TestCase):
                 self.assertEqual(
                     activity_log_target(log),
                     reverse(route, args=[7]),
+                )
+
+    def test_the_three_lookups_point_at_their_books_instead(self):
+        # None of them has a page of its own any more. Their name in the
+        # list opens the book list filtered to them, and so does this.
+        for entity_type, kind in (
+            ("Author", "author"),
+            ("Category", "category"),
+            ("Publisher", "publisher"),
+        ):
+            with self.subTest(entity_type=entity_type):
+                log = make_log(entity_type=entity_type, entity_id=7)
+
+                self.assertEqual(
+                    activity_log_target(log), lookup_books_url(kind, 7)
                 )
 
     def test_deletions_are_not_linked(self):
@@ -148,7 +160,7 @@ class DashboardRecentActivityTests(TestCase):
 
         self.assertEqual(
             targets["Category"],
-            reverse("category_detail", args=[category.id]),
+            lookup_books_url("category", category.id),
         )
         self.assertEqual(targets["Book"], "")
 

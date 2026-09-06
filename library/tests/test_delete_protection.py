@@ -16,15 +16,19 @@ class DeleteProtectionTests(TestCase):
         self.admin = make_user(username="admin_u", password="pass12345", role="Admin")
         self.client.login(username="admin_u", password="pass12345")
 
+    # Authors, categories and publishers confirm in a dialog now, so a
+    # plain POST to one of them has no page to answer with: it says why on
+    # the list instead. `follow=True` is what reads that message. What is
+    # being tested either way is that the record survives.
+
     def test_category_delete_blocked_when_books_exist(self):
         category = make_category()
         make_book(category=category)
 
         response = self.client.post(
-            reverse("category_delete", args=[category.id])
+            reverse("category_delete", args=[category.id]), follow=True
         )
 
-        self.assertEqual(response.status_code, 200)
         self.assertContains(response, "cannot be deleted")
         self.assertTrue(Category.objects.filter(id=category.id).exists())
 
@@ -42,9 +46,10 @@ class DeleteProtectionTests(TestCase):
         author = make_author()
         make_book(author=author)
 
-        response = self.client.post(reverse("author_delete", args=[author.id]))
+        response = self.client.post(
+            reverse("author_delete", args=[author.id]), follow=True
+        )
 
-        self.assertEqual(response.status_code, 200)
         self.assertContains(response, "cannot be deleted")
         self.assertTrue(Author.objects.filter(id=author.id).exists())
 
@@ -52,9 +57,10 @@ class DeleteProtectionTests(TestCase):
         publisher = make_publisher()
         make_book(publisher=publisher)
 
-        response = self.client.post(reverse("publisher_delete", args=[publisher.id]))
+        response = self.client.post(
+            reverse("publisher_delete", args=[publisher.id]), follow=True
+        )
 
-        self.assertEqual(response.status_code, 200)
         self.assertContains(response, "cannot be deleted")
         self.assertTrue(Publisher.objects.filter(id=publisher.id).exists())
 

@@ -1,0 +1,91 @@
+{% comment %}
+Delete confirmation for an author, a category or a publisher, served into
+#formModal.
+
+`blocker` is set when books are still filed under it. The dialog then says
+so and offers no Delete button at all, rather than letting the click fail
+against the foreign keys — or, for a category or publisher, succeed and
+quietly strip the field from every book that had it. See
+`lookup_delete_blocker`.
+
+The confirm posts and swaps this body, so a blocker that appeared in the
+meantime — somebody else filing a book under this name a moment ago —
+replaces the button with the explanation instead of throwing an error.
+A successful post answers with no content and an event, which closes the
+dialog and redraws the list. See `lookup_deleted_response`.
+
+Expected context: kind, label, action, name, blocker.
+{% endcomment %}
+
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>Delete {{ label }}?
+</h5>
+
+<div id="lookupDeleteBody">
+
+    {% if blocker %}
+
+        <div class="alert alert-warning d-flex align-items-start" role="alert">
+            <i class="bi bi-shield-exclamation me-2 mt-1" aria-hidden="true"></i>
+            <div>{{ blocker }}</div>
+        </div>
+
+        <p class="text-body-secondary mb-0">
+            <strong class="text-body">{{ name }}</strong> stays as it is.
+        </p>
+
+        <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
+            <button
+                type="button"
+                class="btn btn-outline-secondary ms-auto"
+                data-bs-dismiss="modal"
+            >
+                Close
+            </button>
+        </div>
+
+    {% else %}
+
+        <p class="mb-2">You are about to delete:</p>
+
+        <p class="fs-5 fw-semibold mb-3">{{ name }}</p>
+
+        <p class="text-body-secondary">
+            No books are filed under it, so nothing in the catalogue
+            changes.
+        </p>
+
+        <p class="text-danger small mb-0">
+            <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+            This cannot be undone.
+        </p>
+
+        <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
+
+            <form
+                hx-post="{{ action }}?modal=1"
+                hx-target="#lookupDeleteBody"
+                hx-swap="outerHTML"
+                hx-disabled-elt="find button[type=submit]"
+                hx-disinherit="*"
+                class="d-inline"
+            >
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash me-1" aria-hidden="true"></i> Delete
+                </button>
+            </form>
+
+            <button
+                type="button"
+                class="btn btn-outline-secondary ms-auto"
+                data-bs-dismiss="modal"
+            >
+                Cancel
+            </button>
+
+        </div>
+
+    {% endif %}
+
+</div>

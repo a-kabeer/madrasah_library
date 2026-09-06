@@ -2148,10 +2148,13 @@ document.addEventListener(
 
 
             function refreshList() {
-                /* #bookListRefresh listens for this and re-requests the
-                   results for whatever the list is currently showing. */
+                /* Whichever list is on screen listens for this and
+                   re-requests itself, keeping the search, filters, sorting
+                   and page it is currently showing. One signal rather than
+                   one per list: the dialogs do not know, and should not
+                   need to know, what they were opened from. */
                 document.body.dispatchEvent(
-                    new CustomEvent("bookListChanged", { bubbles: true })
+                    new CustomEvent("listChanged", { bubbles: true })
                 );
             }
 
@@ -2183,6 +2186,38 @@ document.addEventListener(
                 refreshList();
                 window.showToast(
                     (detail.title ? '"' + detail.title + '"' : "The book")
+                    + " was deleted.",
+                    "danger"
+                );
+            });
+
+
+            /* The same two answers for an author, a category or a
+               publisher. They say "record" rather than naming the three,
+               because the dialog that saved one is shared between them and
+               the name in the event is the only part that differs. */
+
+            document.body.addEventListener("recordSaved", function (e) {
+
+                var detail = (e.detail && e.detail.value) || e.detail || {};
+
+                closeFormModal();
+                refreshList();
+                window.showToast(
+                    (detail.name ? '"' + detail.name + '"' : "It")
+                    + " was saved."
+                );
+            });
+
+
+            document.body.addEventListener("recordDeleted", function (e) {
+
+                var detail = (e.detail && e.detail.value) || e.detail || {};
+
+                closeFormModal();
+                refreshList();
+                window.showToast(
+                    (detail.name ? '"' + detail.name + '"' : "It")
                     + " was deleted.",
                     "danger"
                 );
