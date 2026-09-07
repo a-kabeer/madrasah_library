@@ -6,14 +6,14 @@
 {% endblock %}
 
 {% block page_title %}
-    Suggestion
+    {% translate "Suggestion" %}
 {% endblock %}
 
 {% block breadcrumbs %}
     <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
-                <a href="{% url 'suggestion_list' %}">Suggestions</a>
+                <a href="{% url 'suggestion_list' %}">{% translate "Suggestions" %}</a>
             </li>
             <li class="breadcrumb-item active" aria-current="page">
                 {{ suggestion.title }}
@@ -66,7 +66,7 @@
                                 {{ suggestion.suggested_by.full_name }}
                             {% else %}
                                 <span class="text-body-secondary">
-                                    account removed
+                                    {% translate "account removed" %}
                                 </span>
                             {% endif %}
                         </dd>
@@ -90,7 +90,7 @@
                                     {{ suggestion.reviewed_by.full_name }}
                                 {% else %}
                                     <span class="text-body-secondary">
-                                        account removed
+                                        {% translate "account removed" %}
                                     </span>
                                 {% endif %}
                             </dd>
@@ -132,7 +132,7 @@
                             <input type="hidden" name="status" value="Approved">
                             <button type="submit" class="btn btn-success">
                                 <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
-                                Approve
+                                {% translate "Approve" %}
                             </button>
                         </form>
 
@@ -142,7 +142,7 @@
                             <input type="hidden" name="status" value="Rejected">
                             <button type="submit" class="btn btn-outline-danger">
                                 <i class="bi bi-x-lg me-1" aria-hidden="true"></i>
-                                Reject
+                                {% translate "Reject" %}
                             </button>
                         </form>
 
@@ -178,10 +178,7 @@
                         {% endcomment %}
                         {% if can_catalogue %}
                             <p class="text-body-secondary">
-                                {% translate "Opens the ordinary Add Book form with what
-                                is known filled in. Nothing is added until
-                                you save it there, and the usual checks
-                                still apply." %}
+                                {% translate "Opens the ordinary Add Book form with what is known filled in. Nothing is added until you save it there, and the usual checks still apply." %}
                             </p>
 
                             <div class="d-flex flex-wrap gap-2">
@@ -190,7 +187,7 @@
                                     class="btn btn-primary"
                                 >
                                     <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
-                                    Add to catalogue
+                                    {% translate "Add to catalogue" %}
                                 </a>
 
                                 {% if can_review %}
@@ -213,8 +210,7 @@
                             </div>
                         {% else %}
                             <p class="text-body-secondary mb-0">
-                                {% translate "Approved. Adding it to the catalogue is a
-                                librarian's job." %}
+                                {% translate "Approved. Adding it to the catalogue is a librarian's job." %}
                             </p>
                         {% endif %}
 
@@ -226,15 +222,17 @@
             {% if suggestion.is_closed %}
                 <p class="text-body-secondary small">
                     <i class="bi bi-lock me-1" aria-hidden="true"></i>
-                    This suggestion is finished and cannot be changed. If it
-                    should be looked at again, suggest it afresh.
+                    {% blocktranslate trimmed %}
+                        This suggestion is finished and cannot be changed. If it
+                        should be looked at again, suggest it afresh.
+                    {% endblocktranslate %}
                 </p>
             {% endif %}
 
 
             <a href="{% url 'suggestion_list' %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>
-                Back to suggestions
+                {% translate "Back to suggestions" %}
             </a>
 
         </div>

@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 One brand colour: a native colour picker paired with a hex text field.
 
@@ -47,7 +48,9 @@ Expected context:
     </div>
 
     <div class="form-text">
-        {{ help_text }} Blank uses {{ fallback }}.
-    </div>
+                               {% blocktranslate trimmed %}
+                                   {{ help_text }} Blank uses {{ fallback }}.
+                               {% endblocktranslate %}
+                           </div>
 
 </div>

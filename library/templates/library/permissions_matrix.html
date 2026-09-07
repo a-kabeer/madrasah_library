@@ -11,11 +11,11 @@
 {% endcomment %}
 
 {% block title %}
-    Menu Permissions | {{ branding.display_name }}
+{% translate "Menu Permissions" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Menu Permissions
+    {% translate "Menu Permissions" %}
 {% endblock %}
 
 {% block content %}
@@ -27,9 +27,11 @@
         <div>
             <h2 class="fw-bold mb-1">{% translate "Menu Permissions" %}</h2>
             <p class="text-body-secondary mb-0">
-                Which parts of the library each role can see and open.
-                Switching one off hides the menu entry <em>and</em> refuses
-                the address.
+                {% translate "Which parts of the library each role can see and open." %}
+                {% blocktranslate trimmed %}
+                    Switching one off hides the menu entry <em>and</em>
+                    refuses the address.
+                {% endblocktranslate %}
             </p>
         </div>
     </div>
@@ -41,22 +43,22 @@
     <div class="alert alert-info d-flex align-items-start gap-2" role="alert">
         <i class="bi bi-info-circle-fill mt-1" aria-hidden="true"></i>
         <div>
-            <strong>Some cells cannot be changed.</strong>
+            <strong>{% translate "Some cells cannot be changed." %}</strong>
             <ul class="mb-0 mt-2 small">
                 <li>
-                    {% translate "A dash means the code never allows it — Users, Branding
-                    and this page are Admin-only whatever is ticked here." %}
+                    {% translate "A dash means the code never allows it — Users, Branding and this page are Admin-only whatever is ticked here." %}
                 </li>
                 <li>
-                    {% translate "The Dashboard is always on: somebody signed in with no
-                    dashboard has nowhere to land." %}
+                    {% translate "The Dashboard is always on: somebody signed in with no dashboard has nowhere to land." %}
                 </li>
                 {% if not is_super_admin %}
                     <li>
-                        Your own column (<strong>{{ editor_role }}</strong>)
-                        is read-only. Changing it could lock you out of this
-                        page.
-                    </li>
+                            {% blocktranslate trimmed %}
+                                Your own column (<strong>{{ editor_role }}</strong>)
+                                is read-only. Changing it could lock you out of this
+                                page.
+                            {% endblocktranslate %}
+                        </li>
                 {% endif %}
             </ul>
         </div>
@@ -97,7 +99,7 @@
                                         {{ row.label }}
                                         {% if row.locked %}
                                             <span class="badge text-bg-secondary ms-2">
-                                                always on
+                                                {% translate "always on" %}
                                             </span>
                                         {% endif %}
                                     </td>
@@ -159,10 +161,10 @@
         <div class="d-flex flex-wrap gap-2 mb-4">
             <button type="submit" class="btn btn-primary">
                 <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
-                Save Permissions
+                {% translate "Save Permissions" %}
             </button>
             <a href="{% url 'permissions_matrix' %}" class="btn btn-outline-secondary">
-                Reset
+                {% translate "Reset" %}
             </a>
         </div>
 

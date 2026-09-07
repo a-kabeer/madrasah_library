@@ -1,9 +1,9 @@
 {% extends layout %}
 {% load i18n %}
 
-{% block title %}Return Book | {{ branding.display_name }}{% endblock %}
+{% block title %}{% translate "Return Book" %} | {{ branding.display_name }}{% endblock %}
 
-{% block page_title %}Return Book{% endblock %}
+{% block page_title %}{% translate "Return Book" %}{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-0">
@@ -11,8 +11,8 @@
     <div class="mb-4">
         <nav aria-label="{% translate 'breadcrumb' %}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{% url 'circulation_dashboard' %}">Circulation</a></li>
-                <li class="breadcrumb-item"><a href="{% url 'loan_list' %}">Loans</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'circulation_dashboard' %}">{% translate "Circulation" %}</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'loan_list' %}">{% translate "Loans" %}</a></li>
                 <li class="breadcrumb-item active">{% translate "Return" %}</li>
             </ol>
         </nav>
@@ -24,10 +24,14 @@
 
             {% if loan.return_date %}
             <div class="alert alert-info" role="alert">
-                <strong>This book has already been returned.</strong>
-                <p class="mb-0 mt-2">Return Date: {{ loan.return_date }}</p>
+                <strong>{% translate "This book has already been returned." %}</strong>
+                <p class="mb-0 mt-2">
+                                         {% blocktranslate trimmed with return_date=loan.return_date %}
+                                             Return Date: {{ return_date }}
+                                         {% endblocktranslate %}
+                                     </p>
             </div>
-            <a href="{% url 'loan_list' %}" class="btn btn-outline-secondary">Back to Loans</a>
+            <a href="{% url 'loan_list' %}" class="btn btn-outline-secondary">{% translate "Back to Loans" %}</a>
             {% else %}
 
             {% comment %}
@@ -41,16 +45,20 @@
                     <i class="bi bi-bookmark-star mt-1" aria-hidden="true"></i>
                     <div>
                         <strong>
-                            {{ waiting_count }}
-                            {% if waiting_count == 1 %}person is{% else %}people are{% endif %}
-                            waiting for this book.
+                            {% blocktranslate trimmed count n=waiting_count %}
+                                {{ n }} person is waiting for this book.
+                            {% plural %}
+                                {{ n }} people are waiting for this book.
+                            {% endblocktranslate %}
                         </strong>
                         <span class="d-block small">
-                            {{ waiting_front.borrower.name }} asked first, on
-                            {{ waiting_front.created_at|date:"j M Y" }}. This
-                            copy is not being set aside for them — take the
-                            book back as usual and issue it when they come in.
-                        </span>
+                                                        {% blocktranslate trimmed with name=waiting_front.borrower.name created_at=waiting_front.created_at|date:"j M Y" %}
+                                                            {{ name }} asked first, on
+                                                            {{ created_at }}. This
+                                                            copy is not being set aside for them — take the
+                                                            book back as usual and issue it when they come in.
+                                                        {% endblocktranslate %}
+                                                    </span>
                     </div>
                 </div>
             {% endif %}
@@ -84,7 +92,13 @@
                         <div class="col-sm-8">
                             {{ loan.due_date }}
                             {% if loan.days_overdue > 0 %}
-                                <span class="badge bg-danger ms-2">Overdue by {{ loan.days_overdue }} day{{ loan.days_overdue|pluralize }}</span>
+                                <span class="badge bg-danger ms-2">
+                                    {% blocktranslate trimmed count n=loan.days_overdue %}
+                                        Overdue by {{ n }} day
+                                    {% plural %}
+                                        Overdue by {{ n }} days
+                                    {% endblocktranslate %}
+                                </span>
                             {% endif %}
                         </div>
                     </div>
@@ -119,7 +133,7 @@
                         </div>
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-success">{% translate "Confirm Return" %}</button>
-                            <a href="{% url 'loan_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                            <a href="{% url 'loan_list' %}" class="btn btn-outline-secondary">{% translate "Cancel" %}</a>
                         </div>
                     </form>
                 </div>

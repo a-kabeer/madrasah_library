@@ -1,9 +1,9 @@
 {% extends layout %}
 {% load i18n %}
 
-{% block title %}Issue Books | {{ branding.display_name }}{% endblock %}
+{% block title %}{% translate "Issue Books" %} | {{ branding.display_name }}{% endblock %}
 
-{% block page_title %}Issue Books{% endblock %}
+{% block page_title %}{% translate "Issue Books" %}{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-0">
@@ -11,7 +11,7 @@
     <div class="mb-4">
         <nav aria-label="{% translate 'breadcrumb' %}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{% url 'circulation_dashboard' %}">Circulation</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'circulation_dashboard' %}">{% translate "Circulation" %}</a></li>
                 <li class="breadcrumb-item active">{% translate "Issue Books" %}</li>
             </ol>
         </nav>
@@ -42,7 +42,7 @@
             <form method="get" class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-person me-2"></i>1. Borrower
+                        <i class="bi bi-person me-2"></i>{% translate "1. Borrower" %}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -73,15 +73,13 @@
                     {% url 'borrower_list' as borrower_search_url %}
                     {% include "library/partials/combobox_field.html" with label="Issue to" field_name="borrower" input_id="borrower" entity_label="borrower" search_url=borrower_search_url selected_id=borrower_id selected_name=borrower_name required=False allow_create=False compact=True submit_on_select=True %}
                     <div class="form-text">
-                        {% translate "Search by name, phone or registration number. Only
-                        borrowers who are still active appear. Needed before
-                        you can issue." %}
+                        {% translate "Search by name, phone or registration number. Only borrowers who are still active appear. Needed before you can issue." %}
                     </div>
 
                     <hr class="my-4">
 
                     <h5 class="mb-3 fw-bold">
-                        <i class="bi bi-upc-scan me-2"></i>2. Find copies
+                        <i class="bi bi-upc-scan me-2"></i>{% translate "2. Find copies" %}
                     </h5>
 
                     {% comment %}
@@ -116,7 +114,7 @@
                             autofocus
                         >
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-search me-1"></i> Find
+                            <i class="bi bi-search me-1"></i> {% translate "Find" %}
                         </button>
                         {% comment %}
                           Hidden until app.js decides this device can
@@ -133,14 +131,11 @@
                             data-scan-target="q"
                             hidden
                         >
-                            <i class="bi bi-upc-scan me-1"></i> Scan
+                            <i class="bi bi-upc-scan me-1"></i> {% translate "Scan" %}
                         </button>
                     </div>
                     <div class="form-text">
-                        {% translate "A whole copy code is added to the list straight away,
-                        so a scanner can go one book after another. Anything
-                        else is searched for. Only copies that can actually
-                        be issued are shown." %}
+                        {% translate "A whole copy code is added to the list straight away, so a scanner can go one book after another. Anything else is searched for. Only copies that can actually be issued are shown." %}
                     </div>
 
                 </div>
@@ -150,13 +145,13 @@
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <h5 class="mb-0 fw-bold">
-                            <i class="bi bi-search me-2"></i>Matches
+                            <i class="bi bi-search me-2"></i>{% translate "Matches" %}
                         </h5>
                         <span class="text-body-secondary small">
                             {% if more_matches %}
-                                first {{ lookup_limit }} — narrow the search
+                                {% blocktranslate with shown=lookup_limit %}first {{ shown }} — narrow the search{% endblocktranslate %}
                             {% else %}
-                                {{ matches|length }} found
+                                {% blocktranslate count n=matches|length %}{{ n }} found{% plural %}{{ n }} found{% endblocktranslate %}
                             {% endif %}
                         </span>
                     </div>
@@ -179,7 +174,7 @@
                                             <span class="d-block small text-body-secondary">
                                                 {{ copy.volume.book.author.name }}
                                                 {% if copy.volume.volume_number != 1 or copy.volume.title %}
-                                                    — Volume {{ copy.volume.volume_number }}{% if copy.volume.title %} · {{ copy.volume.title }}{% endif %}
+                                                    — {% blocktranslate with number=copy.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% if copy.volume.title %} · {{ copy.volume.title }}{% endif %}
                                                 {% endif %}
                                             </span>
                                         </td>
@@ -187,26 +182,30 @@
                                             {% if copy.shelf %}
                                                 {{ copy.shelf.location.name }} — {{ copy.shelf.shelf_code }}
                                             {% else %}
-                                                Unshelved
+                                                {% translate "Unshelved" %}
                                             {% endif %}
                                         </td>
                                         <td class="text-end">
                                             <a href="{{ copy.add_url }}" class="btn btn-sm btn-primary">
                                                 <i class="bi bi-plus-lg"></i>
                                                 <span class="visually-hidden">
-                                                    Add {{ copy.copy_code }}
-                                                </span>
+                                                                                  {% blocktranslate trimmed with copy_code=copy.copy_code %}
+                                                                                      Add {{ copy_code }}
+                                                                                  {% endblocktranslate %}
+                                                                              </span>
                                             </a>
                                         </td>
                                     </tr>
                                 {% empty %}
                                     <tr>
                                         <td colspan="4" class="text-center text-body-secondary py-4">
-                                            No copy available to issue matches
-                                            &ldquo;{{ query }}&rdquo;. It may be
-                                            out already, withdrawn, or its book
-                                            archived.
-                                        </td>
+                                                                                                         {% blocktranslate trimmed %}
+                                                                                                             No copy available to issue matches
+                                                                                                             &ldquo;{{ query }}&rdquo;. It may be
+                                                                                                             out already, withdrawn, or its book
+                                                                                                             archived.
+                                                                                                         {% endblocktranslate %}
+                                                                                                     </td>
                                     </tr>
                                 {% endfor %}
                             </tbody>
@@ -234,7 +233,7 @@
 
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-check2-square me-2"></i>3. Review and issue
+                        <i class="bi bi-check2-square me-2"></i>{% translate "3. Review and issue" %}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -269,28 +268,34 @@
         <div class="alert alert-danger" role="alert">
             <strong>
                 <i class="bi bi-bookmark-star me-1" aria-hidden="true"></i>
-                Somebody is first in the queue.
+                {% translate "Somebody is first in the queue." %}
             </strong>
             <ul class="mb-0 mt-2 small">
                 {% for copy in queue_blocks %}
                     <li>
-                        <strong>{{ copy.volume.book.title }}</strong> —
-                        {{ copy.queue_front.borrower.name }} is first of
-                        {{ copy.queue_length }}, waiting since
-                        {{ copy.queue_front.created_at|date:"j M Y" }}.
-                    </li>
+                            {% blocktranslate trimmed with title=copy.volume.book.title name=copy.queue_front.borrower.name queue_length=copy.queue_length created_at=copy.queue_front.created_at|date:"j M Y" %}
+                                <strong>{{ title }}</strong> —
+                                {{ name }} is first of
+                                {{ queue_length }}, waiting since
+                                {{ created_at }}.
+                            {% endblocktranslate %}
+                        </li>
                 {% endfor %}
             </ul>
             <span class="d-block small mt-2">
-                Issue to them instead, or cancel their reservation on the
-                book's page if it should not stand.
+                {% blocktranslate trimmed %}
+                    Issue to them instead, or cancel their reservation on the
+                    book's page if it should not stand.
+                {% endblocktranslate %}
             </span>
         </div>
     {% endif %}
 
                     <p class="text-body-secondary small mb-1">
-                        Copies ({{ chosen|length }})
-                    </p>
+                                                                  {% blocktranslate trimmed with chosen=chosen|length %}
+                                                                      Copies ({{ chosen }})
+                                                                  {% endblocktranslate %}
+                                                              </p>
                     {% if chosen %}
                         <ul class="list-group list-group-flush mb-3">
                             {% for copy in chosen %}
@@ -308,8 +313,10 @@
                                     >
                                         <i class="bi bi-x-lg"></i>
                                         <span class="visually-hidden">
-                                            Remove {{ copy.copy_code }}
-                                        </span>
+                                                                          {% blocktranslate trimmed with copy_code=copy.copy_code %}
+                                                                              Remove {{ copy_code }}
+                                                                          {% endblocktranslate %}
+                                                                      </span>
                                     </a>
                                 </li>
                             {% endfor %}
@@ -358,10 +365,14 @@
                         {% if not chosen or not borrower_id or queue_blocks %}disabled{% endif %}
                     >
                         <i class="bi bi-box-arrow-right me-1"></i>
-                        Issue {{ chosen|length }} cop{{ chosen|length|pluralize:"y,ies" }}
+                        {% blocktranslate trimmed count n=chosen|length %}
+                            Issue {{ n }} copy
+                        {% plural %}
+                            Issue {{ n }} copies
+                        {% endblocktranslate %}
                     </button>
                     <a href="{% url 'circulation_dashboard' %}" class="btn btn-outline-secondary">
-                        Cancel
+                        {% translate "Cancel" %}
                     </a>
                 </div>
             </form>

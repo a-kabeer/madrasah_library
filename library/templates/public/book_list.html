@@ -1,15 +1,14 @@
 {% extends "public/base.html" %}
 {% load i18n %}
 
-{% block title %}Catalogue | {{ branding.display_name }}{% endblock %}
+{% block title %}{% translate "Catalogue" %} | {{ branding.display_name }}{% endblock %}
 
 {% block content %}
 
 <h1 class="public-heading">{% translate "Catalogue" %}</h1>
 
 <p class="text-body-secondary">
-    {% translate "Search the library's books by title or author. Availability is what is
-    on the shelf right now." %}
+    {% translate "Search the library's books by title or author. Availability is what is on the shelf right now." %}
 </p>
 
 
@@ -83,13 +82,13 @@
 
     <div class="public-filter-actions">
         <button type="submit" class="btn btn-primary">
-            <i class="bi bi-search me-1" aria-hidden="true"></i> Search
+            <i class="bi bi-search me-1" aria-hidden="true"></i> {% translate "Search" %}
         </button>
 
         {% if has_filters %}
             {# The reset: a plain link back to the unfiltered list. #}
             <a href="{% url 'public_book_list' %}" class="btn btn-outline-secondary">
-                Clear
+                {% translate "Clear" %}
             </a>
         {% endif %}
     </div>
@@ -105,7 +104,7 @@
     <p class="public-chips">
         {% if author_name %}
             <span class="badge text-bg-light border">
-                Author: {{ author_name }}
+                {% translate "Author:" %} {{ author_name }}
                 <a
                     href="?{% if search %}search={{ search|urlencode }}&{% endif %}{% if category_id %}category={{ category_id }}&{% endif %}{% if publisher_id %}publisher={{ publisher_id }}&{% endif %}{% if availability %}availability={{ availability|urlencode }}{% endif %}"
                     class="ms-1 text-decoration-none"
@@ -116,7 +115,7 @@
 
         {% if publisher_name %}
             <span class="badge text-bg-light border">
-                Publisher: {{ publisher_name }}
+                {% translate "Publisher:" %} {{ publisher_name }}
                 <a
                     href="?{% if search %}search={{ search|urlencode }}&{% endif %}{% if category_id %}category={{ category_id }}&{% endif %}{% if author_id %}author={{ author_id }}&{% endif %}{% if availability %}availability={{ availability|urlencode }}{% endif %}"
                     class="ms-1 text-decoration-none"
@@ -131,7 +130,11 @@
 {% if books %}
 
     <p class="text-body-secondary small">
-        {{ paginator.count }} book{{ paginator.count|pluralize }} found.
+        {% blocktranslate trimmed count n=paginator.count %}
+            {{ n }} book found.
+        {% plural %}
+            {{ n }} books found.
+        {% endblocktranslate %}
     </p>
 
     <ul class="public-results list-unstyled">
@@ -196,15 +199,18 @@
         <i class="bi bi-search fs-1 d-block mb-2" aria-hidden="true"></i>
         <p class="fw-semibold mb-1">
             {% if has_filters %}
-                Nothing matches that.
+                {% translate "Nothing matches that." %}
             {% else %}
-                There are no books in the catalogue yet.
+                {% translate "There are no books in the catalogue yet." %}
             {% endif %}
         </p>
         {% if has_filters %}
             <p class="mb-0 small">
-                Try a shorter search, or
-                <a href="{% url 'public_book_list' %}">start again</a>.
+                {% url 'public_book_list' as start_over_url %}
+                {% blocktranslate trimmed with url=start_over_url %}
+                    Try a shorter search, or <a href="{{ url }}">start
+                    again</a>.
+                {% endblocktranslate %}
             </p>
         {% endif %}
     </div>

@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 The number on the bell, rendered the same way in both places it appears:
 in the shell on a full page load, and in the panel's out-of-band refresh
@@ -13,6 +14,6 @@ nothing unread - an empty badge is a dot the eye has to interpret.
         data-unread-count="{{ unread_count }}"
     >
         {{ unread_count }}{% if unread_count >= unread_cap %}+{% endif %}
-        <span class="visually-hidden">unread notifications</span>
+        <span class="visually-hidden">{% translate "unread notifications" %}</span>
     </span>
 {% endif %}

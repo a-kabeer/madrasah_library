@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block title %}
-    Edit Loan | {{ branding.display_name }}
+{% translate "Edit Loan" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Edit Loan
+    {% translate "Edit Loan" %}
 {% endblock %}
 
 {% block content %}
@@ -21,11 +21,11 @@
     <p>
         {% if next_url %}
             <a href="{{ next_url }}">
-                ← Back
+                {% translate "← Back" %}
             </a>
         {% else %}
             <a href="{% url 'loan_list' %}">
-                ← Back to Loans
+                {% translate "← Back to Loans" %}
             </a>
         {% endif %}
     </p>
@@ -43,7 +43,7 @@
     {% if loan.return_date %}
 
         <p>
-            <strong>Status: Returned</strong>
+            <strong>{% translate "Status: Returned" %}</strong>
         </p>
 
         <p>
@@ -53,7 +53,7 @@
     {% else %}
 
         <p>
-            <strong>Status: Active</strong>
+            <strong>{% translate "Status: Active" %}</strong>
         </p>
 
     {% endif %}
@@ -176,12 +176,12 @@
             <h3>{% translate "Return Information" %}</h3>
 
             <p>
-                <strong>Return Date:</strong>
+                <strong>{% translate "Return Date:" %}</strong>
                 {{ loan.return_date }}
             </p>
 
             <p>
-                <strong>Returned To:</strong>
+                <strong>{% translate "Returned To:" %}</strong>
 
                 {% if loan.returned_to %}
 

@@ -1,9 +1,9 @@
 {% extends layout %}
 {% load i18n %}
 
-{% block title %}Loans | {{ branding.display_name }}{% endblock %}
+{% block title %}{% translate "Loans" %} | {{ branding.display_name }}{% endblock %}
 
-{% block page_title %}Loans{% endblock %}
+{% block page_title %}{% translate "Loans" %}{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-0">
@@ -11,7 +11,7 @@
     <div class="mb-4">
         <nav aria-label="{% translate 'breadcrumb' %}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{% url 'circulation_dashboard' %}">Circulation</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'circulation_dashboard' %}">{% translate "Circulation" %}</a></li>
                 <li class="breadcrumb-item active">{% translate "All Loans" %}</li>
             </ol>
         </nav>
@@ -20,17 +20,17 @@
                 <h2 class="fw-bold mb-1">{% translate "Loans" %}</h2>
                 <p class="text-body-secondary mb-0">{% translate "Search, filter, and manage all loans." %}</p>
             </div>
-            <a href="{% url 'circulation_issue' %}" class="btn btn-primary">Issue Books</a>
+            <a href="{% url 'circulation_issue' %}" class="btn btn-primary">{% translate "Issue Books" %}</a>
         </div>
     </div>
 
     <div class="mb-3">
         <div class="btn-group" role="group">
-            <a href="{% url 'loan_list' %}" class="btn btn-outline-secondary {% if not status and not search %}active{% endif %}">All</a>
-            <a href="{% url 'loan_list' %}?status=active" class="btn btn-outline-primary {% if status == 'active' %}active{% endif %}">Active</a>
-            <a href="{% url 'loan_list' %}?status=overdue" class="btn btn-outline-danger {% if status == 'overdue' %}active{% endif %}">Overdue</a>
-            <a href="{% url 'loan_list' %}?status=due_today" class="btn btn-outline-warning {% if status == 'due_today' %}active{% endif %}">Due Today</a>
-            <a href="{% url 'loan_list' %}?status=returned" class="btn btn-outline-success {% if status == 'returned' %}active{% endif %}">Returned</a>
+            <a href="{% url 'loan_list' %}" class="btn btn-outline-secondary {% if not status and not search %}active{% endif %}">{% translate "All" %}</a>
+            <a href="{% url 'loan_list' %}?status=active" class="btn btn-outline-primary {% if status == 'active' %}active{% endif %}">{% translate "Active" %}</a>
+            <a href="{% url 'loan_list' %}?status=overdue" class="btn btn-outline-danger {% if status == 'overdue' %}active{% endif %}">{% translate "Overdue" %}</a>
+            <a href="{% url 'loan_list' %}?status=due_today" class="btn btn-outline-warning {% if status == 'due_today' %}active{% endif %}">{% translate "Due Today" %}</a>
+            <a href="{% url 'loan_list' %}?status=returned" class="btn btn-outline-success {% if status == 'returned' %}active{% endif %}">{% translate "Returned" %}</a>
         </div>
     </div>
 
@@ -65,14 +65,20 @@
                 </div>
                 {% if search or status or borrower_id %}
                 <div class="col-12">
-                    <a href="{% url 'loan_list' %}" class="btn btn-sm btn-outline-secondary">Clear Filters</a>
+                    <a href="{% url 'loan_list' %}" class="btn btn-sm btn-outline-secondary">{% translate "Clear Filters" %}</a>
                 </div>
                 {% endif %}
             </form>
         </div>
     </div>
 
-    <p class="text-body-secondary">Found {{ loans.paginator.count }} loan{{ loans.paginator.count|pluralize }}.</p>
+    <p class="text-body-secondary">
+        {% blocktranslate trimmed count n=loans.paginator.count %}
+            Found {{ n }} loan.
+        {% plural %}
+            Found {{ n }} loans.
+        {% endblocktranslate %}
+    </p>
 
     <div class="card shadow-sm border-0">
         <div class="table-responsive">
@@ -100,19 +106,23 @@
                         <td>{{ loan.due_date }}</td>
                         <td>
                             {% if loan.return_date %}
-                                <span class="badge bg-secondary">Returned</span>
+                                <span class="badge bg-secondary">{% translate "Returned" %}</span>
                             {% elif loan.days_overdue > 0 %}
-                                <span class="badge bg-danger">Overdue ({{ loan.days_overdue }}d)</span>
+                                <span class="badge bg-danger">
+                                                                  {% blocktranslate trimmed with days_overdue=loan.days_overdue %}
+                                                                      Overdue ({{ days_overdue }}d)
+                                                                  {% endblocktranslate %}
+                                                              </span>
                             {% else %}
-                                <span class="badge bg-success">Active</span>
+                                <span class="badge bg-success">{% translate "Active" %}</span>
                             {% endif %}
                         </td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <a href="{% url 'loan_detail' loan.id %}" class="btn btn-outline-secondary">View</a>
+                                <a href="{% url 'loan_detail' loan.id %}" class="btn btn-outline-secondary">{% translate "View" %}</a>
                                 {% if not loan.return_date %}
-                                <a href="{% url 'loan_return' loan.id %}" class="btn btn-outline-success">Return</a>
-                                <a href="{% url 'loan_renew' loan.id %}" class="btn btn-outline-primary">Renew</a>
+                                <a href="{% url 'loan_return' loan.id %}" class="btn btn-outline-success">{% translate "Return" %}</a>
+                                <a href="{% url 'loan_renew' loan.id %}" class="btn btn-outline-primary">{% translate "Renew" %}</a>
                                 {% endif %}
                             </div>
                         </td>

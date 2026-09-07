@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 Suggestion list for a combobox field, served by the Author / Category /
 Publisher list views when they receive a combobox request.
@@ -44,8 +45,10 @@ existing one it matched, so nothing is ever duplicated).
 {% if total_count > limit %}
 
     <div class="combobox-note">
-        Showing first {{ limit }} of {{ total_count }}. Keep typing to narrow it down.
-    </div>
+                                   {% blocktranslate trimmed %}
+                                       Showing first {{ limit }} of {{ total_count }}. Keep typing to narrow it down.
+                                   {% endblocktranslate %}
+                               </div>
 
 {% endif %}
 
@@ -69,22 +72,28 @@ existing one it matched, so nothing is ever duplicated).
             <i class="bi bi-plus-circle" aria-hidden="true"></i>
 
             <span>
-                Add "<strong>{{ search }}</strong>" as a new {{ entity_label }}
-            </span>
+                      {% blocktranslate trimmed %}
+                          Add "<strong>{{ search }}</strong>" as a new {{ entity_label }}
+                      {% endblocktranslate %}
+                  </span>
         </button>
 
     {% elif not items %}
 
         <div class="combobox-note">
-            No {{ entity_label }} found matching "{{ search }}".
-        </div>
+                                       {% blocktranslate trimmed %}
+                                           No {{ entity_label }} found matching "{{ search }}".
+                                       {% endblocktranslate %}
+                                   </div>
 
     {% endif %}
 
 {% elif not items %}
 
     <div class="combobox-note">
-        No {{ entity_label }} records yet.
-    </div>
+                                   {% blocktranslate trimmed %}
+                                       No {{ entity_label }} records yet.
+                                   {% endblocktranslate %}
+                               </div>
 
 {% endif %}

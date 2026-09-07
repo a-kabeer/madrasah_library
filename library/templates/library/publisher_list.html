@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 {% comment %}
   `layout` rather than base.html by name: an ordinary request renders the
   whole application shell, an HTMX navigation renders only the main-content
@@ -12,11 +13,11 @@
 {% endcomment %}
 
 {% block title %}
-    Publishers | {{ branding.display_name }}
+{% translate "Publishers" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Publishers
+    {% translate "Publishers" %}
 {% endblock %}
 
 {% block content %}
@@ -24,7 +25,15 @@
 <div class="container-fluid px-0">
 
     {% url 'publisher_list' as publisher_list_url %}
-    {% include "library/partials/lookup_list.html" with rows=publishers heading="Publishers" blurb="Who printed what. Open a name to see the books that came from them." noun="publisher" noun_plural="publishers" list_url=publisher_list_url search_placeholder="Search publishers by name or city..." row_link_title="Books from" add_route="publisher_add" edit_route="publisher_edit" delete_route="publisher_delete" pagination_label="Publisher list pages" %}
+    {% translate "Publishers" as lookup_heading %}
+    {% translate "Who printed what. Open a name to see the books that came from them." as lookup_blurb %}
+    {% translate "publisher" as lookup_noun %}
+    {% translate "publishers" as lookup_noun_plural %}
+    {% translate "Search publishers by name or city..." as lookup_search_placeholder %}
+    {% translate "Books from" as lookup_row_link_title %}
+    {% translate "Publisher list pages" as lookup_pagination_label %}
+
+    {% include "library/partials/lookup_list.html" with rows=publishers heading=lookup_heading blurb=lookup_blurb noun=lookup_noun noun_plural=lookup_noun_plural list_url=publisher_list_url search_placeholder=lookup_search_placeholder row_link_title=lookup_row_link_title add_route="publisher_add" edit_route="publisher_edit" delete_route="publisher_delete" pagination_label=lookup_pagination_label %}
 
 </div>
 

@@ -6,14 +6,14 @@
 {% endblock %}
 
 {% block page_title %}
-    Stock Check
+    {% translate "Stock Check" %}
 {% endblock %}
 
 {% block breadcrumbs %}
     <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
-                <a href="{% url 'inventory_session_list' %}">Stock Check</a>
+                <a href="{% url 'inventory_session_list' %}">{% translate "Stock Check" %}</a>
             </li>
             <li class="breadcrumb-item active" aria-current="page">
                 {{ session.name }}
@@ -32,19 +32,19 @@
             <h2 class="fw-bold mb-1">{{ session.name }}</h2>
             <div class="d-flex flex-wrap align-items-center gap-2">
                 {% if session.is_open %}
-                    <span class="badge text-bg-info">In Progress</span>
+                    <span class="badge text-bg-info">{% translate "In Progress" %}</span>
                 {% else %}
-                    <span class="badge text-bg-success">Completed</span>
+                    <span class="badge text-bg-success">{% translate "Completed" %}</span>
                 {% endif %}
                 <span class="text-body-secondary">{{ session.scope_label }}</span>
             </div>
             <p class="text-body-secondary small mb-0 mt-1">
-                Started {{ session.started_at|date:"j M Y, H:i" }}
+                {% translate "Started" %} {{ session.started_at|date:"j M Y, H:i" }}
                 {% if session.started_by %}
-                    by {{ session.started_by.full_name|default:session.started_by.username }}
+                    {% translate "by" %} {{ session.started_by.full_name|default:session.started_by.username }}
                 {% endif %}
                 {% if session.completed_at %}
-                    · Completed {{ session.completed_at|date:"j M Y, H:i" }}
+                    · {% translate "Completed" %} {{ session.completed_at|date:"j M Y, H:i" }}
                 {% endif %}
             </p>
         </div>
@@ -60,7 +60,7 @@
             >
                 {% csrf_token %}
                 <button type="submit" class="btn btn-success">
-                    <i class="bi bi-check2-all me-1"></i> Complete Check
+                    <i class="bi bi-check2-all me-1"></i> {% translate "Complete Check" %}
                 </button>
             </form>
         {% endif %}
@@ -90,7 +90,7 @@
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
                     <p class="text-body-secondary small mb-1">
-                        {% if session.is_open %}Remaining{% else %}Not found{% endif %}
+                        {% if session.is_open %}{% translate "Remaining" %}{% else %}{% translate "Not found" %}{% endif %}
                     </p>
                     <p class="fs-3 fw-bold mb-0 {% if counts.remaining %}text-danger{% endif %}">
                         {{ counts.remaining }}
@@ -117,10 +117,20 @@
 
     {% if counts.duplicates or counts.outside or counts.unknown %}
         <p class="text-body-secondary small mb-4">
-            Also recorded:
-            {{ counts.duplicates }} repeat scan{{ counts.duplicates|pluralize }},
-            {{ counts.outside }} outside this check,
-            {{ counts.unknown }} unrecognised code{{ counts.unknown|pluralize }}.
+            {% translate "Also recorded:" %}
+            {% blocktranslate trimmed count n=counts.duplicates %}
+                {{ n }} repeat scan,
+            {% plural %}
+                {{ n }} repeat scans,
+            {% endblocktranslate %}
+            {% blocktranslate trimmed with n=counts.outside %}
+                {{ n }} outside this check,
+            {% endblocktranslate %}
+            {% blocktranslate trimmed count n=counts.unknown %}
+                {{ n }} unrecognised code.
+            {% plural %}
+                {{ n }} unrecognised codes.
+            {% endblocktranslate %}
         </p>
     {% endif %}
 
@@ -163,8 +173,7 @@
                         </button>
                     </div>
                     <div class="form-text">
-                        {% translate "The same code the issue and return desks scan.
-                        Nothing about the copy is changed by counting it." %}
+                        {% translate "The same code the issue and return desks scan. Nothing about the copy is changed by counting it." %}
                     </div>
                 </form>
             </div>
@@ -189,7 +198,7 @@
                                         — {{ scan.copy.volume.book.author.name }}
                                     {% endif %}
                                     {% if scan.copy.volume.volume_number != 1 or scan.copy.volume.title %}
-                                        · Volume {{ scan.copy.volume.volume_number }}{% if scan.copy.volume.title %} {{ scan.copy.volume.title }}{% endif %}
+                                        · {% blocktranslate with number=scan.copy.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% if scan.copy.volume.title %} {{ scan.copy.volume.title }}{% endif %}
                                     {% endif %}
                                 </span>
                             </span>
@@ -198,7 +207,7 @@
                                     {{ scan.copy.shelf.location.name }} —
                                     {{ scan.copy.shelf.shelf_code }}
                                 {% else %}
-                                    Unshelved
+                                    {% translate "Unshelved" %}
                                 {% endif %}
                                 <span class="d-block">{{ scan.copy.status }}</span>
                             </span>
@@ -220,19 +229,18 @@
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <h5 class="mb-0 fw-bold">
-                    <i class="bi bi-question-circle me-2"></i>Not found
+                    <i class="bi bi-question-circle me-2"></i>{% translate "Not found" %}
                 </h5>
                 <span class="text-body-secondary small">
-                    {{ counts.remaining }} of {{ counts.expected }}
-                </span>
+                                                            {% blocktranslate trimmed with remaining=counts.remaining expected=counts.expected %}
+                                                                {{ remaining }} of {{ expected }}
+                                                            {% endblocktranslate %}
+                                                        </span>
             </div>
 
             {% if missing %}
                 <div class="alert alert-info rounded-0 border-0 mb-0 small">
-                    {% translate "Nothing here has been marked Missing. Several will have
-                    an ordinary explanation — a copy out on loan cannot be
-                    on its shelf. Use the copy's own page if one needs its
-                    status changed." %}
+                    {% translate "Nothing here has been marked Missing. Several will have an ordinary explanation — a copy out on loan cannot be on its shelf. Use the copy's own page if one needs its status changed." %}
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
@@ -260,7 +268,7 @@
                                                 {{ copy.volume.book.author.name }}
                                             {% endif %}
                                             {% if copy.volume.volume_number != 1 or copy.volume.title %}
-                                                · Volume {{ copy.volume.volume_number }}{% if copy.volume.title %} {{ copy.volume.title }}{% endif %}
+                                                · {% blocktranslate with number=copy.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% if copy.volume.title %} {{ copy.volume.title }}{% endif %}
                                             {% endif %}
                                         </span>
                                     </td>
@@ -269,7 +277,7 @@
                                             {{ copy.shelf.location.name }} —
                                             {{ copy.shelf.shelf_code }}
                                         {% else %}
-                                            Unshelved
+                                            {% translate "Unshelved" %}
                                         {% endif %}
                                     </td>
                                     <td>
@@ -293,12 +301,11 @@
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-signpost-split me-2"></i>Found somewhere else
+                        <i class="bi bi-signpost-split me-2"></i>{% translate "Found somewhere else" %}
                     </h5>
                 </div>
                 <div class="alert alert-warning rounded-0 border-0 mb-0 small">
-                    {% translate "Scanned during this check but belonging elsewhere
-                    according to the record. Nothing has been moved." %}
+                    {% translate "Scanned during this check but belonging elsewhere according to the record. Nothing has been moved." %}
                 </div>
                 <div class="table-responsive">
                     <table class="table align-middle mb-0">
@@ -325,7 +332,7 @@
                                             {{ scan.copy.shelf.location.name }} —
                                             {{ scan.copy.shelf.shelf_code }}
                                         {% else %}
-                                            Unshelved
+                                            {% translate "Unshelved" %}
                                         {% endif %}
                                     </td>
                                     <td class="small text-body-secondary">
@@ -343,7 +350,7 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-files me-2"></i>Scanned more than once
+                        <i class="bi bi-files me-2"></i>{% translate "Scanned more than once" %}
                     </h5>
                 </div>
                 <div class="card-body text-body-secondary small">

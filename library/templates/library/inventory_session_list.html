@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block title %}
-    Stock Check | {{ branding.display_name }}
+{% translate "Stock Check" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Stock Check
+    {% translate "Stock Check" %}
 {% endblock %}
 
 {% block content %}
@@ -17,9 +17,7 @@
         <div>
             <h2 class="fw-bold mb-1">{% translate "Stock Check" %}</h2>
             <p class="text-body-secondary mb-0">
-                {% translate "Counting the shelves against the record. Nothing here
-                changes a copy — what is not found is reported, and what to
-                do about it stays your decision." %}
+                {% translate "Counting the shelves against the record. Nothing here changes a copy — what is not found is reported, and what to do about it stays your decision." %}
             </p>
         </div>
 
@@ -27,7 +25,7 @@
             href="{% url 'inventory_session_start' %}"
             class="btn btn-primary"
         >
-            <i class="bi bi-plus-lg me-1"></i> Start a Check
+            <i class="bi bi-plus-lg me-1"></i> {% translate "Start a Check" %}
         </a>
     </div>
 
@@ -79,11 +77,11 @@
                                 <td>
                                     {% if session.is_open %}
                                         <span class="badge text-bg-info">
-                                            In Progress
+                                            {% translate "In Progress" %}
                                         </span>
                                     {% else %}
                                         <span class="badge text-bg-success">
-                                            Completed
+                                            {% translate "Completed" %}
                                         </span>
                                     {% endif %}
                                 </td>

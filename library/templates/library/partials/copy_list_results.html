@@ -37,19 +37,19 @@ Expected context: everything `book_copy_list` provides.
     {% if active_filters %}
         <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
 
-            <span class="text-body-secondary small">Filtered by:</span>
+            <span class="text-body-secondary small">{% translate "Filtered by:" %}</span>
 
             {% for filter in active_filters %}
                 <a href="{{ filter.url }}" hx-get="{{ filter.url }}" class="filter-chip">
                     <span class="text-body-secondary">{{ filter.label }}:</span>
                     <strong>{{ filter.value }}</strong>
                     <i class="bi bi-x-lg" aria-hidden="true"></i>
-                    <span class="visually-hidden">Remove this filter</span>
+                    <span class="visually-hidden">{% translate "Remove this filter" %}</span>
                 </a>
             {% endfor %}
 
             <a href="{% url 'book_copy_list' %}"
-               hx-get="{% url 'book_copy_list' %}" class="small">Clear all</a>
+               hx-get="{% url 'book_copy_list' %}" class="small">{% translate "Clear all" %}</a>
 
         </div>
     {% endif %}
@@ -57,7 +57,11 @@ Expected context: everything `book_copy_list` provides.
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
 
         <p class="text-body-secondary mb-0">
-            Found <strong>{{ paginator.count }}</strong> cop{{ paginator.count|pluralize:"y,ies" }}.
+            {% blocktranslate trimmed count n=paginator.count %}
+                Found <strong>{{ n }}</strong> copy.
+            {% plural %}
+                Found <strong>{{ n }}</strong> copies.
+            {% endblocktranslate %}
 
             {% comment %}
               Labels for the whole result set, not just the page on screen.
@@ -84,7 +88,7 @@ Expected context: everything `book_copy_list` provides.
                     hx-swap="innerHTML"
                 >
                     <i class="bi bi-upc me-1" aria-hidden="true"></i>
-                    Print labels for all of them
+                    {% translate "Print labels for all of them" %}
                 </a>
             {% endif %}
         </p>
@@ -120,7 +124,7 @@ Expected context: everything `book_copy_list` provides.
                 {% endfor %}
             </select>
 
-            <span class="text-body-secondary small">per page</span>
+            <span class="text-body-secondary small">{% translate "per page" %}</span>
 
         </div>
 
@@ -207,7 +211,7 @@ Expected context: everything `book_copy_list` provides.
                                 {% if copy.volume.volume_number == 1 and not copy.volume.title %}
                                     —
                                 {% else %}
-                                    Volume {{ copy.volume.volume_number }}
+                                    {% blocktranslate with number=copy.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}
                                 {% endif %}
                             </td>
 
@@ -221,7 +225,7 @@ Expected context: everything `book_copy_list` provides.
                                 {% if copy.shelf %}
                                     {{ copy.shelf.location.name }}
                                 {% else %}
-                                    <span class="text-body-secondary">Not placed</span>
+                                    <span class="text-body-secondary">{% translate "Not placed" %}</span>
                                 {% endif %}
                             </td>
 
@@ -229,7 +233,7 @@ Expected context: everything `book_copy_list` provides.
                                 {% if copy.shelf %}
                                     {{ copy.shelf.shelf_code }}
                                 {% else %}
-                                    <span class="text-body-secondary">Unshelved</span>
+                                    <span class="text-body-secondary">{% translate "Unshelved" %}</span>
                                 {% endif %}
                             </td>
 
@@ -239,7 +243,11 @@ Expected context: everything `book_copy_list` provides.
                                 </span>
                                 {% if copy.days_overdue %}
                                     <span class="d-block small text-danger">
-                                        {{ copy.days_overdue }} day{{ copy.days_overdue|pluralize }} late
+                                        {% blocktranslate trimmed count n=copy.days_overdue %}
+                                            {{ n }} day late
+                                        {% plural %}
+                                            {{ n }} days late
+                                        {% endblocktranslate %}
                                     </span>
                                 {% endif %}
                             </td>
@@ -252,10 +260,10 @@ Expected context: everything `book_copy_list` provides.
                                             class="btn btn-sm btn-outline-warning"
                                             title="{% translate 'Edit' %}"
                                             aria-label="Edit copy {{ copy.copy_code }}"
-                                            {# Inside the results container, which declares the target and
+                                            {% comment %} Inside the results container, which declares the target and
                                                swap for the fragment requests around it - inherited by
                                                anything within, this link included. It is going somewhere
-                                               else, so it names the shell's region instead. #}
+                                               else, so it names the shell's region instead. {% endcomment %}
                                             hx-target="#mainContent"
                                             hx-swap="innerHTML"
                                         >
@@ -266,10 +274,10 @@ Expected context: everything `book_copy_list` provides.
                                             class="btn btn-sm btn-outline-primary"
                                             title="{% translate 'Move' %}"
                                             aria-label="Move copy {{ copy.copy_code }}"
-                                            {# Inside the results container, which declares the target and
+                                            {% comment %} Inside the results container, which declares the target and
                                                swap for the fragment requests around it - inherited by
                                                anything within, this link included. It is going somewhere
-                                               else, so it names the shell's region instead. #}
+                                               else, so it names the shell's region instead. {% endcomment %}
                                             hx-target="#mainContent"
                                             hx-swap="innerHTML"
                                         >
@@ -281,10 +289,10 @@ Expected context: everything `book_copy_list` provides.
                                             class="btn btn-sm btn-outline-secondary"
                                             title="{% translate 'Open' %}"
                                             aria-label="Open copy {{ copy.copy_code }}"
-                                            {# Inside the results container, which declares the target and
+                                            {% comment %} Inside the results container, which declares the target and
                                                swap for the fragment requests around it - inherited by
                                                anything within, this link included. It is going somewhere
-                                               else, so it names the shell's region instead. #}
+                                               else, so it names the shell's region instead. {% endcomment %}
                                             hx-target="#mainContent"
                                             hx-swap="innerHTML"
                                         >

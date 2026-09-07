@@ -20,6 +20,7 @@ from library import barcode
 from library.models import BookCopy
 
 from .helpers import (
+    main_content,
     make_author,
     make_book,
     make_copy,
@@ -371,8 +372,17 @@ class LabelValidationTests(LabelTestCase):
         # choosing: only ids go in, and the code comes from the row.
         response = self.sheet(copy=self.copy.id, copy_code="FORGED-1")
 
-        self.assertContains(response, "LIB-500001")
-        self.assertNotContains(response, "FORGED-1")
+        sheet = main_content(response.content.decode())
+
+        self.assertIn("LIB-500001", sheet)
+
+        # Checked against the sheet rather than the whole response: the
+        # topbar's language form carries `next="{{ request.get_full_path }}"`,
+        # so any query string the caller sent is echoed back in a hidden
+        # input. Harmless - it is escaped, and it is not what gets printed -
+        # but it means the whole document is no longer the right place to
+        # ask what the label says.
+        self.assertNotIn("FORGED-1", sheet)
 
 
 class LabelPermissionTests(LabelTestCase):

@@ -10,9 +10,20 @@ A theme is applied by the browser, so that control changes the page itself
 and saves in the background. A language is applied by the *server*: the page
 in front of the reader is already rendered in the old one, so choosing a
 language has to fetch the page again. Each option is therefore a real form
-post, which is also what makes it work with no JavaScript at all.
+submission, which is also what makes it work with no JavaScript at all.
 
-Two posts, depending on who is asking:
+One form, not one per language. Which language was picked rides on the
+submit button's own name/value - `<button name="language" value="ur">` -
+because a clicked submit button sends its value with the form. Three forms
+would mean three CSRF tokens and three copies of `next` on every page in
+the application, and this partial is included on the public catalogue,
+where "how many forms does this page have" is a property the tests check.
+
+The menu is a <div> rather than a <ul> so the form can sit inside it:
+Bootstrap finds the menu as the toggle's next sibling, so the form cannot
+wrap the menu, and a <form> is not a legal child of <ul>.
+
+Two actions, depending on who is asking:
 
   * signed in    -> `language_set`, which stores the choice on the account
                     so it follows them to another machine, and redirects
@@ -22,8 +33,9 @@ Two posts, depending on who is asking:
                     both need this, and neither has an account to store
                     anything on.
 
-`next` carries the current page so the reader lands back where they were
-rather than at the dashboard.
+Both read `language`, and both read `next` for where to go back to, so one
+set of fields serves either. `next` carries the current page so the reader
+lands back where they were rather than at the dashboard.
 {% endcomment %}
 
 {% get_current_language as current_language %}
@@ -43,51 +55,47 @@ rather than at the dashboard.
         <i class="bi bi-translate" aria-hidden="true"></i>
     </button>
 
-    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageToggle">
+    <div
+        class="dropdown-menu dropdown-menu-end"
+        aria-labelledby="languageToggle"
+    >
 
-        {% for code, name in available_languages %}
+        <form
+            method="post"
+            action="{% if request.user.is_authenticated %}{% url 'language_set' %}{% else %}{% url 'set_language' %}{% endif %}"
+        >
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
 
-            <li>
-                <form
-                    method="post"
-                    action="{% if request.user.is_authenticated %}{% url 'language_set' %}{% else %}{% url 'set_language' %}{% endif %}"
+            {% for code, name in available_languages %}
+
+                <button
+                    type="submit"
+                    name="language"
+                    value="{{ code }}"
+                    class="dropdown-item d-flex align-items-center gap-2"
+                    {% if code == current_language %}aria-current="true"{% endif %}
                 >
-                    {% csrf_token %}
+                    {% if code == current_language %}
+                        <i class="bi bi-check-lg text-success" aria-hidden="true"></i>
+                    {% else %}
+                        <i class="bi" aria-hidden="true" style="width: 1em;"></i>
+                    {% endif %}
 
                     {% comment %}
-                      The two views read different field names, so both are
-                      sent. Django's `set_language` reads `language`;
-                      `language_set` reads `language` too and `next` for
-                      where to go back to.
+                      Each language's own name, in its own script -
+                      never translated. Somebody looking for Urdu is
+                      looking for "اردو", and would not find it behind
+                      the word "Urdu" on a page they cannot read.
                     {% endcomment %}
-                    <input type="hidden" name="language" value="{{ code }}">
-                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <span dir="auto">{{ name }}</span>
 
-                    <button
-                        type="submit"
-                        class="dropdown-item d-flex align-items-center gap-2"
-                        {% if code == current_language %}aria-current="true"{% endif %}
-                    >
-                        {% if code == current_language %}
-                            <i class="bi bi-check-lg text-success" aria-hidden="true"></i>
-                        {% else %}
-                            <i class="bi" aria-hidden="true" style="width: 1em;"></i>
-                        {% endif %}
+                </button>
 
-                        {% comment %}
-                          Each language's own name, in its own script -
-                          never translated. Somebody looking for Urdu is
-                          looking for "اردو", and would not find it behind
-                          the word "Urdu" on a page they cannot read.
-                        {% endcomment %}
-                        <span dir="auto">{{ name }}</span>
-                    </button>
+            {% endfor %}
 
-                </form>
-            </li>
+        </form>
 
-        {% endfor %}
-
-    </ul>
+    </div>
 
 </div>

@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
   The top of every report: title, what it was filtered by, and the two
   things you can do with it.
@@ -28,7 +29,7 @@
             class="btn btn-outline-secondary"
             onclick="window.print()"
         >
-            <i class="bi bi-printer me-1"></i> Print
+            <i class="bi bi-printer me-1"></i> {% translate "Print" %}
         </button>
 
         {% comment %}
@@ -38,7 +39,7 @@
         {% endcomment %}
         <a href="?{{ export_query }}" class="btn btn-outline-secondary"
            hx-boost="false">
-            <i class="bi bi-filetype-csv me-1"></i> Export CSV
+            <i class="bi bi-filetype-csv me-1"></i> {% translate "Export CSV" %}
         </a>
     </div>
 
@@ -50,7 +51,7 @@
 {% endcomment %}
 <p class="text-body-secondary small mb-3">
     {% if dates.start %}
-        {{ dates.start }} to {{ dates.end }}
+        {% blocktranslate with start=dates.start end=dates.end %}{{ start }} to {{ end }}{% endblocktranslate %}
     {% endif %}
     {% if applied_filters %}
         · {{ applied_filters }}
@@ -63,7 +64,7 @@
     {% endcomment %}
     <span class="print-only d-block">
         {% include "library/partials/institution_print_line.html" %} —
-        generated {{ printed_on|date:"j M Y, H:i" }}
+        {% translate "generated" %} {{ printed_on|date:"j M Y, H:i" }}
     </span>
 </p>
 

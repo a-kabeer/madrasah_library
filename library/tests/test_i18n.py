@@ -11,6 +11,8 @@ comes out right-to-left when it should, and that the things which must not
 be translated - a copy code, an ISBN - are not.
 """
 
+import io
+
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import translation
@@ -322,6 +324,50 @@ class MarkupTests(LanguageTestCase):
                 import io
                 if pattern.search(io.open(path, encoding="utf-8").read()):
                     offenders.append(path)
+
+        self.assertEqual(offenders, [])
+
+    def test_no_template_construct_spans_a_newline(self):
+        """The bug that shipped, and the reason it was invisible.
+
+        Django's tokenizer is `({%.*?%}|{{.*?}}|{#.*?#})` with no DOTALL
+        flag, so a tag, variable or comment containing a newline is not
+        recognised as one. It is not an error either - it is emitted as
+        text, and the reader sees `{% translate "..." %}` printed on the
+        page. Nothing raises, `manage.py check` passes, and a test that
+        renders the page and greps for a word still finds the word.
+
+        An automated marking pass produces exactly this, because the
+        string it wraps was already wrapped across lines in the HTML.
+        """
+
+        import os
+        import re
+
+        opener = re.compile(r"\{%|\{\{|\{#")
+        closes = {"{%": "%}", "{{": "}}", "{#": "#}"}
+
+        offenders = []
+
+        for dirpath, _dirs, files in os.walk("library/templates"):
+            for name in files:
+                if not name.endswith(".html"):
+                    continue
+
+                path = os.path.join(dirpath, name)
+                body = io.open(path, encoding="utf-8").read()
+
+                for match in opener.finditer(body):
+                    start = match.group(0)
+                    end = body.find(closes[start], match.end())
+
+                    if end == -1:
+                        offenders.append("%s: unclosed %s" % (path, start))
+                        continue
+
+                    if "\n" in body[match.end():end]:
+                        line = body[:match.start()].count("\n") + 1
+                        offenders.append("%s:%d" % (path, line))
 
         self.assertEqual(offenders, [])
 

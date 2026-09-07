@@ -2,18 +2,18 @@
 {% load i18n %}
 
 {% block title %}
-    Book Volumes | {{ branding.display_name }}
+{% translate "Book Volumes" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Book Volumes
+    {% translate "Book Volumes" %}
 {% endblock %}
 
 {% block breadcrumbs %}
     <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
-                <a href="{% url 'book_list' %}">Books</a>
+                <a href="{% url 'book_list' %}">{% translate "Books" %}</a>
             </li>
             <li class="breadcrumb-item active" aria-current="page">
                 {% translate "Volumes" %}
@@ -38,7 +38,7 @@
           @role_required("Admin", "Librarian") and is what enforces it.
         {% endcomment %}
         <a href="{% url 'book_volume_add' %}" class="btn btn-primary">
-            <i class="bi bi-plus-lg me-1"></i> Add Volume
+            <i class="bi bi-plus-lg me-1"></i> {% translate "Add Volume" %}
         </a>
     </div>
 
@@ -79,12 +79,12 @@
 
                 <div class="col-12 col-lg-2 d-flex gap-2">
                     <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-search me-1"></i> Search
+                        <i class="bi bi-search me-1"></i> {% translate "Search" %}
                     </button>
                     {% if search or book_id %}
                         <a href="{% url 'book_volume_list' %}" class="btn btn-outline-secondary">
                             <i class="bi bi-x-lg"></i>
-                            <span class="visually-hidden">Clear</span>
+                            <span class="visually-hidden">{% translate "Clear" %}</span>
                         </a>
                     {% endif %}
                 </div>
@@ -99,8 +99,11 @@
     {% endcomment %}
     {% if search or book_id %}
         <p class="text-body-secondary mb-3">
-            Found <strong>{{ volumes.paginator.count }}</strong>
-            volume{{ volumes.paginator.count|pluralize }}.
+            {% blocktranslate trimmed count n=volumes.paginator.count %}
+                Found <strong>{{ n }}</strong> volume.
+            {% plural %}
+                Found <strong>{{ n }}</strong> volumes.
+            {% endblocktranslate %}
         </p>
     {% endif %}
 
@@ -126,7 +129,11 @@
                                     {{ volume.book.title }}
                                 </a>
                             </td>
-                            <td>Volume {{ volume.volume_number }}</td>
+                            <td>
+                                    {% blocktranslate trimmed with volume_number=volume.volume_number %}
+                                        Volume {{ volume_number }}
+                                    {% endblocktranslate %}
+                                </td>
                             <td>{{ volume.title }}</td>
                             <td class="text-end">
                                 <div class="d-inline-flex gap-1">

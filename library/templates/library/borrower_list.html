@@ -9,11 +9,11 @@
 {% endcomment %}
 
 {% block title %}
-    Borrowers | {{ branding.display_name }}
+{% translate "Borrowers" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Borrowers
+    {% translate "Borrowers" %}
 {% endblock %}
 
 {% block content %}
@@ -33,7 +33,7 @@
           permission model and this task does not change it.
         {% endcomment %}
         <a href="{% url 'borrower_add' %}" class="btn btn-primary">
-            <i class="bi bi-plus-lg me-1"></i> Add Borrower
+            <i class="bi bi-plus-lg me-1"></i> {% translate "Add Borrower" %}
         </a>
     </div>
 
@@ -115,12 +115,12 @@
 
                 <div class="col-6 col-lg-2 d-flex gap-2">
                     <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-search me-1"></i> Search
+                        <i class="bi bi-search me-1"></i> {% translate "Search" %}
                     </button>
                     {% if search or borrower_type or active_status or activity %}
                         <a href="{% url 'borrower_list' %}" class="btn btn-outline-secondary">
                             <i class="bi bi-x-lg"></i>
-                            <span class="visually-hidden">Clear</span>
+                            <span class="visually-hidden">{% translate "Clear" %}</span>
                         </a>
                     {% endif %}
                 </div>
@@ -141,17 +141,22 @@
         >
             <i class="bi bi-clock-history" aria-hidden="true"></i>
             <span>
-                <strong>{{ overdue_borrowers }}</strong>
-                borrower{{ overdue_borrowers|pluralize }}
-                {{ overdue_borrowers|pluralize:"has,have" }} something overdue.
+                {% blocktranslate trimmed count n=overdue_borrowers %}
+                    <strong>{{ n }}</strong> borrower has something overdue.
+                {% plural %}
+                    <strong>{{ n }}</strong> borrowers have something overdue.
+                {% endblocktranslate %}
             </span>
             <i class="bi bi-chevron-right ms-auto" aria-hidden="true"></i>
         </a>
     {% endif %}
 
     <p class="text-body-secondary mb-3">
-        Found <strong>{{ paginator.count }}</strong>
-        borrower{{ paginator.count|pluralize }}.
+        {% blocktranslate trimmed count n=paginator.count %}
+            Found <strong>{{ n }}</strong> borrower.
+        {% plural %}
+            Found <strong>{{ n }}</strong> borrowers.
+        {% endblocktranslate %}
     </p>
 
     <div class="card shadow-sm border-0">
@@ -210,22 +215,26 @@
                                 {% endcomment %}
                                 {% if borrower.overdue_loans %}
                                     <span class="badge text-bg-danger">
-                                        {{ borrower.overdue_loans }} overdue
-                                    </span>
+                                                                           {% blocktranslate trimmed with overdue_loans=borrower.overdue_loans %}
+                                                                               {{ overdue_loans }} overdue
+                                                                           {% endblocktranslate %}
+                                                                       </span>
                                 {% endif %}
                                 {% if borrower.active_loans %}
                                     <span class="badge text-bg-info">
-                                        {{ borrower.active_loans }} out
-                                    </span>
+                                                                         {% blocktranslate trimmed with active_loans=borrower.active_loans %}
+                                                                             {{ active_loans }} out
+                                                                         {% endblocktranslate %}
+                                                                     </span>
                                 {% elif not borrower.overdue_loans %}
                                     <span class="text-body-secondary">—</span>
                                 {% endif %}
                             </td>
                             <td>
                                 {% if borrower.is_active %}
-                                    <span class="badge text-bg-success">Active</span>
+                                    <span class="badge text-bg-success">{% translate "Active" %}</span>
                                 {% else %}
-                                    <span class="badge text-bg-secondary">Inactive</span>
+                                    <span class="badge text-bg-secondary">{% translate "Inactive" %}</span>
                                 {% endif %}
                             </td>
                             <td class="text-end">

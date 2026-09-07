@@ -8,7 +8,7 @@
 <p class="mb-3">
     <a href="{% url 'public_book_list' %}" class="text-decoration-none">
         <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>
-        Back to the catalogue
+        {% translate "Back to the catalogue" %}
     </a>
 </p>
 
@@ -82,13 +82,24 @@
 
             {% if volumes %}
                 <dt class="col-sm-3 text-body-secondary fw-normal">
-                    Volume{{ volumes|length|pluralize }}
+                    {% comment %}
+                      `context` because "Volume" is also a plain field
+                      label in ten other templates, and gettext cannot hold
+                      one msgid both with and without a plural form. The
+                      context keeps this heading's singular/plural pair
+                      separate from that label.
+                    {% endcomment %}
+                    {% blocktranslate trimmed count n=volumes|length context "catalogue heading" %}
+                        Volume
+                    {% plural %}
+                        Volumes
+                    {% endblocktranslate %}
                 </dt>
                 <dd class="col-sm-9">
                     <ul class="list-unstyled mb-0">
                         {% for volume in volumes %}
                             <li>
-                                Volume {{ volume.volume_number }}{% if volume.title %} — {{ volume.title }}{% endif %}
+                                {% blocktranslate with number=volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% if volume.title %} — {{ volume.title }}{% endif %}
                             </li>
                         {% endfor %}
                     </ul>

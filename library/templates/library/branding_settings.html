@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block title %}
-    Branding | {{ branding.display_name }}
+{% translate "Branding" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Branding
+    {% translate "Branding" %}
 {% endblock %}
 
 {% block content %}
@@ -40,7 +40,7 @@
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-body">
                         <h5 class="mb-0 fw-bold">
-                            <i class="bi bi-building me-2"></i>Identity
+                            <i class="bi bi-building me-2"></i>{% translate "Identity" %}
                         </h5>
                     </div>
                     <div class="card-body">
@@ -59,9 +59,11 @@
                                 placeholder="{{ settings_obj.DEFAULT_NAME }}"
                             >
                             <div class="form-text">
-                                Shown in the sidebar, page titles and the sign-in page.
-                                Leave blank to use &ldquo;{{ settings_obj.DEFAULT_NAME }}&rdquo;.
-                            </div>
+                                                       {% blocktranslate trimmed with DEFAULT_NAME=settings_obj.DEFAULT_NAME %}
+                                                           Shown in the sidebar, page titles and the sign-in page.
+                                                           Leave blank to use &ldquo;{{ DEFAULT_NAME }}&rdquo;.
+                                                       {% endblocktranslate %}
+                                                   </div>
                         </div>
 
                         <!-- Logo -->
@@ -90,7 +92,7 @@
                             {% else %}
                                 <p class="text-body-secondary small mb-2">
                                     <i class="bi bi-book-half me-1"></i>
-                                    No logo set — the default book icon is shown.
+                                    {% translate "No logo set — the default book icon is shown." %}
                                 </p>
                             {% endif %}
 
@@ -103,9 +105,9 @@
                             >
                             <div class="form-text">
                                 {% if settings_obj.logo %}
-                                    Choosing a file replaces the current logo.
+                                    {% translate "Choosing a file replaces the current logo." %}
                                 {% endif %}
-                                JPG, PNG, WEBP or GIF, up to 1&nbsp;MB.
+                                {% translate "JPG, PNG, WEBP or GIF, up to 1&nbsp;MB." %}
                             </div>
                         </div>
 
@@ -168,16 +170,13 @@
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-body">
                         <h5 class="mb-0 fw-bold">
-                            <i class="bi bi-bank me-2"></i>Institution
+                            <i class="bi bi-bank me-2"></i>{% translate "Institution" %}
                         </h5>
                     </div>
                     <div class="card-body">
 
                         <p class="text-body-secondary">
-                            {% translate "Who the library belongs to. Shown under the name
-                            in the sidebar, and on printed reports and label
-                            sheets. All optional &mdash; leave anything blank
-                            and it is simply not shown." %}
+                            {% translate "Who the library belongs to. Shown under the name in the sidebar, and on printed reports and label sheets. All optional &mdash; leave anything blank and it is simply not shown." %}
                         </p>
 
                         <div class="row g-3">
@@ -246,8 +245,10 @@
                                     placeholder="{% translate 'https://example.org' %}"
                                 >
                                 <div class="form-text">
-                                    Typed without <code>https://</code> is
-                                    fine &mdash; it is added for you.
+                                    {% blocktranslate trimmed %}
+                                        Typed without <code>https://</code>
+                                        is fine &mdash; it is added for you.
+                                    {% endblocktranslate %}
                                 </div>
                             </div>
 
@@ -271,16 +272,19 @@
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-body">
                         <h5 class="mb-0 fw-bold">
-                            <i class="bi bi-palette me-2"></i>Colours
+                            <i class="bi bi-palette me-2"></i>{% translate "Colours" %}
                         </h5>
                     </div>
                     <div class="card-body">
 
                         <p class="text-body-secondary">
-                            Hex codes, e.g. <code>#0d6efd</code>. Leave a field blank
-                            to use the default. Text on coloured surfaces is switched
-                            between black and white automatically, so a pale colour
-                            stays readable.
+                            {% blocktranslate trimmed %}
+                                Hex codes, e.g. <code>#0d6efd</code>. Leave
+                                a field blank to use the default. Text on
+                                coloured surfaces is switched between black
+                                and white automatically, so a pale colour
+                                stays readable.
+                            {% endblocktranslate %}
                         </p>
 
                         {% include "library/partials/color_field.html" with label="Primary" field_name="primary_color" input_id="formPrimaryColor" value=settings_obj.primary_color fallback=settings_obj.DEFAULT_PRIMARY_COLOR help_text="Buttons, links, active navigation and focus rings." %}
@@ -296,7 +300,7 @@
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-body">
                         <h5 class="mb-0 fw-bold">
-                            <i class="bi bi-info-circle me-2"></i>Contact &amp; Footer
+                            <i class="bi bi-info-circle me-2"></i>{% translate "Contact &amp; Footer" %}
                         </h5>
                     </div>
                     <div class="card-body">
@@ -351,10 +355,10 @@
 
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-lg me-1"></i> Save Branding
+                        <i class="bi bi-check-lg me-1"></i> {% translate "Save Branding" %}
                     </button>
                     <a href="{% url 'library_home' %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-x-lg me-1"></i> Cancel
+                        <i class="bi bi-x-lg me-1"></i> {% translate "Cancel" %}
                     </a>
                 </div>
 
@@ -372,15 +376,13 @@
             <div class="card shadow-sm border-0 mt-5" id="borrowingPolicy">
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-journal-check me-2"></i>Borrowing Policy
+                        <i class="bi bi-journal-check me-2"></i>{% translate "Borrowing Policy" %}
                     </h5>
                 </div>
                 <div class="card-body">
 
                     <p class="text-body-secondary">
-                        {% translate "The lending rules for the whole library. They are
-                        enforced when a book is issued or renewed, whatever
-                        the form on screen allows." %}
+                        {% translate "The lending rules for the whole library. They are enforced when a book is issued or renewed, whatever the form on screen allows." %}
                     </p>
 
                     {% if policy_error %}
@@ -411,10 +413,12 @@
                                     placeholder="{{ policy_defaults.loan_period_days }}"
                                 >
                                 <div class="form-text">
-                                    Fills in the due date on the issue form.
-                                    Blank means
-                                    {{ policy_defaults.loan_period_days }} days.
-                                </div>
+                                                           {% blocktranslate trimmed with loan_period_days=policy_defaults.loan_period_days %}
+                                                               Fills in the due date on the issue form.
+                                                               Blank means
+                                                               {{ loan_period_days }} days.
+                                                           {% endblocktranslate %}
+                                                       </div>
                             </div>
 
                             <div class="col-12 col-md-4">
@@ -432,9 +436,7 @@
                                     placeholder="0"
                                 >
                                 <div class="form-text">
-                                    {% translate "How many a borrower may hold at once.
-                                    Blank or 0 means no limit. Returned books
-                                    do not count." %}
+                                    {% translate "How many a borrower may hold at once. Blank or 0 means no limit. Returned books do not count." %}
                                 </div>
                             </div>
 
@@ -453,8 +455,7 @@
                                     placeholder="0"
                                 >
                                 <div class="form-text">
-                                    {% translate "How many times one loan may be extended.
-                                    Blank or 0 means no limit." %}
+                                    {% translate "How many times one loan may be extended. Blank or 0 means no limit." %}
                                 </div>
                             </div>
 
@@ -472,15 +473,13 @@
                                 {% translate "Stop borrowing while anything is overdue" %}
                             </label>
                             <div class="form-text">
-                                {% translate "A borrower holding an overdue book cannot take
-                                another out until it comes back. Off by
-                                default." %}
+                                {% translate "A borrower holding an overdue book cannot take another out until it comes back. Off by default." %}
                             </div>
                         </div>
 
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-1"></i> Save Policy
+                                <i class="bi bi-check-lg me-1"></i> {% translate "Save Policy" %}
                             </button>
                         </div>
 
@@ -491,9 +490,11 @@
 
             <p class="text-body-secondary small mt-4 mb-0">
                 <i class="bi bi-exclamation-triangle me-1"></i>
-                Uploaded files are stored on the server's own filesystem. On hosting
-                that resets its disk on each deploy (such as Render's free tier), the
-                logo and favicon will need re-uploading after a redeploy.
+                {% blocktranslate trimmed %}
+                    Uploaded files are stored on the server's own filesystem. On hosting
+                    that resets its disk on each deploy (such as Render's free tier), the
+                    logo and favicon will need re-uploading after a redeploy.
+                {% endblocktranslate %}
             </p>
 
         </div>

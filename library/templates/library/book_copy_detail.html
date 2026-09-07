@@ -6,7 +6,7 @@
 {% endblock %}
 
 {% block page_title %}
-    Book Copy
+    {% translate "Book Copy" %}
 {% endblock %}
 
 {% block content %}
@@ -20,7 +20,7 @@
             <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
                 <div>
                     <a href="{% url 'book_copy_list' %}" class="small text-decoration-none">
-                        <i class="bi bi-arrow-left me-1"></i> All copies
+                        <i class="bi bi-arrow-left me-1"></i> {% translate "All copies" %}
                     </a>
                     <h2 class="fw-bold mb-1 mt-1">{{ copy.copy_code }}</h2>
                     <span class="badge text-bg-{{ copy.state_tone }}">
@@ -28,7 +28,11 @@
                     </span>
                     {% if copy.days_overdue %}
                         <span class="text-danger small ms-1">
-                            {{ copy.days_overdue }} day{{ copy.days_overdue|pluralize }} overdue
+                            {% blocktranslate trimmed count n=copy.days_overdue %}
+                                {{ n }} day overdue
+                            {% plural %}
+                                {{ n }} days overdue
+                            {% endblocktranslate %}
                         </span>
                     {% endif %}
                 </div>
@@ -41,7 +45,7 @@
                 {% if can_edit %}
                     <div class="d-flex flex-wrap gap-2">
                         <a href="{% url 'book_copy_edit' copy.id %}" class="btn btn-warning">
-                            <i class="bi bi-pencil me-1"></i> Edit
+                            <i class="bi bi-pencil me-1"></i> {% translate "Edit" %}
                         </a>
                         {% comment %}
                       One label for this copy, on the same sheet layout the
@@ -51,11 +55,11 @@
                         href="{% url 'book_copy_labels' %}?copy={{ copy.id }}"
                         class="btn btn-outline-primary"
                     >
-                        <i class="bi bi-upc me-1"></i> Print Label
+                        <i class="bi bi-upc me-1"></i> {% translate "Print Label" %}
                     </a>
 
                     <a href="{% url 'book_copy_move' copy.id %}" class="btn btn-outline-primary">
-                            <i class="bi bi-arrow-left-right me-1"></i> Move
+                            <i class="bi bi-arrow-left-right me-1"></i> {% translate "Move" %}
                         </a>
                         {% comment %}
                           Withdrawing keeps the copy and its loan history
@@ -64,10 +68,10 @@
                           mistake and has no history to lose.
                         {% endcomment %}
                         <a href="{% url 'book_copy_withdraw' copy.id %}" class="btn btn-outline-secondary">
-                            <i class="bi bi-box-arrow-right me-1"></i> Withdraw
+                            <i class="bi bi-box-arrow-right me-1"></i> {% translate "Withdraw" %}
                         </a>
                         <a href="{% url 'book_copy_delete' copy.id %}" class="btn btn-outline-danger">
-                            <i class="bi bi-trash me-1"></i> Delete
+                            <i class="bi bi-trash me-1"></i> {% translate "Delete" %}
                         </a>
                     </div>
                 {% endif %}
@@ -77,7 +81,7 @@
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-upc-scan me-2"></i>Copy
+                        <i class="bi bi-upc-scan me-2"></i>{% translate "Copy" %}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -107,7 +111,7 @@
                             <dt class="col-5 col-sm-3 fw-normal text-body-secondary">{% translate "Volume" %}</dt>
                             <dd class="col-7 col-sm-9">
                                 <a href="{% url 'book_volume_detail' copy.volume.id %}">
-                                    Volume {{ copy.volume.volume_number }}{% if copy.volume.title %} — {{ copy.volume.title }}{% endif %}
+                                    {% blocktranslate with number=copy.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% if copy.volume.title %} — {{ copy.volume.title }}{% endif %}
                                 </a>
                             </dd>
                         {% endif %}
@@ -119,7 +123,7 @@
                                     {{ copy.shelf.location.name }}
                                 </a>
                             {% else %}
-                                <span class="text-body-secondary">Not placed yet</span>
+                                <span class="text-body-secondary">{% translate "Not placed yet" %}</span>
                             {% endif %}
                         </dd>
 
@@ -130,7 +134,7 @@
                                     {{ copy.shelf.shelf_code }}
                                 </a>
                             {% else %}
-                                <span class="text-body-secondary">Unshelved</span>
+                                <span class="text-body-secondary">{% translate "Unshelved" %}</span>
                             {% endif %}
                         </dd>
 
@@ -163,15 +167,15 @@
                                    class="text-decoration-none">{{ last_check.name }}</a>
                                 <span class="d-block small">
                                     {% if last_check_found %}
-                                        <span class="badge text-bg-success">Found</span>
+                                        <span class="badge text-bg-success">{% translate "Found" %}</span>
                                     {% else %}
-                                        <span class="badge text-bg-warning">Not found</span>
+                                        <span class="badge text-bg-warning">{% translate "Not found" %}</span>
                                     {% endif %}
                                     {{ last_check.completed_at|date:"j M Y" }}
                                 </span>
                             {% else %}
                                 <span class="text-body-secondary">
-                                    Never counted
+                                    {% translate "Never counted" %}
                                 </span>
                             {% endif %}
                         </dd>
@@ -184,7 +188,7 @@
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-arrow-left-right me-2"></i>Circulation
+                        <i class="bi bi-arrow-left-right me-2"></i>{% translate "Circulation" %}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -208,7 +212,7 @@
                             <dd class="col-7 col-sm-9 mb-0">
                                 {{ active_loan.due_date }}
                                 {% if copy.days_overdue %}
-                                    <span class="badge text-bg-danger ms-1">Overdue</span>
+                                    <span class="badge text-bg-danger ms-1">{% translate "Overdue" %}</span>
                                 {% endif %}
                             </dd>
 
@@ -220,18 +224,22 @@
                           loan interface.
                         {% endcomment %}
                         <a href="{% url 'loan_detail' active_loan.id %}" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-box-arrow-up-right me-1"></i> Open the loan
+                            <i class="bi bi-box-arrow-up-right me-1"></i> {% translate "Open the loan" %}
                         </a>
                     {% else %}
                         <p class="text-body-secondary mb-0">
-                            Not out on loan.
+                            {% translate "Not out on loan." %}
                             {% if copy.state == "available" %}
-                                It is on the shelf and can be issued.
+                                {% translate "It is on the shelf and can be issued." %}
                             {% elif copy.state == "unshelved" %}
-                                It has no shelf yet, so it needs placing
-                                before it can be found.
+                                {% blocktranslate trimmed %}
+                                    It has no shelf yet, so it needs placing
+                                    before it can be found.
+                                {% endblocktranslate %}
                             {% else %}
-                                It is recorded as {{ copy.state_label|lower }}.
+                                {% blocktranslate trimmed with state=copy.state_label|lower %}
+                                    It is recorded as {{ state }}.
+                                {% endblocktranslate %}
                             {% endif %}
                         </p>
                     {% endif %}
@@ -242,7 +250,7 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-clock-history me-2"></i>Loan History
+                        <i class="bi bi-clock-history me-2"></i>{% translate "Loan History" %}
                     </h5>
                 </div>
                 <div class="table-responsive">
@@ -266,7 +274,7 @@
                                         {% if loan.return_date %}
                                             {{ loan.return_date }}
                                         {% else %}
-                                            <span class="badge text-bg-info">Still out</span>
+                                            <span class="badge text-bg-info">{% translate "Still out" %}</span>
                                         {% endif %}
                                     </td>
                                     <td class="text-end">
@@ -299,11 +307,15 @@
             <div class="card shadow-sm border-0 mt-4">
                 <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-clock-history me-2"></i>History
+                        <i class="bi bi-clock-history me-2"></i>{% translate "History" %}
                     </h5>
                     {% if history_total %}
                         <span class="text-body-secondary small">
-                            {{ history_total }} event{{ history_total|pluralize }}
+                            {% blocktranslate trimmed count n=history_total %}
+                                {{ n }} event
+                            {% plural %}
+                                {{ n }} events
+                            {% endblocktranslate %}
                         </span>
                     {% endif %}
                 </div>
@@ -331,8 +343,10 @@
 
                                         {% if event.user %}
                                             <span class="d-block small text-body-secondary">
-                                                by {{ event.user.full_name|default:event.user.username }}
-                                            </span>
+                                                                                                {% blocktranslate trimmed with full_name=event.user.full_name|default:event.user.username %}
+                                                                                                    by {{ full_name }}
+                                                                                                {% endblocktranslate %}
+                                                                                            </span>
                                         {% endif %}
                                     </div>
 
@@ -340,7 +354,7 @@
                                         {{ event.when|date:"j M Y" }}
                                         {% if event.url %}
                                             <a href="{{ event.url }}"
-                                               class="d-block text-decoration-none">Open</a>
+                                               class="d-block text-decoration-none">{% translate "Open" %}</a>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -355,17 +369,19 @@
                     {% if history.has_other_pages %}
                         <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
                             <span class="text-body-secondary small">
-                                Page {{ history.number }} of
-                                {{ history.paginator.num_pages }}
-                            </span>
+                                                                        {% blocktranslate trimmed with number=history.number num_pages=history.paginator.num_pages %}
+                                                                            Page {{ number }} of
+                                                                            {{ num_pages }}
+                                                                        {% endblocktranslate %}
+                                                                    </span>
                             <div class="btn-group btn-group-sm">
                                 {% if history.has_previous %}
                                     <a class="btn btn-outline-secondary"
-                                       href="?history={{ history.previous_page_number }}">Newer</a>
+                                       href="?history={{ history.previous_page_number }}">{% translate "Newer" %}</a>
                                 {% endif %}
                                 {% if history.has_next %}
                                     <a class="btn btn-outline-secondary"
-                                       href="?history={{ history.next_page_number }}">Older</a>
+                                       href="?history={{ history.next_page_number }}">{% translate "Older" %}</a>
                                 {% endif %}
                             </div>
                         </div>
@@ -375,8 +391,7 @@
                     <div class="card-body text-center text-body-secondary py-4">
                         <p class="mb-1 fw-semibold">{% translate "Nothing has happened to this copy yet." %}</p>
                         <p class="mb-0 small">
-                            {% translate "Issues, returns, renewals, moves, status changes
-                            and stock checks appear here as they happen." %}
+                            {% translate "Issues, returns, renewals, moves, status changes and stock checks appear here as they happen." %}
                         </p>
                     </div>
                 {% endif %}

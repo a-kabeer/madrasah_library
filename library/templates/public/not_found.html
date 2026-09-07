@@ -13,7 +13,7 @@ keeps a crafted id from telling anybody that a hidden record exists: the
 archived and the never-existent are indistinguishable from out here.
 {% endcomment %}
 
-{% block title %}Not found | {{ branding.display_name }}{% endblock %}
+{% block title %}{% translate "Not found" %} | {{ branding.display_name }}{% endblock %}
 
 {% block content %}
 
@@ -28,7 +28,7 @@ archived and the never-existent are indistinguishable from out here.
     </p>
 
     <a href="{% url 'public_book_list' %}" class="btn btn-primary">
-        Browse the catalogue
+        {% translate "Browse the catalogue" %}
     </a>
 
 </div>

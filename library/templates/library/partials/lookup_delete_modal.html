@@ -19,7 +19,7 @@ Expected context: kind, label, action, name, blocker.
 {% endcomment %}
 
 <h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
-    <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>Delete {{ label }}?
+    <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{% blocktranslate with noun=label %}Delete {{ noun }}?{% endblocktranslate %}
 </h5>
 
 <div id="lookupDeleteBody">
@@ -32,8 +32,10 @@ Expected context: kind, label, action, name, blocker.
         </div>
 
         <p class="text-body-secondary mb-0">
-            <strong class="text-body">{{ name }}</strong> stays as it is.
-        </p>
+                                                {% blocktranslate trimmed %}
+                                                    <strong class="text-body">{{ name }}</strong> stays as it is.
+                                                {% endblocktranslate %}
+                                            </p>
 
         <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
             <button
@@ -52,13 +54,12 @@ Expected context: kind, label, action, name, blocker.
         <p class="fs-5 fw-semibold mb-3">{{ name }}</p>
 
         <p class="text-body-secondary">
-            {% translate "No books are filed under it, so nothing in the catalogue
-            changes." %}
+            {% translate "No books are filed under it, so nothing in the catalogue changes." %}
         </p>
 
         <p class="text-danger small mb-0">
             <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
-            This cannot be undone.
+            {% translate "This cannot be undone." %}
         </p>
 
         <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
@@ -73,7 +74,7 @@ Expected context: kind, label, action, name, blocker.
             >
                 {% csrf_token %}
                 <button type="submit" class="btn btn-danger">
-                    <i class="bi bi-trash me-1" aria-hidden="true"></i> Delete
+                    <i class="bi bi-trash me-1" aria-hidden="true"></i> {% translate "Delete" %}
                 </button>
             </form>
 

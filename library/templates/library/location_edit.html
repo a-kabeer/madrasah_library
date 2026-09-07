@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block title %}
-    Edit Location | {{ branding.display_name }}
+{% translate "Edit Location" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Edit Location
+    {% translate "Edit Location" %}
 {% endblock %}
 
 {% block content %}
@@ -19,7 +19,7 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-pencil me-2"></i>Edit Location
+                        <i class="bi bi-pencil me-2"></i>{% translate "Edit Location" %}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -29,7 +29,7 @@
 
                         <div class="mb-3">
                             <label for="formName" class="form-label fw-semibold">
-                                Name <span class="text-danger">*</span>
+                                {% translate "Name" %} <span class="text-danger">*</span>
                             </label>
                             <input
                                 type="text"
@@ -40,7 +40,7 @@
                                 required
                             >
                             <div class="form-text">
-                                A place in the building, e.g. "Main Hall".
+                                {% translate 'A place in the building, e.g. "Main Hall".' %}
                             </div>
                         </div>
 
@@ -58,10 +58,10 @@
 
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-1"></i> Update Location
+                                <i class="bi bi-check-lg me-1"></i> {% translate "Update Location" %}
                             </button>
                             <a href="{% url 'location_detail' location.id %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-lg me-1"></i> Cancel
+                                <i class="bi bi-x-lg me-1"></i> {% translate "Cancel" %}
                             </a>
                         </div>
 

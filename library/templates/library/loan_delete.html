@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block title %}
-    Delete Loan | {{ branding.display_name }}
+{% translate "Delete Loan" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Delete Loan
+    {% translate "Delete Loan" %}
 {% endblock %}
 
 {% block content %}
@@ -21,11 +21,11 @@
     <p>
         {% if next_url %}
             <a href="{{ next_url }}">
-                ← Back
+                {% translate "← Back" %}
             </a>
         {% else %}
             <a href="{% url 'loan_list' %}">
-                ← Back to Loans
+                {% translate "← Back to Loans" %}
             </a>
         {% endif %}
     </p>
@@ -33,36 +33,40 @@
     <h1>{% translate "Delete Loan" %}</h1>
 
     <p>
-        Are you sure you want to permanently delete
-        Loan #{{ loan.id }}?
-    </p>
+           {% blocktranslate trimmed with id=loan.id %}
+               Are you sure you want to permanently delete
+               Loan #{{ id }}?
+           {% endblocktranslate %}
+       </p>
 
     <p>
-        <strong>Book Copy:</strong>
+        <strong>{% translate "Book Copy:" %}</strong>
         {{ loan.copy.copy_code }}
     </p>
 
     <p>
-        <strong>Borrower:</strong>
+        <strong>{% translate "Borrower:" %}</strong>
         {{ loan.borrower.name }}
     </p>
 
     <p>
-        <strong>Status:</strong>
+        <strong>{% translate "Status:" %}</strong>
 
         {% if loan.return_date %}
-            Returned
+            {% translate "Returned" %}
         {% else %}
-            Active
+            {% translate "Active" %}
         {% endif %}
     </p>
 
     {% if not loan.return_date %}
 
         <p>
-            <strong>Note:</strong>
-            This is an active loan. Deleting it will make
-            the book copy available again.
+            <strong>{% translate "Note:" %}</strong>
+            {% blocktranslate trimmed %}
+                This is an active loan. Deleting it will make the book copy
+                available again.
+            {% endblocktranslate %}
         </p>
 
     {% endif %}
@@ -80,11 +84,11 @@
 
         {% if next_url %}
             <a href="{{ next_url }}">
-                Cancel
+                {% translate "Cancel" %}
             </a>
         {% else %}
             <a href="{% url 'loan_list' %}">
-                Cancel
+                {% translate "Cancel" %}
             </a>
         {% endif %}
 

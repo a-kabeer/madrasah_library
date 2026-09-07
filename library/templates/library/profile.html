@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block title %}
-    My Profile | {{ branding.display_name }}
+{% translate "My Profile" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    My Profile
+    {% translate "My Profile" %}
 {% endblock %}
 
 {% block content %}
@@ -20,7 +20,7 @@
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-person-circle me-2"></i>Account
+                        <i class="bi bi-person-circle me-2"></i>{% translate "Account" %}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -55,14 +55,13 @@
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-circle-half me-2"></i>Appearance
+                        <i class="bi bi-circle-half me-2"></i>{% translate "Appearance" %}
                     </h5>
                 </div>
                 <div class="card-body">
 
                     <p class="text-body-secondary">
-                        {% translate "Choose how the app looks. This is saved to your account,
-                        so it follows you to other browsers and devices." %}
+                        {% translate "Choose how the app looks. This is saved to your account, so it follows you to other browsers and devices." %}
                     </p>
 
                     {% comment %}
@@ -90,7 +89,7 @@
                                         {{ label }}
                                         {% if value == "system" %}
                                             <span class="text-body-secondary small">
-                                                — follow my device setting
+                                                {% translate "— follow my device setting" %}
                                             </span>
                                         {% endif %}
                                     </label>
@@ -99,7 +98,7 @@
                         </fieldset>
 
                         <button type="submit" class="btn btn-primary mt-3">
-                            <i class="bi bi-check-lg me-1"></i> Save Appearance
+                            <i class="bi bi-check-lg me-1"></i> {% translate "Save Appearance" %}
                         </button>
                     </form>
 
@@ -110,7 +109,7 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-key me-2"></i>Change Password
+                        <i class="bi bi-key me-2"></i>{% translate "Change Password" %}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -134,7 +133,7 @@
 
                         <div class="mb-3">
                             <label for="current_password" class="form-label fw-semibold">
-                                Current Password <span class="text-danger">*</span>
+                                {% translate "Current Password" %} <span class="text-danger">*</span>
                             </label>
                             <input
                                 type="password"
@@ -148,7 +147,7 @@
 
                         <div class="mb-3">
                             <label for="new_password" class="form-label fw-semibold">
-                                New Password <span class="text-danger">*</span>
+                                {% translate "New Password" %} <span class="text-danger">*</span>
                             </label>
                             <input
                                 type="password"
@@ -163,7 +162,7 @@
 
                         <div class="mb-3">
                             <label for="confirm_password" class="form-label fw-semibold">
-                                Confirm New Password <span class="text-danger">*</span>
+                                {% translate "Confirm New Password" %} <span class="text-danger">*</span>
                             </label>
                             <input
                                 type="password"
@@ -176,7 +175,7 @@
                         </div>
 
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-check-lg me-1"></i> Update Password
+                            <i class="bi bi-check-lg me-1"></i> {% translate "Update Password" %}
                         </button>
                     </form>
 

@@ -1,9 +1,12 @@
+{% load i18n %}
 {% if user.is_authenticated %}
 <p style="text-align:right;">
-    Logged in as <strong>{{ user.full_name }}</strong> ({{ user.role }})
+    {% blocktranslate trimmed with name=user.full_name role=user.role %}
+        Logged in as <strong>{{ name }}</strong> ({{ role }})
+    {% endblocktranslate %}
     |
-    <a href="{% url 'profile' %}">My Profile</a>
+    <a href="{% url 'profile' %}">{% translate "My Profile" %}</a>
     |
-    <a href="{% url 'logout' %}">Log Out</a>
+    <a href="{% url 'logout' %}">{% translate "Log Out" %}</a>
 </p>
 {% endif %}

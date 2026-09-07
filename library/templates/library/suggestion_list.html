@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block title %}
-    Suggestions | {{ branding.display_name }}
+{% translate "Suggestions" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Suggestions
+    {% translate "Suggestions" %}
 {% endblock %}
 
 {% block content %}
@@ -17,11 +17,14 @@
         <div>
             <h2 class="fw-bold mb-1">{% translate "Suggested Purchases" %}</h2>
             <p class="text-body-secondary mb-0">
-                Books worth looking for. A suggestion is a note, not a
-                catalogue record — nothing here is on a shelf, and adding
-                one to the catalogue is still the
-                <a href="{% url 'book_list' %}">Add Book</a> form with its
-                own checks.
+                {% url 'book_list' as book_list_url %}
+                {% blocktranslate trimmed with url=book_list_url %}
+                    Books worth looking for. A suggestion is a note, not a
+                    catalogue record — nothing here is on a shelf, and
+                    adding one to the catalogue is still the
+                    <a href="{{ url }}">Add Book</a> form with its own
+                    checks.
+                {% endblocktranslate %}
             </p>
         </div>
 
@@ -31,7 +34,7 @@
         {% endcomment %}
         <a href="{% url 'suggestion_add' %}" class="btn btn-primary">
             <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
-            Suggest a book
+            {% translate "Suggest a book" %}
         </a>
     </div>
 
@@ -46,7 +49,7 @@
         <a
             href="?{% if search %}search={{ search|urlencode }}{% endif %}"
             class="btn btn-sm {% if not status %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-        >All</a>
+        >{% translate "All" %}</a>
 
         {% for value, label in statuses %}
             <a
@@ -74,7 +77,7 @@
 
             <button type="submit" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-search" aria-hidden="true"></i>
-                <span class="visually-hidden">Search</span>
+                <span class="visually-hidden">{% translate "Search" %}</span>
             </button>
         </form>
 
@@ -105,8 +108,10 @@
 
                                     {% if suggestion.isbn %}
                                         <span class="d-block small text-body-secondary">
-                                            ISBN {{ suggestion.isbn }}
-                                        </span>
+                                                                                            {% blocktranslate trimmed with isbn=suggestion.isbn %}
+                                                                                                ISBN {{ isbn }}
+                                                                                            {% endblocktranslate %}
+                                                                                        </span>
                                     {% endif %}
                                 </td>
 
@@ -150,16 +155,16 @@
                 <i class="bi bi-lightbulb fs-1 d-block mb-2" aria-hidden="true"></i>
                 <p class="mb-1 fw-semibold">
                     {% if status or search %}
-                        Nothing matches that.
+                        {% translate "Nothing matches that." %}
                     {% else %}
-                        Nothing has been suggested yet.
+                        {% translate "Nothing has been suggested yet." %}
                     {% endif %}
                 </p>
                 <p class="mb-0 small">
                     {% if status or search %}
-                        Try another status, or clear the search.
+                        {% translate "Try another status, or clear the search." %}
                     {% else %}
-                        A title is all it takes — everything else is optional.
+                        {% translate "A title is all it takes — everything else is optional." %}
                     {% endif %}
                 </p>
             </div>

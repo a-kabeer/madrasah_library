@@ -1,9 +1,9 @@
 {% extends layout %}
 {% load i18n %}
 
-{% block title %}Return Book | {{ branding.display_name }}{% endblock %}
+{% block title %}{% translate "Return Book" %} | {{ branding.display_name }}{% endblock %}
 
-{% block page_title %}Return Book{% endblock %}
+{% block page_title %}{% translate "Return Book" %}{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-0">
@@ -11,7 +11,7 @@
     <div class="mb-4">
         <nav aria-label="{% translate 'breadcrumb' %}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{% url 'circulation_dashboard' %}">Circulation</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'circulation_dashboard' %}">{% translate "Circulation" %}</a></li>
                 <li class="breadcrumb-item active">{% translate "Return Book" %}</li>
             </ol>
         </nav>
@@ -68,13 +68,11 @@
                                     hidden
                                 >
                                     <i class="bi bi-upc-scan"></i>
-                                    <span class="visually-hidden">Scan a barcode</span>
+                                    <span class="visually-hidden">{% translate "Scan a barcode" %}</span>
                                 </button>
                             </div>
                             <div class="form-text">
-                                {% translate "A whole copy code goes straight to that
-                                loan. Anything else searches what is out on
-                                loan now by book title or author." %}
+                                {% translate "A whole copy code goes straight to that loan. Anything else searches what is out on loan now by book title or author." %}
                             </div>
                         </div>
                     </form>
@@ -103,9 +101,9 @@
                     <h5 class="mb-0">{% translate "Out on loan now" %}</h5>
                     <span class="text-body-secondary small">
                         {% if more_matches %}
-                            first {{ lookup_limit }} — narrow the search
+                            {% blocktranslate with shown=lookup_limit %}first {{ shown }} — narrow the search{% endblocktranslate %}
                         {% else %}
-                            {{ matches|length }} found
+                            {% blocktranslate count n=matches|length %}{{ n }} found{% plural %}{{ n }} found{% endblocktranslate %}
                         {% endif %}
                     </span>
                 </div>
@@ -131,7 +129,7 @@
                                         <span class="d-block small">
                                             {{ match.copy.volume.book.author.name }}
                                             {% if match.copy.volume.volume_number != 1 or match.copy.volume.title %}
-                                                — Volume {{ match.copy.volume.volume_number }}{% if match.copy.volume.title %} · {{ match.copy.volume.title }}{% endif %}
+                                                — {% blocktranslate with number=match.copy.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% if match.copy.volume.title %} · {{ match.copy.volume.title }}{% endif %}
                                             {% endif %}
                                         </span>
                                     </td>
@@ -140,7 +138,11 @@
                                         {{ match.due_date }}
                                         {% if match.days_overdue %}
                                             <span class="d-block small text-danger">
-                                                {{ match.days_overdue }} day{{ match.days_overdue|pluralize }} late
+                                                {% blocktranslate trimmed count n=match.days_overdue %}
+                                                    {{ n }} day late
+                                                {% plural %}
+                                                    {{ n }} days late
+                                                {% endblocktranslate %}
                                             </span>
                                         {% endif %}
                                     </td>
@@ -149,7 +151,7 @@
                                             href="{% url 'loan_return' match.id %}?next={% url 'circulation_return_lookup' %}"
                                             class="btn btn-sm btn-success"
                                         >
-                                            Return
+                                            {% translate "Return" %}
                                         </a>
                                     </td>
                                 </tr>
@@ -202,7 +204,13 @@
                         <div class="col-sm-8">
                             {{ loan.due_date }}
                             {% if loan.days_overdue > 0 %}
-                                <span class="badge bg-danger ms-2">Overdue by {{ loan.days_overdue }} day{{ loan.days_overdue|pluralize }}</span>
+                                <span class="badge bg-danger ms-2">
+                                    {% blocktranslate trimmed count n=loan.days_overdue %}
+                                        Overdue by {{ n }} day
+                                    {% plural %}
+                                        Overdue by {{ n }} days
+                                    {% endblocktranslate %}
+                                </span>
                             {% endif %}
                         </div>
                     </div>
@@ -211,10 +219,10 @@
 
                     <div class="d-flex gap-2">
                         <a href="{% url 'loan_return' loan.id %}?next={% url 'circulation_return_lookup' %}" class="btn btn-success">
-                            Proceed to Return
+                            {% translate "Proceed to Return" %}
                         </a>
                         <a href="{% url 'loan_detail' loan.id %}" class="btn btn-outline-secondary">
-                            View Loan Details
+                            {% translate "View Loan Details" %}
                         </a>
                     </div>
 

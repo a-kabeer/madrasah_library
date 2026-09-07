@@ -1,6 +1,7 @@
 {% extends "library/error_base.html" %}
+{% load i18n %}
 
-{% block title %}403 Forbidden{% endblock %}
+{% block title %}{% translate "403 Forbidden" %}{% endblock %}
 
 {% block error_code %}403{% endblock %}
 
@@ -8,9 +9,11 @@
     <i class="bi bi-shield-lock" aria-hidden="true"></i>
 {% endblock %}
 
-{% block error_title %}Permission denied{% endblock %}
+{% block error_title %}{% translate "Permission denied" %}{% endblock %}
 
 {% block error_message %}
-    Your account does not have permission to do that. If you think it should,
-    ask an administrator to check your role.
+    {% blocktranslate trimmed %}
+        Your account does not have permission to do that. If you think it should,
+        ask an administrator to check your role.
+    {% endblocktranslate %}
 {% endblock %}

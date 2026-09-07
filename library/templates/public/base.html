@@ -135,14 +135,23 @@ none.
         <span class="public-tagline">{% translate "Library catalogue" %}</span>
 
         {% comment %}
-          The public catalogue is read without signing in, so its language
-          comes from the browser or from this control - there is no account
-          to store a choice on. The selector posts to Django's own
-          `set_language` for exactly that reason; see the partial.
+          There is deliberately no language switcher here, and it is worth
+          saying why so that nobody drops the staff one back in.
+
+          This page loads no JavaScript at all - by design, and there is a
+          test that keeps it that way. The topbar switcher is a Bootstrap
+          dropdown, so on this page it would render a button that cannot
+          open: dead UI. It also posts, and every POST form brings a CSRF
+          token, which would break the three properties this catalogue is
+          built around - one GET form and nothing else, no token, and an
+          archived book's page being byte-identical to an unused id's.
+
+          A public switcher therefore has to be scriptless and formless:
+          plain links carrying the language in the query string, honoured
+          per-request without touching the session. That is a small change
+          and it is not made here, so for now an anonymous reader gets the
+          language their browser asks for.
         {% endcomment %}
-        <div class="public-language ms-auto">
-            {% include "library/partials/language_selector.html" %}
-        </div>
 
     </div>
 

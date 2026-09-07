@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block title %}
-    Activity Logs | {{ branding.display_name }}
+{% translate "Activity Logs" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Activity Logs
+    {% translate "Activity Logs" %}
 {% endblock %}
 
 {% block content %}
@@ -123,7 +123,7 @@
     </button>
 
     <a href="{% url 'activity_log_list' %}">
-        Clear Filters
+        {% translate "Clear Filters" %}
     </a>
 
 </form>
@@ -131,8 +131,10 @@
 <br>
 
 <p>
-    Found {{ logs.paginator.count }} log(s).
-</p>
+       {% blocktranslate trimmed with count=logs.paginator.count %}
+           Found {{ count }} log(s).
+       {% endblocktranslate %}
+   </p>
 
 <ul>
 
@@ -140,24 +142,24 @@
 
         <li>
 
-            ID: {{ log.id }}
+            {% translate "ID:" %} {{ log.id }}
 
-            - User:
+            - {% translate "User:" %}
 
             {% if log.user %}
                 {{ log.user.full_name }}
             {% else %}
-                System
+                {% translate "System" %}
             {% endif %}
 
-            - Action: {{ log.action }}
+            - {% translate "Action:" %} {{ log.action }}
 
             {% if log.entity_type %}
-                - Entity: {{ log.entity_type }}
+                - {% translate "Entity:" %} {{ log.entity_type }}
             {% endif %}
 
             {% if log.entity_id %}
-                - ID: {{ log.entity_id }}
+                - {% translate "ID:" %} {{ log.entity_id }}
             {% endif %}
 
             {% if log.description %}

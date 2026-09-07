@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block title %}
-    Import Books | {{ branding.display_name }}
+{% translate "Import Books" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Import Books
+    {% translate "Import Books" %}
 {% endblock %}
 
 {% block content %}
@@ -16,25 +16,24 @@
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
             <a href="{% url 'book_list' %}" class="small text-decoration-none">
-                <i class="bi bi-arrow-left me-1"></i> Books
+                <i class="bi bi-arrow-left me-1"></i> {% translate "Books" %}
             </a>
             <h2 class="fw-bold mb-1 mt-1">{% translate "Import Books" %}</h2>
             <p class="text-body-secondary mb-0">
-                {% translate "Add or update many books at once from a spreadsheet.
-                Nothing is saved until you confirm." %}
+                {% translate "Add or update many books at once from a spreadsheet. Nothing is saved until you confirm." %}
             </p>
         </div>
         <div class="d-flex flex-wrap gap-2">
-            {# A file, not a page: a background fetch would swap a
-               spreadsheet into the layout. #}
+            {% comment %} A file, not a page: a background fetch would swap a
+               spreadsheet into the layout. {% endcomment %}
             <a href="{% url 'book_import_template' %}" hx-boost="false" class="btn btn-outline-primary">
                 <i class="bi bi-file-earmark-arrow-down me-1"></i>
-                Download Template
+                {% translate "Download Template" %}
             </a>
-            {# A file, not a page: a background fetch would swap a
-               spreadsheet into the layout. #}
+            {% comment %} A file, not a page: a background fetch would swap a
+               spreadsheet into the layout. {% endcomment %}
             <a href="{% url 'book_export' %}" hx-boost="false" class="btn btn-outline-secondary">
-                <i class="bi bi-box-arrow-up me-1"></i> Export Books
+                <i class="bi bi-box-arrow-up me-1"></i> {% translate "Export Books" %}
             </a>
         </div>
     </div>
@@ -82,16 +81,18 @@
                             required
                         >
                         <div class="form-text">
-                            Excel .xlsx only, up to {{ max_mb }}&nbsp;MB and
-                            {{ max_rows }} rows. Start from the template if
-                            you are not sure of the columns — but any
-                            spreadsheet will do, and you can match its
-                            columns up on the next step.
-                        </div>
+                                                   {% blocktranslate trimmed %}
+                                                       Excel .xlsx only, up to {{ max_mb }}&nbsp;MB and
+                                                       {{ max_rows }} rows. Start from the template if
+                                                       you are not sure of the columns — but any
+                                                       spreadsheet will do, and you can match its
+                                                       columns up on the next step.
+                                                   {% endblocktranslate %}
+                                               </div>
                     </div>
 
                     <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-upload me-1"></i> Upload
+                        <i class="bi bi-upload me-1"></i> {% translate "Upload" %}
                     </button>
 
                 </form>
@@ -102,7 +103,7 @@
         <div class="card shadow-sm border-0 mt-4">
             <div class="card-header bg-body">
                 <h5 class="mb-0 fw-bold">
-                    <i class="bi bi-info-circle me-2"></i>What the columns mean
+                    <i class="bi bi-info-circle me-2"></i>{% translate "What the columns mean" %}
                 </h5>
             </div>
             <div class="table-responsive">
@@ -120,11 +121,11 @@
                                 <td class="fw-semibold">{{ column.label }}</td>
                                 <td>
                                     {% if column.required %}
-                                        <span class="badge text-bg-danger">Required</span>
+                                        <span class="badge text-bg-danger">{% translate "Required" %}</span>
                                     {% elif column.system %}
-                                        <span class="badge text-bg-secondary">System</span>
+                                        <span class="badge text-bg-secondary">{% translate "System" %}</span>
                                     {% else %}
-                                        <span class="badge text-bg-light">Optional</span>
+                                        <span class="badge text-bg-light">{% translate "Optional" %}</span>
                                     {% endif %}
                                 </td>
                                 <td class="text-body-secondary small">
@@ -148,10 +149,14 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-diagram-3 me-2"></i>Match your columns
+                        <i class="bi bi-diagram-3 me-2"></i>{% translate "Match your columns" %}
                     </h5>
                     <span class="text-body-secondary small">
-                        {{ state.name }} — {{ state.rows }} row{{ state.rows|pluralize }}
+                        {% blocktranslate trimmed count n=state.rows with name=state.name %}
+                            {{ name }} — {{ n }} row
+                        {% plural %}
+                            {{ name }} — {{ n }} rows
+                        {% endblocktranslate %}
                     </span>
                 </div>
                 <div class="card-body">
@@ -163,9 +168,11 @@
                           here — and no spreadsheet has to be renamed before
                           it can be imported.
                         {% endcomment %}
-                        Headings that were recognised are matched already.
-                        Change anything that is wrong, and set the columns
-                        you do not need to <em>Ignore</em>.
+                        {% translate "Headings that were recognised are matched already." %}
+                        {% blocktranslate trimmed %}
+                            Change anything that is wrong, and set the
+                            columns you do not need to <em>Ignore</em>.
+                        {% endblocktranslate %}
                     </p>
 
                     <div class="table-responsive">
@@ -199,7 +206,7 @@
                                                         value="{{ column.key }}"
                                                         {% if row.key == column.key %}selected{% endif %}
                                                     >
-                                                        {{ column.label }}{% if column.required %} (required){% endif %}
+                                                        {{ column.label }}{% if column.required %} {% translate "(required)" %}{% endif %}
                                                     </option>
                                                 {% endfor %}
                                             </select>
@@ -213,7 +220,7 @@
                 </div>
                 <div class="card-footer bg-body d-flex flex-wrap gap-2">
                     <button type="submit" class="btn btn-primary">
-                        Check the data <i class="bi bi-arrow-right ms-1"></i>
+                        {% translate "Check the data" %} <i class="bi bi-arrow-right ms-1"></i>
                     </button>
                     <button
                         type="submit"
@@ -248,7 +255,7 @@
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header bg-body">
                 <h5 class="mb-0 fw-bold">
-                    <i class="bi bi-list-check me-2"></i>What will happen
+                    <i class="bi bi-list-check me-2"></i>{% translate "What will happen" %}
                 </h5>
             </div>
             <div class="table-responsive">
@@ -272,11 +279,11 @@
                                 <td class="fw-semibold">{{ group.label }}</td>
                                 <td>
                                     {% if group.blocked %}
-                                        <span class="badge text-bg-danger">Skipped</span>
+                                        <span class="badge text-bg-danger">{% translate "Skipped" %}</span>
                                     {% elif group.action == "update" %}
-                                        <span class="badge text-bg-info">Update</span>
+                                        <span class="badge text-bg-info">{% translate "Update" %}</span>
                                     {% else %}
-                                        <span class="badge text-bg-success">New book</span>
+                                        <span class="badge text-bg-success">{% translate "New book" %}</span>
                                     {% endif %}
                                 </td>
                                 <td>{{ group.volumes|length }}</td>
@@ -289,7 +296,7 @@
                                             {% else %}
                                                 <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
                                             {% endif %}
-                                            Row {{ problem.row_number }}: {{ problem.message }}
+                                            {% blocktranslate with number=problem.row_number %}Row {{ number }}:{% endblocktranslate %} {{ problem.message }}
                                         </span>
                                     {% empty %}
                                         <span class="text-body-secondary">—</span>
@@ -320,27 +327,36 @@
                     <div class="flex-grow-1">
                         {% if summary.ready %}
                             <span class="fw-semibold d-block">
-                                Ready to import {{ summary.ready|length }}
-                                book{{ summary.ready|length|pluralize }}.
+                                {% blocktranslate trimmed count n=summary.ready|length %}
+                                    Ready to import {{ n }} book.
+                                {% plural %}
+                                    Ready to import {{ n }} books.
+                                {% endblocktranslate %}
                             </span>
                             <span class="text-body-secondary small">
                                 {% if summary.skipped %}
-                                    {{ summary.skipped }}
-                                    book{{ summary.skipped|pluralize }} with
-                                    errors will be skipped — nothing from
-                                    {{ summary.skipped|pluralize:"it,them" }}
-                                    will be saved.
+                                    {% blocktranslate trimmed count n=summary.skipped %}
+                                        {{ n }} book with errors will be
+                                        skipped — nothing from it will be
+                                        saved.
+                                    {% plural %}
+                                        {{ n }} books with errors will be
+                                        skipped — nothing from them will be
+                                        saved.
+                                    {% endblocktranslate %}
                                 {% else %}
-                                    Nothing has errors.
+                                    {% translate "Nothing has errors." %}
                                 {% endif %}
                             </span>
                         {% else %}
                             <span class="fw-semibold d-block text-danger">
-                                Nothing can be imported.
+                                {% translate "Nothing can be imported." %}
                             </span>
                             <span class="text-body-secondary small">
-                                Every book in the file has an error. Fix them
-                                and upload it again.
+                                {% blocktranslate trimmed %}
+                                    Every book in the file has an error. Fix them
+                                    and upload it again.
+                                {% endblocktranslate %}
                             </span>
                         {% endif %}
                     </div>
@@ -348,7 +364,11 @@
                     {% if summary.ready %}
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-check-lg me-1"></i>
-                            Import {{ summary.ready|length }} book{{ summary.ready|length|pluralize }}
+                            {% blocktranslate trimmed count n=summary.ready|length %}
+                                Import {{ n }} book
+                            {% plural %}
+                                Import {{ n }} books
+                            {% endblocktranslate %}
                         </button>
                     {% endif %}
 
@@ -373,11 +393,27 @@
         <div class="alert alert-success d-flex align-items-start" role="alert">
             <i class="bi bi-check-circle-fill me-2 mt-1" aria-hidden="true"></i>
             <div>
-                <strong>Import finished.</strong>
-                {{ results.created }} book{{ results.created|pluralize }} added,
-                {{ results.updated }} updated,
-                {{ results.volumes }} volume{{ results.volumes|pluralize }} and
-                {{ results.copies }} cop{{ results.copies|pluralize:"y,ies" }} created.
+                <strong>{% translate "Import finished." %}</strong>
+                {% blocktranslate trimmed count n=results.created %}
+                    {{ n }} book added.
+                {% plural %}
+                    {{ n }} books added.
+                {% endblocktranslate %}
+                {% blocktranslate trimmed count n=results.updated %}
+                    {{ n }} book updated.
+                {% plural %}
+                    {{ n }} books updated.
+                {% endblocktranslate %}
+                {% blocktranslate trimmed count n=results.volumes %}
+                    {{ n }} volume created.
+                {% plural %}
+                    {{ n }} volumes created.
+                {% endblocktranslate %}
+                {% blocktranslate trimmed count n=results.copies %}
+                    {{ n }} copy created.
+                {% plural %}
+                    {{ n }} copies created.
+                {% endblocktranslate %}
             </div>
         </div>
 
@@ -386,13 +422,13 @@
                 <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <h5 class="mb-0 fw-bold text-danger">
                         <i class="bi bi-exclamation-triangle me-2"></i>
-                        Not imported
+                        {% translate "Not imported" %}
                     </h5>
-                    {# A file, not a page: a background fetch would swap a
-                       spreadsheet into the layout. #}
+                    {% comment %} A file, not a page: a background fetch would swap a
+                       spreadsheet into the layout. {% endcomment %}
                     <a href="{% url 'book_import_errors' %}" hx-boost="false" class="btn btn-sm btn-outline-danger">
                         <i class="bi bi-file-earmark-arrow-down me-1"></i>
-                        Download error report
+                        {% translate "Download error report" %}
                     </a>
                 </div>
                 <div class="table-responsive">
@@ -435,10 +471,10 @@
 
         <div class="d-flex flex-wrap gap-2">
             <a href="{% url 'book_list' %}" class="btn btn-primary">
-                <i class="bi bi-list-ul me-1"></i> Back to Books
+                <i class="bi bi-list-ul me-1"></i> {% translate "Back to Books" %}
             </a>
             <a href="{% url 'book_import' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-upload me-1"></i> Import another file
+                <i class="bi bi-upload me-1"></i> {% translate "Import another file" %}
             </a>
         </div>
 

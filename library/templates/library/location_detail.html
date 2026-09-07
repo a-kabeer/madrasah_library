@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block page_title %}
-    Location
+    {% translate "Location" %}
 {% endblock %}
 
 {% block breadcrumbs %}
@@ -22,7 +22,7 @@
             <li class="breadcrumb-item">
                 <a
                     href="{% url 'location_list' %}"
-                >Locations</a>
+                >{% translate "Locations" %}</a>
             </li>
             <li class="breadcrumb-item active" aria-current="page">
                 {{ location.name }}
@@ -42,7 +42,7 @@
                 href="{% url 'location_list' %}"
                 class="small text-decoration-none"
             >
-                <i class="bi bi-arrow-left me-1"></i> Locations
+                <i class="bi bi-arrow-left me-1"></i> {% translate "Locations" %}
             </a>
             <h2 class="fw-bold mb-1 mt-1">{{ location.name }}</h2>
             {% if location.description %}
@@ -52,10 +52,10 @@
         {% if can_edit %}
             <div class="d-flex flex-wrap gap-2">
                 <a href="{% url 'location_edit' location.id %}" class="btn btn-warning">
-                    <i class="bi bi-pencil me-1"></i> Edit
+                    <i class="bi bi-pencil me-1"></i> {% translate "Edit" %}
                 </a>
                 <a href="{% url 'location_delete' location.id %}" class="btn btn-outline-danger">
-                    <i class="bi bi-trash me-1"></i> Delete
+                    <i class="bi bi-trash me-1"></i> {% translate "Delete" %}
                 </a>
             </div>
         {% endif %}
@@ -85,7 +85,7 @@
     <div class="card shadow-sm border-0">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h5 class="mb-0 fw-bold">
-                <i class="bi bi-box-seam me-2"></i>Shelves
+                <i class="bi bi-box-seam me-2"></i>{% translate "Shelves" %}
             </h5>
             <div class="d-flex flex-wrap gap-2">
                 {% comment %}
@@ -95,12 +95,12 @@
                 {% endcomment %}
                 {% if copy_count %}
                     <a href="{% url 'book_copy_list' %}?location={{ location.id }}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-list-ul me-1"></i> All copies here
+                        <i class="bi bi-list-ul me-1"></i> {% translate "All copies here" %}
                     </a>
                 {% endif %}
                 {% if can_edit %}
                     <a href="{% url 'shelf_add' %}?location={{ location.id }}" class="btn btn-sm btn-primary">
-                        <i class="bi bi-plus-lg me-1"></i> Add Shelf
+                        <i class="bi bi-plus-lg me-1"></i> {% translate "Add Shelf" %}
                     </a>
                 {% endif %}
             </div>

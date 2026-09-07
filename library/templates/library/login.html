@@ -8,7 +8,7 @@ because there is no sidebar or topbar to show before signing in.
 {% endcomment %}
 
 {% block title %}
-    Sign in | {{ branding.display_name }}
+{% translate "Sign in" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block body %}
@@ -89,7 +89,7 @@ because there is no sidebar or topbar to show before signing in.
                     </div>
 
                     <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-box-arrow-in-right me-1"></i> Log In
+                        <i class="bi bi-box-arrow-in-right me-1"></i> {% translate "Log In" %}
                     </button>
                 </form>
 

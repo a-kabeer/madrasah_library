@@ -1,9 +1,9 @@
 {% extends layout %}
 {% load i18n %}
 
-{% block title %}Delete Book Copy | {{ branding.display_name }}{% endblock %}
+{% block title %}{% translate "Delete Book Copy" %} | {{ branding.display_name }}{% endblock %}
 
-{% block page_title %}Delete Book Copy{% endblock %}
+{% block page_title %}{% translate "Delete Book Copy" %}{% endblock %}
 
 {% block content %}
 
@@ -16,15 +16,15 @@
             <div class="mb-3">
                 {% if from_page == "shelf" %}
                     <a href="{% url 'shelf_detail' copy.shelf.id %}" class="text-decoration-none">
-                        <i class="bi bi-arrow-left me-1"></i> Back to Shelf {{ copy.shelf.shelf_code }}
+                        <i class="bi bi-arrow-left me-1"></i> {% blocktranslate with code=copy.shelf.shelf_code %}Back to Shelf {{ code }}{% endblocktranslate %}
                     </a>
                 {% elif from_page == "volume" %}
                     <a href="{% url 'book_volume_detail' copy.volume.id %}" class="text-decoration-none">
-                        <i class="bi bi-arrow-left me-1"></i> Back to Volume
+                        <i class="bi bi-arrow-left me-1"></i> {% translate "Back to Volume" %}
                     </a>
                 {% else %}
                     <a href="{% url 'book_copy_list' %}" class="text-decoration-none">
-                        <i class="bi bi-arrow-left me-1"></i> Back to Book Copies
+                        <i class="bi bi-arrow-left me-1"></i> {% translate "Back to Book Copies" %}
                     </a>
                 {% endif %}
             </div>
@@ -32,7 +32,7 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-trash me-2"></i>Delete Book Copy
+                        <i class="bi bi-trash me-2"></i>{% translate "Delete Book Copy" %}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -51,7 +51,7 @@
                     <div class="row mb-3">
                         <div class="col-sm-4 text-body-secondary">{% translate "Volume" %}</div>
                         <div class="col-sm-8">
-                            Volume {{ copy.volume.volume_number }}{% if copy.volume.title %} — {{ copy.volume.title }}{% endif %}
+                            {% blocktranslate with number=copy.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% if copy.volume.title %} — {{ copy.volume.title }}{% endif %}
                         </div>
                     </div>
                     <div class="row mb-3">
@@ -66,38 +66,38 @@
                     {% if loan_history_exists %}
                         <div class="alert alert-warning" role="alert">
                             <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                            <strong>This book copy cannot be deleted.</strong>
+                            <strong>{% translate "This book copy cannot be deleted." %}</strong>
                         </div>
                         <p>
-                            {% translate "This copy has loan history (active or past) on record.
-                            Deleting it would break that history, so it's blocked." %}
+                            {% translate "This copy has loan history (active or past) on record. Deleting it would break that history, so it's blocked." %}
                         </p>
                         <p class="text-body-secondary small">
-                            If this copy was created in error, you can mark it as
-                            "Lost" or "Missing" instead to remove it from circulation
-                            without destroying the loan history.
+                            {% blocktranslate trimmed %}
+                                If this copy was created in error, you can mark it as
+                                "Lost" or "Missing" instead to remove it from circulation
+                                without destroying the loan history.
+                            {% endblocktranslate %}
                         </p>
                     {% else %}
                         <div class="alert alert-danger" role="alert">
                             <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                            <strong>Are you sure you want to permanently delete this book copy?</strong>
+                            <strong>{% translate "Are you sure you want to permanently delete this book copy?" %}</strong>
                         </div>
                         <p class="text-body-secondary">
-                            {% translate "This copy has no loan history, so it can be safely deleted.
-                            This action cannot be undone." %}
+                            {% translate "This copy has no loan history, so it can be safely deleted. This action cannot be undone." %}
                         </p>
                         <form method="post">
                             {% csrf_token %}
                             <div class="d-flex gap-2">
                                 <button type="submit" class="btn btn-danger">
-                                    <i class="bi bi-trash me-1"></i> Yes, Delete
+                                    <i class="bi bi-trash me-1"></i> {% translate "Yes, Delete" %}
                                 </button>
                                 {% if from_page == "shelf" %}
-                                    <a href="{% url 'shelf_detail' copy.shelf.id %}" class="btn btn-outline-secondary">Cancel</a>
+                                    <a href="{% url 'shelf_detail' copy.shelf.id %}" class="btn btn-outline-secondary">{% translate "Cancel" %}</a>
                                 {% elif from_page == "volume" %}
-                                    <a href="{% url 'book_volume_detail' copy.volume.id %}" class="btn btn-outline-secondary">Cancel</a>
+                                    <a href="{% url 'book_volume_detail' copy.volume.id %}" class="btn btn-outline-secondary">{% translate "Cancel" %}</a>
                                 {% else %}
-                                    <a href="{% url 'book_copy_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                                    <a href="{% url 'book_copy_list' %}" class="btn btn-outline-secondary">{% translate "Cancel" %}</a>
                                 {% endif %}
                             </div>
                         </form>

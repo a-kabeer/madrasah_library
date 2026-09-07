@@ -13,7 +13,7 @@
     <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
-                <a href="{% url 'reports_home' %}">Reports</a>
+                <a href="{% url 'reports_home' %}">{% translate "Reports" %}</a>
             </li>
             <li class="breadcrumb-item active" aria-current="page">{{ heading }}</li>
         </ol>
@@ -72,7 +72,7 @@
                 </div>
                 <div class="col-12 col-md-auto">
                     <button type="submit" class="btn btn-primary btn-sm">
-                        <i class="bi bi-funnel me-1"></i> Apply
+                        <i class="bi bi-funnel me-1"></i> {% translate "Apply" %}
                     </button>
                 </div>
             </div>
@@ -128,7 +128,7 @@
                                 {% if copy.shelf %}{{ copy.shelf.location.name }}{% else %}-{% endif %}
                             </td>
                             <td class="text-body-secondary">
-                                {% if copy.shelf %}{{ copy.shelf.shelf_code }}{% else %}Unshelved{% endif %}
+                                {% if copy.shelf %}{{ copy.shelf.shelf_code }}{% else %}{% translate "Unshelved" %}{% endif %}
                             </td>
                             <td><span class="badge text-bg-secondary">{{ copy.status }}</span></td>
                         </tr>

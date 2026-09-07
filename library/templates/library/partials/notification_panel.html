@@ -22,7 +22,7 @@ its own target would swap this panel into the page.
 
     <div class="notification-panel-head">
 
-        <span class="fw-semibold">Notifications</span>
+        <span class="fw-semibold">{% translate "Notifications" %}</span>
 
         {% if unread_count %}
             <form
@@ -43,7 +43,7 @@ its own target would swap this panel into the page.
             </form>
         {% else %}
             <span class="ms-auto text-body-secondary small">
-                Nothing unread
+                {% translate "Nothing unread" %}
             </span>
         {% endif %}
 
@@ -117,8 +117,10 @@ its own target would swap this panel into the page.
                             >
                                 <i class="bi bi-check2" aria-hidden="true"></i>
                                 <span class="visually-hidden">
-                                    Mark "{{ note.title }}" as read
-                                </span>
+                                                                  {% blocktranslate trimmed with title=note.title %}
+                                                                      Mark "{{ title }}" as read
+                                                                  {% endblocktranslate %}
+                                                              </span>
                             </button>
                         </form>
                     {% endif %}
@@ -132,15 +134,13 @@ its own target would swap this panel into the page.
     {% else %}
 
         <p class="notification-empty">
-            {% translate "Nothing here yet. Notifications arrive when a reserved book
-            comes back, or when a stock check finishes with copies
-            unaccounted for." %}
+            {% translate "Nothing here yet. Notifications arrive when a reserved book comes back, or when a stock check finishes with copies unaccounted for." %}
         </p>
 
     {% endif %}
 
     <div class="notification-panel-foot">
-        <a href="{% url 'notification_list' %}">All notifications</a>
+        <a href="{% url 'notification_list' %}">{% translate "All notifications" %}</a>
     </div>
 
 </div>

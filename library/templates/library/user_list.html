@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block title %}
-    Users | {{ branding.display_name }}
+{% translate "Users" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Users
+    {% translate "Users" %}
 {% endblock %}
 
 {% block content %}
@@ -52,7 +52,7 @@
 
     {% if search or role or active_status %}
         <a href="{% url 'user_list' %}">
-            Clear
+            {% translate "Clear" %}
         </a>
     {% endif %}
 
@@ -60,39 +60,41 @@
 
 {% if search or role or active_status %}
     <p>
-        Found {{ users.paginator.count }} user(s).
-    </p>
+           {% blocktranslate trimmed with count=users.paginator.count %}
+               Found {{ count }} user(s).
+           {% endblocktranslate %}
+       </p>
 {% endif %}
 <a href="{% url 'user_add' %}">
-    Add User
+    {% translate "Add User" %}
 </a>
 
 <ul>
     {% for user in users %}
         <li>
-            ID: {{ user.id }}
-            - Username: {{ user.username }}
-            - Name: {{ user.full_name|default:"N/A" }}
-            - Role: {{ user.role|default:"N/A" }}
+            {% translate "ID:" %} {{ user.id }}
+            - {% translate "Username:" %} {{ user.username }}
+            - {% translate "Name:" %} {{ user.full_name|default:"N/A" }}
+            - {% translate "Role:" %} {{ user.role|default:"N/A" }}
 
             {% if user.is_active %}
-                - Active
+                - {% translate "Active" %}
             {% else %}
-                - Inactive
+                - {% translate "Inactive" %}
             {% endif %}
 
             <a href="{% url 'user_edit' user.id %}">
-                Edit
+                {% translate "Edit" %}
             </a>
 
             <a href="{% url 'user_delete' user.id %}">
-                Delete
+                {% translate "Delete" %}
             </a>
 
             <form method="post" action="{% url 'user_toggle_active' user.id %}" style="display:inline;">
                 {% csrf_token %}
                 <button type="submit">
-                    {% if user.is_active %}Deactivate{% else %}Activate{% endif %}
+                    {% if user.is_active %}{% translate "Deactivate" %}{% else %}{% translate "Activate" %}{% endif %}
                 </button>
             </form>
         </li>

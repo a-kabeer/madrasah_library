@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block title %}
-    Reports | {{ branding.display_name }}
+{% translate "Reports" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Reports
+    {% translate "Reports" %}
 {% endblock %}
 
 {% block content %}
@@ -16,9 +16,7 @@
     <div class="mb-4">
         <h2 class="fw-bold mb-1">{% translate "Reports" %}</h2>
         <p class="text-body-secondary mb-0">
-            {% translate "Each one reads the same records the rest of the application
-            works from, so nothing here can disagree with the page it
-            summarises." %}
+            {% translate "Each one reads the same records the rest of the application works from, so nothing here can disagree with the page it summarises." %}
         </p>
     </div>
 

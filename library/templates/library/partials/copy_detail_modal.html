@@ -16,7 +16,11 @@ only the loan that is open now, and links to it.
     <span class="badge text-bg-{{ copy.state_tone }}">{{ copy.state_label }}</span>
     {% if copy.days_overdue %}
         <span class="text-danger small ms-1">
-            {{ copy.days_overdue }} day{{ copy.days_overdue|pluralize }} overdue
+            {% blocktranslate trimmed count n=copy.days_overdue %}
+                {{ n }} day overdue
+            {% plural %}
+                {{ n }} days overdue
+            {% endblocktranslate %}
         </span>
     {% endif %}
 </div>
@@ -49,7 +53,7 @@ only the loan that is open now, and links to it.
         <dt class="col-5 col-sm-4 fw-normal text-body-secondary">{% translate "Volume" %}</dt>
         <dd class="col-7 col-sm-8">
             <a href="{% url 'book_volume_detail' copy.volume.id %}">
-                Volume {{ copy.volume.volume_number }}{% if copy.volume.title %} — {{ copy.volume.title }}{% endif %}
+                {% blocktranslate with number=copy.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% if copy.volume.title %} — {{ copy.volume.title }}{% endif %}
             </a>
         </dd>
     {% endif %}
@@ -59,7 +63,7 @@ only the loan that is open now, and links to it.
         {% if copy.shelf %}
             {{ copy.shelf.location.name }}
         {% else %}
-            <span class="text-body-secondary">Not placed yet</span>
+            <span class="text-body-secondary">{% translate "Not placed yet" %}</span>
         {% endif %}
     </dd>
 
@@ -68,7 +72,7 @@ only the loan that is open now, and links to it.
         {% if copy.shelf %}
             {{ copy.shelf.shelf_code }}
         {% else %}
-            <span class="text-body-secondary">Unshelved</span>
+            <span class="text-body-secondary">{% translate "Unshelved" %}</span>
         {% endif %}
     </dd>
 
@@ -107,7 +111,7 @@ only the loan that is open now, and links to it.
         <dd class="col-7 col-sm-8">
             {{ active_loan.due_date }}
             {% if copy.days_overdue %}
-                <span class="badge text-bg-danger ms-1">Overdue</span>
+                <span class="badge text-bg-danger ms-1">{% translate "Overdue" %}</span>
             {% endif %}
         </dd>
 
@@ -119,19 +123,21 @@ only the loan that is open now, and links to it.
     {% endcomment %}
     <a href="{% url 'loan_detail' active_loan.id %}" class="btn btn-sm btn-outline-primary">
         <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>
-        Open the loan
+        {% translate "Open the loan" %}
     </a>
 
 {% else %}
 
     <p class="text-body-secondary">
-        Not out on loan.
+        {% translate "Not out on loan." %}
         {% if copy.state == "available" %}
-            It is on the shelf and can be issued.
+            {% translate "It is on the shelf and can be issued." %}
         {% elif copy.state == "unshelved" %}
-            It has no shelf yet, so it needs placing before it can be found.
+            {% translate "It has no shelf yet, so it needs placing before it can be found." %}
         {% else %}
-            It is recorded as {{ copy.state_label|lower }}.
+            {% blocktranslate trimmed with state=copy.state_label|lower %}
+                It is recorded as {{ state }}.
+            {% endblocktranslate %}
         {% endif %}
     </p>
 
@@ -141,7 +147,7 @@ only the loan that is open now, and links to it.
 
     <a href="{% url 'book_copy_detail' copy.id %}" class="btn btn-sm btn-outline-secondary">
         <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>
-        Full page &amp; loan history
+        {% translate "Full page &amp; loan history" %}
     </a>
 
     {% comment %}
@@ -151,10 +157,10 @@ only the loan that is open now, and links to it.
     {% endcomment %}
     {% if can_edit %}
         <a href="{% url 'book_copy_edit' copy.id %}" class="btn btn-sm btn-outline-warning">
-            <i class="bi bi-pencil me-1" aria-hidden="true"></i> Edit copy
+            <i class="bi bi-pencil me-1" aria-hidden="true"></i> {% translate "Edit copy" %}
         </a>
         <a href="{% url 'book_copy_move' copy.id %}" class="btn btn-sm btn-outline-primary">
-            <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i> Move
+            <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i> {% translate "Move" %}
         </a>
     {% endif %}
 

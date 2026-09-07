@@ -115,7 +115,7 @@ library/partials/book_list_results.html needs.
                             style="max-width: 26rem;"
                         >
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-search me-1"></i> Search
+                            <i class="bi bi-search me-1"></i> {% translate "Search" %}
                         </button>
                         {% comment %}
                           Always shown, and deliberately a navigation
@@ -139,13 +139,12 @@ library/partials/book_list_results.html needs.
                             hx-target="#mainContent"
                             hx-swap="innerHTML"
                         >
-                            <i class="bi bi-x-lg me-1"></i> Clear
+                            <i class="bi bi-x-lg me-1"></i> {% translate "Clear" %}
                         </a>
                     </div>
 
                     <div class="form-text">
-                        {% translate "Matches part of a title or an author name. Press
-                        Enter to search." %}
+                        {% translate "Matches part of a title or an author name. Press Enter to search." %}
                     </div>
                 </form>
 
@@ -186,7 +185,7 @@ library/partials/book_list_results.html needs.
                           then.
                         {% endcomment %}
                         <button type="submit" class="btn btn-primary btn-sm" data-filter-apply>
-                            <i class="bi bi-funnel me-1"></i> Apply
+                            <i class="bi bi-funnel me-1"></i> {% translate "Apply" %}
                         </button>
 
                         {% comment %}
@@ -211,7 +210,7 @@ library/partials/book_list_results.html needs.
                             hx-target="#mainContent"
                             hx-swap="innerHTML"
                         >
-                            <i class="bi bi-x-lg me-1"></i> Clear
+                            <i class="bi bi-x-lg me-1"></i> {% translate "Clear" %}
                         </a>
                     </div>
 
@@ -248,7 +247,7 @@ library/partials/book_list_results.html needs.
                           then.
                         {% endcomment %}
                         <button type="submit" class="btn btn-primary btn-sm" data-filter-apply>
-                            <i class="bi bi-funnel me-1"></i> Apply
+                            <i class="bi bi-funnel me-1"></i> {% translate "Apply" %}
                         </button>
 
                         {% comment %}
@@ -273,7 +272,7 @@ library/partials/book_list_results.html needs.
                             hx-target="#mainContent"
                             hx-swap="innerHTML"
                         >
-                            <i class="bi bi-x-lg me-1"></i> Clear
+                            <i class="bi bi-x-lg me-1"></i> {% translate "Clear" %}
                         </a>
                     </div>
 
@@ -312,9 +311,9 @@ library/partials/book_list_results.html needs.
             aria-controls="bookMoreFilters"
         >
             <i class="bi bi-funnel me-1" aria-hidden="true"></i>
-            More filters
+            {% translate "More filters" %}
             {% if secondary_active %}
-                <span class="badge text-bg-primary ms-1">on</span>
+                <span class="badge text-bg-primary ms-1">{% translate "on" %}</span>
             {% endif %}
         </a>
 
@@ -391,7 +390,7 @@ library/partials/book_list_results.html needs.
 
                         <div class="col-12 col-md-3 d-flex gap-2">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-funnel me-1"></i> Apply
+                                <i class="bi bi-funnel me-1"></i> {% translate "Apply" %}
                             </button>
                         </div>
 

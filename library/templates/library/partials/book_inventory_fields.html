@@ -121,7 +121,7 @@ max_total_copies, id_prefix.
         class="btn btn-sm btn-outline-primary"
         data-add-volume
     >
-        <i class="bi bi-plus-lg me-1"></i> Add volume
+        <i class="bi bi-plus-lg me-1"></i> {% translate "Add volume" %}
     </button>
 
 </div>
@@ -167,8 +167,7 @@ max_total_copies, id_prefix.
     </div>
 
     <div class="form-text mb-3" data-copies-skip-note>
-        {% translate "The book is catalogued without copies. Add them later from the
-        book's own page, whenever you know where they will live." %}
+        {% translate "The book is catalogued without copies. Add them later from the book's own page, whenever you know where they will live." %}
     </div>
 
     <div data-copies-panel>
@@ -186,7 +185,7 @@ max_total_copies, id_prefix.
                     <div class="row g-2 align-items-center mb-2" data-copy-qty-row>
                         <div class="col">
                             <span class="small text-body-secondary">
-                                Volume {{ row.number|default:"?" }}
+                                {% blocktranslate with number=row.number|default:"?" %}Volume {{ number }}{% endblocktranslate %}
                                 {% if row.title %}— {{ row.title }}{% endif %}
                             </span>
                         </div>
@@ -230,9 +229,11 @@ max_total_copies, id_prefix.
         </div>
 
         <div class="form-text mb-3">
-            Up to {{ max_copies_per_volume }} per volume,
-            {{ max_total_copies }} in one go.
-        </div>
+                                        {% blocktranslate trimmed %}
+                                            Up to {{ max_copies_per_volume }} per volume,
+                                            {{ max_total_copies }} in one go.
+                                        {% endblocktranslate %}
+                                    </div>
 
         <p class="fw-semibold mb-2">{% translate "Copy codes" %}</p>
 
@@ -271,8 +272,7 @@ max_total_copies, id_prefix.
         </div>
 
         <div class="form-text mb-3" data-code-auto-note>
-            {% translate "Each copy gets its own permanent code. The code never changes,
-            even if the book is retitled, and is never given to another copy." %}
+            {% translate "Each copy gets its own permanent code. The code never changes, even if the book is retitled, and is never given to another copy." %}
         </div>
 
         {% comment %}
@@ -338,7 +338,7 @@ max_total_copies, id_prefix.
                 data-quick-add-toggle="location"
             >
                 <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                <span class="d-none d-sm-inline ms-1">New</span>
+                <span class="d-none d-sm-inline ms-1">{% translate "New" %}</span>
             </button>
         </div>
 
@@ -397,7 +397,7 @@ max_total_copies, id_prefix.
                 data-quick-add-toggle="shelf"
             >
                 <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                <span class="d-none d-sm-inline ms-1">New</span>
+                <span class="d-none d-sm-inline ms-1">{% translate "New" %}</span>
             </button>
         </div>
 

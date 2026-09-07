@@ -2,18 +2,18 @@
 {% load i18n %}
 
 {% block title %}
-    Book Contents | {{ branding.display_name }}
+{% translate "Book Contents" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Book Contents
+    {% translate "Book Contents" %}
 {% endblock %}
 
 {% block breadcrumbs %}
     <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
-                <a href="{% url 'book_list' %}">Books</a>
+                <a href="{% url 'book_list' %}">{% translate "Books" %}</a>
             </li>
             <li class="breadcrumb-item active" aria-current="page">
                 {% translate "Contents" %}
@@ -34,7 +34,7 @@
             </p>
         </div>
         <a href="{% url 'book_content_add' %}" class="btn btn-primary">
-            <i class="bi bi-plus-lg me-1"></i> Add Content
+            <i class="bi bi-plus-lg me-1"></i> {% translate "Add Content" %}
         </a>
     </div>
 
@@ -67,7 +67,7 @@
                                 value="{{ volume.id }}"
                                 {% if volume_id == volume.id|stringformat:"s" %}selected{% endif %}
                             >
-                                {{ volume.book.title }} - Volume {{ volume.volume_number }}
+                                {{ volume.book.title }} - {% blocktranslate with number=volume.volume_number %}Volume {{ number }}{% endblocktranslate %}
                             </option>
                         {% endfor %}
                     </select>
@@ -92,12 +92,12 @@
 
                 <div class="col-12 col-lg-2 d-flex gap-2">
                     <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-search me-1"></i> Search
+                        <i class="bi bi-search me-1"></i> {% translate "Search" %}
                     </button>
                     {% if search or volume_id or content_type %}
                         <a href="{% url 'book_content_list' %}" class="btn btn-outline-secondary">
                             <i class="bi bi-x-lg"></i>
-                            <span class="visually-hidden">Clear</span>
+                            <span class="visually-hidden">{% translate "Clear" %}</span>
                         </a>
                     {% endif %}
                 </div>
@@ -111,8 +111,11 @@
     {% endcomment %}
     {% if search or volume_id or content_type %}
         <p class="text-body-secondary mb-3">
-            Found <strong>{{ contents.paginator.count }}</strong>
-            content item{{ contents.paginator.count|pluralize }}.
+            {% blocktranslate trimmed count n=contents.paginator.count %}
+                Found <strong>{{ n }}</strong> content item.
+            {% plural %}
+                Found <strong>{{ n }}</strong> content items.
+            {% endblocktranslate %}
         </p>
     {% endif %}
 

@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block title %}
-    Add User | {{ branding.display_name }}
+{% translate "Add User" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Add User
+    {% translate "Add User" %}
 {% endblock %}
 
 {% block content %}
@@ -56,7 +56,7 @@
 <br>
 
 <a href="{% url 'user_list' %}">
-    Back to Users
+    {% translate "Back to Users" %}
 </a>
 </div>
 

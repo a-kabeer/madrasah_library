@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block title %}
-    Add Book Content | {{ branding.display_name }}
+{% translate "Add Book Content" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Add Book Content
+    {% translate "Add Book Content" %}
 {% endblock %}
 
 {% block content %}
@@ -20,11 +20,11 @@
         {% endcomment %}
         {% if selected_volume %}
             <a href="{% url 'book_volume_detail' selected_volume.id %}" class="small text-decoration-none">
-                <i class="bi bi-arrow-left me-1"></i> Back to Volume
+                <i class="bi bi-arrow-left me-1"></i> {% translate "Back to Volume" %}
             </a>
         {% else %}
             <a href="{% url 'book_content_list' %}" class="small text-decoration-none">
-                <i class="bi bi-arrow-left me-1"></i> Back to Contents
+                <i class="bi bi-arrow-left me-1"></i> {% translate "Back to Contents" %}
             </a>
         {% endif %}
     </div>
@@ -35,7 +35,7 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-plus-square me-2"></i>Add Book Content
+                        <i class="bi bi-plus-square me-2"></i>{% translate "Add Book Content" %}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -60,10 +60,12 @@
                                     {% endcomment %}
                                     <label class="form-label fw-semibold">{% translate "Volume" %}</label>
                                     <p class="form-control-plaintext mb-0">
-                                        {{ selected_volume.book.title }}
-                                        - Volume {{ selected_volume.volume_number }}
-                                        - {{ selected_volume.title }}
-                                    </p>
+                                                                               {% blocktranslate trimmed with title=selected_volume.book.title volume_number=selected_volume.volume_number title2=selected_volume.title %}
+                                                                                   {{ title }}
+                                                                                   - Volume {{ volume_number }}
+                                                                                   - {{ title2 }}
+                                                                               {% endblocktranslate %}
+                                                                           </p>
                                     <input
                                         type="hidden"
                                         name="volume"
@@ -71,7 +73,7 @@
                                     >
                                 {% else %}
                                     <label for="volume" class="form-label fw-semibold">
-                                        Volume <span class="text-danger">*</span>
+                                        {% translate "Volume" %} <span class="text-danger">*</span>
                                     </label>
                                     <select class="form-select" name="volume" id="volume" required>
                                         <option value="">{% translate "Select Volume" %}</option>
@@ -81,7 +83,7 @@
                                                 {% if volume.id == form_data.volume_id %}selected{% endif %}
                                             >
                                                 {{ volume.book.title }}
-                                                - Volume {{ volume.volume_number }}
+                                                - {% blocktranslate with number=volume.volume_number %}Volume {{ number }}{% endblocktranslate %}
                                                 - {{ volume.title }}
                                             </option>
                                         {% endfor %}
@@ -108,7 +110,7 @@
 
                             <div class="col-12">
                                 <label for="title" class="form-label fw-semibold">
-                                    Title <span class="text-danger">*</span>
+                                    {% translate "Title" %} <span class="text-danger">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -163,15 +165,15 @@
 
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-1"></i> Add Content
+                                <i class="bi bi-check-lg me-1"></i> {% translate "Add Content" %}
                             </button>
                             {% if selected_volume %}
                                 <a href="{% url 'book_volume_detail' selected_volume.id %}" class="btn btn-outline-secondary">
-                                    <i class="bi bi-x-lg me-1"></i> Cancel
+                                    <i class="bi bi-x-lg me-1"></i> {% translate "Cancel" %}
                                 </a>
                             {% else %}
                                 <a href="{% url 'book_content_list' %}" class="btn btn-outline-secondary">
-                                    <i class="bi bi-x-lg me-1"></i> Cancel
+                                    <i class="bi bi-x-lg me-1"></i> {% translate "Cancel" %}
                                 </a>
                             {% endif %}
                         </div>

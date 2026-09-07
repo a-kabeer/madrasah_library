@@ -11,14 +11,14 @@
 
 {% block title %}
 
-    Dashboard | {{ branding.display_name }}
+{% translate "Dashboard" %} | {{ branding.display_name }}
 
 {% endblock %}
 
 
 {% block page_title %}
 
-    Dashboard
+    {% translate "Dashboard" %}
 
 {% endblock %}
 
@@ -81,10 +81,10 @@
                                 {{ overdue_loans }}
                             </h3>
                             <p class="text-body-secondary mb-0">
-                                Overdue
+                                {% translate "Overdue" %}
                                 {% if overdue_loans %}
                                     <span class="d-block small">
-                                        Chase these first
+                                        {% translate "Chase these first" %}
                                     </span>
                                 {% endif %}
                             </p>
@@ -153,14 +153,14 @@
         <div class="card-body d-flex flex-wrap gap-2">
 
             <a href="{% url 'circulation_issue' %}" class="btn btn-primary">
-                <i class="bi bi-box-arrow-right me-1"></i> Issue Book
+                <i class="bi bi-box-arrow-right me-1"></i> {% translate "Issue Book" %}
             </a>
 
             <a
                 href="{% url 'circulation_return_lookup' %}"
                 class="btn btn-success"
             >
-                <i class="bi bi-arrow-return-left me-1"></i> Return Book
+                <i class="bi bi-arrow-return-left me-1"></i> {% translate "Return Book" %}
             </a>
 
             {% if can_edit %}
@@ -168,7 +168,7 @@
                     href="{% url 'book_add' %}"
                     class="btn btn-outline-secondary"
                 >
-                    <i class="bi bi-plus-lg me-1"></i> Add Book
+                    <i class="bi bi-plus-lg me-1"></i> {% translate "Add Book" %}
                 </a>
             {% endif %}
 
@@ -176,7 +176,7 @@
                 href="{% url 'borrower_add' %}"
                 class="btn btn-outline-secondary"
             >
-                <i class="bi bi-person-plus me-1"></i> Add Borrower
+                <i class="bi bi-person-plus me-1"></i> {% translate "Add Borrower" %}
             </a>
 
         </div>
@@ -514,7 +514,7 @@
                             href="{% url 'loan_list' %}"
                             class="btn btn-sm btn-outline-primary"
                         >
-                            View All
+                            {% translate "View All" %}
                         </a>
 
                     </div>
@@ -538,25 +538,23 @@
                                     </div>
 
                                     <div class="small text-body-secondary">
-
-                                        Copy:
-                                        {{ loan.copy.copy_code }}
-
-                                        ·
-
-                                        Borrower:
-                                        {{ loan.borrower.name }}
-
-                                    </div>
+                                                                               {% blocktranslate trimmed with copy_code=loan.copy.copy_code name=loan.borrower.name %}
+                                                                                   Copy:
+                                                                                   {{ copy_code }}
+                                                                                   ·
+                                                                                   Borrower:
+                                                                                   {{ name }}
+                                                                               {% endblocktranslate %}
+                                                                           </div>
 
                                     <div class="small text-body-secondary mt-1">
 
-                                        Issued:
+                                        {% translate "Issued:" %}
                                         {{ loan.issue_date }}
 
                                         {% if loan.issued_by %}
 
-                                            · By:
+                                            · {% translate "By:" %}
 
                                             {% if loan.issued_by.full_name %}
 
@@ -621,7 +619,7 @@
                             href="{% url 'loan_list' %}?status=returned"
                             class="btn btn-sm btn-outline-primary"
                         >
-                            View All
+                            {% translate "View All" %}
                         </a>
 
                     </div>
@@ -642,19 +640,21 @@
                                     </div>
 
                                     <div class="small text-body-secondary">
-                                        Copy:
-                                        {{ loan.copy.copy_code }}
-                                        ·
-                                        Borrower:
-                                        {{ loan.borrower.name }}
-                                    </div>
+                                                                               {% blocktranslate trimmed with copy_code=loan.copy.copy_code name=loan.borrower.name %}
+                                                                                   Copy:
+                                                                                   {{ copy_code }}
+                                                                                   ·
+                                                                                   Borrower:
+                                                                                   {{ name }}
+                                                                               {% endblocktranslate %}
+                                                                           </div>
 
                                     <div class="small text-body-secondary mt-1">
-                                        Returned
+                                        {% translate "Returned" %}
                                         {{ loan.return_date }}
                                         {% if loan.returned_to %}
                                             ·
-                                            to
+                                            {% translate "to" %}
                                             {% if loan.returned_to.full_name %}
                                                 {{ loan.returned_to.full_name }}
                                             {% else %}
@@ -704,7 +704,7 @@
                             href="{% url 'activity_log_list' %}"
                             class="btn btn-sm btn-outline-primary"
                         >
-                            View All
+                            {% translate "View All" %}
                         </a>
 
                     </div>

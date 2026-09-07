@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block title %}
-    Edit Borrower | {{ branding.display_name }}
+{% translate "Edit Borrower" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Edit Borrower
+    {% translate "Edit Borrower" %}
 {% endblock %}
 
 {% block content %}
@@ -42,7 +42,7 @@
 
                             <div class="col-12 col-sm-6">
                                 <label for="formName" class="form-label fw-semibold">
-                                    Name <span class="text-danger">*</span>
+                                    {% translate "Name" %} <span class="text-danger">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -56,7 +56,7 @@
 
                             <div class="col-12 col-sm-6">
                                 <label for="formPhone" class="form-label fw-semibold">
-                                    Phone <span class="text-danger">*</span>
+                                    {% translate "Phone" %} <span class="text-danger">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -67,14 +67,13 @@
                                     required
                                 >
                                 <div class="form-text">
-                                    {% translate "Used to spot a borrower who is already
-                                    registered." %}
+                                    {% translate "Used to spot a borrower who is already registered." %}
                                 </div>
                             </div>
 
                             <div class="col-12 col-sm-6">
                                 <label for="formType" class="form-label fw-semibold">
-                                    Type <span class="text-danger">*</span>
+                                    {% translate "Type" %} <span class="text-danger">*</span>
                                 </label>
                                 <select class="form-select" id="formType" name="borrower_type" required>
                                     <option value="">{% translate "Select type&hellip;" %}</option>
@@ -146,10 +145,10 @@
 
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-1"></i> Save Changes
+                                <i class="bi bi-check-lg me-1"></i> {% translate "Save Changes" %}
                             </button>
                             <a href="{% url 'borrower_detail' borrower.id %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-lg me-1"></i> Cancel
+                                <i class="bi bi-x-lg me-1"></i> {% translate "Cancel" %}
                             </a>
                         </div>
 

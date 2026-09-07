@@ -24,9 +24,9 @@ has_city.
 
 <h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
     {% if editing %}
-        <i class="bi bi-pencil me-2" aria-hidden="true"></i>Edit {{ label }}
+        <i class="bi bi-pencil me-2" aria-hidden="true"></i>{% blocktranslate with noun=label %}Edit {{ noun }}{% endblocktranslate %}
     {% else %}
-        <i class="bi bi-plus-lg me-2" aria-hidden="true"></i>Add {{ label }}
+        <i class="bi bi-plus-lg me-2" aria-hidden="true"></i>{% blocktranslate with noun=label %}Add {{ noun }}{% endblocktranslate %}
     {% endif %}
 </h5>
 
@@ -49,8 +49,10 @@ has_city.
 
     <div class="mb-3">
         <label for="lookupName" class="form-label fw-semibold">
-            {{ label }} Name
-        </label>
+                                                                   {% blocktranslate trimmed %}
+                                                                       {{ label }} Name
+                                                                   {% endblocktranslate %}
+                                                               </label>
         {% comment %}
           autofocus so the dialog is ready to type into. app.js focuses it
           after the swap; the attribute is what tells it which field.
@@ -71,7 +73,7 @@ has_city.
     {% if has_city %}
         <div class="mb-3">
             <label for="lookupCity" class="form-label fw-semibold">
-                City <span class="text-body-secondary fw-normal">(optional)</span>
+                {% translate "City" %} <span class="text-body-secondary fw-normal">{% translate "(optional)" %}</span>
             </label>
             <input
                 type="text"
@@ -83,8 +85,7 @@ has_city.
                 autocomplete="off"
             >
             <div class="form-text">
-                {% translate "Where the publisher is based. Shown under the name in the
-                list, and searchable." %}
+                {% translate "Where the publisher is based. Shown under the name in the list, and searchable." %}
             </div>
         </div>
     {% endif %}
@@ -93,7 +94,7 @@ has_city.
 
         <button type="submit" class="btn btn-primary">
             <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
-            {% if editing %}Save Changes{% else %}Add {{ label }}{% endif %}
+            {% if editing %}{% translate "Save Changes" %}{% else %}{% blocktranslate with noun=label %}Add {{ noun }}{% endblocktranslate %}{% endif %}
         </button>
 
         <button

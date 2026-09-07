@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block title %}
-    Edit {{ copy.copy_code }} | {{ branding.display_name }}
+    {% blocktranslate with code=copy.copy_code %}Edit {{ code }}{% endblocktranslate %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Edit Copy
+    {% translate "Edit Copy" %}
 {% endblock %}
 
 {% block content %}
@@ -46,8 +46,11 @@
                                 <span class="d-block small">{{ volume_name }}</span>
                             {% endif %}
                             <span class="d-block small text-body-secondary">
-                                The book's own details are edited from
-                                <a href="{% url 'book_detail' copy.volume.book.id %}">its page</a>.
+                                {% url 'book_detail' copy.volume.book.id as book_url %}
+                                {% blocktranslate trimmed with url=book_url %}
+                                    The book's own details are edited from
+                                    <a href="{{ url }}">its page</a>.
+                                {% endblocktranslate %}
                             </span>
                         </div>
                     </div>
@@ -76,8 +79,7 @@
                                 aria-describedby="formCopyCodeHelp"
                             >
                             <div class="form-text" id="formCopyCodeHelp">
-                                {% translate "Fixed once the copy exists — it is the label
-                                on the book and appears in its history." %}
+                                {% translate "Fixed once the copy exists — it is the label on the book and appears in its history." %}
                             </div>
                         </div>
 
@@ -116,8 +118,7 @@
                                     {% include "library/partials/shelf_options.html" with shelves=shelves selected_id=form_data.shelf_id has_location=form_data.location_id %}
                                 </select>
                                 <div class="form-text">
-                                    {% translate "Leave the shelf unset for a copy that has
-                                    arrived but not been placed yet." %}
+                                    {% translate "Leave the shelf unset for a copy that has arrived but not been placed yet." %}
                                 </div>
                             </div>
 
@@ -141,8 +142,7 @@
                                     readonly
                                 >
                                 <div class="form-text">
-                                    {% translate "This copy is out on loan. Take it back
-                                    from the loan to change its status." %}
+                                    {% translate "This copy is out on loan. Take it back from the loan to change its status." %}
                                 </div>
                             {% else %}
                                 <select class="form-select" id="formStatus" name="status">
@@ -185,10 +185,10 @@
 
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-1"></i> Save Changes
+                                <i class="bi bi-check-lg me-1"></i> {% translate "Save Changes" %}
                             </button>
                             <a href="{% url 'book_copy_detail' copy.id %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-lg me-1"></i> Cancel
+                                <i class="bi bi-x-lg me-1"></i> {% translate "Cancel" %}
                             </a>
                         </div>
 

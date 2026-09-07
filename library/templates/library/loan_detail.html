@@ -1,9 +1,9 @@
 {% extends layout %}
 {% load i18n %}
 
-{% block title %}Loan #{{ loan.id }} | {{ branding.display_name }}{% endblock %}
+{% block title %}{% blocktranslate with reference=loan.id %}Loan #{{ reference }}{% endblocktranslate %} | {{ branding.display_name }}{% endblock %}
 
-{% block page_title %}Loan #{{ loan.id }}{% endblock %}
+{% block page_title %}{% blocktranslate with reference=loan.id %}Loan #{{ reference }}{% endblocktranslate %}{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-0">
@@ -11,9 +11,13 @@
     <div class="mb-4">
         <nav aria-label="{% translate 'breadcrumb' %}">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{% url 'circulation_dashboard' %}">Circulation</a></li>
-                <li class="breadcrumb-item"><a href="{% url 'loan_list' %}">Loans</a></li>
-                <li class="breadcrumb-item active">Loan #{{ loan.id }}</li>
+                <li class="breadcrumb-item"><a href="{% url 'circulation_dashboard' %}">{% translate "Circulation" %}</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'loan_list' %}">{% translate "Loans" %}</a></li>
+                <li class="breadcrumb-item active">
+                                                       {% blocktranslate trimmed with id=loan.id %}
+                                                           Loan #{{ id }}
+                                                       {% endblocktranslate %}
+                                                   </li>
             </ol>
         </nav>
         <h2 class="fw-bold mb-1">{% translate "Loan Details" %}</h2>
@@ -37,7 +41,7 @@
                     </div>
                     <div class="row mb-3">
                         <div class="col-sm-4 text-body-secondary">{% translate "Volume" %}</div>
-                        <div class="col-sm-8">Volume {{ loan.copy.volume.volume_number }}{% if loan.copy.volume.title %} — {{ loan.copy.volume.title }}{% endif %}</div>
+                        <div class="col-sm-8">{% blocktranslate with number=loan.copy.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% if loan.copy.volume.title %} — {{ loan.copy.volume.title }}{% endif %}</div>
                     </div>
                 </div>
             </div>
@@ -89,11 +93,17 @@
                         <div class="col-sm-4 text-body-secondary">{% translate "Status" %}</div>
                         <div class="col-sm-8">
                             {% if loan.return_date %}
-                                <span class="badge bg-secondary">Returned</span>
+                                <span class="badge bg-secondary">{% translate "Returned" %}</span>
                             {% elif loan.days_overdue > 0 %}
-                                <span class="badge bg-danger">Overdue by {{ loan.days_overdue }} day{{ loan.days_overdue|pluralize }}</span>
+                                <span class="badge bg-danger">
+                                    {% blocktranslate trimmed count n=loan.days_overdue %}
+                                        Overdue by {{ n }} day
+                                    {% plural %}
+                                        Overdue by {{ n }} days
+                                    {% endblocktranslate %}
+                                </span>
                             {% else %}
-                                <span class="badge bg-success">Active</span>
+                                <span class="badge bg-success">{% translate "Active" %}</span>
                             {% endif %}
                         </div>
                     </div>
@@ -117,8 +127,8 @@
 
             {% if not loan.return_date %}
             <div class="d-flex gap-2 mt-4">
-                <a href="{% url 'loan_return' loan.id %}" class="btn btn-success">Return Book</a>
-                <a href="{% url 'loan_renew' loan.id %}" class="btn btn-primary">Renew Loan</a>
+                <a href="{% url 'loan_return' loan.id %}" class="btn btn-success">{% translate "Return Book" %}</a>
+                <a href="{% url 'loan_renew' loan.id %}" class="btn btn-primary">{% translate "Renew Loan" %}</a>
             </div>
             {% endif %}
 
@@ -129,12 +139,12 @@
 {% endblock %}
 
     <p>
-        <strong>Due Date:</strong>
+        <strong>{% translate "Due Date:" %}</strong>
         {{ loan.due_date }}
     </p>
 
     <p>
-        <strong>Issued By:</strong>
+        <strong>{% translate "Issued By:" %}</strong>
 
         {% if loan.issued_by %}
             {{ loan.issued_by.full_name }}
@@ -144,27 +154,29 @@
     </p>
 
     <p>
-        <strong>Status:</strong>
+        <strong>{% translate "Status:" %}</strong>
 
         {% if loan.return_date %}
 
-            Returned
+            {% translate "Returned" %}
 
         {% elif loan.days_overdue > 0 %}
 
-            Overdue by
-            {{ loan.days_overdue }}
-            day(s)
+            {% blocktranslate trimmed count n=loan.days_overdue %}
+                Overdue by {{ n }} day
+            {% plural %}
+                Overdue by {{ n }} days
+            {% endblocktranslate %}
 
         {% else %}
 
-            Active
+            {% translate "Active" %}
 
         {% endif %}
     </p>
 
     <p>
-        <strong>Notes:</strong>
+        <strong>{% translate "Notes:" %}</strong>
         {{ loan.notes|default:"N/A" }}
     </p>
 
@@ -175,12 +187,12 @@
     {% if loan.return_date %}
 
         <p>
-            <strong>Return Date:</strong>
+            <strong>{% translate "Return Date:" %}</strong>
             {{ loan.return_date }}
         </p>
 
         <p>
-            <strong>Returned To:</strong>
+            <strong>{% translate "Returned To:" %}</strong>
 
             {% if loan.returned_to %}
                 {{ loan.returned_to.full_name }}
@@ -205,7 +217,7 @@
 
         <p>
             <a href="{% url 'loan_return' loan.id %}?next={{ request.GET.next|default:request.path|urlencode }}">
-                Return Book
+                {% translate "Return Book" %}
             </a>
         </p>
 
@@ -213,13 +225,13 @@
 
     <p>
         <a href="{% url 'loan_edit' loan.id %}?next={{ request.GET.next|default:request.path|urlencode }}">
-            Edit Loan
+            {% translate "Edit Loan" %}
         </a>
     </p>
 
     <p>
         <a href="{% url 'loan_delete' loan.id %}?next={{ request.GET.next|default:request.path|urlencode }}">
-            Delete Loan
+            {% translate "Delete Loan" %}
         </a>
     </p>
 

@@ -1,4 +1,5 @@
 {% extends "library/error_base.html" %}
+{% load i18n %}
 
 {% comment %}
 Django renders this one with `template.render()` — no request, so no context
@@ -7,7 +8,7 @@ error_base.html is guarded for that, and nothing here queries the database,
 since an unreachable database is a likely cause of getting here at all.
 {% endcomment %}
 
-{% block title %}Server Error{% endblock %}
+{% block title %}{% translate "Server Error" %}{% endblock %}
 
 {% block error_code %}500{% endblock %}
 
@@ -15,9 +16,11 @@ since an unreachable database is a likely cause of getting here at all.
     <i class="bi bi-exclamation-octagon" aria-hidden="true"></i>
 {% endblock %}
 
-{% block error_title %}Something went wrong{% endblock %}
+{% block error_title %}{% translate "Something went wrong" %}{% endblock %}
 
 {% block error_message %}
-    An unexpected error occurred on our side. Please try again, and let a
-    librarian know if it keeps happening.
+    {% blocktranslate trimmed %}
+        An unexpected error occurred on our side. Please try again, and let a
+        librarian know if it keeps happening.
+    {% endblocktranslate %}
 {% endblock %}

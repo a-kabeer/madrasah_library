@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block title %}
-    Edit Shelf | {{ branding.display_name }}
+{% translate "Edit Shelf" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Edit Shelf
+    {% translate "Edit Shelf" %}
 {% endblock %}
 
 {% block content %}
@@ -19,7 +19,7 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-pencil me-2"></i>Edit Shelf
+                        <i class="bi bi-pencil me-2"></i>{% translate "Edit Shelf" %}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -29,7 +29,7 @@
 
                         <div class="mb-3">
                             <label for="formLocation" class="form-label fw-semibold">
-                                Location <span class="text-danger">*</span>
+                                {% translate "Location" %} <span class="text-danger">*</span>
                             </label>
                             <select class="form-select" id="formLocation" name="location" required>
                                 <option value="">{% translate "Select location&hellip;" %}</option>
@@ -43,14 +43,13 @@
                                 {% endfor %}
                             </select>
                             <div class="form-text">
-                                {% translate "A shelf only means anything inside a location,
-                                and its code has to be unique there." %}
+                                {% translate "A shelf only means anything inside a location, and its code has to be unique there." %}
                             </div>
                         </div>
 
                         <div class="mb-3">
                             <label for="formShelfCode" class="form-label fw-semibold">
-                                Shelf Code <span class="text-danger">*</span>
+                                {% translate "Shelf Code" %} <span class="text-danger">*</span>
                             </label>
                             <input
                                 type="text"
@@ -76,10 +75,10 @@
 
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-1"></i> Update Shelf
+                                <i class="bi bi-check-lg me-1"></i> {% translate "Update Shelf" %}
                             </button>
                             <a href="{% url 'shelf_detail' shelf.id %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-lg me-1"></i> Cancel
+                                <i class="bi bi-x-lg me-1"></i> {% translate "Cancel" %}
                             </a>
                         </div>
 

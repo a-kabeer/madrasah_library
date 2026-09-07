@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 {% comment %}
   `layout` rather than base.html by name: an ordinary request renders the
   whole application shell, an HTMX navigation renders only the main-content
@@ -12,11 +13,11 @@
 {% endcomment %}
 
 {% block title %}
-    Categories | {{ branding.display_name }}
+{% translate "Categories" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Categories
+    {% translate "Categories" %}
 {% endblock %}
 
 {% block content %}
@@ -24,7 +25,15 @@
 <div class="container-fluid px-0">
 
     {% url 'category_list' as category_list_url %}
-    {% include "library/partials/lookup_list.html" with rows=categories heading="Categories" blurb="How the catalogue is divided up. Open one to see what is in it." noun="category" noun_plural="categories" list_url=category_list_url search_placeholder="Search categories..." row_link_title="Books in" add_route="category_add" edit_route="category_edit" delete_route="category_delete" pagination_label="Category list pages" %}
+    {% translate "Categories" as lookup_heading %}
+    {% translate "How the catalogue is divided up. Open one to see what is in it." as lookup_blurb %}
+    {% translate "category" as lookup_noun %}
+    {% translate "categories" as lookup_noun_plural %}
+    {% translate "Search categories..." as lookup_search_placeholder %}
+    {% translate "Books in" as lookup_row_link_title %}
+    {% translate "Category list pages" as lookup_pagination_label %}
+
+    {% include "library/partials/lookup_list.html" with rows=categories heading=lookup_heading blurb=lookup_blurb noun=lookup_noun noun_plural=lookup_noun_plural list_url=category_list_url search_placeholder=lookup_search_placeholder row_link_title=lookup_row_link_title add_route="category_add" edit_route="category_edit" delete_route="category_delete" pagination_label=lookup_pagination_label %}
 
 </div>
 

@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block page_title %}
-    Borrower
+    {% translate "Borrower" %}
 {% endblock %}
 
 {% block breadcrumbs %}
@@ -22,7 +22,7 @@
             <li class="breadcrumb-item">
                 <a
                     href="{% url 'borrower_list' %}"
-                >Borrowers</a>
+                >{% translate "Borrowers" %}</a>
             </li>
             <li class="breadcrumb-item active" aria-current="page">
                 {{ borrower.name }}
@@ -42,7 +42,7 @@
                 href="{% url 'borrower_list' %}"
                 class="small text-decoration-none"
             >
-                <i class="bi bi-arrow-left me-1"></i> Borrowers
+                <i class="bi bi-arrow-left me-1"></i> {% translate "Borrowers" %}
             </a>
             <h2 class="fw-bold mb-1 mt-1">{{ borrower.name }}</h2>
             <div class="d-flex flex-wrap align-items-center gap-2">
@@ -52,9 +52,9 @@
                   deliberately shown apart.
                 {% endcomment %}
                 {% if borrower.is_active %}
-                    <span class="badge text-bg-success">Active</span>
+                    <span class="badge text-bg-success">{% translate "Active" %}</span>
                 {% else %}
-                    <span class="badge text-bg-secondary">Inactive</span>
+                    <span class="badge text-bg-secondary">{% translate "Inactive" %}</span>
                 {% endif %}
                 <span class="text-body-secondary">{{ borrower.borrower_type }}</span>
             </div>
@@ -62,7 +62,7 @@
 
         <div class="d-flex flex-wrap gap-2">
             <a href="{% url 'borrower_edit' borrower.id %}" class="btn btn-warning">
-                <i class="bi bi-pencil me-1"></i> Edit
+                <i class="bi bi-pencil me-1"></i> {% translate "Edit" %}
             </a>
 
             {% comment %}
@@ -74,16 +74,16 @@
                 <input type="hidden" name="next" value="{{ request.get_full_path }}">
                 <button type="submit" class="btn btn-outline-secondary">
                     {% if borrower.is_active %}
-                        <i class="bi bi-pause-circle me-1"></i> Deactivate
+                        <i class="bi bi-pause-circle me-1"></i> {% translate "Deactivate" %}
                     {% else %}
-                        <i class="bi bi-play-circle me-1"></i> Reactivate
+                        <i class="bi bi-play-circle me-1"></i> {% translate "Reactivate" %}
                     {% endif %}
                 </button>
             </form>
 
             {% if can_delete %}
                 <a href="{% url 'borrower_delete' borrower.id %}" class="btn btn-outline-danger">
-                    <i class="bi bi-trash me-1"></i> Delete
+                    <i class="bi bi-trash me-1"></i> {% translate "Delete" %}
                 </a>
             {% endif %}
         </div>
@@ -93,9 +93,13 @@
         <div class="alert alert-danger d-flex align-items-center gap-2" role="alert">
             <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
             <span>
-                <strong>{{ overdue_count }}</strong>
-                of the {{ active_count }} item{{ active_count|pluralize }}
-                {{ overdue_count|pluralize:"is,are" }} overdue.
+                {% blocktranslate trimmed count n=overdue_count with total=active_count %}
+                    <strong>{{ n }}</strong> of the {{ total }} items is
+                    overdue.
+                {% plural %}
+                    <strong>{{ n }}</strong> of the {{ total }} items are
+                    overdue.
+                {% endblocktranslate %}
             </span>
         </div>
     {% endif %}
@@ -104,13 +108,17 @@
         <div class="alert alert-warning d-flex align-items-start gap-2" role="alert">
             <i class="bi bi-info-circle-fill mt-1" aria-hidden="true"></i>
             <div>
-                <strong>This borrower is inactive.</strong>
+                <strong>{% translate "This borrower is inactive." %}</strong>
                 <span class="d-block small">
-                    Inactive borrowers cannot receive new loans. Existing loans and loan history remain unchanged and are still accessible below.
+                    {% translate "Inactive borrowers cannot receive new loans. Existing loans and loan history remain unchanged and are still accessible below." %}
                     {% if active_count > 0 %}
-                        This borrower currently has {{ active_count }} active loan{{ active_count|pluralize }}.
+                        {% blocktranslate trimmed count n=active_count %}
+                            This borrower currently has {{ n }} active loan.
+                        {% plural %}
+                            This borrower currently has {{ n }} active loans.
+                        {% endblocktranslate %}
                     {% endif %}
-                    Reactivate the borrower to allow new loans.
+                    {% translate "Reactivate the borrower to allow new loans." %}
                 </span>
             </div>
         </div>
@@ -123,7 +131,7 @@
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-person me-2"></i>Details
+                        <i class="bi bi-person me-2"></i>{% translate "Details" %}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -184,7 +192,7 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-arrow-left-right me-2"></i>Currently out
+                        <i class="bi bi-arrow-left-right me-2"></i>{% translate "Currently out" %}
                     </h5>
                     <div class="d-flex flex-wrap gap-2">
                         {% if active_count %}
@@ -198,7 +206,7 @@
                                 href="{% url 'loan_list' %}?borrower={{ borrower.id }}&amp;status=active"
                                 class="btn btn-sm btn-outline-secondary"
                             >
-                                <i class="bi bi-list-ul me-1"></i> Active loans
+                                <i class="bi bi-list-ul me-1"></i> {% translate "Active loans" %}
                             </a>
                         {% endif %}
 
@@ -217,7 +225,7 @@
                                 href="{% url 'circulation_issue' %}?borrower={{ borrower.id }}"
                                 class="btn btn-sm btn-primary"
                             >
-                                <i class="bi bi-plus-lg me-1"></i> Issue a book
+                                <i class="bi bi-plus-lg me-1"></i> {% translate "Issue a book" %}
                             </a>
                         {% endif %}
                     </div>
@@ -248,7 +256,7 @@
                                         </a>
                                         {% if loan.copy.volume.volume_number != 1 or loan.copy.volume.title %}
                                             <span class="d-block small">
-                                                Volume {{ loan.copy.volume.volume_number }}{% if loan.copy.volume.title %} — {{ loan.copy.volume.title }}{% endif %}
+                                                {% blocktranslate with number=loan.copy.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% if loan.copy.volume.title %} — {{ loan.copy.volume.title }}{% endif %}
                                             </span>
                                         {% endif %}
                                     </td>
@@ -268,7 +276,11 @@
                                         {{ loan.due_date }}
                                         {% if loan.days_overdue %}
                                             <span class="d-block small text-danger">
-                                                {{ loan.days_overdue }} day{{ loan.days_overdue|pluralize }} late
+                                                {% blocktranslate trimmed count n=loan.days_overdue %}
+                                                    {{ n }} day late
+                                                {% plural %}
+                                                    {{ n }} days late
+                                                {% endblocktranslate %}
                                             </span>
                                         {% endif %}
                                     </td>
@@ -313,7 +325,7 @@
     <div class="card shadow-sm border-0 mt-4">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h5 class="mb-0 fw-bold">
-                <i class="bi bi-bookmark-star me-2"></i>Reservations
+                <i class="bi bi-bookmark-star me-2"></i>{% translate "Reservations" %}
             </h5>
         </div>
 
@@ -348,11 +360,11 @@
                                 </td>
                                 <td>
                                     {% if reservation.is_active %}
-                                        <span class="badge text-bg-info">Waiting</span>
+                                        <span class="badge text-bg-info">{% translate "Waiting" %}</span>
                                     {% elif reservation.status == "Fulfilled" %}
-                                        <span class="badge text-bg-success">Fulfilled</span>
+                                        <span class="badge text-bg-success">{% translate "Fulfilled" %}</span>
                                     {% else %}
-                                        <span class="badge text-bg-secondary">Cancelled</span>
+                                        <span class="badge text-bg-secondary">{% translate "Cancelled" %}</span>
                                     {% endif %}
                                 </td>
                                 <td>
@@ -369,7 +381,7 @@
                                         </span>
                                         {% if reservation.ahead == 0 %}
                                             <span class="d-block small text-success">
-                                                Next in line
+                                                {% translate "Next in line" %}
                                             </span>
                                         {% endif %}
                                     {% else %}
@@ -413,10 +425,14 @@
     <div class="card shadow-sm border-0 mt-4">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h5 class="mb-0 fw-bold">
-                <i class="bi bi-clock-history me-2"></i>Loan History
+                <i class="bi bi-clock-history me-2"></i>{% translate "Loan History" %}
             </h5>
             <span class="text-body-secondary small">
-                {{ paginator.count }} loan{{ paginator.count|pluralize }} in all
+                {% blocktranslate trimmed count n=paginator.count %}
+                    {{ n }} loan in all
+                {% plural %}
+                    {{ n }} loans in all
+                {% endblocktranslate %}
             </span>
         </div>
         <div class="table-responsive">
@@ -452,10 +468,14 @@
                                     {{ loan.return_date }}
                                 {% elif loan.days_overdue %}
                                     <span class="badge text-bg-danger">
-                                        Overdue by {{ loan.days_overdue }} day{{ loan.days_overdue|pluralize }}
+                                        {% blocktranslate trimmed count n=loan.days_overdue %}
+                                            Overdue by {{ n }} day
+                                        {% plural %}
+                                            Overdue by {{ n }} days
+                                        {% endblocktranslate %}
                                     </span>
                                 {% else %}
-                                    <span class="badge text-bg-info">Still out</span>
+                                    <span class="badge text-bg-info">{% translate "Still out" %}</span>
                                 {% endif %}
                             </td>
                             <td class="text-end">

@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block title %}
-    Withdraw Copy | {{ branding.display_name }}
+{% translate "Withdraw Copy" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Withdraw Copy
+    {% translate "Withdraw Copy" %}
 {% endblock %}
 
 {% block content %}
@@ -15,7 +15,7 @@
 
     <div class="mb-3">
         <a href="{% url 'book_copy_detail' copy.id %}" class="small text-decoration-none">
-            <i class="bi bi-arrow-left me-1"></i> Back to the copy
+            <i class="bi bi-arrow-left me-1"></i> {% translate "Back to the copy" %}
         </a>
     </div>
 
@@ -34,13 +34,15 @@
                         <h4 class="fw-bold mb-3">{% translate "Already out of circulation" %}</h4>
 
                         <p class="text-body-secondary mb-4">
-                            <strong class="text-body">{{ copy.copy_code }}</strong>
-                            is marked <strong class="text-body">{{ copy.status }}</strong>,
-                            so it is not being offered for issue.
-                        </p>
+                                                                {% blocktranslate trimmed with copy_code=copy.copy_code status=copy.status %}
+                                                                    <strong class="text-body">{{ copy_code }}</strong>
+                                                                    is marked <strong class="text-body">{{ status }}</strong>,
+                                                                    so it is not being offered for issue.
+                                                                {% endblocktranslate %}
+                                                            </p>
 
                         <a href="{% url 'book_copy_edit' copy.id %}" class="btn btn-outline-secondary">
-                            Change its status
+                            {% translate "Change its status" %}
                         </a>
 
                     {% elif blocker %}
@@ -60,10 +62,10 @@
 
                         <div class="d-flex justify-content-center flex-wrap gap-2">
                             <a href="{% url 'loan_return' active_loan.id %}" class="btn btn-success">
-                                <i class="bi bi-arrow-return-left me-1"></i> Take it back
+                                <i class="bi bi-arrow-return-left me-1"></i> {% translate "Take it back" %}
                             </a>
                             <a href="{% url 'book_copy_detail' copy.id %}" class="btn btn-outline-secondary">
-                                Back to the copy
+                                {% translate "Back to the copy" %}
                             </a>
                         </div>
 
@@ -84,14 +86,20 @@
                             style="max-width: 26rem;">
                             <li class="mb-2">
                                 <i class="bi bi-check2 text-success me-2"></i>
-                                The copy and its code stay on record, and so
-                                do all {{ loan_count }} loan{{ loan_count|pluralize }}
-                                against it.
+                                {% blocktranslate trimmed count n=loan_count %}
+                                    The copy and its code stay on record, and
+                                    so does the {{ n }} loan against it.
+                                {% plural %}
+                                    The copy and its code stay on record, and
+                                    so do all {{ n }} loans against it.
+                                {% endblocktranslate %}
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-x-lg text-danger me-2"></i>
-                                It stops being offered for issue and stops
-                                counting as available.
+                                {% blocktranslate trimmed %}
+                                    It stops being offered for issue and stops
+                                    counting as available.
+                                {% endblocktranslate %}
                             </li>
                             <li>
                                 {% comment %}
@@ -101,20 +109,23 @@
                                   becomes a special case.
                                 {% endcomment %}
                                 <i class="bi bi-tag me-2"></i>
-                                Its status becomes
-                                <strong class="text-body">{{ withdrawn_status }}</strong>,
-                                which you can change again from Edit Copy.
+                                {% blocktranslate trimmed with status=withdrawn_status %}
+                                    Its status becomes
+                                    <strong class="text-body">{{ status }}</strong>,
+                                    which you can change again from Edit
+                                    Copy.
+                                {% endblocktranslate %}
                             </li>
                         </ul>
 
                         <div class="d-flex justify-content-center gap-2">
                             <a href="{% url 'book_copy_detail' copy.id %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-lg me-1"></i> Cancel
+                                <i class="bi bi-x-lg me-1"></i> {% translate "Cancel" %}
                             </a>
                             <form method="post" class="d-inline">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-warning">
-                                    <i class="bi bi-box-arrow-right me-1"></i> Withdraw Copy
+                                    <i class="bi bi-box-arrow-right me-1"></i> {% translate "Withdraw Copy" %}
                                 </button>
                             </form>
                         </div>

@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block title %}
-    Delete User | {{ branding.display_name }}
+{% translate "Delete User" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Delete User
+    {% translate "Delete User" %}
 {% endblock %}
 
 {% block content %}
@@ -24,28 +24,28 @@
 
     <p>
         <strong>
-            This user cannot be deleted.
+            {% translate "This user cannot be deleted." %}
         </strong>
     </p>
 
     <p>
-        {% translate "This user has issued/returned loans or other activity on record.
-        Deleting them would break that history, so it's blocked.
-        Consider deactivating the account instead." %}
+        {% translate "This user has issued/returned loans or other activity on record. Deleting them would break that history, so it's blocked. Consider deactivating the account instead." %}
     </p>
 
     <p>
         <a href="{% url 'user_list' %}">
-            Back to Users
+            {% translate "Back to Users" %}
         </a>
     </p>
 
 {% else %}
 
     <p>
-        Are you sure you want to delete:
-        <strong>{{ target_user.username }}</strong>?
-    </p>
+           {% blocktranslate trimmed with username=target_user.username %}
+               Are you sure you want to delete:
+               <strong>{{ username }}</strong>?
+           {% endblocktranslate %}
+       </p>
 
     <form method="post">
         {% csrf_token %}
@@ -58,7 +58,7 @@
     <br>
 
     <a href="{% url 'user_list' %}">
-        Cancel
+        {% translate "Cancel" %}
     </a>
 
 {% endif %}

@@ -2,11 +2,11 @@
 {% load i18n %}
 
 {% block title %}
-    Archive Book | {{ branding.display_name }}
+{% translate "Archive Book" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Archive Book
+    {% translate "Archive Book" %}
 {% endblock %}
 
 {% block content %}
@@ -15,7 +15,7 @@
 
     <div class="mb-3">
         <a href="{% url 'book_detail' book.id %}" class="small text-decoration-none">
-            <i class="bi bi-arrow-left me-1"></i> Back to the book
+            <i class="bi bi-arrow-left me-1"></i> {% translate "Back to the book" %}
         </a>
     </div>
 
@@ -34,13 +34,15 @@
                         <h4 class="fw-bold mb-3">{% translate "Already archived" %}</h4>
 
                         <p class="text-body-secondary mb-4">
-                            <strong class="text-body">{{ book.title }}</strong>
-                            left the active catalogue on
-                            {{ book.archived_at|date:"j M Y" }}.
-                        </p>
+                                                                {% blocktranslate trimmed with title=book.title archived_at=book.archived_at|date:"j M Y" %}
+                                                                    <strong class="text-body">{{ title }}</strong>
+                                                                    left the active catalogue on
+                                                                    {{ archived_at }}.
+                                                                {% endblocktranslate %}
+                                                            </p>
 
                         <a href="{% url 'book_detail' book.id %}" class="btn btn-outline-secondary">
-                            Back to the book
+                            {% translate "Back to the book" %}
                         </a>
 
                     {% elif blocker %}
@@ -60,10 +62,10 @@
 
                         <div class="d-flex justify-content-center flex-wrap gap-2">
                             <a href="{% url 'book_detail' book.id %}?tab=copies" class="btn btn-primary">
-                                <i class="bi bi-stack me-1"></i> See its copies
+                                <i class="bi bi-stack me-1"></i> {% translate "See its copies" %}
                             </a>
                             <a href="{% url 'book_detail' book.id %}" class="btn btn-outline-secondary">
-                                Back to the book
+                                {% translate "Back to the book" %}
                             </a>
                         </div>
 
@@ -76,9 +78,11 @@
                         <h4 class="fw-bold mb-3">{% translate "Archive this book?" %}</h4>
 
                         <p class="text-body-secondary mb-4">
-                            <strong class="text-body">{{ book.title }}</strong>
-                            will be taken out of the active catalogue.
-                        </p>
+                                                                {% blocktranslate trimmed with title=book.title %}
+                                                                    <strong class="text-body">{{ title }}</strong>
+                                                                    will be taken out of the active catalogue.
+                                                                {% endblocktranslate %}
+                                                            </p>
 
                         {% comment %}
                           Said plainly, because "archive" is the word people
@@ -88,34 +92,44 @@
                             style="max-width: 26rem;">
                             <li class="mb-2">
                                 <i class="bi bi-check2 text-success me-2"></i>
-                                Its {{ copy_count }} cop{{ copy_count|pluralize:"y,ies" }},
-                                their copy codes and their shelves are kept
-                                exactly as they are.
+                                {% blocktranslate trimmed count n=copy_count %}
+                                    Its {{ n }} copy, its copy code and its
+                                    shelf are kept exactly as they are.
+                                {% plural %}
+                                    Its {{ n }} copies, their copy codes and
+                                    their shelves are kept exactly as they
+                                    are.
+                                {% endblocktranslate %}
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-check2 text-success me-2"></i>
-                                All {{ loan_count }} loan{{ loan_count|pluralize }}
-                                on record stay readable.
+                                {% blocktranslate trimmed count n=loan_count %}
+                                    The {{ n }} loan on record stays readable.
+                                {% plural %}
+                                    All {{ n }} loans on record stay readable.
+                                {% endblocktranslate %}
                             </li>
                             <li class="mb-2">
                                 <i class="bi bi-x-lg text-danger me-2"></i>
-                                It stops appearing in the catalogue, and its
-                                copies stop being offered for issue.
+                                {% blocktranslate trimmed %}
+                                    It stops appearing in the catalogue, and its
+                                    copies stop being offered for issue.
+                                {% endblocktranslate %}
                             </li>
                             <li>
                                 <i class="bi bi-arrow-counterclockwise text-primary me-2"></i>
-                                You can restore it at any time.
+                                {% translate "You can restore it at any time." %}
                             </li>
                         </ul>
 
                         <div class="d-flex justify-content-center gap-2">
                             <a href="{% url 'book_detail' book.id %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-lg me-1"></i> Cancel
+                                <i class="bi bi-x-lg me-1"></i> {% translate "Cancel" %}
                             </a>
                             <form method="post" class="d-inline">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-warning">
-                                    <i class="bi bi-archive me-1"></i> Archive Book
+                                    <i class="bi bi-archive me-1"></i> {% translate "Archive Book" %}
                                 </button>
                             </form>
                         </div>
