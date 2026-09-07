@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     Add Shelf | {{ branding.display_name }}
@@ -31,7 +32,7 @@
                                 Location <span class="text-danger">*</span>
                             </label>
                             <select class="form-select" id="formLocation" name="location" required>
-                                <option value="">Select location&hellip;</option>
+                                <option value="">{% translate "Select location&hellip;" %}</option>
                                 {% for option in locations %}
                                     <option
                                         value="{{ option.id }}"
@@ -42,8 +43,8 @@
                                 {% endfor %}
                             </select>
                             <div class="form-text">
-                                A shelf only means anything inside a location,
-                                and its code has to be unique there.
+                                {% translate "A shelf only means anything inside a location,
+                                and its code has to be unique there." %}
                             </div>
                         </div>
 
@@ -63,7 +64,7 @@
 
                         <div class="mb-3">
                             <label for="formDescription" class="form-label fw-semibold">
-                                Description
+                                {% translate "Description" %}
                             </label>
                             <textarea
                                 class="form-control"

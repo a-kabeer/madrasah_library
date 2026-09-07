@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 Delete confirmation for an author, a category or a publisher, served into
 #formModal.
@@ -40,19 +41,19 @@ Expected context: kind, label, action, name, blocker.
                 class="btn btn-outline-secondary ms-auto"
                 data-bs-dismiss="modal"
             >
-                Close
+                {% translate "Close" %}
             </button>
         </div>
 
     {% else %}
 
-        <p class="mb-2">You are about to delete:</p>
+        <p class="mb-2">{% translate "You are about to delete:" %}</p>
 
         <p class="fs-5 fw-semibold mb-3">{{ name }}</p>
 
         <p class="text-body-secondary">
-            No books are filed under it, so nothing in the catalogue
-            changes.
+            {% translate "No books are filed under it, so nothing in the catalogue
+            changes." %}
         </p>
 
         <p class="text-danger small mb-0">
@@ -81,7 +82,7 @@ Expected context: kind, label, action, name, blocker.
                 class="btn btn-outline-secondary ms-auto"
                 data-bs-dismiss="modal"
             >
-                Cancel
+                {% translate "Cancel" %}
             </button>
 
         </div>

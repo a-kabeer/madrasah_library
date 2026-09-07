@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     Book Contents | {{ branding.display_name }}
@@ -9,13 +10,13 @@
 {% endblock %}
 
 {% block breadcrumbs %}
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
                 <a href="{% url 'book_list' %}">Books</a>
             </li>
             <li class="breadcrumb-item active" aria-current="page">
-                Contents
+                {% translate "Contents" %}
             </li>
         </ol>
     </nav>
@@ -27,9 +28,9 @@
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
-            <h2 class="fw-bold mb-1">Book Contents</h2>
+            <h2 class="fw-bold mb-1">{% translate "Book Contents" %}</h2>
             <p class="text-body-secondary mb-0">
-                Chapters, sections and other entries inside a volume.
+                {% translate "Chapters, sections and other entries inside a volume." %}
             </p>
         </div>
         <a href="{% url 'book_content_add' %}" class="btn btn-primary">
@@ -43,7 +44,7 @@
 
                 <div class="col-12 col-lg-4">
                     <label for="contentSearch" class="form-label fw-semibold">
-                        Search
+                        {% translate "Search" %}
                     </label>
                     <input
                         type="text"
@@ -51,16 +52,16 @@
                         id="contentSearch"
                         name="search"
                         value="{{ search }}"
-                        placeholder="Search contents..."
+                        placeholder="{% translate 'Search contents...' %}"
                     >
                 </div>
 
                 <div class="col-12 col-lg-4">
                     <label for="volume" class="form-label fw-semibold">
-                        Volume
+                        {% translate "Volume" %}
                     </label>
                     <select class="form-select" name="volume" id="volume">
-                        <option value="">All Volumes</option>
+                        <option value="">{% translate "All Volumes" %}</option>
                         {% for volume in volumes %}
                             <option
                                 value="{{ volume.id }}"
@@ -74,10 +75,10 @@
 
                 <div class="col-12 col-lg-2">
                     <label for="content_type" class="form-label fw-semibold">
-                        Content Type
+                        {% translate "Content Type" %}
                     </label>
                     <select class="form-select" name="content_type" id="content_type">
-                        <option value="">All Types</option>
+                        <option value="">{% translate "All Types" %}</option>
                         {% for item in content_types %}
                             <option
                                 value="{{ item }}"
@@ -120,11 +121,11 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-secondary">
                     <tr>
-                        <th>ID</th>
-                        <th>Volume</th>
-                        <th>Content</th>
-                        <th>Parent</th>
-                        <th class="text-end">Actions</th>
+                        <th>{% translate "ID" %}</th>
+                        <th>{% translate "Volume" %}</th>
+                        <th>{% translate "Content" %}</th>
+                        <th>{% translate "Parent" %}</th>
+                        <th class="text-end">{% translate "Actions" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -153,21 +154,21 @@
                                     <a
                                         href="{% url 'book_content_detail' content.id %}"
                                         class="btn btn-sm btn-outline-secondary"
-                                        title="View Details"
+                                        title="{% translate 'View Details' %}"
                                     >
                                         <i class="bi bi-box-arrow-up-right"></i>
                                     </a>
                                     <a
                                         href="{% url 'book_content_edit' content.id %}"
                                         class="btn btn-sm btn-outline-warning"
-                                        title="Edit"
+                                        title="{% translate 'Edit' %}"
                                     >
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                     <a
                                         href="{% url 'book_content_delete' content.id %}"
                                         class="btn btn-sm btn-outline-danger"
-                                        title="Delete"
+                                        title="{% translate 'Delete' %}"
                                     >
                                         <i class="bi bi-trash"></i>
                                     </a>
@@ -177,7 +178,7 @@
                     {% empty %}
                         <tr>
                             <td colspan="5" class="text-center text-body-secondary py-4">
-                                No contents found.
+                                {% translate "No contents found." %}
                             </td>
                         </tr>
                     {% endfor %}

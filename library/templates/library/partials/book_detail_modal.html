@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 Book details for the shared #globalModal, served by `book_detail` when the
 request carries HX-Request. Opened from the book list so the user keeps
@@ -30,7 +31,7 @@ header by id, which saves any JavaScript for the title.
     {% else %}
         <div
             class="cover-modal cover-modal-empty align-self-start"
-            aria-label="No cover image"
+            aria-label="{% translate 'No cover image' %}"
         >
             <i class="bi bi-book" aria-hidden="true"></i>
         </div>
@@ -40,10 +41,10 @@ header by id, which saves any JavaScript for the title.
 
         <dl class="row mb-0 small">
 
-            <dt class="col-4 text-body-secondary fw-normal">Author</dt>
+            <dt class="col-4 text-body-secondary fw-normal">{% translate "Author" %}</dt>
             <dd class="col-8 fw-semibold">{{ book.author.name }}</dd>
 
-            <dt class="col-4 text-body-secondary fw-normal">Category</dt>
+            <dt class="col-4 text-body-secondary fw-normal">{% translate "Category" %}</dt>
             <dd class="col-8">
                 {% if book.category %}
                     <span class="badge bg-secondary">{{ book.category.name }}</span>
@@ -52,7 +53,7 @@ header by id, which saves any JavaScript for the title.
                 {% endif %}
             </dd>
 
-            <dt class="col-4 text-body-secondary fw-normal">Publisher</dt>
+            <dt class="col-4 text-body-secondary fw-normal">{% translate "Publisher" %}</dt>
             <dd class="col-8 fw-semibold">
                 {% if book.publisher %}
                     {{ book.publisher.name }}
@@ -66,7 +67,7 @@ header by id, which saves any JavaScript for the title.
                 {% endif %}
             </dd>
 
-            <dt class="col-4 text-body-secondary fw-normal">Volumes</dt>
+            <dt class="col-4 text-body-secondary fw-normal">{% translate "Volumes" %}</dt>
             <dd class="col-8 fw-semibold mb-0">{{ volumes|length }}</dd>
 
         </dl>
@@ -134,7 +135,7 @@ header by id, which saves any JavaScript for the title.
     <hr>
 
     <p class="text-body-secondary small mb-0">
-        No volumes have been added for this book yet.
+        {% translate "No volumes have been added for this book yet." %}
     </p>
 
 {% endif %}

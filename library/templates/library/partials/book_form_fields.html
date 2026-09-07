@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 The book's own details: title, author, category, publisher, cover.
 
@@ -40,7 +41,7 @@ Expected context:
 
 <div class="mb-3">
     <label for="{{ id_prefix }}CoverImage" class="form-label fw-semibold">
-        Cover Image
+        {% translate "Cover Image" %}
     </label>
 
     {% if book %}
@@ -59,7 +60,7 @@ Expected context:
                         name="remove_cover"
                     >
                     <label class="form-check-label" for="{{ id_prefix }}RemoveCover">
-                        Remove current cover
+                        {% translate "Remove current cover" %}
                     </label>
                 </div>
             </div>

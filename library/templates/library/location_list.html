@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 {% comment %}
   `layout` rather than base.html by name: an ordinary request renders the
   whole application shell, an HTMX navigation renders only the main-content
@@ -22,9 +23,9 @@
     <!-- Page Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
-            <h2 class="fw-bold mb-1">Locations</h2>
+            <h2 class="fw-bold mb-1">{% translate "Locations" %}</h2>
             <p class="text-body-secondary mb-0">
-                Where the library keeps its books. Open a location to see its shelves.
+                {% translate "Where the library keeps its books. Open a location to see its shelves." %}
             </p>
         </div>
         {% if can_edit %}
@@ -42,9 +43,9 @@
                     class="form-control"
                     name="search"
                     value="{{ search }}"
-                    placeholder="Search locations..."
+                    placeholder="{% translate 'Search locations...' %}"
                     style="max-width: 26rem;"
-                    aria-label="Search locations"
+                    aria-label="{% translate 'Search locations' %}"
                 >
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-search me-1"></i> Search
@@ -89,10 +90,10 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-secondary">
                     <tr>
-                        <th>Location</th>
-                        <th>Shelves</th>
-                        <th>Copies</th>
-                        <th class="text-end">Actions</th>
+                        <th>{% translate "Location" %}</th>
+                        <th>{% translate "Shelves" %}</th>
+                        <th>{% translate "Copies" %}</th>
+                        <th class="text-end">{% translate "Actions" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -134,7 +135,7 @@
                                         href="{% url 'location_detail' location.id %}"
                                         data-row-primary
                                         class="btn btn-sm btn-outline-secondary"
-                                        title="Open"
+                                        title="{% translate 'Open' %}"
                                         aria-label="Open {{ location.name }}"
                                     >
                                         <i class="bi bi-box-arrow-up-right"></i>
@@ -143,7 +144,7 @@
                                         <a
                                             href="{% url 'location_edit' location.id %}"
                                             class="btn btn-sm btn-outline-warning"
-                                            title="Edit"
+                                            title="{% translate 'Edit' %}"
                                             aria-label="Edit {{ location.name }}"
                                         >
                                             <i class="bi bi-pencil"></i>
@@ -151,7 +152,7 @@
                                         <a
                                             href="{% url 'location_delete' location.id %}"
                                             class="btn btn-sm btn-outline-danger"
-                                            title="Delete"
+                                            title="{% translate 'Delete' %}"
                                             aria-label="Delete {{ location.name }}"
                                         >
                                             <i class="bi bi-trash"></i>
@@ -163,7 +164,7 @@
                     {% empty %}
                         <tr>
                             <td colspan="4" class="text-center text-body-secondary py-4">
-                                No locations found.
+                                {% translate "No locations found." %}
                             </td>
                         </tr>
                     {% endfor %}

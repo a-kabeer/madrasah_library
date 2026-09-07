@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     Delete Borrower | {{ branding.display_name }}
@@ -36,7 +37,7 @@
                             <i class="bi bi-shield-exclamation text-warning" style="font-size: 3rem;"></i>
                         </div>
 
-                        <h4 class="fw-bold mb-3">This borrower cannot be deleted</h4>
+                        <h4 class="fw-bold mb-3">{% translate "This borrower cannot be deleted" %}</h4>
 
                         <p class="text-body-secondary mb-4">
                             <strong class="text-body">{{ borrower.name }}</strong>
@@ -51,9 +52,9 @@
 
                         {% if borrower.is_active %}
                             <p class="text-body-secondary mb-4">
-                                Deactivate them instead. They stop being
+                                {% translate "Deactivate them instead. They stop being
                                 offered for new loans, and everything they
-                                have ever borrowed stays on the record.
+                                have ever borrowed stays on the record." %}
                             </p>
 
                             <div class="d-flex justify-content-center flex-wrap gap-2">
@@ -75,8 +76,8 @@
                             </div>
                         {% else %}
                             <p class="text-body-secondary mb-4">
-                                They are already inactive, so they are not
-                                offered for new loans.
+                                {% translate "They are already inactive, so they are not
+                                offered for new loans." %}
                             </p>
 
                             <a href="{% url 'borrower_detail' borrower.id %}" class="btn btn-outline-secondary">
@@ -90,7 +91,7 @@
                             <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
                         </div>
 
-                        <h4 class="fw-bold mb-3">Delete Borrower?</h4>
+                        <h4 class="fw-bold mb-3">{% translate "Delete Borrower?" %}</h4>
 
                         <p class="text-body-secondary mb-4">
                             Are you sure you want to delete:<br>
@@ -98,8 +99,8 @@
                         </p>
 
                         <p class="text-body-secondary small mb-4">
-                            They have never taken a book out, so no loan
-                            history is affected.
+                            {% translate "They have never taken a book out, so no loan
+                            history is affected." %}
                         </p>
 
                         <p class="text-danger small mb-4">

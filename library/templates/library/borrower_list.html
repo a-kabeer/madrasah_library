@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 {% comment %}
   `layout` rather than base.html by name: an ordinary request renders the
   whole application shell, an HTMX navigation renders only the main-content
@@ -22,9 +23,9 @@
     <!-- Page Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
-            <h2 class="fw-bold mb-1">Borrowers</h2>
+            <h2 class="fw-bold mb-1">{% translate "Borrowers" %}</h2>
             <p class="text-body-secondary mb-0">
-                Who borrows from the library, and what they are holding.
+                {% translate "Who borrows from the library, and what they are holding." %}
             </p>
         </div>
         {% comment %}
@@ -42,7 +43,7 @@
 
                 <div class="col-12 col-lg-4">
                     <label for="borrowerSearch" class="form-label fw-semibold">
-                        Search
+                        {% translate "Search" %}
                     </label>
                     <input
                         type="search"
@@ -50,16 +51,16 @@
                         id="borrowerSearch"
                         name="search"
                         value="{{ search }}"
-                        placeholder="Name, phone, registration no or department..."
+                        placeholder="{% translate 'Name, phone, registration no or department...' %}"
                     >
                 </div>
 
                 <div class="col-6 col-lg-2">
                     <label for="borrowerType" class="form-label fw-semibold">
-                        Type
+                        {% translate "Type" %}
                     </label>
                     <select class="form-select" id="borrowerType" name="borrower_type">
-                        <option value="">Any type</option>
+                        <option value="">{% translate "Any type" %}</option>
                         {% for option in borrower_types %}
                             <option
                                 value="{{ option }}"
@@ -78,36 +79,36 @@
                       holding, which is the next control along.
                     {% endcomment %}
                     <label for="borrowerStatus" class="form-label fw-semibold">
-                        Status
+                        {% translate "Status" %}
                     </label>
                     <select class="form-select" id="borrowerStatus" name="status">
-                        <option value="">All</option>
+                        <option value="">{% translate "All" %}</option>
                         <option value="active" {% if active_status == "active" %}selected{% endif %}>
-                            Active
+                            {% translate "Active" %}
                         </option>
                         <option value="inactive" {% if active_status == "inactive" %}selected{% endif %}>
-                            Inactive
+                            {% translate "Inactive" %}
                         </option>
                     </select>
                 </div>
 
                 <div class="col-6 col-lg-2">
                     <label for="borrowerActivity" class="form-label fw-semibold">
-                        Loans
+                        {% translate "Loans" %}
                     </label>
                     <select class="form-select" id="borrowerActivity" name="activity">
-                        <option value="">Any</option>
+                        <option value="">{% translate "Any" %}</option>
                         <option value="has_loans" {% if activity == "has_loans" %}selected{% endif %}>
-                            Has active loans
+                            {% translate "Has active loans" %}
                         </option>
                         <option value="no_loans" {% if activity == "no_loans" %}selected{% endif %}>
-                            No active loans
+                            {% translate "No active loans" %}
                         </option>
                         <option value="overdue" {% if activity == "overdue" %}selected{% endif %}>
-                            Has overdue items
+                            {% translate "Has overdue items" %}
                         </option>
                         <option value="no_overdue" {% if activity == "no_overdue" %}selected{% endif %}>
-                            Nothing overdue
+                            {% translate "Nothing overdue" %}
                         </option>
                     </select>
                 </div>
@@ -158,12 +159,12 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-secondary">
                     <tr>
-                        <th>Borrower</th>
-                        <th>Registration No</th>
-                        <th>Type</th>
-                        <th>On loan</th>
-                        <th>Status</th>
-                        <th class="text-end">Actions</th>
+                        <th>{% translate "Borrower" %}</th>
+                        <th>{% translate "Registration No" %}</th>
+                        <th>{% translate "Type" %}</th>
+                        <th>{% translate "On loan" %}</th>
+                        <th>{% translate "Status" %}</th>
+                        <th class="text-end">{% translate "Actions" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -233,7 +234,7 @@
                                         href="{% url 'borrower_detail' borrower.id %}"
                                         class="btn btn-sm btn-outline-secondary"
                                         data-row-primary
-                                        title="Open"
+                                        title="{% translate 'Open' %}"
                                         aria-label="Open {{ borrower.name }}"
                                     >
                                         <i class="bi bi-box-arrow-up-right"></i>
@@ -241,7 +242,7 @@
                                     <a
                                         href="{% url 'borrower_edit' borrower.id %}"
                                         class="btn btn-sm btn-outline-warning"
-                                        title="Edit"
+                                        title="{% translate 'Edit' %}"
                                         aria-label="Edit {{ borrower.name }}"
                                     >
                                         <i class="bi bi-pencil"></i>
@@ -256,7 +257,7 @@
                                         <a
                                             href="{% url 'borrower_delete' borrower.id %}"
                                             class="btn btn-sm btn-outline-danger"
-                                            title="Delete"
+                                            title="{% translate 'Delete' %}"
                                             aria-label="Delete {{ borrower.name }}"
                                         >
                                             <i class="bi bi-trash"></i>
@@ -268,7 +269,7 @@
                     {% empty %}
                         <tr>
                             <td colspan="6" class="text-center text-body-secondary py-4">
-                                No borrowers found.
+                                {% translate "No borrowers found." %}
                             </td>
                         </tr>
                     {% endfor %}

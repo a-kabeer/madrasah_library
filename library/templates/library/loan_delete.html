@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     Delete Loan | {{ branding.display_name }}
@@ -29,7 +30,7 @@
         {% endif %}
     </p>
 
-    <h1>Delete Loan</h1>
+    <h1>{% translate "Delete Loan" %}</h1>
 
     <p>
         Are you sure you want to permanently delete
@@ -74,7 +75,7 @@
         <input type="hidden" name="next" value="{{ next_url }}">
 
         <button type="submit">
-            Yes, Delete
+            {% translate "Yes, Delete" %}
         </button>
 
         {% if next_url %}

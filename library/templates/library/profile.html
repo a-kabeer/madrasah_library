@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     My Profile | {{ branding.display_name }}
@@ -25,25 +26,25 @@
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-12 col-sm-6">
-                            <p class="mb-1 text-body-secondary small">Username</p>
+                            <p class="mb-1 text-body-secondary small">{% translate "Username" %}</p>
                             <p class="fw-semibold mb-0">{{ user.username }}</p>
                         </div>
                         <div class="col-12 col-sm-6">
-                            <p class="mb-1 text-body-secondary small">Full Name</p>
+                            <p class="mb-1 text-body-secondary small">{% translate "Full Name" %}</p>
                             <p class="fw-semibold mb-0">{{ user.full_name }}</p>
                         </div>
                         <div class="col-12 col-sm-6">
-                            <p class="mb-1 text-body-secondary small">Role</p>
+                            <p class="mb-1 text-body-secondary small">{% translate "Role" %}</p>
                             <p class="fw-semibold mb-0">
                                 <span class="badge bg-secondary">{{ user.role }}</span>
                             </p>
                         </div>
                         <div class="col-12 col-sm-6">
-                            <p class="mb-1 text-body-secondary small">Last Login</p>
+                            <p class="mb-1 text-body-secondary small">{% translate "Last Login" %}</p>
                             <p class="fw-semibold mb-0">{{ user.last_login|default:"N/A" }}</p>
                         </div>
                         <div class="col-12 col-sm-6">
-                            <p class="mb-1 text-body-secondary small">Account Created</p>
+                            <p class="mb-1 text-body-secondary small">{% translate "Account Created" %}</p>
                             <p class="fw-semibold mb-0">{{ user.created_at }}</p>
                         </div>
                     </div>
@@ -60,8 +61,8 @@
                 <div class="card-body">
 
                     <p class="text-body-secondary">
-                        Choose how the app looks. This is saved to your account,
-                        so it follows you to other browsers and devices.
+                        {% translate "Choose how the app looks. This is saved to your account,
+                        so it follows you to other browsers and devices." %}
                     </p>
 
                     {% comment %}
@@ -73,7 +74,7 @@
                         <input type="hidden" name="next" value="{% url 'profile' %}">
 
                         <fieldset>
-                            <legend class="visually-hidden">Appearance</legend>
+                            <legend class="visually-hidden">{% translate "Appearance" %}</legend>
 
                             {% for value, label in theme_choices %}
                                 <div class="form-check">
@@ -157,7 +158,7 @@
                                 autocomplete="new-password"
                                 required
                             >
-                            <div class="form-text">At least 8 characters.</div>
+                            <div class="form-text">{% translate "At least 8 characters." %}</div>
                         </div>
 
                         <div class="mb-3">

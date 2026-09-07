@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 The camera scanner, shared by the issue and return pages.
 
@@ -33,7 +34,7 @@ Expected context: nothing.
                     type="button"
                     class="btn-close"
                     data-bs-dismiss="modal"
-                    aria-label="Close"
+                    aria-label="{% translate 'Close' %}"
                 ></button>
             </div>
 
@@ -53,7 +54,7 @@ Expected context: nothing.
                 ></video>
 
                 <p class="text-body-secondary small mb-0 mt-3" data-scan-status>
-                    Point the camera at the barcode on the book.
+                    {% translate "Point the camera at the barcode on the book." %}
                 </p>
 
                 {% comment %}
@@ -80,7 +81,7 @@ Expected context: nothing.
                     class="btn btn-outline-secondary"
                     data-bs-dismiss="modal"
                 >
-                    Type it instead
+                    {% translate "Type it instead" %}
                 </button>
             </div>
 

@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     Edit Loan | {{ branding.display_name }}
@@ -29,7 +30,7 @@
         {% endif %}
     </p>
 
-    <h1>Edit Loan</h1>
+    <h1>{% translate "Edit Loan" %}</h1>
     {% if error_message %}
 
     <p>
@@ -46,7 +47,7 @@
         </p>
 
         <p>
-            This loan has already been returned.
+            {% translate "This loan has already been returned." %}
         </p>
 
     {% else %}
@@ -65,7 +66,7 @@
 
 
         <label for="copy">
-            Book Copy:
+            {% translate "Book Copy:" %}
         </label>
 
         {% if loan.return_date %}
@@ -110,7 +111,7 @@
 
 
         <label for="borrower">
-            Borrower:
+            {% translate "Borrower:" %}
         </label>
 
         <select
@@ -137,7 +138,7 @@
 
 
         <label for="issue_date">
-            Issue Date:
+            {% translate "Issue Date:" %}
         </label>
 
         <input
@@ -153,7 +154,7 @@
 
 
         <label for="due_date">
-            Due Date:
+            {% translate "Due Date:" %}
         </label>
 
         <input
@@ -172,7 +173,7 @@
 
             <hr>
 
-            <h3>Return Information</h3>
+            <h3>{% translate "Return Information" %}</h3>
 
             <p>
                 <strong>Return Date:</strong>
@@ -202,7 +203,7 @@
 
 
         <label for="notes">
-            Notes:
+            {% translate "Notes:" %}
         </label>
 
         <br>
@@ -219,7 +220,7 @@
 
 
         <button type="submit">
-            Update Loan
+            {% translate "Update Loan" %}
         </button>
 
     </form>

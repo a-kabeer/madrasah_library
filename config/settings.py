@@ -81,10 +81,19 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    # Order is not a style choice here. LocaleMiddleware reads the session,
+    # so it has to come after SessionMiddleware; CommonMiddleware can
+    # redirect (APPEND_SLASH) before a language is active, so it has to come
+    # after this. In the wrong place the language silently never applies.
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.auth.middleware.LoginRequiredMiddleware",
+    # A signed-in person's stored language beats whatever the browser asked
+    # for. Must be after AuthenticationMiddleware, which is what puts
+    # `request.user` there for it to read.
+    "library.middleware.UserLanguageMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -105,6 +114,9 @@ TEMPLATES = [
         "OPTIONS": {
             "context_processors": [
                 "django.template.context_processors.request",
+                # LANGUAGE_CODE and LANGUAGE_BIDI in every template, which
+                # is what base.html reads to set `lang` and `dir`.
+                "django.template.context_processors.i18n",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 # Organisation branding (name, logo, colours). Must stay
@@ -175,7 +187,26 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
-LANGUAGE_CODE = "en-us"
+# "en" rather than "en-us": the three offered languages are en/ur/ar, and a
+# regional default would make Django resolve `en-us` to `en` on every
+# request for nothing.
+LANGUAGE_CODE = "en"
+
+LANGUAGES = [
+    ("en", "English"),
+    ("ur", "اردو"),
+    ("ar", "العربية"),
+]
+
+LOCALE_PATHS = [BASE_DIR / "locale"]
+
+# Django's own `ar` locale formats numbers with Eastern Arabic digits
+# (٠١٢٣) and dates in a different order. For a library that is wrong: a
+# copy code, an ISBN and a loan number are identifiers, not quantities, and
+# they must read the same in every language. These modules force Latin
+# digits back; the identifiers themselves are additionally wrapped in
+# `{% localize off %}` where they are printed.
+FORMAT_MODULE_PATH = ["config.formats"]
 
 TIME_ZONE = "UTC"
 

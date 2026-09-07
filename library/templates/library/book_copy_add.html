@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}Add Book Copy | {{ branding.display_name }}{% endblock %}
 
@@ -61,9 +62,9 @@
                         <!-- Volume (only shown when no pre-selected volume) -->
                         {% if not selected_volume %}
                         <div class="mb-3">
-                            <label for="volume" class="form-label fw-semibold">Volume</label>
+                            <label for="volume" class="form-label fw-semibold">{% translate "Volume" %}</label>
                             <select name="volume" id="volume" class="form-select" required>
-                                <option value="">Select Volume</option>
+                                <option value="">{% translate "Select Volume" %}</option>
                                 {% for volume in volumes %}
                                 <option value="{{ volume.id }}" {% if volume.id == form_data.volume_id %}selected{% endif %}>
                                     {{ volume.book.title }} — Volume {{ volume.volume_number }}{% if volume.title %} — {{ volume.title }}{% endif %}
@@ -71,7 +72,7 @@
                                 {% endfor %}
                             </select>
                             <div class="form-text">
-                                The volume cannot be changed after the copy is created. If filed incorrectly, the copy must be deleted and re-created.
+                                {% translate "The volume cannot be changed after the copy is created. If filed incorrectly, the copy must be deleted and re-created." %}
                             </div>
                         </div>
                         {% else %}
@@ -81,31 +82,31 @@
 
                         <!-- Shelf -->
                         <div class="mb-3">
-                            <label for="shelf" class="form-label fw-semibold">Home Location / Shelf</label>
+                            <label for="shelf" class="form-label fw-semibold">{% translate "Home Location / Shelf" %}</label>
                             <select name="shelf" id="shelf" class="form-select" required>
-                                <option value="">Select Shelf</option>
+                                <option value="">{% translate "Select Shelf" %}</option>
                                 {% for shelf in shelves %}
                                 <option value="{{ shelf.id }}" {% if shelf.id == form_data.shelf_id %}selected{% endif %}>
                                     {{ shelf.location.name }} — {{ shelf.shelf_code }}
                                 </option>
                                 {% endfor %}
                             </select>
-                            <div class="form-text">Where this copy is normally kept when not on loan.</div>
+                            <div class="form-text">{% translate "Where this copy is normally kept when not on loan." %}</div>
                         </div>
 
                         <!-- Copy Code -->
                         <div class="mb-3">
-                            <label for="copy_code" class="form-label fw-semibold">Copy Code</label>
+                            <label for="copy_code" class="form-label fw-semibold">{% translate "Copy Code" %}</label>
                             <input type="text" class="form-control" name="copy_code" id="copy_code"
                                 value="{{ form_data.copy_code }}" required>
                             <div class="form-text">
-                                Printed on the physical copy. This cannot be changed after creation.
+                                {% translate "Printed on the physical copy. This cannot be changed after creation." %}
                             </div>
                         </div>
 
                         <!-- Status -->
                         <div class="mb-3">
-                            <label for="status" class="form-label fw-semibold">Status</label>
+                            <label for="status" class="form-label fw-semibold">{% translate "Status" %}</label>
                             <select name="status" id="status" class="form-select">
                                 {% for status_item in statuses %}
                                 <option value="{{ status_item }}" {% if status_item == form_data.status %}selected{% endif %}>
@@ -117,14 +118,14 @@
 
                         <!-- Acquisition Date -->
                         <div class="mb-3">
-                            <label for="acquisition_date" class="form-label fw-semibold">Acquisition Date</label>
+                            <label for="acquisition_date" class="form-label fw-semibold">{% translate "Acquisition Date" %}</label>
                             <input type="date" class="form-control" name="acquisition_date" id="acquisition_date"
                                 value="{% if form_data.acquisition_date %}{{ form_data.acquisition_date }}{% else %}{% now 'Y-m-d' %}{% endif %}">
                         </div>
 
                         <!-- Notes -->
                         <div class="mb-3">
-                            <label for="notes" class="form-label fw-semibold">Notes</label>
+                            <label for="notes" class="form-label fw-semibold">{% translate "Notes" %}</label>
                             <textarea class="form-control" name="notes" id="notes" rows="3">{{ form_data.notes }}</textarea>
                         </div>
 

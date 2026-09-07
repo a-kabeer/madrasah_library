@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     Analytics | {{ branding.display_name }}
@@ -13,7 +14,7 @@
 <div class="container-fluid px-0">
 
     <div class="mb-4">
-        <h2 class="fw-bold mb-1">Library Insights</h2>
+        <h2 class="fw-bold mb-1">{% translate "Library Insights" %}</h2>
         <p class="text-body-secondary mb-0">
             What the records say about how the library is being used.
             Read-only, computed live — nothing here is stored, and nothing
@@ -32,7 +33,7 @@
 
         <div class="analytics-filter">
             <label for="analyticsPeriod" class="form-label small fw-semibold">
-                Period
+                {% translate "Period" %}
             </label>
             <select class="form-select" id="analyticsPeriod" name="period">
                 {% for key, label in periods %}
@@ -45,10 +46,10 @@
 
         <div class="analytics-filter">
             <label for="analyticsCategory" class="form-label small fw-semibold">
-                Category
+                {% translate "Category" %}
             </label>
             <select class="form-select" id="analyticsCategory" name="category">
-                <option value="">All categories</option>
+                <option value="">{% translate "All categories" %}</option>
                 {% for category in categories %}
                     <option value="{{ category.id }}"
                         {% if period.category_id == category.id|stringformat:"s" %}selected{% endif %}
@@ -58,7 +59,7 @@
         </div>
 
         <div class="analytics-filter-actions">
-            <button type="submit" class="btn btn-primary">Apply</button>
+            <button type="submit" class="btn btn-primary">{% translate "Apply" %}</button>
 
             {% if period.key != "90d" or period.category_id %}
                 <a href="{% url 'analytics' %}" class="btn btn-outline-secondary">
@@ -85,7 +86,7 @@
 
     <!-- ================= KPIs ================= -->
 
-    <h3 class="analytics-heading">Loans</h3>
+    <h3 class="analytics-heading">{% translate "Loans" %}</h3>
 
     <div class="analytics-kpis">
 
@@ -128,7 +129,7 @@
     </div>
 
 
-    <h3 class="analytics-heading">Borrowing</h3>
+    <h3 class="analytics-heading">{% translate "Borrowing" %}</h3>
 
     <div class="analytics-kpis">
 
@@ -145,7 +146,7 @@
     </div>
 
 
-    <h3 class="analytics-heading">Collection</h3>
+    <h3 class="analytics-heading">{% translate "Collection" %}</h3>
 
     <div class="analytics-kpis">
 
@@ -192,8 +193,8 @@
                 <table class="table table-sm align-middle mb-0 analytics-table">
                     <thead class="table-secondary">
                         <tr>
-                            <th>Period</th>
-                            <th class="text-end">Loans</th>
+                            <th>{% translate "Period" %}</th>
+                            <th class="text-end">{% translate "Loans" %}</th>
                             <th class="analytics-bar-column"></th>
                         </tr>
                     </thead>
@@ -221,7 +222,7 @@
             </div>
         </div>
     {% else %}
-        <p class="analytics-empty">No loans in this period.</p>
+        <p class="analytics-empty">{% translate "No loans in this period." %}</p>
     {% endif %}
 
 
@@ -239,11 +240,11 @@
                     <thead class="table-secondary">
                         <tr>
                             <th class="analytics-rank">#</th>
-                            <th>Book</th>
-                            <th>Author</th>
-                            <th>Category</th>
-                            <th class="text-end">Loans</th>
-                            <th class="text-end">Out now</th>
+                            <th>{% translate "Book" %}</th>
+                            <th>{% translate "Author" %}</th>
+                            <th>{% translate "Category" %}</th>
+                            <th class="text-end">{% translate "Loans" %}</th>
+                            <th class="text-end">{% translate "Out now" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -271,7 +272,7 @@
             </div>
         </div>
     {% else %}
-        <p class="analytics-empty">Nothing was borrowed in this period.</p>
+        <p class="analytics-empty">{% translate "Nothing was borrowed in this period." %}</p>
     {% endif %}
 
 
@@ -284,9 +285,9 @@
             </h3>
 
             <p class="text-body-secondary small">
-                Books in the catalogue with at least one copy on the
+                {% translate "Books in the catalogue with at least one copy on the
                 premises. A nought here means nobody borrowed it during
-                this period — it may still have a history.
+                this period — it may still have a history." %}
             </p>
 
             {% if underused %}
@@ -295,9 +296,9 @@
                         <table class="table table-hover align-middle mb-0 analytics-table">
                             <thead class="table-secondary">
                                 <tr>
-                                    <th>Book</th>
-                                    <th>Category</th>
-                                    <th class="text-end">Loans</th>
+                                    <th>{% translate "Book" %}</th>
+                                    <th>{% translate "Category" %}</th>
+                                    <th class="text-end">{% translate "Loans" %}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -321,7 +322,7 @@
                     </div>
                 </div>
             {% else %}
-                <p class="analytics-empty">No books with copies to rank.</p>
+                <p class="analytics-empty">{% translate "No books with copies to rank." %}</p>
             {% endif %}
         </div>
 
@@ -332,8 +333,8 @@
             </h3>
 
             <p class="text-body-secondary small">
-                Not the same as the list beside it: no loan has ever
-                existed for any copy of these, whatever the period says.
+                {% translate "Not the same as the list beside it: no loan has ever
+                existed for any copy of these, whatever the period says." %}
             </p>
 
             {% if never_borrowed %}
@@ -342,9 +343,9 @@
                         <table class="table table-hover align-middle mb-0 analytics-table">
                             <thead class="table-secondary">
                                 <tr>
-                                    <th>Book</th>
-                                    <th>Category</th>
-                                    <th class="text-end">Copies</th>
+                                    <th>{% translate "Book" %}</th>
+                                    <th>{% translate "Category" %}</th>
+                                    <th class="text-end">{% translate "Copies" %}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -369,7 +370,7 @@
                 </div>
             {% else %}
                 <p class="analytics-empty">
-                    Every book with a copy has been borrowed at least once.
+                    {% translate "Every book with a copy has been borrowed at least once." %}
                 </p>
             {% endif %}
         </div>
@@ -391,11 +392,11 @@
                     <thead class="table-secondary">
                         <tr>
                             <th class="analytics-rank">#</th>
-                            <th>Borrower</th>
-                            <th>Registration</th>
-                            <th class="text-end">Loans</th>
-                            <th class="text-end">Out now</th>
-                            <th class="text-end">Overdue now</th>
+                            <th>{% translate "Borrower" %}</th>
+                            <th>{% translate "Registration" %}</th>
+                            <th class="text-end">{% translate "Loans" %}</th>
+                            <th class="text-end">{% translate "Out now" %}</th>
+                            <th class="text-end">{% translate "Overdue now" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -425,7 +426,7 @@
             </div>
         </div>
     {% else %}
-        <p class="analytics-empty">Nobody borrowed anything in this period.</p>
+        <p class="analytics-empty">{% translate "Nobody borrowed anything in this period." %}</p>
     {% endif %}
 
 
@@ -434,7 +435,7 @@
     <div class="analytics-pair">
 
         <div>
-            <h3 class="analytics-heading">Category usage</h3>
+            <h3 class="analytics-heading">{% translate "Category usage" %}</h3>
 
             {% if category_usage %}
                 <div class="card shadow-sm border-0">
@@ -442,9 +443,9 @@
                         <table class="table table-hover align-middle mb-0 analytics-table">
                             <thead class="table-secondary">
                                 <tr>
-                                    <th>Category</th>
-                                    <th class="text-end">Books</th>
-                                    <th class="text-end">Loans</th>
+                                    <th>{% translate "Category" %}</th>
+                                    <th class="text-end">{% translate "Books" %}</th>
+                                    <th class="text-end">{% translate "Loans" %}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -468,12 +469,12 @@
                     </div>
                 </div>
                 <p class="text-body-secondary small mt-2">
-                    Books is how many distinct titles were borrowed;
+                    {% translate "Books is how many distinct titles were borrowed;
                     Loans is how many times. Categories nobody borrowed
-                    from are left out.
+                    from are left out." %}
                 </p>
             {% else %}
-                <p class="analytics-empty">No category saw a loan in this period.</p>
+                <p class="analytics-empty">{% translate "No category saw a loan in this period." %}</p>
             {% endif %}
         </div>
 
@@ -530,12 +531,12 @@
 
     <!-- ================= Collection attention ================= -->
 
-    <h3 class="analytics-heading">Collection attention</h3>
+    <h3 class="analytics-heading">{% translate "Collection attention" %}</h3>
 
     <p class="text-body-secondary small">
-        Copies that are not on the shelf in usable condition. Counts, not a
+        {% translate "Copies that are not on the shelf in usable condition. Counts, not a
         score — each links to the records behind it, and nothing here
-        changes a copy's status.
+        changes a copy's status." %}
     </p>
 
     <div class="analytics-kpis">
@@ -586,10 +587,10 @@
                 <table class="table table-hover align-middle mb-0 analytics-table">
                     <thead class="table-secondary">
                         <tr>
-                            <th>Stock check</th>
-                            <th>Scope</th>
-                            <th>Completed</th>
-                            <th class="text-end">Not found</th>
+                            <th>{% translate "Stock check" %}</th>
+                            <th>{% translate "Scope" %}</th>
+                            <th>{% translate "Completed" %}</th>
+                            <th class="text-end">{% translate "Not found" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -621,14 +622,14 @@
           which one this is.
         {% endcomment %}
         <p class="text-body-secondary small mt-2">
-            One row per finished stock check, counting what that check
+            {% translate "One row per finished stock check, counting what that check
             expected and did not find. A copy unfound at three checks
             appears in all three — these are findings, not distinct copies.
             Checks still in progress are not counted, and a scan of
-            something outside a check's scope was never expected by it.
+            something outside a check's scope was never expected by it." %}
         </p>
     {% else %}
-        <p class="analytics-empty">No stock check has been completed yet.</p>
+        <p class="analytics-empty">{% translate "No stock check has been completed yet." %}</p>
     {% endif %}
 
 </div>

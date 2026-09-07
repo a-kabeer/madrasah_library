@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 Pagination for the public catalogue.
 
@@ -15,7 +16,7 @@ page_ellipsis.
 
 {% if paginator.num_pages > 1 %}
 
-    <nav class="public-pagination" aria-label="Catalogue pages">
+    <nav class="public-pagination" aria-label="{% translate 'Catalogue pages' %}">
 
         <p class="text-body-secondary small mb-0">
             Showing <strong>{{ books.start_index }}</strong>–<strong>{{ books.end_index }}</strong>

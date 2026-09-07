@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     Delete Location | {{ branding.display_name }}
@@ -31,7 +32,7 @@
                             <i class="bi bi-shield-exclamation text-warning" style="font-size: 3rem;"></i>
                         </div>
 
-                        <h4 class="fw-bold mb-3">This location cannot be deleted</h4>
+                        <h4 class="fw-bold mb-3">{% translate "This location cannot be deleted" %}</h4>
 
                         <p class="text-body-secondary mb-4">
                             Shelves are still assigned to
@@ -56,7 +57,7 @@
                             <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
                         </div>
 
-                        <h4 class="fw-bold mb-3">Delete Location?</h4>
+                        <h4 class="fw-bold mb-3">{% translate "Delete Location?" %}</h4>
 
                         <p class="text-body-secondary mb-4">
                             Are you sure you want to delete:<br>
@@ -64,7 +65,7 @@
                         </p>
 
                         <p class="text-body-secondary small mb-4">
-                            It has no shelves, so no book copies are affected.
+                            {% translate "It has no shelves, so no book copies are affected." %}
                         </p>
 
                         <p class="text-danger small mb-4">

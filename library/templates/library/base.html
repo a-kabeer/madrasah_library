@@ -1,3 +1,4 @@
+{% load i18n %}
 {% load static %}
 
 <!DOCTYPE html>
@@ -8,7 +9,7 @@
   JavaScript needed and nothing to flash. "System" and anonymous visitors
   fall through to the inline script below, which still runs before paint.
 {% endcomment %}
-<html lang="en" data-bs-theme="{% if theme_preference == 'light' or theme_preference == 'dark' %}{{ theme_preference }}{% else %}light{% endif %}"{% if request.user.is_authenticated %} data-theme-save-url="{% url 'theme_set' %}"{% endif %}>
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}" data-bs-theme="{% if theme_preference == 'light' or theme_preference == 'dark' %}{{ theme_preference }}{% else %}light{% endif %}"{% if request.user.is_authenticated %} data-theme-save-url="{% url 'theme_set' %}"{% endif %}>
 
 <head>
 
@@ -101,7 +102,13 @@
     <!-- Bootstrap CSS -->
 
     <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+        {% comment %}
+          The RTL build for Urdu and Arabic. Same version as the LTR one -
+          they must not drift, or the two directions get different
+          component styles. `LANGUAGE_BIDI` comes from the i18n context
+          processor.
+        {% endcomment %}
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap{% if LANGUAGE_BIDI %}.rtl{% endif %}.min.css"
         rel="stylesheet"
     >
 
@@ -213,7 +220,7 @@
     <aside
         class="sidebar"
         id="sidebar"
-        aria-label="Main navigation"
+        aria-label="{% translate 'Main navigation' %}"
     >
 
         <!-- Logo -->
@@ -265,7 +272,7 @@
 
         <!-- Navigation -->
 
-        <nav class="sidebar-nav" aria-label="Primary">
+        <nav class="sidebar-nav" aria-label="{% translate 'Primary' %}">
 
             {% comment %}
               Grouped the way circulation work actually runs, rather than one
@@ -281,6 +288,7 @@
               what makes each one shareable, middle-clickable and still
               working when the script never arrives.
             {% endcomment %}
+            {% if "dashboard" in allowed_features %}
             <a
                 href="{% url 'library_home' %}"
                 class="nav-link-custom"
@@ -294,15 +302,19 @@
                 </span>
 
             </a>
+            {% endif %}
 
 
+            {% if "CIRCULATION" in allowed_sections %}
             <div class="nav-section-title">
 
-                CIRCULATION
+                {% translate "CIRCULATION" %}
 
             </div>
+            {% endif %}
 
 
+            {% if "circulation.issue" in allowed_features %}
             <a
                 href="{% url 'circulation_issue' %}"
                 class="nav-link-custom"
@@ -315,17 +327,11 @@
                 </span>
 
             </a>
+            {% endif %}
 
 
-            {% comment %}
-              `loan_return_lookup` carries
-              @role_required("Admin", "Librarian"), so an Assistant is
-              refused it. Hiding the link only avoids offering a door that
-              answers 403 — the view is what enforces it, exactly as with
-              Branding further down.
-            {% endcomment %}
-            {% if request.user.role == "Admin" or request.user.role == "Librarian" %}
 
+                {% if "circulation.return" in allowed_features %}
                 <a
                     href="{% url 'circulation_return_lookup' %}"
                     class="nav-link-custom"
@@ -338,8 +344,8 @@
                     </span>
 
                 </a>
+                {% endif %}
 
-            {% endif %}
 
 
             {% comment %}
@@ -347,6 +353,7 @@
               desk it belongs to - it is answered when a book comes back,
               not when the catalogue is being tidied.
             {% endcomment %}
+            {% if "reservations" in allowed_features %}
             <a
                 href="{% url 'reservation_list' %}"
                 class="nav-link-custom"
@@ -359,8 +366,10 @@
                 </span>
 
             </a>
+            {% endif %}
 
 
+            {% if "loans.active" in allowed_features %}
             <a
                 href="{% url 'loan_list' %}?status=active"
                 class="nav-link-custom"
@@ -373,6 +382,7 @@
                 </span>
 
             </a>
+            {% endif %}
 
 
             {% comment %}
@@ -381,6 +391,7 @@
               makes this entry match only while that filter is in force, and
               step aside otherwise.
             {% endcomment %}
+            {% if "loans.overdue" in allowed_features %}
             <a
                 href="{% url 'loan_list' %}?status=overdue"
                 class="nav-link-custom"
@@ -394,13 +405,16 @@
                 </span>
 
             </a>
+            {% endif %}
 
 
+            {% if "CATALOG" in allowed_sections %}
             <div class="nav-section-title">
 
-                CATALOG
+                {% translate "CATALOG" %}
 
             </div>
+            {% endif %}
 
 
             {% comment %}
@@ -414,6 +428,7 @@
               the first it finds, which is this one, so Books would stay lit
               while the librarian was looking at the copy list.
             {% endcomment %}
+            {% if "books" in allowed_features %}
             <a
                 href="{% url 'book_list' %}"
                 class="nav-link-custom"
@@ -427,6 +442,7 @@
                 </span>
 
             </a>
+            {% endif %}
 
 
             {% comment %}
@@ -442,6 +458,7 @@
               wiring, and Books keeps claiming volumes and contents exactly
               as before.
             {% endcomment %}
+            {% if "suggestions" in allowed_features %}
             <a
                 href="{% url 'suggestion_list' %}"
                 class="nav-link-custom"
@@ -454,8 +471,10 @@
                 </span>
 
             </a>
+            {% endif %}
 
 
+            {% if "authors" in allowed_features %}
             <a
                 href="{% url 'author_list' %}"
                 class="nav-link-custom"
@@ -468,8 +487,10 @@
                 </span>
 
             </a>
+            {% endif %}
 
 
+            {% if "categories" in allowed_features %}
             <a
                 href="{% url 'category_list' %}"
                 class="nav-link-custom"
@@ -482,8 +503,10 @@
                 </span>
 
             </a>
+            {% endif %}
 
 
+            {% if "publishers" in allowed_features %}
             <a
                 href="{% url 'publisher_list' %}"
                 class="nav-link-custom"
@@ -496,15 +519,19 @@
                 </span>
 
             </a>
+            {% endif %}
 
 
+            {% if "PEOPLE" in allowed_sections %}
             <div class="nav-section-title">
 
-                PEOPLE
+                {% translate "PEOPLE" %}
 
             </div>
+            {% endif %}
 
 
+            {% if "borrowers" in allowed_features %}
             <a
                 href="{% url 'borrower_list' %}"
                 class="nav-link-custom"
@@ -517,15 +544,19 @@
                 </span>
 
             </a>
+            {% endif %}
 
 
+            {% if "INVENTORY" in allowed_sections %}
             <div class="nav-section-title">
 
-                INVENTORY
+                {% translate "INVENTORY" %}
 
             </div>
+            {% endif %}
 
 
+            {% if "locations" in allowed_features %}
             <a
                 href="{% url 'location_list' %}"
                 class="nav-link-custom"
@@ -538,6 +569,7 @@
                 </span>
 
             </a>
+            {% endif %}
 
 
             {% comment %}
@@ -549,6 +581,7 @@
               A plain href like every other entry, so the shell boosts it
               and it swaps the main content rather than reloading.
             {% endcomment %}
+            {% if "copies" in allowed_features %}
             <a
                 href="{% url 'book_copy_list' %}"
                 class="nav-link-custom"
@@ -561,8 +594,10 @@
                 </span>
 
             </a>
+            {% endif %}
 
 
+            {% if "shelves" in allowed_features %}
             <a
                 href="{% url 'shelf_list' %}"
                 class="nav-link-custom"
@@ -575,14 +610,10 @@
                 </span>
 
             </a>
+            {% endif %}
 
 
-            {% comment %}
-              Counting the shelves against the record. In this group
-              because that is what it is about, and only for the roles that
-              may run one - the views enforce the same rule.
-            {% endcomment %}
-            {% if request.user.role == "Admin" or request.user.role == "Librarian" %}
+                {% if "inventory.sessions" in allowed_features %}
                 <a
                     href="{% url 'inventory_session_list' %}"
                     class="nav-link-custom"
@@ -595,23 +626,20 @@
                     </span>
 
                 </a>
+                {% endif %}
+
+
+            {% if "ADMINISTRATION" in allowed_sections %}
+            <div class="nav-section-title">
+
+                {% translate "ADMINISTRATION" %}
+
+            </div>
             {% endif %}
 
 
-            <div class="nav-section-title">
 
-                ADMINISTRATION
-
-            </div>
-
-
-            {% comment %}
-              Users and Branding are both Admin-only on the server
-              (@role_required("Admin")). Hiding the links is convenience,
-              not security.
-            {% endcomment %}
-            {% if request.user.role == "Admin" %}
-
+                {% if "users" in allowed_features %}
                 <a
                     href="{% url 'user_list' %}"
                     class="nav-link-custom"
@@ -624,8 +652,10 @@
                     </span>
 
                 </a>
+                {% endif %}
 
 
+                {% if "branding" in allowed_features %}
                 <a
                     href="{% url 'branding_settings' %}"
                     class="nav-link-custom"
@@ -638,21 +668,28 @@
                     </span>
 
                 </a>
+                {% endif %}
 
-            {% endif %}
+                {% if "permissions" in allowed_features %}
+
+                    <a
+                        href="{% url 'permissions_matrix' %}"
+                        class="nav-link-custom"
+                    >
+
+                        <i class="bi bi-sliders"></i>
+
+                        <span>
+                            Menu Permissions
+                        </span>
+
+                    </a>
+
+                {% endif %}
 
 
-            {% comment %}
-              Insights, beside Reports because they are read from the same
-              records - but a different question: Reports prints what
-              happened between two dates, Analytics says what to do about
-              the collection.
 
-              Admin and Librarian only, matching `@role_required` on the
-              view. Hiding it from an Assistant is convenience; the
-              decorator is what refuses them.
-            {% endcomment %}
-            {% if request.user.role == "Admin" or request.user.role == "Librarian" %}
+                {% if "analytics" in allowed_features %}
                 <a
                     href="{% url 'analytics' %}"
                     class="nav-link-custom"
@@ -665,7 +702,7 @@
                     </span>
 
                 </a>
-            {% endif %}
+                {% endif %}
 
 
             {% comment %}
@@ -674,6 +711,7 @@
               make the longest group in the navigation the one nobody uses
               daily.
             {% endcomment %}
+            {% if "reports" in allowed_features %}
             <a
                 href="{% url 'reports_home' %}"
                 class="nav-link-custom"
@@ -686,8 +724,10 @@
                 </span>
 
             </a>
+            {% endif %}
 
 
+            {% if "activity_log" in allowed_features %}
             <a
                 href="{% url 'activity_log_list' %}"
                 class="nav-link-custom"
@@ -700,6 +740,7 @@
                 </span>
 
             </a>
+            {% endif %}
 
 
         </nav>
@@ -724,7 +765,7 @@
                     type="button"
                     class="btn menu-button"
                     id="menuToggle"
-                    aria-label="Toggle navigation menu"
+                    aria-label="{% translate 'Toggle navigation menu' %}"
                     aria-expanded="false"
                     aria-controls="sidebar"
                 >
@@ -781,6 +822,8 @@
                 {% if request.user.is_authenticated %}
                     {% include "library/partials/notification_bell.html" %}
                 {% endif %}
+
+                {% include "library/partials/language_selector.html" %}
 
                 {% include "library/partials/theme_selector.html" %}
 
@@ -955,14 +998,14 @@
             <div class="modal-header">
 
                 <h5 class="modal-title" id="globalModalLabel">
-                    Modal title
+                    {% translate "Modal title" %}
                 </h5>
 
                 <button
                     type="button"
                     class="btn-close"
                     data-bs-dismiss="modal"
-                    aria-label="Close"
+                    aria-label="{% translate 'Close' %}"
                 ></button>
 
             </div>
@@ -980,7 +1023,7 @@
                     class="btn btn-secondary"
                     data-bs-dismiss="modal"
                 >
-                    Close
+                    {% translate "Close" %}
                 </button>
 
             </div>
@@ -1015,14 +1058,14 @@
             <div class="modal-header">
 
                 <h5 class="modal-title" id="formModalLabel">
-                    Loading&hellip;
+                    {% translate "Loading&hellip;" %}
                 </h5>
 
                 <button
                     type="button"
                     class="btn-close"
                     data-bs-dismiss="modal"
-                    aria-label="Close"
+                    aria-label="{% translate 'Close' %}"
                 ></button>
 
             </div>

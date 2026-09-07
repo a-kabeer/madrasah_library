@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 Add Book, served into #formModal by `book_add` so the librarian never
 leaves the list — their search, filters, sorting and page are all still
@@ -44,10 +45,10 @@ the error and everything already typed.
       a lie.
     {% endcomment %}
     <ol class="book-steps" data-step-list hidden>
-        <li data-step-for="1">Book</li>
-        <li data-step-for="2">Volumes</li>
-        <li data-step-for="3">Copies</li>
-        <li data-step-for="4">Location</li>
+        <li data-step-for="1">{% translate "Book" %}</li>
+        <li data-step-for="2">{% translate "Volumes" %}</li>
+        <li data-step-for="3">{% translate "Copies" %}</li>
+        <li data-step-for="4">{% translate "Location" %}</li>
     </ol>
 
     <div data-book-step="1" class="book-step">
@@ -90,7 +91,7 @@ the error and everything already typed.
             class="btn btn-outline-secondary ms-auto"
             data-bs-dismiss="modal"
         >
-            Cancel
+            {% translate "Cancel" %}
         </button>
 
     </div>

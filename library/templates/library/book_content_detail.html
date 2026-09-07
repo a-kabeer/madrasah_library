@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     {{ content.title }} | {{ branding.display_name }}
@@ -9,7 +10,7 @@
 {% endblock %}
 
 {% block breadcrumbs %}
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
                 <a href="{% url 'book_content_list' %}">Contents</a>
@@ -70,10 +71,10 @@
                 <div class="card-body">
                     <dl class="row mb-0">
 
-                        <dt class="col-4 fw-normal text-body-secondary">Title</dt>
+                        <dt class="col-4 fw-normal text-body-secondary">{% translate "Title" %}</dt>
                         <dd class="col-8">{{ content.title }}</dd>
 
-                        <dt class="col-4 fw-normal text-body-secondary">Book</dt>
+                        <dt class="col-4 fw-normal text-body-secondary">{% translate "Book" %}</dt>
                         <dd class="col-8">
                             <a href="{% url 'book_detail' content.volume.book.id %}"
                                class="text-decoration-none">
@@ -81,7 +82,7 @@
                             </a>
                         </dd>
 
-                        <dt class="col-4 fw-normal text-body-secondary">Volume</dt>
+                        <dt class="col-4 fw-normal text-body-secondary">{% translate "Volume" %}</dt>
                         <dd class="col-8">
                             <a href="{% url 'book_volume_detail' content.volume.id %}"
                                class="text-decoration-none">
@@ -90,7 +91,7 @@
                             </a>
                         </dd>
 
-                        <dt class="col-4 fw-normal text-body-secondary">Parent</dt>
+                        <dt class="col-4 fw-normal text-body-secondary">{% translate "Parent" %}</dt>
                         <dd class="col-8">
                             {% if content.parent %}
                                 {{ content.parent.title }}
@@ -99,13 +100,13 @@
                             {% endif %}
                         </dd>
 
-                        <dt class="col-4 fw-normal text-body-secondary">Content Type</dt>
+                        <dt class="col-4 fw-normal text-body-secondary">{% translate "Content Type" %}</dt>
                         <dd class="col-8">{{ content.content_type|default:"N/A" }}</dd>
 
-                        <dt class="col-4 fw-normal text-body-secondary">Page Number</dt>
+                        <dt class="col-4 fw-normal text-body-secondary">{% translate "Page Number" %}</dt>
                         <dd class="col-8">{{ content.page_number|default:"N/A" }}</dd>
 
-                        <dt class="col-4 fw-normal text-body-secondary">Sort Order</dt>
+                        <dt class="col-4 fw-normal text-body-secondary">{% translate "Sort Order" %}</dt>
                         <dd class="col-8 mb-0">{{ content.sort_order }}</dd>
 
                     </dl>

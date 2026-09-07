@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     Start a Stock Check | {{ branding.display_name }}
@@ -9,12 +10,12 @@
 {% endblock %}
 
 {% block breadcrumbs %}
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
                 <a href="{% url 'inventory_session_list' %}">Stock Check</a>
             </li>
-            <li class="breadcrumb-item active" aria-current="page">Start</li>
+            <li class="breadcrumb-item active" aria-current="page">{% translate "Start" %}</li>
         </ol>
     </nav>
 {% endblock %}
@@ -27,10 +28,10 @@
         <div class="col-12 col-lg-7">
 
             <div class="mb-4">
-                <h2 class="fw-bold mb-1">Start a Stock Check</h2>
+                <h2 class="fw-bold mb-1">{% translate "Start a Stock Check" %}</h2>
                 <p class="text-body-secondary mb-0">
-                    Choose what to count. The check works out what should
-                    be there; you scan what is.
+                    {% translate "Choose what to count. The check works out what should
+                    be there; you scan what is." %}
                 </p>
             </div>
 
@@ -47,7 +48,7 @@
 
                     <div class="mb-4">
                         <label for="checkName" class="form-label fw-semibold">
-                            Name
+                            {% translate "Name" %}
                         </label>
                         <input
                             type="text"
@@ -56,12 +57,12 @@
                             name="name"
                             value="{{ form.name }}"
                             maxlength="255"
-                            placeholder="e.g. Main Hall, September"
+                            placeholder="{% translate 'e.g. Main Hall, September' %}"
                             required
                             autofocus
                         >
                         <div class="form-text">
-                            Something you will recognise in the list later.
+                            {% translate "Something you will recognise in the list later." %}
                         </div>
                     </div>
 
@@ -73,7 +74,7 @@
                     {% endcomment %}
                     <fieldset class="mb-4">
                         <legend class="form-label fw-semibold">
-                            What to count
+                            {% translate "What to count" %}
                         </legend>
 
                         {% for value, label in scopes %}
@@ -96,14 +97,14 @@
                     <div class="row g-3">
                         <div class="col-12 col-md-6">
                             <label for="checkLocation" class="form-label fw-semibold">
-                                Location
+                                {% translate "Location" %}
                             </label>
                             <select
                                 class="form-select"
                                 id="checkLocation"
                                 name="location"
                             >
-                                <option value="">Choose a location…</option>
+                                <option value="">{% translate "Choose a location…" %}</option>
                                 {% for location in locations %}
                                     <option
                                         value="{{ location.id }}"
@@ -112,20 +113,20 @@
                                 {% endfor %}
                             </select>
                             <div class="form-text">
-                                Only used for a location check.
+                                {% translate "Only used for a location check." %}
                             </div>
                         </div>
 
                         <div class="col-12 col-md-6">
                             <label for="checkShelf" class="form-label fw-semibold">
-                                Shelf
+                                {% translate "Shelf" %}
                             </label>
                             <select
                                 class="form-select"
                                 id="checkShelf"
                                 name="shelf"
                             >
-                                <option value="">Choose a shelf…</option>
+                                <option value="">{% translate "Choose a shelf…" %}</option>
                                 {% for shelf in shelves %}
                                     <option
                                         value="{{ shelf.id }}"
@@ -134,7 +135,7 @@
                                 {% endfor %}
                             </select>
                             <div class="form-text">
-                                Only used for a shelf check.
+                                {% translate "Only used for a shelf check." %}
                             </div>
                         </div>
                     </div>

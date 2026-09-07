@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 The browsing half of the book list: the mode pills, the filter control that
 goes with the chosen mode, and the results.
@@ -30,7 +31,7 @@ library/partials/book_list_results.html needs.
     {% endcomment %}
     <ul
         class="nav nav-pills mb-3"
-        aria-label="Browse books by"
+        aria-label="{% translate 'Browse books by' %}"
         hx-target="#bookBrowser"
         hx-swap="innerHTML show:none"
         hx-push-url="true"
@@ -100,7 +101,7 @@ library/partials/book_list_results.html needs.
                     <input type="hidden" name="mode" value="all">
 
                     <label for="filterSearch" class="form-label fw-semibold">
-                        Search
+                        {% translate "Search" %}
                     </label>
 
                     <div class="d-flex flex-wrap gap-2">
@@ -110,7 +111,7 @@ library/partials/book_list_results.html needs.
                             id="filterSearch"
                             name="search"
                             value="{{ search }}"
-                            placeholder="Book title or author name..."
+                            placeholder="{% translate 'Book title or author name...' %}"
                             style="max-width: 26rem;"
                         >
                         <button type="submit" class="btn btn-primary">
@@ -143,8 +144,8 @@ library/partials/book_list_results.html needs.
                     </div>
 
                     <div class="form-text">
-                        Matches part of a title or an author name. Press
-                        Enter to search.
+                        {% translate "Matches part of a title or an author name. Press
+                        Enter to search." %}
                     </div>
                 </form>
 
@@ -215,7 +216,7 @@ library/partials/book_list_results.html needs.
                     </div>
 
                     <div class="form-text mt-2">
-                        Start typing to find an author. Books update as soon as you pick one.
+                        {% translate "Start typing to find an author. Books update as soon as you pick one." %}
                     </div>
                 </form>
 
@@ -277,7 +278,7 @@ library/partials/book_list_results.html needs.
                     </div>
 
                     <div class="form-text mt-2">
-                        Start typing to find a category. Books update as soon as you pick one.
+                        {% translate "Start typing to find a category. Books update as soon as you pick one." %}
                     </div>
                 </form>
 
@@ -356,10 +357,10 @@ library/partials/book_list_results.html needs.
 
                         <div class="col-12 col-md-5">
                             <label for="filterPublisher" class="form-label fw-semibold">
-                                Publisher
+                                {% translate "Publisher" %}
                             </label>
                             <select class="form-select" id="filterPublisher" name="publisher">
-                                <option value="">Any publisher</option>
+                                <option value="">{% translate "Any publisher" %}</option>
                                 {% for option in publishers %}
                                     <option
                                         value="{{ option.id }}"
@@ -373,10 +374,10 @@ library/partials/book_list_results.html needs.
 
                         <div class="col-12 col-md-4">
                             <label for="filterAvailability" class="form-label fw-semibold">
-                                Availability
+                                {% translate "Availability" %}
                             </label>
                             <select class="form-select" id="filterAvailability" name="availability">
-                                <option value="">Any</option>
+                                <option value="">{% translate "Any" %}</option>
                                 {% for option in availability_options %}
                                     <option
                                         value="{{ option.value }}"

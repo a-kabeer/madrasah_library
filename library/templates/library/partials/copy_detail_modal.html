@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 One physical copy, in the shared #globalModal — opened by clicking its row
 so the librarian keeps their search, filters and page.
@@ -20,14 +21,14 @@ only the loan that is open now, and links to it.
     {% endif %}
 </div>
 
-<h6 class="fw-bold text-body-secondary small text-uppercase">Copy</h6>
+<h6 class="fw-bold text-body-secondary small text-uppercase">{% translate "Copy" %}</h6>
 
 <dl class="row mb-4">
 
-    <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Copy code</dt>
+    <dt class="col-5 col-sm-4 fw-normal text-body-secondary">{% translate "Copy code" %}</dt>
     <dd class="col-7 col-sm-8 fw-semibold">{{ copy.copy_code }}</dd>
 
-    <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Book</dt>
+    <dt class="col-5 col-sm-4 fw-normal text-body-secondary">{% translate "Book" %}</dt>
     <dd class="col-7 col-sm-8">
         <a href="{% url 'book_detail' copy.volume.book.id %}">
             {{ copy.volume.book.title }}
@@ -45,7 +46,7 @@ only the loan that is open now, and links to it.
       "Volume 1" would put that plumbing back in front of the librarian.
     {% endcomment %}
     {% if copy.volume.volume_number != 1 or copy.volume.title %}
-        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Volume</dt>
+        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">{% translate "Volume" %}</dt>
         <dd class="col-7 col-sm-8">
             <a href="{% url 'book_volume_detail' copy.volume.id %}">
                 Volume {{ copy.volume.volume_number }}{% if copy.volume.title %} — {{ copy.volume.title }}{% endif %}
@@ -53,7 +54,7 @@ only the loan that is open now, and links to it.
         </dd>
     {% endif %}
 
-    <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Location</dt>
+    <dt class="col-5 col-sm-4 fw-normal text-body-secondary">{% translate "Location" %}</dt>
     <dd class="col-7 col-sm-8">
         {% if copy.shelf %}
             {{ copy.shelf.location.name }}
@@ -62,7 +63,7 @@ only the loan that is open now, and links to it.
         {% endif %}
     </dd>
 
-    <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Shelf</dt>
+    <dt class="col-5 col-sm-4 fw-normal text-body-secondary">{% translate "Shelf" %}</dt>
     <dd class="col-7 col-sm-8">
         {% if copy.shelf %}
             {{ copy.shelf.shelf_code }}
@@ -72,24 +73,24 @@ only the loan that is open now, and links to it.
     </dd>
 
     {% if copy.acquisition_date %}
-        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Acquired</dt>
+        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">{% translate "Acquired" %}</dt>
         <dd class="col-7 col-sm-8">{{ copy.acquisition_date }}</dd>
     {% endif %}
 
     {% if copy.notes %}
-        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Notes</dt>
+        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">{% translate "Notes" %}</dt>
         <dd class="col-7 col-sm-8">{{ copy.notes }}</dd>
     {% endif %}
 
 </dl>
 
-<h6 class="fw-bold text-body-secondary small text-uppercase">Circulation</h6>
+<h6 class="fw-bold text-body-secondary small text-uppercase">{% translate "Circulation" %}</h6>
 
 {% if active_loan %}
 
     <dl class="row mb-3">
 
-        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Borrower</dt>
+        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">{% translate "Borrower" %}</dt>
         <dd class="col-7 col-sm-8">
             <a href="{% url 'borrower_detail' active_loan.borrower.id %}">
                 {{ active_loan.borrower.name }}
@@ -99,10 +100,10 @@ only the loan that is open now, and links to it.
             </span>
         </dd>
 
-        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Issued</dt>
+        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">{% translate "Issued" %}</dt>
         <dd class="col-7 col-sm-8">{{ active_loan.issue_date }}</dd>
 
-        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Due</dt>
+        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">{% translate "Due" %}</dt>
         <dd class="col-7 col-sm-8">
             {{ active_loan.due_date }}
             {% if copy.days_overdue %}

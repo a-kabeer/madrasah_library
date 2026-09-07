@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     Activity Logs | {{ branding.display_name }}
@@ -17,27 +18,27 @@
   separate job.
 {% endcomment %}
 <div class="container-fluid px-0 legacy-page">
-<h1>Activity Logs</h1>
+<h1>{% translate "Activity Logs" %}</h1>
 
 <form method="get">
 
-    <label>Search:</label>
+    <label>{% translate "Search:" %}</label>
 
     <input
         type="text"
         name="search"
         value="{{ search }}"
-        placeholder="Search activity logs..."
+        placeholder="{% translate 'Search activity logs...' %}"
     >
 
     <br><br>
 
-    <label>User:</label>
+    <label>{% translate "User:" %}</label>
 
     <select name="user">
 
         <option value="">
-            All Users
+            {% translate "All Users" %}
         </option>
 
         {% for user in users %}
@@ -57,12 +58,12 @@
 
     <br><br>
 
-    <label>Action:</label>
+    <label>{% translate "Action:" %}</label>
 
     <select name="action">
 
         <option value="">
-            All Actions
+            {% translate "All Actions" %}
         </option>
 
         {% for item in actions %}
@@ -82,12 +83,12 @@
 
     <br><br>
 
-    <label>Entity Type:</label>
+    <label>{% translate "Entity Type:" %}</label>
 
     <select name="entity_type">
 
         <option value="">
-            All Entity Types
+            {% translate "All Entity Types" %}
         </option>
 
         {% for item in entity_types %}
@@ -107,7 +108,7 @@
 
     <br><br>
 
-    <label>Date:</label>
+    <label>{% translate "Date:" %}</label>
 
     <input
         type="date"
@@ -118,7 +119,7 @@
     <br><br>
 
     <button type="submit">
-        Search / Filter
+        {% translate "Search / Filter" %}
     </button>
 
     <a href="{% url 'activity_log_list' %}">
@@ -169,7 +170,7 @@
 
     {% empty %}
 
-        <li>No activity logs found.</li>
+        <li>{% translate "No activity logs found." %}</li>
 
     {% endfor %}
 

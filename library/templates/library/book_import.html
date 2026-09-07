@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     Import Books | {{ branding.display_name }}
@@ -17,10 +18,10 @@
             <a href="{% url 'book_list' %}" class="small text-decoration-none">
                 <i class="bi bi-arrow-left me-1"></i> Books
             </a>
-            <h2 class="fw-bold mb-1 mt-1">Import Books</h2>
+            <h2 class="fw-bold mb-1 mt-1">{% translate "Import Books" %}</h2>
             <p class="text-body-secondary mb-0">
-                Add or update many books at once from a spreadsheet.
-                Nothing is saved until you confirm.
+                {% translate "Add or update many books at once from a spreadsheet.
+                Nothing is saved until you confirm." %}
             </p>
         </div>
         <div class="d-flex flex-wrap gap-2">
@@ -43,10 +44,10 @@
       change only happens at the end.
     {% endcomment %}
     <ol class="book-steps mb-4">
-        <li {% if step == "upload" %}class="current"{% endif %}>File</li>
-        <li {% if step == "map" %}class="current"{% endif %}>Columns</li>
-        <li {% if step == "preview" %}class="current"{% endif %}>Check</li>
-        <li {% if step == "done" %}class="current"{% endif %}>Results</li>
+        <li {% if step == "upload" %}class="current"{% endif %}>{% translate "File" %}</li>
+        <li {% if step == "map" %}class="current"{% endif %}>{% translate "Columns" %}</li>
+        <li {% if step == "preview" %}class="current"{% endif %}>{% translate "Check" %}</li>
+        <li {% if step == "done" %}class="current"{% endif %}>{% translate "Results" %}</li>
     </ol>
 
     {% if error %}
@@ -70,7 +71,7 @@
 
                     <div class="mb-3">
                         <label for="workbook" class="form-label fw-semibold">
-                            Spreadsheet
+                            {% translate "Spreadsheet" %}
                         </label>
                         <input
                             type="file"
@@ -108,9 +109,9 @@
                 <table class="table align-middle mb-0">
                     <thead class="table-secondary">
                         <tr>
-                            <th>Column</th>
-                            <th>Needed?</th>
-                            <th>Notes</th>
+                            <th>{% translate "Column" %}</th>
+                            <th>{% translate "Needed?" %}</th>
+                            <th>{% translate "Notes" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -171,8 +172,8 @@
                         <table class="table align-middle mb-0">
                             <thead class="table-secondary">
                                 <tr>
-                                    <th>Your column</th>
-                                    <th>Becomes</th>
+                                    <th>{% translate "Your column" %}</th>
+                                    <th>{% translate "Becomes" %}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -191,7 +192,7 @@
                                                     value="{{ ignore }}"
                                                     {% if not row.key %}selected{% endif %}
                                                 >
-                                                    — Ignore this column —
+                                                    {% translate "— Ignore this column —" %}
                                                 </option>
                                                 {% for column in columns %}
                                                     <option
@@ -220,7 +221,7 @@
                         value="cancel"
                         class="btn btn-outline-secondary ms-auto"
                     >
-                        Cancel
+                        {% translate "Cancel" %}
                     </button>
                 </div>
             </div>
@@ -254,12 +255,12 @@
                 <table class="table align-middle mb-0">
                     <thead class="table-secondary">
                         <tr>
-                            <th>Rows</th>
-                            <th>Book</th>
-                            <th>Action</th>
-                            <th>Volumes</th>
-                            <th>Copies</th>
-                            <th>Notes</th>
+                            <th>{% translate "Rows" %}</th>
+                            <th>{% translate "Book" %}</th>
+                            <th>{% translate "Action" %}</th>
+                            <th>{% translate "Volumes" %}</th>
+                            <th>{% translate "Copies" %}</th>
+                            <th>{% translate "Notes" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -357,7 +358,7 @@
                         value="cancel"
                         class="btn btn-outline-secondary"
                     >
-                        Cancel
+                        {% translate "Cancel" %}
                     </button>
 
                 </div>
@@ -398,9 +399,9 @@
                     <table class="table align-middle mb-0">
                         <thead class="table-secondary">
                             <tr>
-                                <th>Rows</th>
-                                <th>Book</th>
-                                <th>Problem</th>
+                                <th>{% translate "Rows" %}</th>
+                                <th>{% translate "Book" %}</th>
+                                <th>{% translate "Problem" %}</th>
                             </tr>
                         </thead>
                         <tbody>

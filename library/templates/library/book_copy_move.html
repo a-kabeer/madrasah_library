@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     Move {{ copy.copy_code }} | {{ branding.display_name }}
@@ -32,7 +33,7 @@
 
                     <dl class="row mb-4">
 
-                        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Book</dt>
+                        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">{% translate "Book" %}</dt>
                         <dd class="col-7 col-sm-8">
                             {{ copy.volume.book.title }}
                             {% if volume_name and volume_name != "Single volume" %}
@@ -42,7 +43,7 @@
                             {% endif %}
                         </dd>
 
-                        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">Currently on</dt>
+                        <dt class="col-5 col-sm-4 fw-normal text-body-secondary">{% translate "Currently on" %}</dt>
                         <dd class="col-7 col-sm-8 mb-0">
                             {% if copy.shelf %}
                                 {{ copy.shelf.location.name }} — {{ copy.shelf.shelf_code }}
@@ -59,7 +60,7 @@
 
                         <div class="mb-3">
                             <label for="moveLocation" class="form-label fw-semibold">
-                                Location
+                                {% translate "Location" %}
                             </label>
                             {% comment %}
                               Choosing a location loads that location's
@@ -84,7 +85,7 @@
 
                         <div class="mb-3">
                             <label for="moveShelf" class="form-label fw-semibold">
-                                Shelf
+                                {% translate "Shelf" %}
                             </label>
                             <select class="form-select" id="moveShelf" name="shelf" required>
                                 {% include "library/partials/shelf_options.html" with shelves=shelves selected_id=copy.shelf_id has_location=location_id %}

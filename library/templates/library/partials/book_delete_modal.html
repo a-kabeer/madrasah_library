@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 Delete Book confirmation, served into #formModal by `book_delete`.
 
@@ -31,7 +32,7 @@ database's foreign keys. See `book_delete_blocker`.
         {% endcomment %}
         {% if not book.is_archived %}
             <p class="text-body-secondary">
-                Archiving keeps all of that and takes the book out of the active catalogue instead.
+                {% translate "Archiving keeps all of that and takes the book out of the active catalogue instead." %}
             </p>
 
             <a href="{% url 'book_archive' book.id %}" class="btn btn-warning">
@@ -49,13 +50,13 @@ database's foreign keys. See `book_delete_blocker`.
                 class="btn btn-outline-secondary ms-auto"
                 data-bs-dismiss="modal"
             >
-                Close
+                {% translate "Close" %}
             </button>
         </div>
 
     {% else %}
 
-        <p class="mb-2">You are about to delete:</p>
+        <p class="mb-2">{% translate "You are about to delete:" %}</p>
 
         <p class="fs-5 fw-semibold mb-3">{{ book.title }}</p>
 
@@ -94,7 +95,7 @@ database's foreign keys. See `book_delete_blocker`.
                 class="btn btn-outline-secondary ms-auto"
                 data-bs-dismiss="modal"
             >
-                Cancel
+                {% translate "Cancel" %}
             </button>
 
         </div>

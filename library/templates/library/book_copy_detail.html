@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     {{ copy.copy_code }} | {{ branding.display_name }}
@@ -82,10 +83,10 @@
                 <div class="card-body">
                     <dl class="row mb-0">
 
-                        <dt class="col-5 col-sm-3 fw-normal text-body-secondary">Copy code</dt>
+                        <dt class="col-5 col-sm-3 fw-normal text-body-secondary">{% translate "Copy code" %}</dt>
                         <dd class="col-7 col-sm-9 fw-semibold">{{ copy.copy_code }}</dd>
 
-                        <dt class="col-5 col-sm-3 fw-normal text-body-secondary">Book</dt>
+                        <dt class="col-5 col-sm-3 fw-normal text-body-secondary">{% translate "Book" %}</dt>
                         <dd class="col-7 col-sm-9">
                             <a href="{% url 'book_detail' copy.volume.book.id %}">
                                 {{ copy.volume.book.title }}
@@ -103,7 +104,7 @@
                           hang off it, not because anyone asked.
                         {% endcomment %}
                         {% if copy.volume.volume_number != 1 or copy.volume.title %}
-                            <dt class="col-5 col-sm-3 fw-normal text-body-secondary">Volume</dt>
+                            <dt class="col-5 col-sm-3 fw-normal text-body-secondary">{% translate "Volume" %}</dt>
                             <dd class="col-7 col-sm-9">
                                 <a href="{% url 'book_volume_detail' copy.volume.id %}">
                                     Volume {{ copy.volume.volume_number }}{% if copy.volume.title %} — {{ copy.volume.title }}{% endif %}
@@ -111,7 +112,7 @@
                             </dd>
                         {% endif %}
 
-                        <dt class="col-5 col-sm-3 fw-normal text-body-secondary">Location</dt>
+                        <dt class="col-5 col-sm-3 fw-normal text-body-secondary">{% translate "Location" %}</dt>
                         <dd class="col-7 col-sm-9">
                             {% if copy.shelf %}
                                 <a href="{% url 'location_detail' copy.shelf.location.id %}">
@@ -122,7 +123,7 @@
                             {% endif %}
                         </dd>
 
-                        <dt class="col-5 col-sm-3 fw-normal text-body-secondary">Shelf</dt>
+                        <dt class="col-5 col-sm-3 fw-normal text-body-secondary">{% translate "Shelf" %}</dt>
                         <dd class="col-7 col-sm-9">
                             {% if copy.shelf %}
                                 <a href="{% url 'shelf_detail' copy.shelf.id %}">
@@ -133,12 +134,12 @@
                             {% endif %}
                         </dd>
 
-                        <dt class="col-5 col-sm-3 fw-normal text-body-secondary">Acquired</dt>
+                        <dt class="col-5 col-sm-3 fw-normal text-body-secondary">{% translate "Acquired" %}</dt>
                         <dd class="col-7 col-sm-9">
                             {{ copy.acquisition_date|default:"—" }}
                         </dd>
 
-                        <dt class="col-5 col-sm-3 fw-normal text-body-secondary">Notes</dt>
+                        <dt class="col-5 col-sm-3 fw-normal text-body-secondary">{% translate "Notes" %}</dt>
                         <dd class="col-7 col-sm-9">
                             {{ copy.notes|default:"—"|linebreaksbr }}
                         </dd>
@@ -154,7 +155,7 @@
                           still the operational answer.
                         {% endcomment %}
                         <dt class="col-5 col-sm-3 fw-normal text-body-secondary">
-                            Last stock check
+                            {% translate "Last stock check" %}
                         </dt>
                         <dd class="col-7 col-sm-9 mb-0">
                             {% if last_check %}
@@ -190,7 +191,7 @@
                     {% if active_loan %}
                         <dl class="row mb-3">
 
-                            <dt class="col-5 col-sm-3 fw-normal text-body-secondary">Borrower</dt>
+                            <dt class="col-5 col-sm-3 fw-normal text-body-secondary">{% translate "Borrower" %}</dt>
                             <dd class="col-7 col-sm-9">
                                 <a href="{% url 'borrower_detail' active_loan.borrower.id %}">
                                     {{ active_loan.borrower.name }}
@@ -200,10 +201,10 @@
                                 </span>
                             </dd>
 
-                            <dt class="col-5 col-sm-3 fw-normal text-body-secondary">Issued</dt>
+                            <dt class="col-5 col-sm-3 fw-normal text-body-secondary">{% translate "Issued" %}</dt>
                             <dd class="col-7 col-sm-9">{{ active_loan.issue_date }}</dd>
 
-                            <dt class="col-5 col-sm-3 fw-normal text-body-secondary">Due</dt>
+                            <dt class="col-5 col-sm-3 fw-normal text-body-secondary">{% translate "Due" %}</dt>
                             <dd class="col-7 col-sm-9 mb-0">
                                 {{ active_loan.due_date }}
                                 {% if copy.days_overdue %}
@@ -248,11 +249,11 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-secondary">
                             <tr>
-                                <th>Borrower</th>
-                                <th>Issued</th>
-                                <th>Due</th>
-                                <th>Returned</th>
-                                <th class="text-end">Actions</th>
+                                <th>{% translate "Borrower" %}</th>
+                                <th>{% translate "Issued" %}</th>
+                                <th>{% translate "Due" %}</th>
+                                <th>{% translate "Returned" %}</th>
+                                <th class="text-end">{% translate "Actions" %}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -277,7 +278,7 @@
                             {% empty %}
                                 <tr>
                                     <td colspan="5" class="text-center text-body-secondary py-4">
-                                        This copy has never been issued.
+                                        {% translate "This copy has never been issued." %}
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -372,10 +373,10 @@
 
                 {% else %}
                     <div class="card-body text-center text-body-secondary py-4">
-                        <p class="mb-1 fw-semibold">Nothing has happened to this copy yet.</p>
+                        <p class="mb-1 fw-semibold">{% translate "Nothing has happened to this copy yet." %}</p>
                         <p class="mb-0 small">
-                            Issues, returns, renewals, moves, status changes
-                            and stock checks appear here as they happen.
+                            {% translate "Issues, returns, renewals, moves, status changes
+                            and stock checks appear here as they happen." %}
                         </p>
                     </div>
                 {% endif %}

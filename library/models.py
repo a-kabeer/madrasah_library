@@ -3,6 +3,7 @@ import re
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 
 
@@ -326,12 +327,12 @@ class BookCopy(models.Model):
 
     # Mirrors the `check_copy_status` CHECK constraint on book_copies in Postgres.
     STATUS_CHOICES = [
-        (STATUS_AVAILABLE, "Available"),
-        (STATUS_ISSUED, "Issued"),
-        (STATUS_LOST, "Lost"),
-        (STATUS_DAMAGED, "Damaged"),
-        (STATUS_MISSING, "Missing"),
-        (STATUS_TRANSFERRED, "Transferred"),
+        (STATUS_AVAILABLE, _("Available")),
+        (STATUS_ISSUED, _("Issued")),
+        (STATUS_LOST, _("Lost")),
+        (STATUS_DAMAGED, _("Damaged")),
+        (STATUS_MISSING, _("Missing")),
+        (STATUS_TRANSFERRED, _("Transferred")),
     ]
 
     status = models.CharField(
@@ -365,10 +366,10 @@ class Borrower(models.Model):
 
     # Mirrors the `check_borrower_type` CHECK constraint on borrowers in Postgres.
     BORROWER_TYPE_CHOICES = [
-        ("Student", "Student"),
-        ("Teacher", "Teacher"),
-        ("Staff", "Staff"),
-        ("Other", "Other"),
+        ("Student", _("Student")),
+        ("Teacher", _("Teacher")),
+        ("Staff", _("Staff")),
+        ("Other", _("Other")),
     ]
 
     borrower_type = models.CharField(
@@ -450,10 +451,17 @@ class User(AbstractBaseUser):
     )
 
     # Mirrors the `check_user_role` CHECK constraint on users in Postgres.
+    #
+    # SuperAdmin is the developer's account and sits outside the library's
+    # own hierarchy: it holds every feature unconditionally and is the only
+    # role that can change what an Admin sees. It is never offered in the
+    # Add/Edit User form - see library/views/accounts.py - so the only way
+    # one exists is for somebody with database access to make it.
     ROLE_CHOICES = [
-        ("Admin", "Admin"),
-        ("Librarian", "Librarian"),
-        ("Assistant", "Assistant"),
+        ("SuperAdmin", _("Super Admin")),
+        ("Admin", _("Admin")),
+        ("Librarian", _("Librarian")),
+        ("Assistant", _("Assistant")),
     ]
 
     role = models.CharField(
@@ -473,14 +481,36 @@ class User(AbstractBaseUser):
     THEME_DARK = "dark"
 
     THEME_CHOICES = [
-        (THEME_LIGHT, "Light"),
-        (THEME_DARK, "Dark"),
-        (THEME_SYSTEM, "System"),
+        (THEME_LIGHT, _("Light")),
+        (THEME_DARK, _("Dark")),
+        (THEME_SYSTEM, _("System")),
     ]
 
     theme_preference = models.CharField(
         max_length=10,
         choices=THEME_CHOICES,
+        null=True,
+        blank=True,
+    )
+
+    # Language preference, exactly the shape `theme_preference` above has
+    # and for the same reason: nullable with no default, so the column
+    # could be added to an existing `users` table without rewriting a row.
+    # NULL means "no choice stored", and the request then falls back to the
+    # browser's Accept-Language the way an anonymous visitor's does.
+    #
+    # The codes are the ones in settings.LANGUAGES; they are not a CHECK
+    # constraint because adding a language should not need a migration, and
+    # library/middleware.py ignores a code that is no longer offered.
+    LANGUAGE_CHOICES = [
+        ("en", "English"),
+        ("ur", "اردو"),
+        ("ar", "العربية"),
+    ]
+
+    language_preference = models.CharField(
+        max_length=5,
+        choices=LANGUAGE_CHOICES,
         null=True,
         blank=True,
     )
@@ -507,6 +537,22 @@ class User(AbstractBaseUser):
             return self.theme_preference
 
         return self.THEME_SYSTEM
+
+    @property
+    def language(self):
+        """The user's language choice, or "" when they have made none.
+
+        Empty rather than a default, because "no choice" and "chose
+        English" are different: the first should follow the browser, the
+        second should not. The switcher shows this as no option selected.
+        """
+
+        valid = {choice for choice, _ in self.LANGUAGE_CHOICES}
+
+        if self.language_preference in valid:
+            return self.language_preference
+
+        return ""
     
 class Loan(models.Model):
     id = models.AutoField(primary_key=True)
@@ -915,9 +961,9 @@ class InventorySession(models.Model):
 
     # Mirrors the `check_inventory_scope` CHECK constraint in Postgres.
     SCOPE_CHOICES = [
-        (SCOPE_LIBRARY, "Entire library"),
-        (SCOPE_LOCATION, "One location"),
-        (SCOPE_SHELF, "One shelf"),
+        (SCOPE_LIBRARY, _("Entire library")),
+        (SCOPE_LOCATION, _("One location")),
+        (SCOPE_SHELF, _("One shelf")),
     ]
 
     STATUS_IN_PROGRESS = "In Progress"
@@ -925,8 +971,8 @@ class InventorySession(models.Model):
 
     # Mirrors `check_inventory_status`.
     STATUS_CHOICES = [
-        (STATUS_IN_PROGRESS, "In Progress"),
-        (STATUS_COMPLETED, "Completed"),
+        (STATUS_IN_PROGRESS, _("In Progress")),
+        (STATUS_COMPLETED, _("Completed")),
     ]
 
     id = models.AutoField(primary_key=True)
@@ -1021,10 +1067,10 @@ class InventoryScan(models.Model):
 
     # Mirrors `check_inventory_scan_outcome`.
     OUTCOME_CHOICES = [
-        (OUTCOME_FOUND, "Found"),
-        (OUTCOME_DUPLICATE, "Already scanned"),
-        (OUTCOME_OUTSIDE, "Outside this session"),
-        (OUTCOME_UNKNOWN, "Unknown code"),
+        (OUTCOME_FOUND, _("Found")),
+        (OUTCOME_DUPLICATE, _("Already scanned")),
+        (OUTCOME_OUTSIDE, _("Outside this session")),
+        (OUTCOME_UNKNOWN, _("Unknown code")),
     ]
 
     id = models.AutoField(primary_key=True)
@@ -1093,9 +1139,9 @@ class Reservation(models.Model):
 
     # Mirrors the `check_reservation_status` CHECK constraint in Postgres.
     STATUS_CHOICES = [
-        (STATUS_ACTIVE, "Waiting"),
-        (STATUS_FULFILLED, "Fulfilled"),
-        (STATUS_CANCELLED, "Cancelled"),
+        (STATUS_ACTIVE, _("Waiting")),
+        (STATUS_FULFILLED, _("Fulfilled")),
+        (STATUS_CANCELLED, _("Cancelled")),
     ]
 
     id = models.AutoField(primary_key=True)
@@ -1187,9 +1233,9 @@ class Notification(models.Model):
     # Postgres. Explicit values, not a free-text kind: a notification whose
     # type nothing recognises is one no page can render properly.
     EVENT_CHOICES = [
-        (EVENT_RESERVATION_READY, "Reserved book available"),
-        (EVENT_STOCK_CHECK_MISSING, "Stock check found copies missing"),
-        (EVENT_SUGGESTION_SUBMITTED, "Book suggested for acquisition"),
+        (EVENT_RESERVATION_READY, _("Reserved book available")),
+        (EVENT_STOCK_CHECK_MISSING, _("Stock check found copies missing")),
+        (EVENT_SUGGESTION_SUBMITTED, _("Book suggested for acquisition")),
     ]
 
     id = models.AutoField(primary_key=True)
@@ -1297,10 +1343,10 @@ class AcquisitionSuggestion(models.Model):
     # `inventory_sessions.status`) rather than the SCREAMING_CASE a fresh
     # project might pick - there is one convention here and this follows it.
     STATUS_CHOICES = [
-        (STATUS_PENDING, "Pending"),
-        (STATUS_APPROVED, "Approved"),
-        (STATUS_REJECTED, "Rejected"),
-        (STATUS_ACQUIRED, "Acquired"),
+        (STATUS_PENDING, _("Pending")),
+        (STATUS_APPROVED, _("Approved")),
+        (STATUS_REJECTED, _("Rejected")),
+        (STATUS_ACQUIRED, _("Acquired")),
     ]
 
     # Which states may follow which. The one place that says so:
@@ -1401,3 +1447,52 @@ class AcquisitionSuggestion(models.Model):
         """
 
         return status in self.TRANSITIONS[self.status]
+
+
+class RoleFeature(models.Model):
+    """One override: this role does, or does not, get this part of the menu.
+
+    Overrides only. A missing row means "whatever library/features.py says
+    by default", which is why an installation that has never opened the
+    permissions page has an empty table and behaves exactly as it did
+    before the table existed.
+
+    Nothing here can widen a role beyond the ceiling in features.py - the
+    resolver checks the ceiling before it reads the table, so a row saying
+    an Assistant may manage users is stored, read, and ignored. The table
+    is a record of a person's choice, not the authority on what is allowed.
+
+    `role` is deliberately plain text with no foreign key: roles are a fixed
+    list in code, not rows. The unique constraint is what keeps one
+    (role, feature) pair from having two answers.
+    """
+
+    id = models.AutoField(primary_key=True)
+
+    role = models.CharField(max_length=30)
+
+    feature_key = models.CharField(max_length=50)
+
+    allowed = models.BooleanField()
+
+    updated_at = models.DateTimeField()
+
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.DO_NOTHING,
+        db_column="updated_by",
+        null=True,
+        blank=True,
+        related_name="feature_changes",
+    )
+
+    class Meta:
+        managed = False
+        db_table = "role_features"
+
+    def __str__(self):
+        return "%s %s %s" % (
+            self.role,
+            "may" if self.allowed else "may not",
+            self.feature_key,
+        )

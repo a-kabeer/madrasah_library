@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}Return Book | {{ branding.display_name }}{% endblock %}
 
@@ -8,15 +9,15 @@
 <div class="container-fluid px-0">
 
     <div class="mb-4">
-        <nav aria-label="breadcrumb">
+        <nav aria-label="{% translate 'breadcrumb' %}">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{% url 'circulation_dashboard' %}">Circulation</a></li>
-                <li class="breadcrumb-item active">Return Book</li>
+                <li class="breadcrumb-item active">{% translate "Return Book" %}</li>
             </ol>
         </nav>
-        <h2 class="fw-bold mb-1">Return Book</h2>
+        <h2 class="fw-bold mb-1">{% translate "Return Book" %}</h2>
         <p class="text-body-secondary mb-0">
-            Scan the label, or search for the book if the label will not read.
+            {% translate "Scan the label, or search for the book if the label will not read." %}
         </p>
     </div>
 
@@ -28,7 +29,7 @@
                     <form method="get" action="{% url 'circulation_return_lookup' %}">
                         <div class="mb-3">
                             <label for="copy_code" class="form-label fw-semibold">
-                                Scan copy code or search by book / author
+                                {% translate "Scan copy code or search by book / author" %}
                             </label>
                             <div class="input-group input-group-lg">
                                 <span class="input-group-text">
@@ -42,7 +43,7 @@
                                     id="copy_code"
                                     name="copy_code"
                                     value="{{ copy_code }}"
-                                    placeholder="LIB-000001, or a book or author name"
+                                    placeholder="{% translate 'LIB-000001, or a book or author name' %}"
                                     {% comment %}
                                       Where a scanner types, so the cursor
                                       starts here and app.js puts it back
@@ -51,7 +52,7 @@
                                     autofocus
                                     autocomplete="off"
                                 >
-                                <button class="btn btn-primary" type="submit">Find</button>
+                                <button class="btn btn-primary" type="submit">{% translate "Find" %}</button>
                                 {% comment %}
                                   The same scanner the issue page uses, on
                                   the same terms: hidden until app.js
@@ -71,9 +72,9 @@
                                 </button>
                             </div>
                             <div class="form-text">
-                                A whole copy code goes straight to that
+                                {% translate "A whole copy code goes straight to that
                                 loan. Anything else searches what is out on
-                                loan now by book title or author.
+                                loan now by book title or author." %}
                             </div>
                         </div>
                     </form>
@@ -99,7 +100,7 @@
             {% if matches %}
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <h5 class="mb-0">Out on loan now</h5>
+                    <h5 class="mb-0">{% translate "Out on loan now" %}</h5>
                     <span class="text-body-secondary small">
                         {% if more_matches %}
                             first {{ lookup_limit }} — narrow the search
@@ -112,11 +113,11 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-secondary">
                             <tr>
-                                <th>Copy</th>
-                                <th>Book</th>
-                                <th>Borrower</th>
-                                <th>Due</th>
-                                <th class="text-end">Take back</th>
+                                <th>{% translate "Copy" %}</th>
+                                <th>{% translate "Book" %}</th>
+                                <th>{% translate "Borrower" %}</th>
+                                <th>{% translate "Due" %}</th>
+                                <th class="text-end">{% translate "Take back" %}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -162,17 +163,17 @@
             {% if loan %}
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0">Active Loan Found</h5>
+                    <h5 class="mb-0">{% translate "Active Loan Found" %}</h5>
                 </div>
                 <div class="card-body">
 
                     <div class="row mb-3">
-                        <div class="col-sm-4 text-body-secondary">Copy Code</div>
+                        <div class="col-sm-4 text-body-secondary">{% translate "Copy Code" %}</div>
                         <div class="col-sm-8 fw-semibold">{{ loan.copy.copy_code }}</div>
                     </div>
 
                     <div class="row mb-3">
-                        <div class="col-sm-4 text-body-secondary">Book</div>
+                        <div class="col-sm-4 text-body-secondary">{% translate "Book" %}</div>
                         <div class="col-sm-8">
                             <a href="{% url 'book_detail' loan.copy.volume.book.id %}">{{ loan.copy.volume.book.title }}</a>
                             {% if loan.copy.volume.title %}
@@ -182,7 +183,7 @@
                     </div>
 
                     <div class="row mb-3">
-                        <div class="col-sm-4 text-body-secondary">Borrower</div>
+                        <div class="col-sm-4 text-body-secondary">{% translate "Borrower" %}</div>
                         <div class="col-sm-8">
                             <a href="{% url 'borrower_detail' loan.borrower.id %}">{{ loan.borrower.name }}</a>
                             {% if loan.borrower.phone %}
@@ -192,12 +193,12 @@
                     </div>
 
                     <div class="row mb-3">
-                        <div class="col-sm-4 text-body-secondary">Issue Date</div>
+                        <div class="col-sm-4 text-body-secondary">{% translate "Issue Date" %}</div>
                         <div class="col-sm-8">{{ loan.issue_date }}</div>
                     </div>
 
                     <div class="row mb-3">
-                        <div class="col-sm-4 text-body-secondary">Due Date</div>
+                        <div class="col-sm-4 text-body-secondary">{% translate "Due Date" %}</div>
                         <div class="col-sm-8">
                             {{ loan.due_date }}
                             {% if loan.days_overdue > 0 %}

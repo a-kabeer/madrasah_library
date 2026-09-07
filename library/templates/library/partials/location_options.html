@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 The Location dropdown's <option> list.
 
@@ -13,7 +14,7 @@ dropped by the parser. Errors travel in the response's trigger
 event instead — see `render_options`.
 {% endcomment %}
 
-<option value="">Select location…</option>
+<option value="">{% translate "Select location…" %}</option>
 
 {% for location in locations %}
     <option

@@ -1,0 +1,93 @@
+{% load i18n %}
+{% comment %}
+English / اردو / العربية for the topbar.
+
+Beside the theme selector and built the same way - the Bootstrap dropdown
+the topbar already uses - but working differently underneath, and the
+difference is the point.
+
+A theme is applied by the browser, so that control changes the page itself
+and saves in the background. A language is applied by the *server*: the page
+in front of the reader is already rendered in the old one, so choosing a
+language has to fetch the page again. Each option is therefore a real form
+post, which is also what makes it work with no JavaScript at all.
+
+Two posts, depending on who is asking:
+
+  * signed in    -> `language_set`, which stores the choice on the account
+                    so it follows them to another machine, and redirects
+                    back to the page they were on.
+  * not signed in -> Django's own `set_language`, which writes the session
+                    and a cookie. The login page and the public catalogue
+                    both need this, and neither has an account to store
+                    anything on.
+
+`next` carries the current page so the reader lands back where they were
+rather than at the dashboard.
+{% endcomment %}
+
+{% get_current_language as current_language %}
+{% get_available_languages as available_languages %}
+
+<div class="dropdown">
+
+    <button
+        type="button"
+        class="btn theme-toggle"
+        id="languageToggle"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+        aria-label="{% translate 'Language' %}"
+        title="{% translate 'Language' %}"
+    >
+        <i class="bi bi-translate" aria-hidden="true"></i>
+    </button>
+
+    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageToggle">
+
+        {% for code, name in available_languages %}
+
+            <li>
+                <form
+                    method="post"
+                    action="{% if request.user.is_authenticated %}{% url 'language_set' %}{% else %}{% url 'set_language' %}{% endif %}"
+                >
+                    {% csrf_token %}
+
+                    {% comment %}
+                      The two views read different field names, so both are
+                      sent. Django's `set_language` reads `language`;
+                      `language_set` reads `language` too and `next` for
+                      where to go back to.
+                    {% endcomment %}
+                    <input type="hidden" name="language" value="{{ code }}">
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+
+                    <button
+                        type="submit"
+                        class="dropdown-item d-flex align-items-center gap-2"
+                        {% if code == current_language %}aria-current="true"{% endif %}
+                    >
+                        {% if code == current_language %}
+                            <i class="bi bi-check-lg text-success" aria-hidden="true"></i>
+                        {% else %}
+                            <i class="bi" aria-hidden="true" style="width: 1em;"></i>
+                        {% endif %}
+
+                        {% comment %}
+                          Each language's own name, in its own script -
+                          never translated. Somebody looking for Urdu is
+                          looking for "اردو", and would not find it behind
+                          the word "Urdu" on a page they cannot read.
+                        {% endcomment %}
+                        <span dir="auto">{{ name }}</span>
+                    </button>
+
+                </form>
+            </li>
+
+        {% endfor %}
+
+    </ul>
+
+</div>

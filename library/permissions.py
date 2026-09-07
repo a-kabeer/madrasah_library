@@ -2,6 +2,8 @@ from functools import wraps
 
 from django.core.exceptions import PermissionDenied
 
+from . import features
+
 
 # Roles allowed to create/modify library catalogue data (books, authors,
 # categories, publishers, ...). Kept here so templates and views can ask the
@@ -49,6 +51,56 @@ def role_required(*allowed_roles):
                 raise PermissionDenied(
                     "Your role does not have permission to perform this action."
                 )
+            return view_func(request, *args, **kwargs)
+
+        return wrapped
+
+    return decorator
+
+
+def feature_required(feature_key, *ceiling):
+    """Restrict a view to a feature that is switched on for the user's role.
+
+    Replaces `role_required` on the views behind a menu entry, and does two
+    jobs where that did one:
+
+      * `ceiling` is the same check `role_required` made - the roles that
+        may *ever* reach this view. Stated per view, not per feature,
+        because a feature is usually one menu entry over several views with
+        different answers: everybody may read the book list, only an Admin
+        or Librarian may add to it. Leave it out to mean "any signed-in
+        role", which is what an undecorated view meant before.
+
+      * the feature toggle, which an Admin (or a SuperAdmin) sets from
+        /library/permissions/ without a deploy.
+
+    The order matters and is the whole safety argument: the ceiling is
+    checked first and comes from code, so no row in `role_features` can let
+    a role past it. Turning a feature *on* for a role the ceiling excludes
+    changes nothing.
+
+    Hiding the menu entry is never the boundary - this is. A person who
+    types the URL of a feature switched off for them gets the same 403 as
+    one who types the URL of a view their role never had.
+    """
+
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapped(request, *args, **kwargs):
+            role = getattr(request.user, "role", None)
+
+            if ceiling and role not in ceiling and role != features.SUPER_ADMIN:
+                raise PermissionDenied(
+                    "Your role does not have permission to perform this action."
+                )
+
+            if not features.role_has(
+                role, feature_key, features.overrides_for(request)
+            ):
+                raise PermissionDenied(
+                    "This part of the library is switched off for your role."
+                )
+
             return view_func(request, *args, **kwargs)
 
         return wrapped

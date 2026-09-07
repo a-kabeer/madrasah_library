@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     Add Book Volume | {{ branding.display_name }}
@@ -56,7 +57,7 @@
                                     Book <span class="text-danger">*</span>
                                 </label>
                                 <select class="form-select" name="book" id="book" required>
-                                    <option value="">Select Book</option>
+                                    <option value="">{% translate "Select Book" %}</option>
                                     {% for book in books %}
                                         <option
                                             value="{{ book.id }}"

@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 The Authors, Categories and Publishers page - one page, three nouns.
 
@@ -128,7 +129,7 @@ Expected context:
         <div class="d-flex align-items-center gap-2">
 
             <label for="pageSize" class="text-body-secondary small mb-0">
-                Show
+                {% translate "Show" %}
             </label>
 
             {% comment %}
@@ -149,7 +150,7 @@ Expected context:
                 hx-target="#mainContent"
                 hx-swap="innerHTML"
                 hx-push-url="true"
-                aria-label="Rows per page"
+                aria-label="{% translate 'Rows per page' %}"
             >
                 {% for option in page_size_options %}
                     <option
@@ -197,7 +198,7 @@ Expected context:
                           empty strip, so it goes altogether.
                         {% endcomment %}
                         {% if can_edit %}
-                            <th class="text-end">Actions</th>
+                            <th class="text-end">{% translate "Actions" %}</th>
                         {% endif %}
 
                     </tr>
@@ -266,7 +267,7 @@ Expected context:
                                         <a
                                             href="{% url edit_route row.id %}"
                                             class="btn btn-sm btn-outline-warning"
-                                            title="Edit"
+                                            title="{% translate 'Edit' %}"
                                             aria-label="Edit {{ row.name }}"
                                             data-form-modal
                                             hx-get="{% url edit_route row.id %}?modal=1"
@@ -278,7 +279,7 @@ Expected context:
                                         <a
                                             href="{% url delete_route row.id %}"
                                             class="btn btn-sm btn-outline-danger"
-                                            title="Delete"
+                                            title="{% translate 'Delete' %}"
                                             aria-label="Delete {{ row.name }}"
                                             data-form-modal
                                             hx-get="{% url delete_route row.id %}?modal=1"

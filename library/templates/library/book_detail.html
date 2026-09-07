@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     {{ book.title }} | {{ branding.display_name }}
@@ -9,7 +10,7 @@
 {% endblock %}
 
 {% block breadcrumbs %}
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
                 <a href="{% url 'book_list' %}">Books</a>
@@ -210,11 +211,11 @@
                             <h3 class="fw-bold mb-3">{{ book.title }}</h3>
                             <div class="row g-3">
                                 <div class="col-12 col-lg-4">
-                                    <p class="mb-1 text-body-secondary small">Author</p>
+                                    <p class="mb-1 text-body-secondary small">{% translate "Author" %}</p>
                                     <p class="fw-semibold mb-0">{{ book.author.name }}</p>
                                 </div>
                                 <div class="col-12 col-lg-4">
-                                    <p class="mb-1 text-body-secondary small">Category</p>
+                                    <p class="mb-1 text-body-secondary small">{% translate "Category" %}</p>
                                     <p class="fw-semibold mb-0">
                                         {% if book.category %}
                                             <span class="badge bg-secondary">{{ book.category.name }}</span>
@@ -224,7 +225,7 @@
                                     </p>
                                 </div>
                                 <div class="col-12 col-lg-4">
-                                    <p class="mb-1 text-body-secondary small">Publisher</p>
+                                    <p class="mb-1 text-body-secondary small">{% translate "Publisher" %}</p>
                                     <p class="fw-semibold mb-0">
                                         {% if book.publisher %}
                                             {{ book.publisher.name }}
@@ -258,7 +259,7 @@
 
                             <div class="col-6 col-lg-3">
                                 <div class="border rounded p-3 h-100">
-                                    <p class="text-body-secondary small mb-1">Total Copies</p>
+                                    <p class="text-body-secondary small mb-1">{% translate "Total Copies" %}</p>
                                     <p class="fs-4 fw-bold mb-0">{{ total_copies }}</p>
                                 </div>
                             </div>
@@ -279,7 +280,7 @@
                         </div>
                     {% else %}
                         <p class="text-body-secondary mb-0">
-                            No physical copies have been added for this book yet.
+                            {% translate "No physical copies have been added for this book yet." %}
                         </p>
                     {% endif %}
                 </div>
@@ -366,7 +367,7 @@
                             </div>
                         {% else %}
                             <p class="text-body-secondary mb-0">
-                                No physical copies yet.
+                                {% translate "No physical copies yet." %}
                             </p>
                         {% endif %}
 
@@ -420,7 +421,7 @@
                         </div>
 
                     {% else %}
-                        <p class="text-body-secondary mb-0">No volumes have been added yet.</p>
+                        <p class="text-body-secondary mb-0">{% translate "No volumes have been added yet." %}</p>
                     {% endif %}
                 </div>
             </div>
@@ -484,10 +485,10 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-secondary">
                             <tr>
-                                <th>Copy Code</th>
-                                <th>Volume</th>
-                                <th>Location / Shelf</th>
-                                <th>Status</th>
+                                <th>{% translate "Copy Code" %}</th>
+                                <th>{% translate "Volume" %}</th>
+                                <th>{% translate "Location / Shelf" %}</th>
+                                <th>{% translate "Status" %}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -533,7 +534,7 @@
                             {% empty %}
                                 <tr>
                                     <td colspan="4" class="text-center text-body-secondary py-4">
-                                        No copies have been added for this book yet.
+                                        {% translate "No copies have been added for this book yet." %}
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -595,8 +596,8 @@
                         </div>
                     {% else %}
                         <p class="text-body-secondary mb-0">
-                            Contents are recorded against a volume, and this
-                            book has none yet.
+                            {% translate "Contents are recorded against a volume, and this
+                            book has none yet." %}
                         </p>
                     {% endif %}
 
@@ -626,12 +627,12 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-secondary">
                             <tr>
-                                <th>Borrower</th>
-                                <th>Copy</th>
-                                <th>Issued</th>
-                                <th>Due</th>
-                                <th>Returned</th>
-                                <th class="text-end">Actions</th>
+                                <th>{% translate "Borrower" %}</th>
+                                <th>{% translate "Copy" %}</th>
+                                <th>{% translate "Issued" %}</th>
+                                <th>{% translate "Due" %}</th>
+                                <th>{% translate "Returned" %}</th>
+                                <th class="text-end">{% translate "Actions" %}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -667,7 +668,7 @@
                                     </td>
                                     <td class="text-end">
                                         <a href="{% url 'loan_detail' loan.id %}"
-                                           class="btn btn-sm btn-outline-secondary" title="Open loan">
+                                           class="btn btn-sm btn-outline-secondary" title="{% translate 'Open loan' %}">
                                             <i class="bi bi-box-arrow-up-right"></i>
                                         </a>
                                     </td>
@@ -675,7 +676,7 @@
                             {% empty %}
                                 <tr>
                                     <td colspan="6" class="text-center text-body-secondary py-4">
-                                        This book has never been borrowed.
+                                        {% translate "This book has never been borrowed." %}
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -748,8 +749,8 @@
                         </div>
 
                         <div class="form-text">
-                            Only borrowers who are still active can be added,
-                            and an archived book cannot be reserved.
+                            {% translate "Only borrowers who are still active can be added,
+                            and an archived book cannot be reserved." %}
                         </div>
                     </form>
                 </div>
@@ -758,16 +759,16 @@
             {% if reservation_queue %}
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-body">
-                        <h5 class="mb-0 fw-bold">Waiting, in order</h5>
+                        <h5 class="mb-0 fw-bold">{% translate "Waiting, in order" %}</h5>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-secondary">
                                 <tr>
                                     <th style="width: 4rem;">#</th>
-                                    <th>Borrower</th>
-                                    <th>Asked</th>
-                                    <th class="text-end">Actions</th>
+                                    <th>{% translate "Borrower" %}</th>
+                                    <th>{% translate "Asked" %}</th>
+                                    <th class="text-end">{% translate "Actions" %}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -801,7 +802,7 @@
                                                        value="{{ request.get_full_path }}">
                                                 <button type="submit"
                                                         class="btn btn-sm btn-outline-danger">
-                                                    Cancel
+                                                    {% translate "Cancel" %}
                                                 </button>
                                             </form>
                                         </td>
@@ -813,7 +814,7 @@
                 </div>
             {% else %}
                 <p class="text-body-secondary mb-0">
-                    Nobody is waiting for this book.
+                    {% translate "Nobody is waiting for this book." %}
                 </p>
             {% endif %}
 

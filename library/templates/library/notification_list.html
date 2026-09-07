@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     Notifications | {{ branding.display_name }}
@@ -13,7 +14,7 @@
 <div class="container-fluid px-0">
 
     <div class="mb-4">
-        <h2 class="fw-bold mb-1">Notifications</h2>
+        <h2 class="fw-bold mb-1">{% translate "Notifications" %}</h2>
         <p class="text-body-secondary mb-0">
             Yours alone, newest first. A notification is something to act
             on — a reserved book back on the shelf, a stock check that
@@ -51,7 +52,7 @@
                 <input type="hidden" name="next"
                        value="{{ request.get_full_path }}">
                 <button type="submit" class="btn btn-sm btn-outline-secondary">
-                    Mark all read
+                    {% translate "Mark all read" %}
                 </button>
             </form>
 
@@ -126,7 +127,7 @@
                                        value="{{ request.get_full_path }}">
                                 <button type="submit"
                                         class="btn btn-sm btn-outline-secondary">
-                                    Mark read
+                                    {% translate "Mark read" %}
                                 </button>
                             </form>
                         {% endif %}
@@ -154,9 +155,9 @@
                     {% endif %}
                 </p>
                 <p class="mb-0 small">
-                    Notifications arrive when a reserved book comes back,
+                    {% translate "Notifications arrive when a reserved book comes back,
                     or when a stock check finishes with copies
-                    unaccounted for.
+                    unaccounted for." %}
                 </p>
             </div>
         </div>

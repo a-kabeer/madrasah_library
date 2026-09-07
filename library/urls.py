@@ -8,10 +8,20 @@ urlpatterns = [
     path("logout/", views.logout_view, name="logout"),
     path("profile/", views.profile_view, name="profile"),
     path("appearance/", views.theme_set, name="theme_set"),
+    path("language/", views.language_set, name="language_set"),
     path(
         "settings/branding/",
         views.branding_settings,
         name="branding_settings",
+    ),
+
+    # Who sees which menu entries. Admin-only by ceiling; a SuperAdmin sees
+    # one more column than an Admin does. GET draws the grid, one POST saves
+    # the whole of it.
+    path(
+        "settings/permissions/",
+        views.permissions_matrix,
+        name="permissions_matrix",
     ),
     path("", views.library_home, name="library_home"),
     # The three lookups: a list, and three endpoints that answer with a

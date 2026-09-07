@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 Add or Edit an author, a category or a publisher, served into #formModal.
 
@@ -82,8 +83,8 @@ has_city.
                 autocomplete="off"
             >
             <div class="form-text">
-                Where the publisher is based. Shown under the name in the
-                list, and searchable.
+                {% translate "Where the publisher is based. Shown under the name in the
+                list, and searchable." %}
             </div>
         </div>
     {% endif %}
@@ -100,7 +101,7 @@ has_city.
             class="btn btn-outline-secondary ms-auto"
             data-bs-dismiss="modal"
         >
-            Cancel
+            {% translate "Cancel" %}
         </button>
 
     </div>

@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     Add Book Content | {{ branding.display_name }}
@@ -57,7 +58,7 @@
                                       Fixed, and stated rather than offered:
                                       the volume came in on the URL.
                                     {% endcomment %}
-                                    <label class="form-label fw-semibold">Volume</label>
+                                    <label class="form-label fw-semibold">{% translate "Volume" %}</label>
                                     <p class="form-control-plaintext mb-0">
                                         {{ selected_volume.book.title }}
                                         - Volume {{ selected_volume.volume_number }}
@@ -73,7 +74,7 @@
                                         Volume <span class="text-danger">*</span>
                                     </label>
                                     <select class="form-select" name="volume" id="volume" required>
-                                        <option value="">Select Volume</option>
+                                        <option value="">{% translate "Select Volume" %}</option>
                                         {% for volume in volumes %}
                                             <option
                                                 value="{{ volume.id }}"
@@ -90,10 +91,10 @@
 
                             <div class="col-12">
                                 <label for="parent" class="form-label fw-semibold">
-                                    Parent
+                                    {% translate "Parent" %}
                                 </label>
                                 <select class="form-select" name="parent" id="parent">
-                                    <option value="">No Parent</option>
+                                    <option value="">{% translate "No Parent" %}</option>
                                     {% for parent in parents %}
                                         <option
                                             value="{{ parent.id }}"
@@ -121,7 +122,7 @@
 
                             <div class="col-12 col-sm-4">
                                 <label for="content_type" class="form-label fw-semibold">
-                                    Content Type
+                                    {% translate "Content Type" %}
                                 </label>
                                 <input
                                     type="text"
@@ -134,7 +135,7 @@
 
                             <div class="col-12 col-sm-4">
                                 <label for="page_number" class="form-label fw-semibold">
-                                    Page Number
+                                    {% translate "Page Number" %}
                                 </label>
                                 <input
                                     type="number"
@@ -147,7 +148,7 @@
 
                             <div class="col-12 col-sm-4">
                                 <label for="sort_order" class="form-label fw-semibold">
-                                    Sort Order
+                                    {% translate "Sort Order" %}
                                 </label>
                                 <input
                                     type="number"

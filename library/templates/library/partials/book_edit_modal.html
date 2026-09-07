@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 Edit Book, served into #formModal by `book_edit`.
 
@@ -58,7 +59,7 @@ the error and the user's edits intact.
             class="btn btn-outline-secondary ms-auto"
             data-bs-dismiss="modal"
         >
-            Cancel
+            {% translate "Cancel" %}
         </button>
 
     </div>

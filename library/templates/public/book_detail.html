@@ -1,4 +1,5 @@
 {% extends "public/base.html" %}
+{% load i18n %}
 
 {% block title %}{{ book.title }} | {{ branding.display_name }}{% endblock %}
 
@@ -50,7 +51,7 @@
 
         <dl class="row mb-0">
 
-            <dt class="col-sm-3 text-body-secondary fw-normal">Author</dt>
+            <dt class="col-sm-3 text-body-secondary fw-normal">{% translate "Author" %}</dt>
             <dd class="col-sm-9">
                 {% comment %}
                   A link back into the list, which is how the author filter
@@ -62,7 +63,7 @@
             </dd>
 
             {% if book.publisher %}
-                <dt class="col-sm-3 text-body-secondary fw-normal">Publisher</dt>
+                <dt class="col-sm-3 text-body-secondary fw-normal">{% translate "Publisher" %}</dt>
                 <dd class="col-sm-9">
                     <a href="{% url 'public_book_list' %}?publisher={{ book.publisher_id }}">
                         {{ book.publisher.name }}
@@ -71,7 +72,7 @@
             {% endif %}
 
             {% if book.category %}
-                <dt class="col-sm-3 text-body-secondary fw-normal">Category</dt>
+                <dt class="col-sm-3 text-body-secondary fw-normal">{% translate "Category" %}</dt>
                 <dd class="col-sm-9">
                     <a href="{% url 'public_book_list' %}?category={{ book.category_id }}">
                         {{ book.category.name }}
@@ -97,7 +98,7 @@
         </dl>
 
         <p class="text-body-secondary small mt-4 mb-0">
-            To borrow this book, ask at the library desk.
+            {% translate "To borrow this book, ask at the library desk." %}
         </p>
 
     </div>

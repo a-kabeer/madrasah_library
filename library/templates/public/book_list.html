@@ -1,14 +1,15 @@
 {% extends "public/base.html" %}
+{% load i18n %}
 
 {% block title %}Catalogue | {{ branding.display_name }}{% endblock %}
 
 {% block content %}
 
-<h1 class="public-heading">Catalogue</h1>
+<h1 class="public-heading">{% translate "Catalogue" %}</h1>
 
 <p class="text-body-secondary">
-    Search the library's books by title or author. Availability is what is
-    on the shelf right now.
+    {% translate "Search the library's books by title or author. Availability is what is
+    on the shelf right now." %}
 </p>
 
 
@@ -23,7 +24,7 @@
 
     <div class="public-filter-field public-filter-grow">
         <label for="catalogSearch" class="form-label small fw-semibold">
-            Title or author
+            {% translate "Title or author" %}
         </label>
         <input
             type="search"
@@ -31,16 +32,16 @@
             id="catalogSearch"
             name="search"
             value="{{ search }}"
-            placeholder="e.g. Fath al-Bari, or Ibn Hajar"
+            placeholder="{% translate 'e.g. Fath al-Bari, or Ibn Hajar' %}"
         >
     </div>
 
     <div class="public-filter-field">
         <label for="catalogCategory" class="form-label small fw-semibold">
-            Category
+            {% translate "Category" %}
         </label>
         <select class="form-select" id="catalogCategory" name="category">
-            <option value="">All categories</option>
+            <option value="">{% translate "All categories" %}</option>
             {% for category in categories %}
                 <option
                     value="{{ category.id }}"
@@ -52,10 +53,10 @@
 
     <div class="public-filter-field">
         <label for="catalogAvailability" class="form-label small fw-semibold">
-            Availability
+            {% translate "Availability" %}
         </label>
         <select class="form-select" id="catalogAvailability" name="availability">
-            <option value="">Any</option>
+            <option value="">{% translate "Any" %}</option>
             {% for value, label in availability_filters %}
                 <option
                     value="{{ value }}"
@@ -108,7 +109,7 @@
                 <a
                     href="?{% if search %}search={{ search|urlencode }}&{% endif %}{% if category_id %}category={{ category_id }}&{% endif %}{% if publisher_id %}publisher={{ publisher_id }}&{% endif %}{% if availability %}availability={{ availability|urlencode }}{% endif %}"
                     class="ms-1 text-decoration-none"
-                    aria-label="Remove the author filter"
+                    aria-label="{% translate 'Remove the author filter' %}"
                 >&times;</a>
             </span>
         {% endif %}
@@ -119,7 +120,7 @@
                 <a
                     href="?{% if search %}search={{ search|urlencode }}&{% endif %}{% if category_id %}category={{ category_id }}&{% endif %}{% if author_id %}author={{ author_id }}&{% endif %}{% if availability %}availability={{ availability|urlencode }}{% endif %}"
                     class="ms-1 text-decoration-none"
-                    aria-label="Remove the publisher filter"
+                    aria-label="{% translate 'Remove the publisher filter' %}"
                 >&times;</a>
             </span>
         {% endif %}

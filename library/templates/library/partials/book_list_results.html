@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 Results half of the book list: active filters, the count and rows-per-page
 control, the table, and pagination.
@@ -105,7 +106,7 @@ and history behaviour are inherited from #bookResults in book_list.html.
         <div class="d-flex align-items-center gap-2">
 
             <label for="pageSize" class="text-body-secondary small mb-0">
-                Show
+                {% translate "Show" %}
             </label>
 
             {% comment %}
@@ -121,7 +122,7 @@ and history behaviour are inherited from #bookResults in book_list.html.
                 hx-trigger="change"
                 hx-include="this"
                 name="page_size"
-                aria-label="Rows per page"
+                aria-label="{% translate 'Rows per page' %}"
             >
                 {% for option in page_size_options %}
                     <option
@@ -170,9 +171,9 @@ and history behaviour are inherited from #bookResults in book_list.html.
                           on every click. The Availability filter is the
                           way to narrow by it.
                         {% endcomment %}
-                        <th>Copies</th>
+                        <th>{% translate "Copies" %}</th>
 
-                        <th class="text-end">Actions</th>
+                        <th class="text-end">{% translate "Actions" %}</th>
 
                     </tr>
                 </thead>
@@ -262,7 +263,7 @@ and history behaviour are inherited from #bookResults in book_list.html.
                                     <a
                                         href="{% url 'book_edit' book.id %}"
                                         class="btn btn-sm btn-outline-warning"
-                                        title="Edit"
+                                        title="{% translate 'Edit' %}"
                                         aria-label="Edit {{ book.title }}"
                                         data-form-modal
                                         hx-get="{% url 'book_edit' book.id %}?modal=1"
@@ -276,7 +277,7 @@ and history behaviour are inherited from #bookResults in book_list.html.
                                     <a
                                         href="{% url 'book_delete' book.id %}"
                                         class="btn btn-sm btn-outline-danger"
-                                        title="Delete"
+                                        title="{% translate 'Delete' %}"
                                         aria-label="Delete {{ book.title }}"
                                         data-form-modal
                                         hx-get="{% url 'book_delete' book.id %}?modal=1"
@@ -294,7 +295,7 @@ and history behaviour are inherited from #bookResults in book_list.html.
                     {% empty %}
                         <tr>
                             <td colspan="4" class="text-center text-body-secondary py-4">
-                                No books found.
+                                {% translate "No books found." %}
                             </td>
                         </tr>
                     {% endfor %}

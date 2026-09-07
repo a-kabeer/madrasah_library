@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     Edit {{ copy.copy_code }} | {{ branding.display_name }}
@@ -64,7 +65,7 @@
                         {% endcomment %}
                         <div class="mb-3">
                             <label for="formCopyCode" class="form-label fw-semibold">
-                                Copy Code
+                                {% translate "Copy Code" %}
                             </label>
                             <input
                                 type="text"
@@ -75,8 +76,8 @@
                                 aria-describedby="formCopyCodeHelp"
                             >
                             <div class="form-text" id="formCopyCodeHelp">
-                                Fixed once the copy exists — it is the label
-                                on the book and appears in its history.
+                                {% translate "Fixed once the copy exists — it is the label
+                                on the book and appears in its history." %}
                             </div>
                         </div>
 
@@ -84,7 +85,7 @@
 
                             <div class="col-12 col-sm-6">
                                 <label for="formLocation" class="form-label fw-semibold">
-                                    Location
+                                    {% translate "Location" %}
                                 </label>
                                 {% comment %}
                                   Choosing a location reloads the Shelf
@@ -109,14 +110,14 @@
 
                             <div class="col-12 col-sm-6">
                                 <label for="formShelf" class="form-label fw-semibold">
-                                    Shelf
+                                    {% translate "Shelf" %}
                                 </label>
                                 <select class="form-select" id="formShelf" name="shelf">
                                     {% include "library/partials/shelf_options.html" with shelves=shelves selected_id=form_data.shelf_id has_location=form_data.location_id %}
                                 </select>
                                 <div class="form-text">
-                                    Leave the shelf unset for a copy that has
-                                    arrived but not been placed yet.
+                                    {% translate "Leave the shelf unset for a copy that has
+                                    arrived but not been placed yet." %}
                                 </div>
                             </div>
 
@@ -124,7 +125,7 @@
 
                         <div class="mb-3 mt-3">
                             <label for="formStatus" class="form-label fw-semibold">
-                                Status
+                                {% translate "Status" %}
                             </label>
                             {% comment %}
                               A copy that is out stays "Issued": the loan is
@@ -140,8 +141,8 @@
                                     readonly
                                 >
                                 <div class="form-text">
-                                    This copy is out on loan. Take it back
-                                    from the loan to change its status.
+                                    {% translate "This copy is out on loan. Take it back
+                                    from the loan to change its status." %}
                                 </div>
                             {% else %}
                                 <select class="form-select" id="formStatus" name="status">
@@ -159,7 +160,7 @@
 
                         <div class="mb-3">
                             <label for="formAcquisitionDate" class="form-label fw-semibold">
-                                Acquisition Date
+                                {% translate "Acquisition Date" %}
                             </label>
                             <input
                                 type="date"
@@ -172,7 +173,7 @@
 
                         <div class="mb-3">
                             <label for="formNotes" class="form-label fw-semibold">
-                                Notes
+                                {% translate "Notes" %}
                             </label>
                             <textarea
                                 class="form-control"

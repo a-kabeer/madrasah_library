@@ -1,0 +1,173 @@
+{% extends layout %}
+{% load i18n %}
+{% comment %}
+  `layout` rather than base.html by name: an ordinary request renders the
+  whole application shell, an HTMX navigation renders only the main-content
+  region. See library/context_processors.py.
+
+  The whole grid is one form and one Save. Ticking boxes and saving once is
+  how somebody actually thinks about a permissions table - a save per cell
+  would mean the page could be left half-applied.
+{% endcomment %}
+
+{% block title %}
+    Menu Permissions | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    Menu Permissions
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid px-0">
+
+    <!-- Page Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h2 class="fw-bold mb-1">{% translate "Menu Permissions" %}</h2>
+            <p class="text-body-secondary mb-0">
+                Which parts of the library each role can see and open.
+                Switching one off hides the menu entry <em>and</em> refuses
+                the address.
+            </p>
+        </div>
+    </div>
+
+    {% comment %}
+      What the grid cannot do, said before somebody discovers it by
+      clicking. A dash is not a bug and a locked row is not an oversight.
+    {% endcomment %}
+    <div class="alert alert-info d-flex align-items-start gap-2" role="alert">
+        <i class="bi bi-info-circle-fill mt-1" aria-hidden="true"></i>
+        <div>
+            <strong>Some cells cannot be changed.</strong>
+            <ul class="mb-0 mt-2 small">
+                <li>
+                    {% translate "A dash means the code never allows it — Users, Branding
+                    and this page are Admin-only whatever is ticked here." %}
+                </li>
+                <li>
+                    {% translate "The Dashboard is always on: somebody signed in with no
+                    dashboard has nowhere to land." %}
+                </li>
+                {% if not is_super_admin %}
+                    <li>
+                        Your own column (<strong>{{ editor_role }}</strong>)
+                        is read-only. Changing it could lock you out of this
+                        page.
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        {% for section in sections %}
+
+            <div class="card shadow-sm border-0 mb-4">
+
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        {{ section.title }}
+                    </h5>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+
+                        <thead class="table-secondary">
+                            <tr>
+                                <th>{% translate "Menu entry" %}</th>
+                                {% for role in roles %}
+                                    <th class="text-center" style="width: 9rem;">
+                                        {{ role }}
+                                    </th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for row in section.rows %}
+                                <tr>
+
+                                    <td class="fw-semibold">
+                                        {{ row.label }}
+                                        {% if row.locked %}
+                                            <span class="badge text-bg-secondary ms-2">
+                                                always on
+                                            </span>
+                                        {% endif %}
+                                    </td>
+
+                                    {% for cell in row.cells %}
+                                        <td class="text-center">
+                                            {% if not cell.available %}
+                                                {% comment %}
+                                                  Outside the ceiling. A dash
+                                                  rather than an unticked box,
+                                                  because an unticked box
+                                                  invites a click that would
+                                                  do nothing.
+                                                {% endcomment %}
+                                                <span class="text-body-secondary"
+                                                      title="{% translate 'Not available to this role' %}">
+                                                    &mdash;
+                                                </span>
+
+                                            {% elif cell.editable %}
+                                                <input
+                                                    type="checkbox"
+                                                    class="form-check-input"
+                                                    name="feature"
+                                                    value="{{ cell.name }}"
+                                                    {% if cell.allowed %}checked{% endif %}
+                                                    aria-label="{{ cell.role }} — {{ row.label }}"
+                                                >
+
+                                            {% else %}
+                                                {% comment %}
+                                                  On, but not this person's to
+                                                  change: their own column, or
+                                                  a locked row. Shown as its
+                                                  state, not as a control.
+                                                {% endcomment %}
+                                                {% if cell.allowed %}
+                                                    <i class="bi bi-check-lg text-success"
+                                                       aria-label="{% translate 'On' %}"></i>
+                                                {% else %}
+                                                    <i class="bi bi-x-lg text-body-secondary"
+                                                       aria-label="{% translate 'Off' %}"></i>
+                                                {% endif %}
+                                            {% endif %}
+                                        </td>
+                                    {% endfor %}
+
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+
+                    </table>
+                </div>
+
+            </div>
+
+        {% endfor %}
+
+        <div class="d-flex flex-wrap gap-2 mb-4">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
+                Save Permissions
+            </button>
+            <a href="{% url 'permissions_matrix' %}" class="btn btn-outline-secondary">
+                Reset
+            </a>
+        </div>
+
+    </form>
+
+</div>
+
+{% endblock %}

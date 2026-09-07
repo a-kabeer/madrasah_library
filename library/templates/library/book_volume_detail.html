@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     {{ volume_name }} | {{ branding.display_name }}
@@ -64,11 +65,11 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-secondary">
                             <tr>
-                                <th>Copy Code</th>
-                                <th>Location</th>
-                                <th>Shelf</th>
-                                <th>Status</th>
-                                <th class="text-end">Actions</th>
+                                <th>{% translate "Copy Code" %}</th>
+                                <th>{% translate "Location" %}</th>
+                                <th>{% translate "Shelf" %}</th>
+                                <th>{% translate "Status" %}</th>
+                                <th class="text-end">{% translate "Actions" %}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -109,14 +110,14 @@
                                     <td class="text-end">
                                         <div class="d-inline-flex gap-1" data-row-actions>
                                             {% if can_edit %}
-                                                <a href="{% url 'book_copy_edit' copy.id %}?from=volume" class="btn btn-sm btn-outline-warning" title="Edit">
+                                                <a href="{% url 'book_copy_edit' copy.id %}?from=volume" class="btn btn-sm btn-outline-warning" title="{% translate 'Edit' %}">
                                                     <i class="bi bi-pencil"></i>
                                                 </a>
-                                                <a href="{% url 'book_copy_move' copy.id %}?from=volume" class="btn btn-sm btn-outline-primary" title="Move">
+                                                <a href="{% url 'book_copy_move' copy.id %}?from=volume" class="btn btn-sm btn-outline-primary" title="{% translate 'Move' %}">
                                                     <i class="bi bi-arrow-left-right"></i>
                                                 </a>
                                             {% else %}
-                                                <a href="{% url 'book_copy_detail' copy.id %}?from=volume" class="btn btn-sm btn-outline-secondary" title="Open">
+                                                <a href="{% url 'book_copy_detail' copy.id %}?from=volume" class="btn btn-sm btn-outline-secondary" title="{% translate 'Open' %}">
                                                     <i class="bi bi-box-arrow-up-right"></i>
                                                 </a>
                                             {% endif %}
@@ -126,7 +127,7 @@
                             {% empty %}
                                 <tr>
                                     <td colspan="5" class="text-center text-body-secondary py-4">
-                                        No copies of this volume yet.
+                                        {% translate "No copies of this volume yet." %}
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -160,10 +161,10 @@
                                     </div>
                                     {% if can_edit %}
                                         <div class="d-inline-flex gap-1">
-                                            <a href="{% url 'book_content_edit' content.id %}?from=volume" class="btn btn-sm btn-outline-warning" title="Edit">
+                                            <a href="{% url 'book_content_edit' content.id %}?from=volume" class="btn btn-sm btn-outline-warning" title="{% translate 'Edit' %}">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
-                                            <a href="{% url 'book_content_delete' content.id %}?from=volume" class="btn btn-sm btn-outline-danger" title="Delete">
+                                            <a href="{% url 'book_content_delete' content.id %}?from=volume" class="btn btn-sm btn-outline-danger" title="{% translate 'Delete' %}">
                                                 <i class="bi bi-trash"></i>
                                             </a>
                                         </div>
@@ -173,7 +174,7 @@
                         </div>
                     {% else %}
                         <p class="text-body-secondary mb-0">
-                            No contents have been recorded for this volume.
+                            {% translate "No contents have been recorded for this volume." %}
                         </p>
                     {% endif %}
                 </div>

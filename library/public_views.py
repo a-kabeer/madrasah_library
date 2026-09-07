@@ -69,13 +69,8 @@ from django.db.models import Q
 from django.shortcuts import render
 
 from .models import Author, BookVolume, Category, Publisher
-from .views import (
-    PAGE_SIZE,
-    active_books,
-    annotate_copy_counts,
-    numeric_param,
-    query_with,
-)
+from .queries import active_books, annotate_copy_counts
+from .views import PAGE_SIZE, numeric_param, query_with
 
 
 # What a visitor may narrow by. `available` and `unavailable` are the two

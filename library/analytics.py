@@ -46,9 +46,9 @@ from datetime import timedelta
 
 from django.db import models
 from django.db.models.functions import TruncDay, TruncMonth, TruncWeek
-from django.utils import timezone
 
 from . import inventory
+from . import queries
 from .models import (
     Book,
     BookCopy,
@@ -201,14 +201,11 @@ class Period:
     def books(self):
         """The catalogue this page is about: active books, category applied.
 
-        `active_books()` is Task 5's own exclusion - imported at call time
-        because views.py imports this module and the other direction can
-        only be taken here.
+        `active_books()` is the catalogue's own exclusion of archived
+        books, shared with the views and the reports.
         """
 
-        from .views import active_books
-
-        books = active_books()
+        books = queries.active_books()
 
         if self.category_id:
             books = books.filter(category_id=self.category_id)

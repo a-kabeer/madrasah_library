@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     Delete Book | {{ branding.display_name }}
@@ -22,7 +23,7 @@
                         <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
                     </div>
 
-                    <h4 class="fw-bold mb-3">Delete Book?</h4>
+                    <h4 class="fw-bold mb-3">{% translate "Delete Book?" %}</h4>
 
                     {% comment %}
                       `blocker` says why the book has to stay — copies still
@@ -50,7 +51,7 @@
                         {% endcomment %}
                         {% if not book.is_archived %}
                             <p class="text-body-secondary mb-4">
-                                Archiving keeps all of that and takes the book out of the active catalogue instead.
+                                {% translate "Archiving keeps all of that and takes the book out of the active catalogue instead." %}
                             </p>
 
                             <a href="{% url 'book_archive' book.id %}" class="btn btn-warning">

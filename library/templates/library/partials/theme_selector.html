@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 Light / Dark / System selector for the topbar.
 
@@ -19,8 +20,8 @@ is no user to save a preference for.
         id="themeToggle"
         data-bs-toggle="dropdown"
         aria-expanded="false"
-        aria-label="Appearance"
-        title="Appearance"
+        aria-label="{% translate 'Appearance' %}"
+        title="{% translate 'Appearance' %}"
     >
 
         <i class="bi bi-circle-half" id="themeIcon" aria-hidden="true"></i>
@@ -30,7 +31,7 @@ is no user to save a preference for.
     <ul
         class="dropdown-menu dropdown-menu-end"
         role="menu"
-        aria-label="Appearance"
+        aria-label="{% translate 'Appearance' %}"
     >
 
         <li>

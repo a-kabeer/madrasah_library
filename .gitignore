@@ -26,3 +26,9 @@ backups/*.sql
 
 # Claude Code local state
 .claude/
+
+# Scratch directory listings
+file_list.txt
+
+# Compiled translation catalogues - built by `manage.py compilemessages`
+locale/*/LC_MESSAGES/*.mo

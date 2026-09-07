@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 {% comment %}
   `layout` rather than base.html by name: an ordinary request renders the
   whole application shell, an HTMX navigation renders only the main-content
@@ -16,7 +17,7 @@
 {% endblock %}
 
 {% block breadcrumbs %}
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
                 <a
@@ -128,25 +129,25 @@
                 <div class="card-body">
                     <dl class="row mb-0">
 
-                        <dt class="col-5 fw-normal text-body-secondary">Phone</dt>
+                        <dt class="col-5 fw-normal text-body-secondary">{% translate "Phone" %}</dt>
                         <dd class="col-7">{{ borrower.phone }}</dd>
 
-                        <dt class="col-5 fw-normal text-body-secondary">Type</dt>
+                        <dt class="col-5 fw-normal text-body-secondary">{% translate "Type" %}</dt>
                         <dd class="col-7">{{ borrower.borrower_type }}</dd>
 
-                        <dt class="col-5 fw-normal text-body-secondary">Registration No</dt>
+                        <dt class="col-5 fw-normal text-body-secondary">{% translate "Registration No" %}</dt>
                         <dd class="col-7">{{ borrower.registration_no|default:"—" }}</dd>
 
-                        <dt class="col-5 fw-normal text-body-secondary">Department</dt>
+                        <dt class="col-5 fw-normal text-body-secondary">{% translate "Department" %}</dt>
                         <dd class="col-7">{{ borrower.department|default:"—" }}</dd>
 
-                        <dt class="col-5 fw-normal text-body-secondary">Address</dt>
+                        <dt class="col-5 fw-normal text-body-secondary">{% translate "Address" %}</dt>
                         <dd class="col-7">{{ borrower.address|default:"—"|linebreaksbr }}</dd>
 
-                        <dt class="col-5 fw-normal text-body-secondary">Registered</dt>
+                        <dt class="col-5 fw-normal text-body-secondary">{% translate "Registered" %}</dt>
                         <dd class="col-7">{{ borrower.created_at|date:"j M Y" }}</dd>
 
-                        <dt class="col-5 fw-normal text-body-secondary">Notes</dt>
+                        <dt class="col-5 fw-normal text-body-secondary">{% translate "Notes" %}</dt>
                         <dd class="col-7 mb-0">
                             {{ borrower.notes|default:"—"|linebreaksbr }}
                         </dd>
@@ -162,7 +163,7 @@
                 <div class="col-6">
                     <div class="card shadow-sm border-0 h-100">
                         <div class="card-body">
-                            <p class="text-body-secondary small mb-1">Out on loan</p>
+                            <p class="text-body-secondary small mb-1">{% translate "Out on loan" %}</p>
                             <p class="fs-3 fw-bold mb-0">{{ active_count }}</p>
                         </div>
                     </div>
@@ -170,7 +171,7 @@
                 <div class="col-6">
                     <div class="card shadow-sm border-0 h-100">
                         <div class="card-body">
-                            <p class="text-body-secondary small mb-1">Overdue</p>
+                            <p class="text-body-secondary small mb-1">{% translate "Overdue" %}</p>
                             <p class="fs-3 fw-bold mb-0 {% if overdue_count %}text-danger{% endif %}">
                                 {{ overdue_count }}
                             </p>
@@ -225,11 +226,11 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-secondary">
                             <tr>
-                                <th>Book</th>
-                                <th>Copy</th>
-                                <th>Issued</th>
-                                <th>Due</th>
-                                <th class="text-end">Actions</th>
+                                <th>{% translate "Book" %}</th>
+                                <th>{% translate "Copy" %}</th>
+                                <th>{% translate "Issued" %}</th>
+                                <th>{% translate "Due" %}</th>
+                                <th class="text-end">{% translate "Actions" %}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -274,7 +275,7 @@
                                     <td class="text-end">
                                         <div class="d-inline-flex gap-1">
                                             <a href="{% url 'loan_detail' loan.id %}"
-                                               class="btn btn-sm btn-outline-secondary" title="Open loan">
+                                               class="btn btn-sm btn-outline-secondary" title="{% translate 'Open loan' %}">
                                                 <i class="bi bi-box-arrow-up-right"></i>
                                             </a>
                                             {% comment %}
@@ -283,7 +284,7 @@
                                               workflow.
                                             {% endcomment %}
                                             <a href="{% url 'loan_return' loan.id %}?next={{ request.get_full_path|urlencode }}"
-                                               class="btn btn-sm btn-outline-success" title="Take back">
+                                               class="btn btn-sm btn-outline-success" title="{% translate 'Take back' %}">
                                                 <i class="bi bi-arrow-return-left"></i>
                                             </a>
                                         </div>
@@ -292,7 +293,7 @@
                             {% empty %}
                                 <tr>
                                     <td colspan="5" class="text-center text-body-secondary py-4">
-                                        Nothing out on loan.
+                                        {% translate "Nothing out on loan." %}
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -321,11 +322,11 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-secondary">
                         <tr>
-                            <th>Book</th>
-                            <th>Asked</th>
-                            <th>Status</th>
-                            <th>Position</th>
-                            <th class="text-end">Actions</th>
+                            <th>{% translate "Book" %}</th>
+                            <th>{% translate "Asked" %}</th>
+                            <th>{% translate "Status" %}</th>
+                            <th>{% translate "Position" %}</th>
+                            <th class="text-end">{% translate "Actions" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -387,7 +388,7 @@
                                                    value="{{ request.get_full_path }}">
                                             <button type="submit"
                                                     class="btn btn-sm btn-outline-danger">
-                                                Cancel
+                                                {% translate "Cancel" %}
                                             </button>
                                         </form>
                                     {% else %}
@@ -403,7 +404,7 @@
             </div>
         {% else %}
             <div class="card-body text-body-secondary">
-                This borrower is not waiting for anything.
+                {% translate "This borrower is not waiting for anything." %}
             </div>
         {% endif %}
     </div>
@@ -426,12 +427,12 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-secondary">
                     <tr>
-                        <th>Book</th>
-                        <th>Copy</th>
-                        <th>Issued</th>
-                        <th>Due</th>
-                        <th>Returned</th>
-                        <th class="text-end">Actions</th>
+                        <th>{% translate "Book" %}</th>
+                        <th>{% translate "Copy" %}</th>
+                        <th>{% translate "Issued" %}</th>
+                        <th>{% translate "Due" %}</th>
+                        <th>{% translate "Returned" %}</th>
+                        <th class="text-end">{% translate "Actions" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -459,7 +460,7 @@
                             </td>
                             <td class="text-end">
                                 <a href="{% url 'loan_detail' loan.id %}"
-                                   class="btn btn-sm btn-outline-secondary" title="Open loan">
+                                   class="btn btn-sm btn-outline-secondary" title="{% translate 'Open loan' %}">
                                     <i class="bi bi-box-arrow-up-right"></i>
                                 </a>
                             </td>
@@ -467,7 +468,7 @@
                     {% empty %}
                         <tr>
                             <td colspan="6" class="text-center text-body-secondary py-4">
-                                This borrower has never taken a book out.
+                                {% translate "This borrower has never taken a book out." %}
                             </td>
                         </tr>
                     {% endfor %}

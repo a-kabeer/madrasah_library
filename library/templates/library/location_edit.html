@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     Edit Location | {{ branding.display_name }}
@@ -45,7 +46,7 @@
 
                         <div class="mb-3">
                             <label for="formDescription" class="form-label fw-semibold">
-                                Description
+                                {% translate "Description" %}
                             </label>
                             <textarea
                                 class="form-control"

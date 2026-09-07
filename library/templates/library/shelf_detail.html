@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     {{ shelf.shelf_code }} | {{ branding.display_name }}
@@ -9,7 +10,7 @@
 {% endblock %}
 
 {% block breadcrumbs %}
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
                 <a href="{% url 'location_list' %}">Locations</a>
@@ -91,9 +92,9 @@
                     class="form-control"
                     name="search"
                     value="{{ search }}"
-                    placeholder="Copy code or book title..."
+                    placeholder="{% translate 'Copy code or book title...' %}"
                     style="max-width: 26rem;"
-                    aria-label="Search copies on this shelf"
+                    aria-label="{% translate 'Search copies on this shelf' %}"
                 >
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-search me-1"></i> Search
@@ -132,11 +133,11 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-secondary">
                     <tr>
-                        <th>Copy Code</th>
-                        <th>Book</th>
-                        <th>Volume</th>
-                        <th>Status</th>
-                        <th class="text-end">Actions</th>
+                        <th>{% translate "Copy Code" %}</th>
+                        <th>{% translate "Book" %}</th>
+                        <th>{% translate "Volume" %}</th>
+                        <th>{% translate "Status" %}</th>
+                        <th class="text-end">{% translate "Actions" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -175,7 +176,7 @@
                                         <a
                                             href="{% url 'book_copy_edit' copy.id %}?from=shelf"
                                             class="btn btn-sm btn-outline-warning"
-                                            title="Edit"
+                                            title="{% translate 'Edit' %}"
                                             aria-label="Edit copy {{ copy.copy_code }}"
                                         >
                                             <i class="bi bi-pencil"></i>
@@ -183,7 +184,7 @@
                                         <a
                                             href="{% url 'book_copy_move' copy.id %}?from=shelf"
                                             class="btn btn-sm btn-outline-primary"
-                                            title="Move"
+                                            title="{% translate 'Move' %}"
                                             aria-label="Move copy {{ copy.copy_code }}"
                                         >
                                             <i class="bi bi-arrow-left-right"></i>
@@ -192,7 +193,7 @@
                                         <a
                                             href="{% url 'book_copy_detail' copy.id %}?from=shelf"
                                             class="btn btn-sm btn-outline-secondary"
-                                            title="Open"
+                                            title="{% translate 'Open' %}"
                                             aria-label="Open copy {{ copy.copy_code }}"
                                         >
                                             <i class="bi bi-box-arrow-up-right"></i>

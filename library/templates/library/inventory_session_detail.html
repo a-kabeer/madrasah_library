@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     {{ session.name }} | {{ branding.display_name }}
@@ -9,7 +10,7 @@
 {% endblock %}
 
 {% block breadcrumbs %}
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
                 <a href="{% url 'inventory_session_list' %}">Stock Check</a>
@@ -70,7 +71,7 @@
         <div class="col-6 col-lg-3">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
-                    <p class="text-body-secondary small mb-1">Expected</p>
+                    <p class="text-body-secondary small mb-1">{% translate "Expected" %}</p>
                     <p class="fs-3 fw-bold mb-0">{{ counts.expected }}</p>
                 </div>
             </div>
@@ -78,7 +79,7 @@
         <div class="col-6 col-lg-3">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
-                    <p class="text-body-secondary small mb-1">Found</p>
+                    <p class="text-body-secondary small mb-1">{% translate "Found" %}</p>
                     <p class="fs-3 fw-bold mb-0 text-success">
                         {{ counts.found }}
                     </p>
@@ -100,7 +101,7 @@
         <div class="col-6 col-lg-3">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
-                    <p class="text-body-secondary small mb-1">Progress</p>
+                    <p class="text-body-secondary small mb-1">{% translate "Progress" %}</p>
                     <p class="fs-3 fw-bold mb-0">{{ counts.progress }}%</p>
                 </div>
             </div>
@@ -108,7 +109,7 @@
     </div>
 
     <div class="progress mb-4" role="progressbar"
-         aria-label="Stock check progress"
+         aria-label="{% translate 'Stock check progress' %}"
          aria-valuenow="{{ counts.progress }}"
          aria-valuemin="0" aria-valuemax="100">
         <div class="progress-bar" style="width: {{ counts.progress }}%"></div>
@@ -142,7 +143,7 @@
                 >
                     {% csrf_token %}
                     <label for="copy_code" class="form-label fw-semibold">
-                        Scan or type a copy code
+                        {% translate "Scan or type a copy code" %}
                     </label>
                     <div class="input-group input-group-lg">
                         <span class="input-group-text">
@@ -153,17 +154,17 @@
                             class="form-control"
                             id="copy_code"
                             name="copy_code"
-                            placeholder="e.g. LIB-000123"
+                            placeholder="{% translate 'e.g. LIB-000123' %}"
                             autocomplete="off"
                             autofocus
                         >
                         <button type="submit" class="btn btn-primary">
-                            Record
+                            {% translate "Record" %}
                         </button>
                     </div>
                     <div class="form-text">
-                        The same code the issue and return desks scan.
-                        Nothing about the copy is changed by counting it.
+                        {% translate "The same code the issue and return desks scan.
+                        Nothing about the copy is changed by counting it." %}
                     </div>
                 </form>
             </div>
@@ -172,7 +173,7 @@
         {% if recent %}
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-body">
-                    <h5 class="mb-0 fw-bold">Just counted</h5>
+                    <h5 class="mb-0 fw-bold">{% translate "Just counted" %}</h5>
                 </div>
                 <ul class="list-group list-group-flush">
                     {% for scan in recent %}
@@ -228,19 +229,19 @@
 
             {% if missing %}
                 <div class="alert alert-info rounded-0 border-0 mb-0 small">
-                    Nothing here has been marked Missing. Several will have
+                    {% translate "Nothing here has been marked Missing. Several will have
                     an ordinary explanation — a copy out on loan cannot be
                     on its shelf. Use the copy's own page if one needs its
-                    status changed.
+                    status changed." %}
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-secondary">
                             <tr>
-                                <th>Copy</th>
-                                <th>Book</th>
-                                <th>Where it should be</th>
-                                <th>Status</th>
+                                <th>{% translate "Copy" %}</th>
+                                <th>{% translate "Book" %}</th>
+                                <th>{% translate "Where it should be" %}</th>
+                                <th>{% translate "Status" %}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -283,7 +284,7 @@
                 </div>
             {% else %}
                 <div class="card-body text-body-secondary">
-                    Everything expected was found.
+                    {% translate "Everything expected was found." %}
                 </div>
             {% endif %}
         </div>
@@ -296,17 +297,17 @@
                     </h5>
                 </div>
                 <div class="alert alert-warning rounded-0 border-0 mb-0 small">
-                    Scanned during this check but belonging elsewhere
-                    according to the record. Nothing has been moved.
+                    {% translate "Scanned during this check but belonging elsewhere
+                    according to the record. Nothing has been moved." %}
                 </div>
                 <div class="table-responsive">
                     <table class="table align-middle mb-0">
                         <thead class="table-secondary">
                             <tr>
-                                <th>Copy</th>
-                                <th>Book</th>
-                                <th>Record says</th>
-                                <th>Scanned</th>
+                                <th>{% translate "Copy" %}</th>
+                                <th>{% translate "Book" %}</th>
+                                <th>{% translate "Record says" %}</th>
+                                <th>{% translate "Scanned" %}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -346,7 +347,7 @@
                     </h5>
                 </div>
                 <div class="card-body text-body-secondary small">
-                    Counted once each, whatever the number of reads.
+                    {% translate "Counted once each, whatever the number of reads." %}
                 </div>
                 <ul class="list-group list-group-flush">
                     {% for scan in duplicates %}

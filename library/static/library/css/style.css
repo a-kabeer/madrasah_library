@@ -17,6 +17,10 @@
   can never drift apart again.
 */
 :root {
+    /* 1 in LTR, -1 in RTL. Used by anything that cannot be expressed with
+       a logical property - which is `translateX` and nothing else. */
+    --dir: 1;
+
     --sidebar-width: 260px;
     --topbar-height: 70px;
 
@@ -205,7 +209,7 @@ body {
     position: fixed;
 
     top: 0;
-    left: 0;
+    inset-inline-start: 0;
 
     width: var(--sidebar-width);
     height: 100vh;
@@ -372,7 +376,7 @@ body {
 ========================= */
 
 .main-area {
-    margin-left: var(--sidebar-width);
+    margin-inline-start: var(--sidebar-width);
 
     min-height: 100vh;
 }
@@ -510,7 +514,7 @@ body {
 .notification-badge-slot {
     position: absolute;
     top: 0.05rem;
-    right: 0.05rem;
+    inset-inline-end: 0.05rem;
 
     line-height: 0;
 }
@@ -646,7 +650,7 @@ a.notification-title:hover {
 /* The tick marks the active choice; it also carries the meaning conveyed to
    assistive tech via aria-checked on the same button. */
 .theme-option-check {
-    margin-left: auto;
+    margin-inline-start: auto;
 
     visibility: hidden;
 }
@@ -1049,7 +1053,7 @@ a.notification-title:hover {
 
 /* Room for the spinner and clear button sitting inside the field. */
 .combobox-input {
-    padding-right: 4.5rem;
+    padding-inline-end: 4.5rem;
 }
 
 
@@ -1057,7 +1061,7 @@ a.notification-title:hover {
     position: absolute;
 
     top: 50%;
-    right: 2.25rem;
+    inset-inline-end: 2.25rem;
 
     transform: translateY(-50%);
 
@@ -1128,7 +1132,7 @@ a.notification-title:hover {
     width: 1.5rem;
     height: 1.5rem;
 
-    margin-right: 0.4rem;
+    margin-inline-end: 0.4rem;
 
     border-radius: 50%;
 
@@ -1153,7 +1157,7 @@ a.notification-title:hover {
    The accent edge is what marks it as something acting on a selection
    rather than another panel that was always there. */
 .copy-move-bar {
-    border-left: 3px solid var(--brand-primary) !important;
+    border-inline-start: 3px solid var(--brand-primary) !important;
 }
 
 
@@ -1174,7 +1178,7 @@ a.notification-title:hover {
     position: absolute;
 
     top: 50%;
-    right: 0.5rem;
+    inset-inline-end: 0.5rem;
 
     transform: translateY(-50%);
 
@@ -1206,8 +1210,8 @@ a.notification-title:hover {
     position: absolute;
 
     top: calc(100% + 0.25rem);
-    left: 0;
-    right: 0;
+    inset-inline-start: 0;
+    inset-inline-end: 0;
 
     z-index: 1050;
 
@@ -1251,7 +1255,7 @@ a.notification-title:hover {
 
     color: var(--bs-body-color);
 
-    text-align: left;
+    text-align: start;
 
     cursor: pointer;
 }
@@ -1366,7 +1370,7 @@ a.notification-title:hover {
     position: fixed;
 
     top: 0;
-    left: 0;
+    inset-inline-start: 0;
 
     /* Below Bootstrap's modal backdrop (1050) and dialog (1055): the book
        name both shows this preview and opens a dialog, and a pointer-
@@ -1445,7 +1449,10 @@ a.notification-title:hover {
 @media (max-width: 991.98px) {
 
     .sidebar {
-        transform: translateX(-100%);
+        /* translateX has no logical form, so the direction is a
+           variable: 1 in LTR, -1 in RTL (set on :root below). The sidebar
+           slides in from whichever side the language starts on. */
+        transform: translateX(calc(-100% * var(--dir)));
     }
 
     .sidebar.show {
@@ -1453,7 +1460,7 @@ a.notification-title:hover {
     }
 
     .main-area {
-        margin-left: 0;
+        margin-inline-start: 0;
     }
 
     .menu-button {
@@ -1764,7 +1771,7 @@ a.notification-title:hover {
 }
 
 .public-tagline {
-    margin-left: auto;
+    margin-inline-start: auto;
 
     color: var(--bs-secondary-color);
     font-size: 0.9rem;
@@ -1975,11 +1982,11 @@ a.notification-title:hover {
     }
 
     .public-result-availability {
-        margin-left: 3.75rem;
+        margin-inline-start: 3.75rem;
     }
 
     .public-tagline {
-        margin-left: 0;
+        margin-inline-start: 0;
         width: 100%;
     }
 
@@ -2167,4 +2174,142 @@ a.notification-title:hover {
     .label-sheet {
         justify-content: start;
     }
+}
+
+
+/* ==========================================================================
+   RIGHT-TO-LEFT (Urdu, Arabic)
+   ==========================================================================
+
+   Almost nothing is needed here, and that is the point: the rules above use
+   logical properties, and the markup uses Bootstrap's logical utilities
+   (`ms-`/`me-`/`ps-`/`pe-`/`text-start`) throughout - 376 of them, and not
+   one of the physical `ml-`/`mr-`/`text-left` kind. Bootstrap's own RTL
+   build handles its components.
+
+   What is left is the two things a stylesheet cannot infer.
+   ========================================================================== */
+
+[dir="rtl"] {
+    --dir: -1;
+}
+
+/* Directional icons point the wrong way when the page is mirrored. Only the
+   ones that mean "forward" or "back" - a chevron in a breadcrumb, an arrow
+   on a pagination control. Icons that mean a *thing* (a book, a shelf) are
+   not mirrored, and neither is anything that would read as a mistake
+   reversed. */
+[dir="rtl"] .bi-arrow-left,
+[dir="rtl"] .bi-arrow-right,
+[dir="rtl"] .bi-arrow-left-short,
+[dir="rtl"] .bi-arrow-right-short,
+[dir="rtl"] .bi-chevron-left,
+[dir="rtl"] .bi-chevron-right,
+[dir="rtl"] .bi-box-arrow-right,
+[dir="rtl"] .bi-box-arrow-in-left,
+[dir="rtl"] .bi-box-arrow-up-right {
+    transform: scaleX(-1);
+}
+
+
+/* ==========================================================================
+   ARABIC-SCRIPT TYPOGRAPHY
+   ==========================================================================
+
+   The font files are not in the repository - they are ~1MB of binary and
+   belong with the deployment, not the source. Drop these four into
+   library/static/library/fonts/ and this section starts working:
+
+       NotoNastaliqUrdu-Regular.woff2   NotoNastaliqUrdu-Bold.woff2
+       NotoNaskhArabic-Regular.woff2    NotoNaskhArabic-Bold.woff2
+
+   Until then Urdu and Arabic render in the system's own Arabic-script face,
+   which is legible on Windows and Android but is not Nastaliq.
+
+   `unicode-range` is what makes this cheap and is the whole trick: the
+   browser downloads these faces only when Arabic-script characters are
+   actually on the page, and Latin text and digits keep the system stack. So
+   a copy code reads `CP-00042` on an Urdu page, and an Arabic book title
+   renders correctly on an English one.
+   ========================================================================== */
+
+@font-face {
+    font-family: "Noto Nastaliq Urdu";
+    src: url("../fonts/NotoNastaliqUrdu-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-display: swap;
+    unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF,
+                   U+FE70-FEFF;
+}
+
+@font-face {
+    font-family: "Noto Nastaliq Urdu";
+    src: url("../fonts/NotoNastaliqUrdu-Bold.woff2") format("woff2");
+    font-weight: 700;
+    font-display: swap;
+    unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF,
+                   U+FE70-FEFF;
+}
+
+@font-face {
+    font-family: "Noto Naskh Arabic";
+    src: url("../fonts/NotoNaskhArabic-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-display: swap;
+    unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF,
+                   U+FE70-FEFF;
+}
+
+@font-face {
+    font-family: "Noto Naskh Arabic";
+    src: url("../fonts/NotoNaskhArabic-Bold.woff2") format("woff2");
+    font-weight: 700;
+    font-display: swap;
+    unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF,
+                   U+FE70-FEFF;
+}
+
+/* Nastaliq is a hanging script: its descenders reach well below the
+   baseline, and at the line-height a Latin face is comfortable at they are
+   simply cut off. This is the single most common way an Urdu page comes out
+   broken, so it is set once, high, on the language itself. */
+[lang="ur"] {
+    font-family: "Noto Nastaliq Urdu", system-ui, sans-serif;
+    line-height: 2.2;
+    /* Nastaliq renders optically smaller than a Latin face at the same
+       size. */
+    font-size: 1.08rem;
+}
+
+[lang="ar"] {
+    font-family: "Noto Naskh Arabic", system-ui, sans-serif;
+    line-height: 1.9;
+}
+
+/* The same descenders need room inside anything with a fixed height. Every
+   one of these clips Urdu text at its Latin height. */
+[lang="ur"] .nav-link-custom,
+[lang="ur"] .btn,
+[lang="ur"] .form-control,
+[lang="ur"] .form-select,
+[lang="ur"] .badge,
+[lang="ur"] .page-link,
+[lang="ur"] .table > :not(caption) > * > * {
+    line-height: 2.1;
+    padding-block: 0.45rem;
+}
+
+[lang="ur"] .nav-section-title {
+    line-height: 1.9;
+}
+
+/* Identifiers stay Latin whatever the page language is: a copy code, an
+   ISBN or a shelf code is read off a spine and typed into a scanner, and
+   Nastaliq numerals would be a different string to the eye. */
+[lang="ur"] .copy-code,
+[lang="ar"] .copy-code,
+[lang="ur"] code,
+[lang="ar"] code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    line-height: 1.5;
 }

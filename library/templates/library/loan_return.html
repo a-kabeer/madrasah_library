@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}Return Book | {{ branding.display_name }}{% endblock %}
 
@@ -8,14 +9,14 @@
 <div class="container-fluid px-0">
 
     <div class="mb-4">
-        <nav aria-label="breadcrumb">
+        <nav aria-label="{% translate 'breadcrumb' %}">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{% url 'circulation_dashboard' %}">Circulation</a></li>
                 <li class="breadcrumb-item"><a href="{% url 'loan_list' %}">Loans</a></li>
-                <li class="breadcrumb-item active">Return</li>
+                <li class="breadcrumb-item active">{% translate "Return" %}</li>
             </ol>
         </nav>
-        <h2 class="fw-bold mb-1">Return Book</h2>
+        <h2 class="fw-bold mb-1">{% translate "Return Book" %}</h2>
     </div>
 
     <div class="row">
@@ -63,23 +64,23 @@
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-body">
                     <div class="row mb-3">
-                        <div class="col-sm-4 text-body-secondary">Copy Code</div>
+                        <div class="col-sm-4 text-body-secondary">{% translate "Copy Code" %}</div>
                         <div class="col-sm-8 fw-semibold">{{ loan.copy.copy_code }}</div>
                     </div>
                     <div class="row mb-3">
-                        <div class="col-sm-4 text-body-secondary">Book</div>
+                        <div class="col-sm-4 text-body-secondary">{% translate "Book" %}</div>
                         <div class="col-sm-8">{{ loan.copy.volume.book.title }}</div>
                     </div>
                     <div class="row mb-3">
-                        <div class="col-sm-4 text-body-secondary">Borrower</div>
+                        <div class="col-sm-4 text-body-secondary">{% translate "Borrower" %}</div>
                         <div class="col-sm-8">{{ loan.borrower.name }}</div>
                     </div>
                     <div class="row mb-3">
-                        <div class="col-sm-4 text-body-secondary">Issue Date</div>
+                        <div class="col-sm-4 text-body-secondary">{% translate "Issue Date" %}</div>
                         <div class="col-sm-8">{{ loan.issue_date }}</div>
                     </div>
                     <div class="row mb-3">
-                        <div class="col-sm-4 text-body-secondary">Due Date</div>
+                        <div class="col-sm-4 text-body-secondary">{% translate "Due Date" %}</div>
                         <div class="col-sm-8">
                             {{ loan.due_date }}
                             {% if loan.days_overdue > 0 %}
@@ -92,14 +93,14 @@
 
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0">Confirm Return</h5>
+                    <h5 class="mb-0">{% translate "Confirm Return" %}</h5>
                 </div>
                 <div class="card-body">
                     <form method="post">
                         {% csrf_token %}
                         <input type="hidden" name="next" value="{{ next_url }}">
                         <div class="mb-3">
-                            <label for="return_date" class="form-label fw-semibold">Return Date</label>
+                            <label for="return_date" class="form-label fw-semibold">{% translate "Return Date" %}</label>
                             <input type="date" class="form-control" id="return_date" name="return_date" value="{% now 'Y-m-d' %}" required>
                         </div>
                         {% comment %}
@@ -107,17 +108,17 @@
                           follows for "Issued By".
                         {% endcomment %}
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Returned To</label>
+                            <label class="form-label fw-semibold">{% translate "Returned To" %}</label>
                             <p class="form-control-plaintext mb-0">
                                 {{ request.user.full_name|default:request.user.username }}
                             </p>
                         </div>
                         <div class="mb-3">
-                            <label for="notes" class="form-label fw-semibold">Notes</label>
+                            <label for="notes" class="form-label fw-semibold">{% translate "Notes" %}</label>
                             <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
                         </div>
                         <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-success">Confirm Return</button>
+                            <button type="submit" class="btn btn-success">{% translate "Confirm Return" %}</button>
                             <a href="{% url 'loan_list' %}" class="btn btn-outline-secondary">Cancel</a>
                         </div>
                     </form>

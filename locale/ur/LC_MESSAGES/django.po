@@ -1,0 +1,2532 @@
+# Urdu translation for the Madrasah Library.
+#
+# Every msgstr below is deliberately empty: an empty one means
+# gettext hands back the English msgid, so the application runs
+# unchanged until a translator fills these in. Fill them in, run
+#
+#     python manage.py compilemessages
+#
+# and the pages come out in Urdu.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-09-07 10:36+0500\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+#: .\library\models.py:330
+msgid "Available"
+msgstr ""
+
+#: .\library\models.py:331
+#: .\library\templates\library\book_copy_detail.html:209
+#: .\library\templates\library\book_copy_detail.html:259
+#: .\library\templates\library\book_detail.html:645
+#: .\library\templates\library\borrower_detail.html:235
+#: .\library\templates\library\borrower_detail.html:442
+#: .\library\templates\library\partials\copy_detail_modal.html:104
+#: .\library\templates\library\report_borrowers.html:84
+#: .\library\templates\library\report_circulation.html:97
+#: .\library\templates\library\report_overdue.html:72
+msgid "Issued"
+msgstr ""
+
+#: .\library\models.py:332
+msgid "Lost"
+msgstr ""
+
+#: .\library\models.py:333
+msgid "Damaged"
+msgstr ""
+
+#: .\library\models.py:334
+msgid "Missing"
+msgstr ""
+
+#: .\library\models.py:335
+msgid "Transferred"
+msgstr ""
+
+#: .\library\models.py:369
+msgid "Student"
+msgstr ""
+
+#: .\library\models.py:370
+msgid "Teacher"
+msgstr ""
+
+#: .\library\models.py:371
+msgid "Staff"
+msgstr ""
+
+#: .\library\models.py:372
+msgid "Other"
+msgstr ""
+
+#: .\library\models.py:461
+msgid "Super Admin"
+msgstr ""
+
+#: .\library\models.py:462 .\library\templates\library\user_add.html:45
+#: .\library\templates\library\user_edit.html:89
+msgid "Admin"
+msgstr ""
+
+#: .\library\models.py:463 .\library\templates\library\user_add.html:46
+#: .\library\templates\library\user_edit.html:98
+msgid "Librarian"
+msgstr ""
+
+#: .\library\models.py:464 .\library\templates\library\user_add.html:47
+#: .\library\templates\library\user_edit.html:107
+msgid "Assistant"
+msgstr ""
+
+#: .\library\models.py:484
+msgid "Light"
+msgstr ""
+
+#: .\library\models.py:485
+msgid "Dark"
+msgstr ""
+
+#: .\library\models.py:486
+msgid "System"
+msgstr ""
+
+#: .\library\models.py:964
+msgid "Entire library"
+msgstr ""
+
+#: .\library\models.py:965
+msgid "One location"
+msgstr ""
+
+#: .\library\models.py:966
+msgid "One shelf"
+msgstr ""
+
+#: .\library\models.py:974
+msgid "In Progress"
+msgstr ""
+
+#: .\library\models.py:975 .\library\templates\library\analytics.html:601
+msgid "Completed"
+msgstr ""
+
+#: .\library\models.py:1070
+#: .\library\templates\library\inventory_session_detail.html:83
+#: .\library\templates\library\inventory_session_list.html:42
+msgid "Found"
+msgstr ""
+
+#: .\library\models.py:1071
+msgid "Already scanned"
+msgstr ""
+
+#: .\library\models.py:1072
+msgid "Outside this session"
+msgstr ""
+
+#: .\library\models.py:1073
+msgid "Unknown code"
+msgstr ""
+
+#: .\library\models.py:1142
+msgid "Waiting"
+msgstr ""
+
+#: .\library\models.py:1143
+msgid "Fulfilled"
+msgstr ""
+
+#: .\library\models.py:1144
+msgid "Cancelled"
+msgstr ""
+
+#: .\library\models.py:1236
+msgid "Reserved book available"
+msgstr ""
+
+#: .\library\models.py:1237
+msgid "Stock check found copies missing"
+msgstr ""
+
+#: .\library\models.py:1238
+msgid "Book suggested for acquisition"
+msgstr ""
+
+#: .\library\models.py:1346
+msgid "Pending"
+msgstr ""
+
+#: .\library\models.py:1347
+msgid "Approved"
+msgstr ""
+
+#: .\library\models.py:1348
+msgid "Rejected"
+msgstr ""
+
+#: .\library\models.py:1349
+#: .\library\templates\library\book_copy_detail.html:141
+#: .\library\templates\library\partials\copy_detail_modal.html:77
+msgid "Acquired"
+msgstr ""
+
+#: .\library\templates\library\activity_log_list.html:21
+msgid "Activity Logs"
+msgstr ""
+
+#: .\library\templates\library\activity_log_list.html:25
+msgid "Search:"
+msgstr ""
+
+#: .\library\templates\library\activity_log_list.html:31
+msgid "Search activity logs..."
+msgstr ""
+
+#: .\library\templates\library\activity_log_list.html:36
+msgid "User:"
+msgstr ""
+
+#: .\library\templates\library\activity_log_list.html:41
+msgid "All Users"
+msgstr ""
+
+#: .\library\templates\library\activity_log_list.html:61
+msgid "Action:"
+msgstr ""
+
+#: .\library\templates\library\activity_log_list.html:66
+msgid "All Actions"
+msgstr ""
+
+#: .\library\templates\library\activity_log_list.html:86
+msgid "Entity Type:"
+msgstr ""
+
+#: .\library\templates\library\activity_log_list.html:91
+msgid "All Entity Types"
+msgstr ""
+
+#: .\library\templates\library\activity_log_list.html:111
+msgid "Date:"
+msgstr ""
+
+#: .\library\templates\library\activity_log_list.html:122
+msgid "Search / Filter"
+msgstr ""
+
+#: .\library\templates\library\activity_log_list.html:173
+msgid "No activity logs found."
+msgstr ""
+
+#: .\library\templates\library\analytics.html:17
+msgid "Library Insights"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:37
+#: .\library\templates\library\analytics.html:201
+msgid "Period"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:50
+#: .\library\templates\library\analytics.html:251
+#: .\library\templates\library\analytics.html:306
+#: .\library\templates\library\analytics.html:353
+#: .\library\templates\library\analytics.html:452
+#: .\library\templates\library\book_detail.html:222
+#: .\library\templates\library\partials\book_detail_modal.html:48
+#: .\library\templates\public\book_detail.html:77
+#: .\library\templates\public\book_list.html:41
+msgid "Category"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:53
+#: .\library\templates\public\book_list.html:44
+msgid "All categories"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:63
+msgid "Apply"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:91
+#: .\library\templates\library\analytics.html:202
+#: .\library\templates\library\analytics.html:252
+#: .\library\templates\library\analytics.html:307
+#: .\library\templates\library\analytics.html:403
+#: .\library\templates\library\analytics.html:454
+#: .\library\templates\library\borrower_list.html:99
+#: .\library\templates\library\loan_list.html:20
+msgid "Loans"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:135
+msgid "Borrowing"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:152
+msgid "Collection"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:231
+msgid "No loans in this period."
+msgstr ""
+
+#: .\library\templates\library\analytics.html:249
+#: .\library\templates\library\analytics.html:305
+#: .\library\templates\library\analytics.html:352
+#: .\library\templates\library\book_content_detail.html:78
+#: .\library\templates\library\book_copy_delete.html:46
+#: .\library\templates\library\book_copy_detail.html:92
+#: .\library\templates\library\book_copy_move.html:36
+#: .\library\templates\library\book_import.html:264
+#: .\library\templates\library\book_import.html:410
+#: .\library\templates\library\book_volume_list.html:66
+#: .\library\templates\library\book_volume_list.html:115
+#: .\library\templates\library\borrower_detail.html:233
+#: .\library\templates\library\borrower_detail.html:333
+#: .\library\templates\library\borrower_detail.html:440
+#: .\library\templates\library\inventory_session_detail.html:245
+#: .\library\templates\library\inventory_session_detail.html:311
+#: .\library\templates\library\loan_add.html:174
+#: .\library\templates\library\loan_detail.html:35
+#: .\library\templates\library\loan_list.html:84
+#: .\library\templates\library\loan_renew.html:44
+#: .\library\templates\library\loan_return.html:72
+#: .\library\templates\library\loan_return_lookup.html:120
+#: .\library\templates\library\loan_return_lookup.html:179
+#: .\library\templates\library\partials\book_add_modal.html:49
+#: .\library\templates\library\partials\copy_detail_modal.html:31
+#: .\library\templates\library\report_circulation.html:96
+#: .\library\templates\library\report_inventory.html:109
+#: .\library\templates\library\report_overdue.html:71
+#: .\library\templates\library\report_popular.html:72
+#: .\library\templates\library\reservation_list.html:50
+#: .\library\templates\library\shelf_detail.html:139
+msgid "Book"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:250
+#: .\library\templates\library\book_detail.html:218
+#: .\library\templates\library\partials\book_detail_modal.html:45
+#: .\library\templates\library\report_popular.html:72
+#: .\library\templates\library\suggestion_add.html:101
+#: .\library\templates\library\suggestion_detail.html:45
+#: .\library\templates\library\suggestion_list.html:93
+#: .\library\templates\public\book_detail.html:55
+msgid "Author"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:253
+#: .\library\templates\library\analytics.html:404
+#: .\library\templates\library\report_borrowers.html:85
+msgid "Out now"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:281
+msgid "Nothing was borrowed in this period."
+msgstr ""
+
+#: .\library\templates\library\analytics.html:331
+msgid "No books with copies to rank."
+msgstr ""
+
+#: .\library\templates\library\analytics.html:354
+#: .\library\templates\library\book_import.html:267
+#: .\library\templates\library\location_detail.html:114
+#: .\library\templates\library\location_list.html:96
+#: .\library\templates\library\partials\book_add_modal.html:51
+#: .\library\templates\library\partials\book_list_results.html:179
+#: .\library\templates\library\shelf_list.html:116
+msgid "Copies"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:379
+msgid "Every book with a copy has been borrowed at least once."
+msgstr ""
+
+#: .\library\templates\library\analytics.html:401
+#: .\library\templates\library\book_copy_detail.html:199
+#: .\library\templates\library\book_copy_detail.html:258
+#: .\library\templates\library\book_detail.html:643
+#: .\library\templates\library\book_detail.html:786
+#: .\library\templates\library\borrower_list.html:165
+#: .\library\templates\library\loan_add.html:249
+#: .\library\templates\library\loan_list.html:55
+#: .\library\templates\library\loan_list.html:85
+#: .\library\templates\library\loan_renew.html:49
+#: .\library\templates\library\loan_return.html:76
+#: .\library\templates\library\loan_return_lookup.html:121
+#: .\library\templates\library\loan_return_lookup.html:189
+#: .\library\templates\library\partials\copy_detail_modal.html:94
+#: .\library\templates\library\report_borrowers.html:83
+#: .\library\templates\library\report_circulation.html:96
+#: .\library\templates\library\report_overdue.html:70
+#: .\library\templates\library\reservation_list.html:49
+msgid "Borrower"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:402
+msgid "Registration"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:405
+msgid "Overdue now"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:435
+#: .\library\templates\library\report_borrowers.html:108
+msgid "Nobody borrowed anything in this period."
+msgstr ""
+
+#: .\library\templates\library\analytics.html:444
+msgid "Category usage"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:453
+#: .\library\templates\library\book_list.html:19
+msgid "Books"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:484
+msgid "No category saw a loan in this period."
+msgstr ""
+
+#: .\library\templates\library\analytics.html:542
+msgid "Collection attention"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:599
+msgid "Stock check"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:600
+msgid "Scope"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:602
+msgid "Not found"
+msgstr ""
+
+#: .\library\templates\library\analytics.html:642
+msgid "No stock check has been completed yet."
+msgstr ""
+
+#: .\library\templates\library\base.html:226
+msgid "Main navigation"
+msgstr ""
+
+#: .\library\templates\library\base.html:279
+msgid "Primary"
+msgstr ""
+
+#: .\library\templates\library\base.html:317
+msgid "CIRCULATION"
+msgstr ""
+
+#: .\library\templates\library\base.html:422
+msgid "CATALOG"
+msgstr ""
+
+#: .\library\templates\library\base.html:538
+msgid "PEOPLE"
+msgstr ""
+
+#: .\library\templates\library\base.html:563
+msgid "INVENTORY"
+msgstr ""
+
+#: .\library\templates\library\base.html:646
+msgid "ADMINISTRATION"
+msgstr ""
+
+#: .\library\templates\library\base.html:780
+msgid "Toggle navigation menu"
+msgstr ""
+
+#: .\library\templates\library\base.html:1016
+msgid "Modal title"
+msgstr ""
+
+#: .\library\templates\library\base.html:1023
+#: .\library\templates\library\base.html:1041
+#: .\library\templates\library\base.html:1083
+#: .\library\templates\library\partials\barcode_scanner.html:37
+#: .\library\templates\library\partials\book_delete_modal.html:54
+#: .\library\templates\library\partials\lookup_delete_modal.html:44
+#: .\library\templates\library\partials\page_messages.html:25
+msgid "Close"
+msgstr ""
+
+#: .\library\templates\library\base.html:1076
+msgid "Loading&hellip;"
+msgstr ""
+
+#: .\library\templates\library\book_archive.html:34
+msgid "Already archived"
+msgstr ""
+
+#: .\library\templates\library\book_archive.html:58
+msgid "This book cannot be archived yet"
+msgstr ""
+
+#: .\library\templates\library\book_archive.html:77
+msgid "Archive this book?"
+msgstr ""
+
+#: .\library\templates\library\book_content_add.html:63
+#: .\library\templates\library\book_content_detail.html:86
+#: .\library\templates\library\book_content_list.html:61
+#: .\library\templates\library\book_content_list.html:126
+#: .\library\templates\library\book_copy_add.html:65
+#: .\library\templates\library\book_copy_delete.html:52
+#: .\library\templates\library\book_copy_detail.html:111
+#: .\library\templates\library\book_detail.html:499
+#: .\library\templates\library\book_volume_list.html:116
+#: .\library\templates\library\loan_detail.html:39
+#: .\library\templates\library\partials\copy_detail_modal.html:50
+#: .\library\templates\library\shelf_detail.html:140
+msgid "Volume"
+msgstr ""
+
+#: .\library\templates\library\book_content_add.html:79
+#: .\library\templates\library\book_copy_add.html:67
+msgid "Select Volume"
+msgstr ""
+
+#: .\library\templates\library\book_content_add.html:96
+#: .\library\templates\library\book_content_detail.html:95
+#: .\library\templates\library\book_content_edit.html:69
+#: .\library\templates\library\book_content_list.html:128
+msgid "Parent"
+msgstr ""
+
+#: .\library\templates\library\book_content_add.html:99
+#: .\library\templates\library\book_content_edit.html:72
+msgid "No Parent"
+msgstr ""
+
+#: .\library\templates\library\book_content_add.html:127
+#: .\library\templates\library\book_content_detail.html:104
+#: .\library\templates\library\book_content_edit.html:100
+#: .\library\templates\library\book_content_list.html:78
+msgid "Content Type"
+msgstr ""
+
+#: .\library\templates\library\book_content_add.html:140
+#: .\library\templates\library\book_content_detail.html:107
+#: .\library\templates\library\book_content_edit.html:113
+msgid "Page Number"
+msgstr ""
+
+#: .\library\templates\library\book_content_add.html:153
+#: .\library\templates\library\book_content_detail.html:110
+#: .\library\templates\library\book_content_edit.html:126
+msgid "Sort Order"
+msgstr ""
+
+#: .\library\templates\library\book_content_delete.html:38
+msgid "Delete Book Content?"
+msgstr ""
+
+#: .\library\templates\library\book_content_detail.html:13
+#: .\library\templates\library\book_content_list.html:13
+#: .\library\templates\library\book_copy_labels.html:13
+#: .\library\templates\library\book_detail.html:13
+#: .\library\templates\library\book_volume_list.html:13
+#: .\library\templates\library\borrower_detail.html:20
+#: .\library\templates\library\inventory_session_detail.html:13
+#: .\library\templates\library\inventory_session_start.html:13
+#: .\library\templates\library\location_detail.html:20
+#: .\library\templates\library\report_borrowers.html:13
+#: .\library\templates\library\report_circulation.html:13
+#: .\library\templates\library\report_inventory.html:13
+#: .\library\templates\library\report_overdue.html:13
+#: .\library\templates\library\report_popular.html:13
+#: .\library\templates\library\shelf_detail.html:13
+#: .\library\templates\library\suggestion_add.html:13
+#: .\library\templates\library\suggestion_detail.html:13
+msgid "Breadcrumb"
+msgstr ""
+
+#: .\library\templates\library\book_content_detail.html:75
+#: .\library\templates\library\book_volume_list.html:117
+#: .\library\templates\library\suggestion_list.html:92
+msgid "Title"
+msgstr ""
+
+#: .\library\templates\library\book_content_list.html:19
+msgid "Contents"
+msgstr ""
+
+#: .\library\templates\library\book_content_list.html:31
+msgid "Book Contents"
+msgstr ""
+
+#: .\library\templates\library\book_content_list.html:33
+msgid "Chapters, sections and other entries inside a volume."
+msgstr ""
+
+#: .\library\templates\library\book_content_list.html:47
+#: .\library\templates\library\book_copy_list.html:60
+#: .\library\templates\library\book_volume_list.html:52
+#: .\library\templates\library\borrower_list.html:47
+#: .\library\templates\library\loan_list.html:41
+#: .\library\templates\library\partials\book_list_browser.html:106
+#: .\library\templates\library\shelf_list.html:43
+#: .\library\templates\library\user_list.html:51
+msgid "Search"
+msgstr ""
+
+#: .\library\templates\library\book_content_list.html:55
+msgid "Search contents..."
+msgstr ""
+
+#: .\library\templates\library\book_content_list.html:64
+msgid "All Volumes"
+msgstr ""
+
+#: .\library\templates\library\book_content_list.html:81
+msgid "All Types"
+msgstr ""
+
+#: .\library\templates\library\book_content_list.html:125
+#: .\library\templates\library\book_volume_list.html:114
+#: .\library\templates\library\loan_list.html:82
+msgid "ID"
+msgstr ""
+
+#: .\library\templates\library\book_content_list.html:127
+msgid "Content"
+msgstr ""
+
+#: .\library\templates\library\book_content_list.html:129
+#: .\library\templates\library\book_copy_detail.html:262
+#: .\library\templates\library\book_detail.html:648
+#: .\library\templates\library\book_detail.html:788
+#: .\library\templates\library\book_volume_detail.html:73
+#: .\library\templates\library\book_volume_list.html:118
+#: .\library\templates\library\borrower_detail.html:237
+#: .\library\templates\library\borrower_detail.html:337
+#: .\library\templates\library\borrower_detail.html:445
+#: .\library\templates\library\borrower_list.html:170
+#: .\library\templates\library\loan_detail.html:202
+#: .\library\templates\library\loan_list.html:89
+#: .\library\templates\library\location_detail.html:115
+#: .\library\templates\library\location_list.html:97
+#: .\library\templates\library\partials\book_list_results.html:181
+#: .\library\templates\library\partials\copy_list_results.html:173
+#: .\library\templates\library\partials\lookup_list.html:205
+#: .\library\templates\library\reservation_list.html:53
+#: .\library\templates\library\shelf_detail.html:142
+#: .\library\templates\library\shelf_list.html:117
+msgid "Actions"
+msgstr ""
+
+#: .\library\templates\library\book_content_list.html:158
+#: .\library\templates\library\book_volume_list.html:138
+msgid "View Details"
+msgstr ""
+
+#: .\library\templates\library\book_content_list.html:165
+#: .\library\templates\library\book_volume_detail.html:115
+#: .\library\templates\library\book_volume_detail.html:166
+#: .\library\templates\library\book_volume_list.html:145
+#: .\library\templates\library\borrower_list.html:251
+#: .\library\templates\library\location_detail.html:161
+#: .\library\templates\library\location_list.html:149
+#: .\library\templates\library\partials\book_list_results.html:274
+#: .\library\templates\library\partials\copy_list_results.html:260
+#: .\library\templates\library\partials\lookup_list.html:277
+#: .\library\templates\library\shelf_detail.html:182
+#: .\library\templates\library\shelf_list.html:158
+msgid "Edit"
+msgstr ""
+
+#: .\library\templates\library\book_content_list.html:172
+#: .\library\templates\library\book_volume_detail.html:169
+#: .\library\templates\library\book_volume_list.html:152
+#: .\library\templates\library\borrower_list.html:267
+#: .\library\templates\library\location_detail.html:169
+#: .\library\templates\library\location_list.html:157
+#: .\library\templates\library\partials\book_list_results.html:288
+#: .\library\templates\library\partials\lookup_list.html:289
+#: .\library\templates\library\shelf_list.html:166
+msgid "Delete"
+msgstr ""
+
+#: .\library\templates\library\book_content_list.html:182
+msgid "No contents found."
+msgstr ""
+
+#: .\library\templates\library\book_copy_add.html:75
+msgid ""
+"The volume cannot be changed after the copy is created. If filed "
+"incorrectly, the copy must be deleted and re-created."
+msgstr ""
+
+#: .\library\templates\library\book_copy_add.html:85
+msgid "Home Location / Shelf"
+msgstr ""
+
+#: .\library\templates\library\book_copy_add.html:87
+msgid "Select Shelf"
+msgstr ""
+
+#: .\library\templates\library\book_copy_add.html:94
+msgid "Where this copy is normally kept when not on loan."
+msgstr ""
+
+#: .\library\templates\library\book_copy_add.html:99
+#: .\library\templates\library\book_copy_delete.html:42
+#: .\library\templates\library\book_copy_edit.html:70
+#: .\library\templates\library\book_detail.html:498
+#: .\library\templates\library\book_volume_detail.html:69
+#: .\library\templates\library\loan_add.html:173
+#: .\library\templates\library\loan_renew.html:39
+#: .\library\templates\library\loan_return.html:68
+#: .\library\templates\library\loan_return_lookup.html:174
+#: .\library\templates\library\shelf_detail.html:138
+msgid "Copy Code"
+msgstr ""
+
+#: .\library\templates\library\book_copy_add.html:103
+msgid "Printed on the physical copy. This cannot be changed after creation."
+msgstr ""
+
+#: .\library\templates\library\book_copy_add.html:109
+#: .\library\templates\library\book_copy_edit.html:131
+#: .\library\templates\library\book_copy_list.html:109
+#: .\library\templates\library\book_detail.html:501
+#: .\library\templates\library\book_volume_detail.html:72
+#: .\library\templates\library\borrower_detail.html:335
+#: .\library\templates\library\borrower_list.html:84
+#: .\library\templates\library\borrower_list.html:169
+#: .\library\templates\library\inventory_session_detail.html:247
+#: .\library\templates\library\inventory_session_list.html:44
+#: .\library\templates\library\loan_detail.html:89
+#: .\library\templates\library\loan_list.html:45
+#: .\library\templates\library\loan_list.html:88
+#: .\library\templates\library\report_inventory.html:64
+#: .\library\templates\library\report_inventory.html:110
+#: .\library\templates\library\reservation_list.html:52
+#: .\library\templates\library\shelf_detail.html:141
+#: .\library\templates\library\suggestion_list.html:96
+msgid "Status"
+msgstr ""
+
+#: .\library\templates\library\book_copy_add.html:121
+#: .\library\templates\library\book_copy_edit.html:167
+msgid "Acquisition Date"
+msgstr ""
+
+#: .\library\templates\library\book_copy_add.html:128
+#: .\library\templates\library\book_copy_detail.html:146
+#: .\library\templates\library\book_copy_edit.html:180
+#: .\library\templates\library\book_import.html:116
+#: .\library\templates\library\book_import.html:268
+#: .\library\templates\library\borrower_add.html:136
+#: .\library\templates\library\borrower_detail.html:152
+#: .\library\templates\library\borrower_edit.html:136
+#: .\library\templates\library\loan_add.html:358
+#: .\library\templates\library\loan_detail.html:101
+#: .\library\templates\library\loan_return.html:119
+#: .\library\templates\library\partials\copy_detail_modal.html:82
+msgid "Notes"
+msgstr ""
+
+#: .\library\templates\library\book_copy_delete.html:58
+msgid "Current Status"
+msgstr ""
+
+#: .\library\templates\library\book_copy_detail.html:89
+#: .\library\templates\library\partials\book_inventory_fields.html:296
+#: .\library\templates\library\partials\book_inventory_fields.html:297
+#: .\library\templates\library\partials\copy_detail_modal.html:28
+msgid "Copy code"
+msgstr ""
+
+#: .\library\templates\library\book_copy_detail.html:119
+#: .\library\templates\library\book_copy_edit.html:90
+#: .\library\templates\library\book_copy_list.html:74
+#: .\library\templates\library\book_copy_list.html:179
+#: .\library\templates\library\book_copy_move.html:63
+#: .\library\templates\library\book_volume_detail.html:70
+#: .\library\templates\library\inventory_session_start.html:101
+#: .\library\templates\library\location_list.html:94
+#: .\library\templates\library\partials\book_add_modal.html:52
+#: .\library\templates\library\partials\book_inventory_fields.html:318
+#: .\library\templates\library\partials\copy_detail_modal.html:58
+#: .\library\templates\library\report_circulation.html:52
+#: .\library\templates\library\report_inventory.html:42
+#: .\library\templates\library\report_inventory.html:109
+#: .\library\templates\library\report_overdue.html:42
+#: .\library\templates\library\shelf_list.html:57
+#: .\library\templates\library\shelf_list.html:115
+msgid "Location"
+msgstr ""
+
+#: .\library\templates\library\book_copy_detail.html:130
+#: .\library\templates\library\book_copy_edit.html:116
+#: .\library\templates\library\book_copy_list.html:100
+#: .\library\templates\library\book_copy_list.html:198
+#: .\library\templates\library\book_copy_move.html:89
+#: .\library\templates\library\book_volume_detail.html:71
+#: .\library\templates\library\inventory_session_start.html:123
+#: .\library\templates\library\location_detail.html:113
+#: .\library\templates\library\partials\book_inventory_fields.html:389
+#: .\library\templates\library\partials\copy_detail_modal.html:67
+#: .\library\templates\library\report_inventory.html:53
+#: .\library\templates\library\report_inventory.html:110
+#: .\library\templates\library\shelf_list.html:114
+msgid "Shelf"
+msgstr ""
+
+#: .\library\templates\library\book_copy_detail.html:163
+msgid "Last stock check"
+msgstr ""
+
+#: .\library\templates\library\book_copy_detail.html:212
+#: .\library\templates\library\book_copy_detail.html:260
+#: .\library\templates\library\book_detail.html:646
+#: .\library\templates\library\borrower_detail.html:236
+#: .\library\templates\library\borrower_detail.html:443
+#: .\library\templates\library\loan_return_lookup.html:122
+#: .\library\templates\library\partials\copy_detail_modal.html:107
+#: .\library\templates\library\report_circulation.html:97
+#: .\library\templates\library\report_overdue.html:72
+msgid "Due"
+msgstr ""
+
+#: .\library\templates\library\book_copy_detail.html:261
+#: .\library\templates\library\book_detail.html:647
+#: .\library\templates\library\borrower_detail.html:444
+#: .\library\templates\library\loan_list.html:51
+#: .\library\templates\library\report_borrowers.html:84
+#: .\library\templates\library\report_circulation.html:97
+msgid "Returned"
+msgstr ""
+
+#: .\library\templates\library\book_copy_detail.html:287
+msgid "This copy has never been issued."
+msgstr ""
+
+#: .\library\templates\library\book_copy_detail.html:384
+msgid "Nothing has happened to this copy yet."
+msgstr ""
+
+#: .\library\templates\library\book_copy_labels.html:18
+msgid "Labels"
+msgstr ""
+
+#: .\library\templates\library\book_copy_labels.html:37
+msgid "Copy Labels"
+msgstr ""
+
+#: .\library\templates\library\book_copy_labels.html:89
+msgid "Nothing to print."
+msgstr ""
+
+#: .\library\templates\library\book_copy_list.html:19
+msgid "Book Copies"
+msgstr ""
+
+#: .\library\templates\library\book_copy_list.html:21
+msgid "Every physical copy, where it is kept and what it is doing."
+msgstr ""
+
+#: .\library\templates\library\book_copy_list.html:68
+#: .\library\templates\library\shelf_detail.html:96
+msgid "Copy code or book title..."
+msgstr ""
+
+#: .\library\templates\library\book_copy_list.html:112
+msgid "Any status"
+msgstr ""
+
+#: .\library\templates\library\book_copy_list.html:241
+msgid "Clear selection"
+msgstr ""
+
+#: .\library\templates\library\book_copy_move.html:46
+msgid "Currently on"
+msgstr ""
+
+#: .\library\templates\library\book_copy_withdraw.html:34
+msgid "Already out of circulation"
+msgstr ""
+
+#: .\library\templates\library\book_copy_withdraw.html:58
+msgid "This copy cannot be withdrawn yet"
+msgstr ""
+
+#: .\library\templates\library\book_copy_withdraw.html:77
+msgid "Withdraw this copy?"
+msgstr ""
+
+#: .\library\templates\library\book_delete.html:26
+msgid "Delete Book?"
+msgstr ""
+
+#: .\library\templates\library\book_delete.html:56
+#: .\library\templates\library\partials\book_delete_modal.html:36
+msgid ""
+"Archiving keeps all of that and takes the book out of the active catalogue "
+"instead."
+msgstr ""
+
+#: .\library\templates\library\book_detail.html:232
+#: .\library\templates\library\partials\book_detail_modal.html:57
+#: .\library\templates\library\partials\book_list_browser.html:370
+#: .\library\templates\library\suggestion_add.html:128
+#: .\library\templates\library\suggestion_detail.html:48
+#: .\library\templates\public\book_detail.html:68
+msgid "Publisher"
+msgstr ""
+
+#: .\library\templates\library\book_detail.html:267
+#: .\library\templates\library\dashboard.html:234
+msgid "Total Copies"
+msgstr ""
+
+#: .\library\templates\library\book_detail.html:288
+msgid "No physical copies have been added for this book yet."
+msgstr ""
+
+#: .\library\templates\library\book_detail.html:377
+msgid "No physical copies yet."
+msgstr ""
+
+#: .\library\templates\library\book_detail.html:432
+msgid "No volumes have been added yet."
+msgstr ""
+
+#: .\library\templates\library\book_detail.html:500
+msgid "Location / Shelf"
+msgstr ""
+
+#: .\library\templates\library\book_detail.html:547
+msgid "No copies have been added for this book yet."
+msgstr ""
+
+#: .\library\templates\library\book_detail.html:644
+#: .\library\templates\library\borrower_detail.html:234
+#: .\library\templates\library\borrower_detail.html:441
+#: .\library\templates\library\inventory_session_detail.html:244
+#: .\library\templates\library\inventory_session_detail.html:310
+#: .\library\templates\library\loan_list.html:83
+#: .\library\templates\library\loan_return_lookup.html:119
+#: .\library\templates\library\partials\copy_detail_modal.html:24
+#: .\library\templates\library\report_circulation.html:96
+#: .\library\templates\library\report_inventory.html:109
+#: .\library\templates\library\report_overdue.html:71
+msgid "Copy"
+msgstr ""
+
+#: .\library\templates\library\book_detail.html:684
+#: .\library\templates\library\borrower_detail.html:284
+#: .\library\templates\library\borrower_detail.html:473
+msgid "Open loan"
+msgstr ""
+
+#: .\library\templates\library\book_detail.html:692
+msgid "This book has never been borrowed."
+msgstr ""
+
+#: .\library\templates\library\book_detail.html:779
+msgid "Waiting, in order"
+msgstr ""
+
+#: .\library\templates\library\book_detail.html:787
+#: .\library\templates\library\borrower_detail.html:334
+#: .\library\templates\library\reservation_list.html:51
+#: .\library\templates\library\suggestion_detail.html:74
+#: .\library\templates\library\suggestion_list.html:95
+msgid "Asked"
+msgstr ""
+
+#: .\library\templates\library\book_detail.html:822
+#: .\library\templates\library\book_import.html:228
+#: .\library\templates\library\book_import.html:367
+#: .\library\templates\library\borrower_detail.html:400
+#: .\library\templates\library\partials\book_add_modal.html:96
+#: .\library\templates\library\partials\book_delete_modal.html:99
+#: .\library\templates\library\partials\book_edit_modal.html:62
+#: .\library\templates\library\partials\lookup_delete_modal.html:85
+#: .\library\templates\library\partials\lookup_form_modal.html:105
+#: .\library\templates\library\reservation_list.html:107
+msgid "Cancel"
+msgstr ""
+
+#: .\library\templates\library\book_detail.html:834
+msgid "Nobody is waiting for this book."
+msgstr ""
+
+#: .\library\templates\library\book_import.html:21
+msgid "Import Books"
+msgstr ""
+
+#: .\library\templates\library\book_import.html:48
+msgid "File"
+msgstr ""
+
+#: .\library\templates\library\book_import.html:49
+msgid "Columns"
+msgstr ""
+
+#: .\library\templates\library\book_import.html:50
+#: .\library\templates\library\inventory_session_list.html:40
+msgid "Check"
+msgstr ""
+
+#: .\library\templates\library\book_import.html:51
+msgid "Results"
+msgstr ""
+
+#: .\library\templates\library\book_import.html:76
+msgid "Spreadsheet"
+msgstr ""
+
+#: .\library\templates\library\book_import.html:114
+msgid "Column"
+msgstr ""
+
+#: .\library\templates\library\book_import.html:115
+msgid "Needed?"
+msgstr ""
+
+#: .\library\templates\library\book_import.html:179
+msgid "Your column"
+msgstr ""
+
+#: .\library\templates\library\book_import.html:180
+msgid "Becomes"
+msgstr ""
+
+#: .\library\templates\library\book_import.html:199
+msgid "— Ignore this column —"
+msgstr ""
+
+#: .\library\templates\library\book_import.html:263
+#: .\library\templates\library\book_import.html:409
+msgid "Rows"
+msgstr ""
+
+#: .\library\templates\library\book_import.html:265
+msgid "Action"
+msgstr ""
+
+#: .\library\templates\library\book_import.html:266
+#: .\library\templates\library\book_volume_list.html:19
+#: .\library\templates\library\partials\book_add_modal.html:50
+#: .\library\templates\library\partials\book_detail_modal.html:71
+msgid "Volumes"
+msgstr ""
+
+#: .\library\templates\library\book_import.html:411
+msgid "Problem"
+msgstr ""
+
+#: .\library\templates\library\book_list.html:20
+msgid "Manage your library's book collection."
+msgstr ""
+
+#: .\library\templates\library\book_volume_add.html:61
+msgid "Select Book"
+msgstr ""
+
+#: .\library\templates\library\book_volume_delete.html:37
+msgid "This volume cannot be deleted"
+msgstr ""
+
+#: .\library\templates\library\book_volume_delete.html:65
+msgid "Delete Book Volume?"
+msgstr ""
+
+#: .\library\templates\library\book_volume_detail.html:118
+#: .\library\templates\library\partials\copy_list_results.html:274
+#: .\library\templates\library\shelf_detail.html:190
+msgid "Move"
+msgstr ""
+
+#: .\library\templates\library\book_volume_detail.html:122
+#: .\library\templates\library\borrower_list.html:243
+#: .\library\templates\library\location_detail.html:152
+#: .\library\templates\library\location_list.html:140
+#: .\library\templates\library\partials\copy_list_results.html:289
+#: .\library\templates\library\shelf_detail.html:199
+#: .\library\templates\library\shelf_list.html:149
+msgid "Open"
+msgstr ""
+
+#: .\library\templates\library\book_volume_detail.html:132
+msgid "No copies of this volume yet."
+msgstr ""
+
+#: .\library\templates\library\book_volume_detail.html:179
+msgid "No contents have been recorded for this volume."
+msgstr ""
+
+#: .\library\templates\library\book_volume_list.html:31
+msgid "Book Volumes"
+msgstr ""
+
+#: .\library\templates\library\book_volume_list.html:33
+msgid "Every volume in the catalogue, across all books."
+msgstr ""
+
+#: .\library\templates\library\book_volume_list.html:60
+msgid "Search book volumes..."
+msgstr ""
+
+#: .\library\templates\library\book_volume_list.html:69
+msgid "All Books"
+msgstr ""
+
+#: .\library\templates\library\book_volume_list.html:162
+msgid "No volumes found."
+msgstr ""
+
+#: .\library\templates\library\borrower_add.html:81
+#: .\library\templates\library\borrower_edit.html:81
+msgid "Select type&hellip;"
+msgstr ""
+
+#: .\library\templates\library\borrower_add.html:95
+#: .\library\templates\library\borrower_detail.html:140
+#: .\library\templates\library\borrower_edit.html:95
+#: .\library\templates\library\borrower_list.html:166
+#: .\library\templates\library\loan_detail.html:64
+msgid "Registration No"
+msgstr ""
+
+#: .\library\templates\library\borrower_add.html:105
+#: .\library\templates\library\borrower_edit.html:105
+msgid "Optional, but has to be unique when given."
+msgstr ""
+
+#: .\library\templates\library\borrower_add.html:111
+#: .\library\templates\library\borrower_detail.html:143
+#: .\library\templates\library\borrower_edit.html:111
+msgid "Department"
+msgstr ""
+
+#: .\library\templates\library\borrower_add.html:124
+#: .\library\templates\library\borrower_detail.html:146
+#: .\library\templates\library\borrower_edit.html:124
+#: .\library\templates\library\branding_settings.html:259
+msgid "Address"
+msgstr ""
+
+#: .\library\templates\library\borrower_delete.html:41
+msgid "This borrower cannot be deleted"
+msgstr ""
+
+#: .\library\templates\library\borrower_delete.html:95
+msgid "Delete Borrower?"
+msgstr ""
+
+#: .\library\templates\library\borrower_detail.html:134
+#: .\library\templates\library\loan_detail.html:55
+#: .\library\templates\library\report_overdue.html:70
+msgid "Phone"
+msgstr ""
+
+#: .\library\templates\library\borrower_detail.html:137
+#: .\library\templates\library\borrower_list.html:61
+#: .\library\templates\library\borrower_list.html:167
+#: .\library\templates\library\branding_settings.html:211
+#: .\library\templates\library\loan_detail.html:59
+msgid "Type"
+msgstr ""
+
+#: .\library\templates\library\borrower_detail.html:149
+msgid "Registered"
+msgstr ""
+
+#: .\library\templates\library\borrower_detail.html:168
+msgid "Out on loan"
+msgstr ""
+
+#: .\library\templates\library\borrower_detail.html:176
+#: .\library\templates\library\circulation_dashboard.html:69
+#: .\library\templates\library\loan_list.html:49
+#: .\library\templates\library\report_borrowers.html:85
+#: .\library\templates\library\report_overdue.html:18
+msgid "Overdue"
+msgstr ""
+
+#: .\library\templates\library\borrower_detail.html:294
+#: .\library\templates\library\loan_return_lookup.html:123
+msgid "Take back"
+msgstr ""
+
+#: .\library\templates\library\borrower_detail.html:303
+msgid "Nothing out on loan."
+msgstr ""
+
+#: .\library\templates\library\borrower_detail.html:336
+msgid "Position"
+msgstr ""
+
+#: .\library\templates\library\borrower_detail.html:416
+msgid "This borrower is not waiting for anything."
+msgstr ""
+
+#: .\library\templates\library\borrower_detail.html:481
+msgid "This borrower has never taken a book out."
+msgstr ""
+
+#: .\library\templates\library\borrower_list.html:26
+#: .\library\templates\library\circulation_dashboard.html:106
+msgid "Borrowers"
+msgstr ""
+
+#: .\library\templates\library\borrower_list.html:28
+msgid "Who borrows from the library, and what they are holding."
+msgstr ""
+
+#: .\library\templates\library\borrower_list.html:55
+msgid "Name, phone, registration no or department..."
+msgstr ""
+
+#: .\library\templates\library\borrower_list.html:64
+msgid "Any type"
+msgstr ""
+
+#: .\library\templates\library\borrower_list.html:87
+#: .\library\templates\library\user_list.html:46
+msgid "All"
+msgstr ""
+
+#: .\library\templates\library\borrower_list.html:89
+#: .\library\templates\library\loan_list.html:48
+#: .\library\templates\library\user_list.html:47
+msgid "Active"
+msgstr ""
+
+#: .\library\templates\library\borrower_list.html:92
+#: .\library\templates\library\user_list.html:48
+msgid "Inactive"
+msgstr ""
+
+#: .\library\templates\library\borrower_list.html:102
+#: .\library\templates\library\partials\book_list_browser.html:390
+#: .\library\templates\public\book_list.html:59
+msgid "Any"
+msgstr ""
+
+#: .\library\templates\library\borrower_list.html:104
+msgid "Has active loans"
+msgstr ""
+
+#: .\library\templates\library\borrower_list.html:107
+msgid "No active loans"
+msgstr ""
+
+#: .\library\templates\library\borrower_list.html:110
+msgid "Has overdue items"
+msgstr ""
+
+#: .\library\templates\library\borrower_list.html:113
+msgid "Nothing overdue"
+msgstr ""
+
+#: .\library\templates\library\borrower_list.html:168
+msgid "On loan"
+msgstr ""
+
+#: .\library\templates\library\borrower_list.html:279
+msgid "No borrowers found."
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:21
+msgid "Organisation Branding"
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:23
+msgid "Applies across the whole app, including the sign-in page."
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:50
+msgid "Organisation Name"
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:69
+msgid "Logo"
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:75
+msgid "Current logo"
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:86
+msgid "Remove current logo"
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:114
+msgid "Favicon"
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:120
+msgid "Current favicon"
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:131
+msgid "Remove current favicon"
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:137
+msgid "No favicon set — browsers show their default icon."
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:149
+msgid "Square works best. PNG, ICO, WEBP, GIF or JPG, up to 256&nbsp;KB."
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:187
+msgid "Name in Arabic"
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:229
+msgid "Madrasah"
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:240
+msgid "Website"
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:249
+msgid "https://example.org"
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:310
+msgid "Contact Email"
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:324
+msgid "Contact Phone"
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:339
+msgid "Footer Text"
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:348
+msgid "Shown at the bottom of every page and under the sign-in box."
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:405
+msgid "Loan period (days)"
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:426
+msgid "Maximum books per borrower"
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:447
+msgid "Renewal limit"
+msgstr ""
+
+#: .\library\templates\library\branding_settings.html:476
+msgid "Stop borrowing while anything is overdue"
+msgstr ""
+
+#: .\library\templates\library\circulation_dashboard.html:12
+#: .\library\templates\library\dashboard.html:379
+#: .\library\templates\library\partials\copy_detail_modal.html:88
+#: .\library\templates\library\report_circulation.html:18
+msgid "Circulation"
+msgstr ""
+
+#: .\library\templates\library\circulation_dashboard.html:13
+msgid "Issue books, returns, and manage active loans."
+msgstr ""
+
+#: .\library\templates\library\circulation_dashboard.html:29
+#: .\library\templates\library\loan_add.html:15
+#: .\library\templates\library\loan_add.html:18
+msgid "Issue Books"
+msgstr ""
+
+#: .\library\templates\library\circulation_dashboard.html:30
+msgid "Issue copies to a borrower"
+msgstr ""
+
+#: .\library\templates\library\circulation_dashboard.html:47
+msgid "Return Books"
+msgstr ""
+
+#: .\library\templates\library\circulation_dashboard.html:48
+msgid "Scan or enter copy code"
+msgstr ""
+
+#: .\library\templates\library\circulation_dashboard.html:58
+msgid "Active Loans"
+msgstr ""
+
+#: .\library\templates\library\circulation_dashboard.html:84
+#: .\library\templates\library\loan_list.html:50
+msgid "Due Today"
+msgstr ""
+
+#: .\library\templates\library\circulation_dashboard.html:95
+msgid "View All Loans"
+msgstr ""
+
+#: .\library\templates\library\circulation_dashboard.html:96
+msgid "Search, filter &amp; manage"
+msgstr ""
+
+#: .\library\templates\library\circulation_dashboard.html:107
+msgid "Manage borrower records"
+msgstr ""
+
+#: .\library\templates\library\dashboard.html:37
+msgid "Library Dashboard"
+msgstr ""
+
+#: .\library\templates\library\dashboard.html:43
+msgid "Overview of your library, circulation, and recent activity."
+msgstr ""
+
+#: .\library\templates\library\dashboard.html:111
+msgid "Due today"
+msgstr ""
+
+#: .\library\templates\library\dashboard.html:132
+msgid "Currently out"
+msgstr ""
+
+#: .\library\templates\library\dashboard.html:205
+msgid "Total Books"
+msgstr ""
+
+#: .\library\templates\library\dashboard.html:263
+msgid "Available Copies"
+msgstr ""
+
+#: .\library\templates\library\dashboard.html:292
+msgid "Issued Copies"
+msgstr ""
+
+#: .\library\templates\library\dashboard.html:320
+msgid "Total Borrowers"
+msgstr ""
+
+#: .\library\templates\library\dashboard.html:349
+msgid "Active Borrowers"
+msgstr ""
+
+#: .\library\templates\library\dashboard.html:383
+msgid "Issue / Return"
+msgstr ""
+
+#: .\library\templates\library\dashboard.html:416
+msgid "Authors"
+msgstr ""
+
+#: .\library\templates\library\dashboard.html:445
+msgid "Categories"
+msgstr ""
+
+#: .\library\templates\library\dashboard.html:474
+msgid "Publishers"
+msgstr ""
+
+#: .\library\templates\library\dashboard.html:511
+msgid "Recently Issued"
+msgstr ""
+
+#: .\library\templates\library\dashboard.html:587
+msgid "No recent loans found."
+msgstr ""
+
+#: .\library\templates\library\dashboard.html:619
+msgid "Recently Returned"
+msgstr ""
+
+#: .\library\templates\library\dashboard.html:678
+msgid "Nothing has been returned yet."
+msgstr ""
+
+#: .\library\templates\library\dashboard.html:702
+msgid "Recent Activity"
+msgstr ""
+
+#: .\library\templates\library\dashboard.html:754
+msgid "No recent activity found."
+msgstr ""
+
+#: .\library\templates\library\inventory_session_detail.html:75
+msgid "Expected"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_detail.html:105
+msgid "Progress"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_detail.html:113
+msgid "Stock check progress"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_detail.html:148
+msgid "Scan or type a copy code"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_detail.html:159
+#: .\library\templates\library\loan_add.html:110
+msgid "e.g. LIB-000123"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_detail.html:164
+msgid "Record"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_detail.html:178
+msgid "Just counted"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_detail.html:246
+msgid "Where it should be"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_detail.html:290
+msgid "Everything expected was found."
+msgstr ""
+
+#: .\library\templates\library\inventory_session_detail.html:312
+msgid "Record says"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_detail.html:313
+msgid "Scanned"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_detail.html:353
+msgid "Counted once each, whatever the number of reads."
+msgstr ""
+
+#: .\library\templates\library\inventory_session_list.html:18
+msgid "Stock Check"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_list.html:41
+msgid "Covers"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_list.html:43
+msgid "Started"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_list.html:103
+msgid "No stock check has been run yet."
+msgstr ""
+
+#: .\library\templates\library\inventory_session_list.html:105
+msgid "Start one for a shelf, a location, or the whole library."
+msgstr ""
+
+#: .\library\templates\library\inventory_session_start.html:18
+msgid "Start"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_start.html:31
+msgid "Start a Stock Check"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_start.html:51
+#: .\library\templates\library\loan_detail.html:51
+msgid "Name"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_start.html:60
+msgid "e.g. Main Hall, September"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_start.html:65
+msgid "Something you will recognise in the list later."
+msgstr ""
+
+#: .\library\templates\library\inventory_session_start.html:78
+msgid "What to count"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_start.html:108
+msgid "Choose a location…"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_start.html:117
+msgid "Only used for a location check."
+msgstr ""
+
+#: .\library\templates\library\inventory_session_start.html:130
+msgid "Choose a shelf…"
+msgstr ""
+
+#: .\library\templates\library\inventory_session_start.html:139
+msgid "Only used for a shelf check."
+msgstr ""
+
+#: .\library\templates\library\loan_add.html:12
+#: .\library\templates\library\loan_detail.html:12
+#: .\library\templates\library\loan_list.html:12
+#: .\library\templates\library\loan_renew.html:12
+#: .\library\templates\library\loan_return.html:12
+#: .\library\templates\library\loan_return_lookup.html:12
+msgid "breadcrumb"
+msgstr ""
+
+#: .\library\templates\library\loan_add.html:20
+msgid "Choose the borrower, find the copies by code or title, then issue."
+msgstr ""
+
+#: .\library\templates\library\loan_add.html:101
+msgid "Scan a copy code, or search by book or author"
+msgstr ""
+
+#: .\library\templates\library\loan_add.html:175
+msgid "Where"
+msgstr ""
+
+#: .\library\templates\library\loan_add.html:176
+msgid "Add"
+msgstr ""
+
+#: .\library\templates\library\loan_add.html:265
+msgid "Not chosen yet."
+msgstr ""
+
+#: .\library\templates\library\loan_add.html:315
+msgid "Remove"
+msgstr ""
+
+#: .\library\templates\library\loan_add.html:327
+msgid "None chosen yet — search above and add one."
+msgstr ""
+
+#: .\library\templates\library\loan_add.html:333
+#: .\library\templates\library\loan_detail.html:77
+#: .\library\templates\library\loan_list.html:86
+#: .\library\templates\library\loan_return.html:80
+#: .\library\templates\library\loan_return_lookup.html:199
+msgid "Issue Date"
+msgstr ""
+
+#: .\library\templates\library\loan_add.html:338
+#: .\library\templates\library\loan_detail.html:81
+#: .\library\templates\library\loan_list.html:87
+#: .\library\templates\library\loan_return.html:84
+#: .\library\templates\library\loan_return_lookup.html:204
+msgid "Due Date"
+msgstr ""
+
+#: .\library\templates\library\loan_add.html:351
+#: .\library\templates\library\loan_detail.html:85
+msgid "Issued By"
+msgstr ""
+
+#: .\library\templates\library\loan_delete.html:33
+msgid "Delete Loan"
+msgstr ""
+
+#: .\library\templates\library\loan_delete.html:78
+#: .\library\templates\library\user_delete.html:54
+msgid "Yes, Delete"
+msgstr ""
+
+#: .\library\templates\library\loan_detail.html:19
+msgid "Loan Details"
+msgstr ""
+
+#: .\library\templates\library\loan_detail.html:27
+msgid "Book Information"
+msgstr ""
+
+#: .\library\templates\library\loan_detail.html:31
+msgid "Book Copy"
+msgstr ""
+
+#: .\library\templates\library\loan_detail.html:47
+msgid "Borrower Information"
+msgstr ""
+
+#: .\library\templates\library\loan_detail.html:73
+msgid "Loan Information"
+msgstr ""
+
+#: .\library\templates\library\loan_detail.html:107
+#: .\library\templates\library\loan_return.html:104
+msgid "Return Date"
+msgstr ""
+
+#: .\library\templates\library\loan_detail.html:111
+#: .\library\templates\library\loan_return.html:113
+msgid "Returned To"
+msgstr ""
+
+#: .\library\templates\library\loan_detail.html:173
+#: .\library\templates\library\loan_edit.html:176
+msgid "Return Information"
+msgstr ""
+
+#: .\library\templates\library\loan_detail.html:195
+msgid "This book has not been returned yet."
+msgstr ""
+
+#: .\library\templates\library\loan_edit.html:33
+msgid "Edit Loan"
+msgstr ""
+
+#: .\library\templates\library\loan_edit.html:50
+msgid "This loan has already been returned."
+msgstr ""
+
+#: .\library\templates\library\loan_edit.html:69
+msgid "Book Copy:"
+msgstr ""
+
+#: .\library\templates\library\loan_edit.html:114
+msgid "Borrower:"
+msgstr ""
+
+#: .\library\templates\library\loan_edit.html:141
+msgid "Issue Date:"
+msgstr ""
+
+#: .\library\templates\library\loan_edit.html:157
+msgid "Due Date:"
+msgstr ""
+
+#: .\library\templates\library\loan_edit.html:206
+msgid "Notes:"
+msgstr ""
+
+#: .\library\templates\library\loan_edit.html:223
+msgid "Update Loan"
+msgstr ""
+
+#: .\library\templates\library\loan_list.html:15
+msgid "All Loans"
+msgstr ""
+
+#: .\library\templates\library\loan_list.html:21
+msgid "Search, filter, and manage all loans."
+msgstr ""
+
+#: .\library\templates\library\loan_list.html:42
+msgid "Borrower, copy code, book title..."
+msgstr ""
+
+#: .\library\templates\library\loan_list.html:47
+msgid "All Statuses"
+msgstr ""
+
+#: .\library\templates\library\loan_list.html:57
+msgid "All Borrowers"
+msgstr ""
+
+#: .\library\templates\library\loan_list.html:64
+msgid "Filter"
+msgstr ""
+
+#: .\library\templates\library\loan_list.html:121
+msgid "No loans found."
+msgstr ""
+
+#: .\library\templates\library\loan_renew.html:16
+msgid "Renew"
+msgstr ""
+
+#: .\library\templates\library\loan_renew.html:19
+msgid "Renew Loan"
+msgstr ""
+
+#: .\library\templates\library\loan_renew.html:20
+msgid "Extend the due date for this loan."
+msgstr ""
+
+#: .\library\templates\library\loan_renew.html:54
+msgid "Current Due Date"
+msgstr ""
+
+#: .\library\templates\library\loan_renew.html:59
+msgid "New Due Date"
+msgstr ""
+
+#: .\library\templates\library\loan_renew.html:66
+msgid "This will extend the loan period by 14 days from the current due date."
+msgstr ""
+
+#: .\library\templates\library\loan_renew.html:72
+msgid "Confirm Renewal"
+msgstr ""
+
+#: .\library\templates\library\loan_return.html:16
+msgid "Return"
+msgstr ""
+
+#: .\library\templates\library\loan_return.html:19
+#: .\library\templates\library\loan_return_lookup.html:15
+#: .\library\templates\library\loan_return_lookup.html:18
+msgid "Return Book"
+msgstr ""
+
+#: .\library\templates\library\loan_return.html:97
+#: .\library\templates\library\loan_return.html:123
+msgid "Confirm Return"
+msgstr ""
+
+#: .\library\templates\library\loan_return_lookup.html:20
+msgid "Scan the label, or search for the book if the label will not read."
+msgstr ""
+
+#: .\library\templates\library\loan_return_lookup.html:32
+msgid "Scan copy code or search by book / author"
+msgstr ""
+
+#: .\library\templates\library\loan_return_lookup.html:46
+msgid "LIB-000001, or a book or author name"
+msgstr ""
+
+#: .\library\templates\library\loan_return_lookup.html:56
+msgid "Find"
+msgstr ""
+
+#: .\library\templates\library\loan_return_lookup.html:106
+msgid "Out on loan now"
+msgstr ""
+
+#: .\library\templates\library\loan_return_lookup.html:169
+msgid "Active Loan Found"
+msgstr ""
+
+#: .\library\templates\library\location_add.html:49
+#: .\library\templates\library\location_edit.html:49
+#: .\library\templates\library\shelf_add.html:67
+#: .\library\templates\library\shelf_edit.html:67
+msgid "Description"
+msgstr ""
+
+#: .\library\templates\library\location_delete.html:36
+msgid "This location cannot be deleted"
+msgstr ""
+
+#: .\library\templates\library\location_delete.html:61
+msgid "Delete Location?"
+msgstr ""
+
+#: .\library\templates\library\location_delete.html:69
+msgid "It has no shelves, so no book copies are affected."
+msgstr ""
+
+#: .\library\templates\library\location_detail.html:69
+#: .\library\templates\library\location_list.html:95
+#: .\library\templates\library\shelf_list.html:19
+msgid "Shelves"
+msgstr ""
+
+#: .\library\templates\library\location_detail.html:77
+msgid "Book copies"
+msgstr ""
+
+#: .\library\templates\library\location_detail.html:181
+msgid "This location has no shelves yet."
+msgstr ""
+
+#: .\library\templates\library\location_list.html:26
+msgid "Locations"
+msgstr ""
+
+#: .\library\templates\library\location_list.html:28
+msgid "Where the library keeps its books. Open a location to see its shelves."
+msgstr ""
+
+#: .\library\templates\library\location_list.html:46
+msgid "Search locations..."
+msgstr ""
+
+#: .\library\templates\library\location_list.html:48
+msgid "Search locations"
+msgstr ""
+
+#: .\library\templates\library\location_list.html:169
+msgid "No locations found."
+msgstr ""
+
+#: .\library\templates\library\login.html:45
+msgid "Sign in to continue"
+msgstr ""
+
+#: .\library\templates\library\login.html:59
+#: .\library\templates\library\profile.html:29
+msgid "Username"
+msgstr ""
+
+#: .\library\templates\library\login.html:72
+msgid "Password"
+msgstr ""
+
+#: .\library\templates\library\notification_list.html:17
+#: .\library\templates\library\partials\notification_bell.html:42
+#: .\library\templates\library\partials\notification_bell.html:43
+msgid "Notifications"
+msgstr ""
+
+#: .\library\templates\library\notification_list.html:56
+#: .\library\templates\library\partials\notification_panel.html:41
+msgid "Mark all read"
+msgstr ""
+
+#: .\library\templates\library\notification_list.html:132
+msgid "Mark read"
+msgstr ""
+
+#: .\library\templates\library\partials\barcode_scanner.html:58
+msgid "Point the camera at the barcode on the book."
+msgstr ""
+
+#: .\library\templates\library\partials\barcode_scanner.html:86
+msgid "Type it instead"
+msgstr ""
+
+#: .\library\templates\library\partials\book_delete_modal.html:60
+#: .\library\templates\library\partials\lookup_delete_modal.html:50
+msgid "You are about to delete:"
+msgstr ""
+
+#: .\library\templates\library\partials\book_detail_modal.html:35
+msgid "No cover image"
+msgstr ""
+
+#: .\library\templates\library\partials\book_detail_modal.html:140
+msgid "No volumes have been added for this book yet."
+msgstr ""
+
+#: .\library\templates\library\partials\book_form_fields.html:44
+msgid "Cover Image"
+msgstr ""
+
+#: .\library\templates\library\partials\book_form_fields.html:63
+msgid "Remove current cover"
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:33
+msgid "Does this book have more than one volume?"
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:48
+msgid "Single volume"
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:63
+msgid "Multiple volumes"
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:70
+msgid "Nothing more to fill in — the book is recorded as one volume."
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:86
+msgid "Volume no."
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:96
+msgid "Volume title (optional)"
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:109
+msgid "Remove this volume"
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:136
+msgid "Would you like to add physical copies now?"
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:151
+msgid "Add copies now"
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:166
+msgid "Skip for now"
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:205
+#: .\library\templates\library\partials\book_inventory_fields.html:216
+msgid "Number of copies"
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:241
+msgid "Copy codes"
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:256
+msgid "Generate automatically"
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:271
+msgid "Enter manually"
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:313
+msgid "Where will the copies be kept?"
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:354
+msgid "New location name"
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:368
+msgid "e.g. Main Hall"
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:378
+#: .\library\templates\library\partials\book_inventory_fields.html:432
+msgid "Save"
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:414
+msgid "New shelf code, in the location chosen above"
+msgstr ""
+
+#: .\library\templates\library\partials\book_inventory_fields.html:422
+msgid "e.g. A-1"
+msgstr ""
+
+#: .\library\templates\library\partials\book_list_browser.html:35
+msgid "Browse books by"
+msgstr ""
+
+#: .\library\templates\library\partials\book_list_browser.html:116
+msgid "Book title or author name..."
+msgstr ""
+
+#: .\library\templates\library\partials\book_list_browser.html:225
+msgid "Start typing to find an author. Books update as soon as you pick one."
+msgstr ""
+
+#: .\library\templates\library\partials\book_list_browser.html:289
+msgid "Start typing to find a category. Books update as soon as you pick one."
+msgstr ""
+
+#: .\library\templates\library\partials\book_list_browser.html:373
+msgid "Any publisher"
+msgstr ""
+
+#: .\library\templates\library\partials\book_list_browser.html:387
+#: .\library\templates\public\book_list.html:56
+msgid "Availability"
+msgstr ""
+
+#: .\library\templates\library\partials\book_list_results.html:112
+#: .\library\templates\library\partials\copy_list_results.html:98
+#: .\library\templates\library\partials\lookup_list.html:134
+msgid "Show"
+msgstr ""
+
+#: .\library\templates\library\partials\book_list_results.html:129
+#: .\library\templates\library\partials\copy_list_results.html:115
+#: .\library\templates\library\partials\lookup_list.html:156
+msgid "Rows per page"
+msgstr ""
+
+#: .\library\templates\library\partials\book_list_results.html:306
+msgid "No books found."
+msgstr ""
+
+#: .\library\templates\library\partials\copy_list_results.html:151
+msgid "Select all copies on this page"
+msgstr ""
+
+#: .\library\templates\library\partials\copy_list_results.html:308
+msgid "No copies found."
+msgstr ""
+
+#: .\library\templates\library\partials\language_selector.html:40
+#: .\library\templates\library\partials\language_selector.html:41
+msgid "Language"
+msgstr ""
+
+#: .\library\templates\library\partials\location_options.html:17
+msgid "Select location…"
+msgstr ""
+
+#: .\library\templates\library\partials\notification_panel.html:117
+msgid "Mark as read"
+msgstr ""
+
+#: .\library\templates\library\partials\shelf_options.html:16
+msgid "Select shelf…"
+msgstr ""
+
+#: .\library\templates\library\partials\shelf_options.html:18
+msgid "Choose a location first"
+msgstr ""
+
+#: .\library\templates\library\partials\theme_selector.html:23
+#: .\library\templates\library\partials\theme_selector.html:24
+#: .\library\templates\library\partials\theme_selector.html:34
+#: .\library\templates\library\profile.html:78
+msgid "Appearance"
+msgstr ""
+
+#: .\library\templates\library\permissions_matrix.html:28
+msgid "Menu Permissions"
+msgstr ""
+
+#: .\library\templates\library\permissions_matrix.html:84
+msgid "Menu entry"
+msgstr ""
+
+#: .\library\templates\library\permissions_matrix.html:118
+msgid "Not available to this role"
+msgstr ""
+
+#: .\library\templates\library\permissions_matrix.html:142
+msgid "On"
+msgstr ""
+
+#: .\library\templates\library\permissions_matrix.html:145
+msgid "Off"
+msgstr ""
+
+#: .\library\templates\library\profile.html:33
+msgid "Full Name"
+msgstr ""
+
+#: .\library\templates\library\profile.html:37
+msgid "Role"
+msgstr ""
+
+#: .\library\templates\library\profile.html:43
+msgid "Last Login"
+msgstr ""
+
+#: .\library\templates\library\profile.html:47
+msgid "Account Created"
+msgstr ""
+
+#: .\library\templates\library\profile.html:162
+msgid "At least 8 characters."
+msgstr ""
+
+#: .\library\templates\library\report_borrowers.html:18
+msgid "Borrower Activity"
+msgstr ""
+
+#: .\library\templates\library\report_borrowers.html:42
+#: .\library\templates\library\report_circulation.html:42
+#: .\library\templates\library\report_popular.html:42
+msgid "From"
+msgstr ""
+
+#: .\library\templates\library\report_borrowers.html:47
+#: .\library\templates\library\report_circulation.html:47
+#: .\library\templates\library\report_popular.html:47
+msgid "To"
+msgstr ""
+
+#: .\library\templates\library\report_borrowers.html:83
+#: .\library\templates\library\report_overdue.html:70
+msgid "Reg. no"
+msgstr ""
+
+#: .\library\templates\library\report_circulation.html:54
+#: .\library\templates\library\report_inventory.html:44
+#: .\library\templates\library\report_overdue.html:44
+#: .\library\templates\library\shelf_list.html:60
+msgid "All locations"
+msgstr ""
+
+#: .\library\templates\library\report_circulation.html:63
+msgid "Book title"
+msgstr ""
+
+#: .\library\templates\library\report_circulation.html:66
+msgid "Any title"
+msgstr ""
+
+#: .\library\templates\library\report_circulation.html:126
+msgid "Nothing was issued or returned in this period."
+msgstr ""
+
+#: .\library\templates\library\report_inventory.html:55
+msgid "All shelves"
+msgstr ""
+
+#: .\library\templates\library\report_inventory.html:66
+msgid "All of them"
+msgstr ""
+
+#: .\library\templates\library\report_inventory.html:87
+msgid "Total"
+msgstr ""
+
+#: .\library\templates\library\report_inventory.html:139
+msgid "No copies match."
+msgstr ""
+
+#: .\library\templates\library\report_overdue.html:72
+msgid "Days"
+msgstr ""
+
+#: .\library\templates\library\report_overdue.html:105
+msgid "Nothing is overdue."
+msgstr ""
+
+#: .\library\templates\library\report_popular.html:18
+msgid "Popular Books"
+msgstr ""
+
+#: .\library\templates\library\report_popular.html:73
+msgid "Times issued"
+msgstr ""
+
+#: .\library\templates\library\report_popular.html:73
+msgid "Copies available"
+msgstr ""
+
+#: .\library\templates\library\report_popular.html:96
+msgid "Nothing was issued in this period."
+msgstr ""
+
+#: .\library\templates\library\reports_home.html:17
+msgid "Reports"
+msgstr ""
+
+#: .\library\templates\library\reservation_list.html:17
+msgid "Reservations"
+msgstr ""
+
+#: .\library\templates\library\reservation_list.html:129
+msgid "Nobody is on this list."
+msgstr ""
+
+#: .\library\templates\library\reservation_list.html:131
+msgid "A borrower joins a queue from the book's own page."
+msgstr ""
+
+#: .\library\templates\library\shelf_add.html:35
+#: .\library\templates\library\shelf_edit.html:35
+msgid "Select location&hellip;"
+msgstr ""
+
+#: .\library\templates\library\shelf_delete.html:36
+msgid "This shelf cannot be deleted"
+msgstr ""
+
+#: .\library\templates\library\shelf_delete.html:60
+msgid "Delete Shelf?"
+msgstr ""
+
+#: .\library\templates\library\shelf_delete.html:70
+msgid "It is empty, so no book copies are affected."
+msgstr ""
+
+#: .\library\templates\library\shelf_detail.html:98
+msgid "Search copies on this shelf"
+msgstr ""
+
+#: .\library\templates\library\shelf_list.html:21
+msgid "Every shelf in the library. Open one to see what is on it."
+msgstr ""
+
+#: .\library\templates\library\shelf_list.html:51
+msgid "Shelf code or location..."
+msgstr ""
+
+#: .\library\templates\library\shelf_list.html:178
+msgid "No shelves found."
+msgstr ""
+
+#: .\library\templates\library\suggestion_add.html:18
+msgid "New"
+msgstr ""
+
+#: .\library\templates\library\suggestion_add.html:142
+#: .\library\templates\library\suggestion_detail.html:51
+msgid "ISBN"
+msgstr ""
+
+#: .\library\templates\library\suggestion_add.html:153
+msgid "Copied off the cover is fine."
+msgstr ""
+
+#: .\library\templates\library\suggestion_add.html:160
+#: .\library\templates\library\suggestion_detail.html:54
+msgid "Why this book"
+msgstr ""
+
+#: .\library\templates\library\suggestion_detail.html:63
+#: .\library\templates\library\suggestion_list.html:94
+msgid "Suggested by"
+msgstr ""
+
+#: .\library\templates\library\suggestion_detail.html:87
+msgid "Decided by"
+msgstr ""
+
+#: .\library\templates\library\suggestion_detail.html:100
+msgid "Decided"
+msgstr ""
+
+#: .\library\templates\library\suggestion_detail.html:127
+msgid "Decide"
+msgstr ""
+
+#: .\library\templates\library\suggestion_detail.html:152
+msgid "Neither can be undone."
+msgstr ""
+
+#: .\library\templates\library\suggestion_detail.html:163
+msgid "Approved — next step"
+msgstr ""
+
+#: .\library\templates\library\suggestion_detail.html:213
+msgid "Already acquired"
+msgstr ""
+
+#: .\library\templates\library\suggestion_list.html:18
+msgid "Suggested Purchases"
+msgstr ""
+
+#: .\library\templates\library\suggestion_list.html:66
+msgid "Search suggestions by title"
+msgstr ""
+
+#: .\library\templates\library\suggestion_list.html:74
+msgid "Search titles"
+msgstr ""
+
+#: .\library\templates\library\user_add.html:21
+#: .\library\templates\library\user_add.html:52
+msgid "Add User"
+msgstr ""
+
+#: .\library\templates\library\user_add.html:26
+#: .\library\templates\library\user_edit.html:34
+msgid "Username:"
+msgstr ""
+
+#: .\library\templates\library\user_add.html:31
+#: .\library\templates\library\user_edit.html:48
+msgid "Full Name:"
+msgstr ""
+
+#: .\library\templates\library\user_add.html:36
+msgid "Password Hash:"
+msgstr ""
+
+#: .\library\templates\library\user_add.html:41
+#: .\library\templates\library\user_edit.html:75
+#: .\library\templates\library\user_list.html:31
+msgid "Role:"
+msgstr ""
+
+#: .\library\templates\library\user_add.html:44
+msgid "Select Role"
+msgstr ""
+
+#: .\library\templates\library\user_delete.html:21
+msgid "Delete User"
+msgstr ""
+
+#: .\library\templates\library\user_edit.html:21
+msgid "Edit User"
+msgstr ""
+
+#: .\library\templates\library\user_edit.html:62
+msgid "New Password:"
+msgstr ""
+
+#: .\library\templates\library\user_edit.html:68
+msgid "Leave empty to keep current"
+msgstr ""
+
+#: .\library\templates\library\user_edit.html:125
+msgid "Active User"
+msgstr ""
+
+#: .\library\templates\library\user_edit.html:134
+msgid "Update User"
+msgstr ""
+
+#: .\library\templates\library\user_list.html:21
+msgid "Users"
+msgstr ""
+
+#: .\library\templates\library\user_list.html:28
+msgid "Search users..."
+msgstr ""
+
+#: .\library\templates\library\user_list.html:34
+msgid "All Roles"
+msgstr ""
+
+#: .\library\templates\library\user_list.html:43
+msgid "Status:"
+msgstr ""
+
+#: .\library\templates\library\user_list.html:100
+msgid "No users found."
+msgstr ""
+
+#: .\library\templates\public\base.html:139
+msgid "Library catalogue"
+msgstr ""
+
+#: .\library\templates\public\book_detail.html:103
+msgid "To borrow this book, ask at the library desk."
+msgstr ""
+
+#: .\library\templates\public\book_list.html:8
+msgid "Catalogue"
+msgstr ""
+
+#: .\library\templates\public\book_list.html:27
+msgid "Title or author"
+msgstr ""
+
+#: .\library\templates\public\book_list.html:35
+msgid "e.g. Fath al-Bari, or Ibn Hajar"
+msgstr ""
+
+#: .\library\templates\public\book_list.html:113
+msgid "Remove the author filter"
+msgstr ""
+
+#: .\library\templates\public\book_list.html:124
+msgid "Remove the publisher filter"
+msgstr ""
+
+#: .\library\templates\public\not_found.html:24
+msgid "That book is not in the catalogue."
+msgstr ""
+
+#: .\library\templates\public\not_found.html:27
+msgid "It may never have been, or it may no longer be listed."
+msgstr ""
+
+#: .\library\templates\public\pagination.html:19
+msgid "Catalogue pages"
+msgstr ""
+
+#: .\library\views\accounts.py:159
+msgid "Appearance updated."
+msgstr ""
+
+#: .\library\views\accounts.py:214
+msgid "Language updated."
+msgstr ""
+
+#: .\library\views\acquisitions.py:201
+#, python-format
+msgid "%s has been suggested."
+msgstr ""
+
+#: .\library\views\acquisitions.py:271
+msgid "That is not a state a suggestion can be in."
+msgstr ""
+
+#: .\library\views\acquisitions.py:285
+msgid ""
+"Nothing changed — that suggestion is no longer waiting for this decision."
+msgstr ""
+
+#: .\library\views\acquisitions.py:300
+#, python-format
+msgid "Suggestion marked %s."
+msgstr ""
+
+#: .\library\views\imports.py:412
+msgid "Import cancelled."
+msgstr ""
+
+#: .\library\views\imports.py:774
+msgid "There is no error report to download."
+msgstr ""
+
+#: .\library\views\inventory.py:237
+msgid "This stock check is complete. Start a new one to carry on counting."
+msgstr ""
+
+#: .\library\views\inventory.py:256
+#, python-format
+msgid "%s found. Scan the next one."
+msgstr ""
+
+#: .\library\views\inventory.py:262
+#, python-format
+msgid "%s has already been counted in this check."
+msgstr ""
+
+#: .\library\views\inventory.py:269
+#, python-format
+msgid ""
+"%s is not part of this check - the record puts it %s. Nothing has been "
+"changed; move it or edit the copy if it belongs here."
+msgstr ""
+
+#: .\library\views\inventory.py:287
+#, python-format
+msgid "No copy carries the code \\u201c%s\\u201d. Check the label."
+msgstr ""
+
+#: .\library\views\inventory.py:342
+msgid ""
+"Stock check complete. What was not found is listed below - nothing has been "
+"marked Missing."
+msgstr ""
+
+#: .\library\views\inventory.py:348
+msgid "This stock check was already complete."
+msgstr ""
+
+#: .\library\views\organization.py:218
+msgid "Borrowing policy updated."
+msgstr ""
+
+#: .\library\views\organization.py:340
+msgid "Branding updated."
+msgstr ""
+
+#: .\library\views\organization.py:457
+#, python-format
+msgid "Saved. %d change%s."
+msgstr ""
+
+#: .\library\views\organization.py:462
+msgid "Nothing changed."
+msgstr ""
+
+#: .\library\views\reservations.py:108
+msgid "Choose who is waiting for this book."
+msgstr ""
+
+#: .\library\views\reservations.py:129
+#, python-format
+msgid "%s is in the queue for %s."
+msgstr ""
+
+#: .\library\views\reservations.py:181
+#, python-format
+msgid "%s is no longer waiting for %s."
+msgstr ""
+
+#: .\library\views\reservations.py:187
+msgid "That reservation had already been closed."
+msgstr ""

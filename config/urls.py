@@ -18,7 +18,9 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.contrib.auth.decorators import login_not_required
 from django.urls import include, path
+from django.views.i18n import set_language
 from django.views.static import serve
 
 
@@ -30,6 +32,20 @@ urlpatterns = [
     # marked `@login_not_required` are exempt, of which there is exactly
     # one in this tree (the sign-in page itself).
     path("library/", include("library.urls")),
+
+    # Django's own language switch, for readers with no account: the login
+    # page and the public catalogue. Signed-in staff post to `language_set`
+    # instead, which stores the choice on their row.
+    #
+    # Wrapped in `login_not_required` because this project turns
+    # LoginRequiredMiddleware on globally - without it the one control an
+    # anonymous reader needs would answer by redirecting them to a login
+    # page, in the language they were trying to change.
+    path(
+        "i18n/setlang/",
+        login_not_required(set_language),
+        name="set_language",
+    ),
 
     # The public catalogue: read-only, anonymous, and mounted apart from
     # the staff application so the two share no route. Its views carry

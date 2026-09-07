@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     Branding | {{ branding.display_name }}
@@ -17,9 +18,9 @@
 
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
                 <div>
-                    <h2 class="fw-bold mb-1">Organisation Branding</h2>
+                    <h2 class="fw-bold mb-1">{% translate "Organisation Branding" %}</h2>
                     <p class="text-body-secondary mb-0">
-                        Applies across the whole app, including the sign-in page.
+                        {% translate "Applies across the whole app, including the sign-in page." %}
                     </p>
                 </div>
             </div>
@@ -46,7 +47,7 @@
 
                         <div class="mb-3">
                             <label for="formName" class="form-label fw-semibold">
-                                Organisation Name
+                                {% translate "Organisation Name" %}
                             </label>
                             <input
                                 type="text"
@@ -65,13 +66,13 @@
 
                         <!-- Logo -->
                         <div class="mb-4">
-                            <label for="formLogo" class="form-label fw-semibold">Logo</label>
+                            <label for="formLogo" class="form-label fw-semibold">{% translate "Logo" %}</label>
 
                             {% if settings_obj.logo %}
                                 <div class="d-flex align-items-start gap-3 mb-2">
                                     <img
                                         src="{{ settings_obj.logo.url }}"
-                                        alt="Current logo"
+                                        alt="{% translate 'Current logo' %}"
                                         class="branding-preview-logo"
                                     >
                                     <div class="form-check">
@@ -82,7 +83,7 @@
                                             name="remove_logo"
                                         >
                                         <label class="form-check-label" for="formRemoveLogo">
-                                            Remove current logo
+                                            {% translate "Remove current logo" %}
                                         </label>
                                     </div>
                                 </div>
@@ -110,13 +111,13 @@
 
                         <!-- Favicon -->
                         <div class="mb-0">
-                            <label for="formFavicon" class="form-label fw-semibold">Favicon</label>
+                            <label for="formFavicon" class="form-label fw-semibold">{% translate "Favicon" %}</label>
 
                             {% if settings_obj.favicon %}
                                 <div class="d-flex align-items-center gap-3 mb-2">
                                     <img
                                         src="{{ settings_obj.favicon.url }}"
-                                        alt="Current favicon"
+                                        alt="{% translate 'Current favicon' %}"
                                         class="branding-preview-favicon"
                                     >
                                     <div class="form-check">
@@ -127,13 +128,13 @@
                                             name="remove_favicon"
                                         >
                                         <label class="form-check-label" for="formRemoveFavicon">
-                                            Remove current favicon
+                                            {% translate "Remove current favicon" %}
                                         </label>
                                     </div>
                                 </div>
                             {% else %}
                                 <p class="text-body-secondary small mb-2">
-                                    No favicon set — browsers show their default icon.
+                                    {% translate "No favicon set — browsers show their default icon." %}
                                 </p>
                             {% endif %}
 
@@ -145,7 +146,7 @@
                                 accept="image/png,image/x-icon,image/vnd.microsoft.icon,image/webp,image/gif,image/jpeg"
                             >
                             <div class="form-text">
-                                Square works best. PNG, ICO, WEBP, GIF or JPG, up to 256&nbsp;KB.
+                                {% translate "Square works best. PNG, ICO, WEBP, GIF or JPG, up to 256&nbsp;KB." %}
                             </div>
                         </div>
 
@@ -173,16 +174,16 @@
                     <div class="card-body">
 
                         <p class="text-body-secondary">
-                            Who the library belongs to. Shown under the name
+                            {% translate "Who the library belongs to. Shown under the name
                             in the sidebar, and on printed reports and label
                             sheets. All optional &mdash; leave anything blank
-                            and it is simply not shown.
+                            and it is simply not shown." %}
                         </p>
 
                         <div class="row g-3">
                             <div class="col-12 col-md-6">
                                 <label for="formNameArabic" class="form-label fw-semibold">
-                                    Name in Arabic
+                                    {% translate "Name in Arabic" %}
                                 </label>
                                 {% comment %}
                                   `dir="rtl"` and `lang="ar"` on the input
@@ -205,7 +206,7 @@
 
                             <div class="col-12 col-md-6">
                                 <label for="formInstitutionType" class="form-label fw-semibold">
-                                    Type
+                                    {% translate "Type" %}
                                 </label>
                                 {% comment %}
                                   A datalist, not a select: the suggestions
@@ -222,7 +223,7 @@
                                     value="{{ settings_obj.institution_type }}"
                                     maxlength="100"
                                     list="institutionTypeOptions"
-                                    placeholder="Madrasah"
+                                    placeholder="{% translate 'Madrasah' %}"
                                 >
                                 <datalist id="institutionTypeOptions">
                                     {% for suggestion in institution_types %}
@@ -233,7 +234,7 @@
 
                             <div class="col-12 col-md-6">
                                 <label for="formWebsite" class="form-label fw-semibold">
-                                    Website
+                                    {% translate "Website" %}
                                 </label>
                                 <input
                                     type="text"
@@ -242,7 +243,7 @@
                                     name="website"
                                     value="{{ settings_obj.website }}"
                                     maxlength="255"
-                                    placeholder="https://example.org"
+                                    placeholder="{% translate 'https://example.org' %}"
                                 >
                                 <div class="form-text">
                                     Typed without <code>https://</code> is
@@ -252,7 +253,7 @@
 
                             <div class="col-12 col-md-6">
                                 <label for="formAddress" class="form-label fw-semibold">
-                                    Address
+                                    {% translate "Address" %}
                                 </label>
                                 <textarea
                                     class="form-control"
@@ -303,7 +304,7 @@
                         <div class="row g-3">
                             <div class="col-12 col-md-6">
                                 <label for="formContactEmail" class="form-label fw-semibold">
-                                    Contact Email
+                                    {% translate "Contact Email" %}
                                 </label>
                                 <input
                                     type="email"
@@ -317,7 +318,7 @@
 
                             <div class="col-12 col-md-6">
                                 <label for="formContactPhone" class="form-label fw-semibold">
-                                    Contact Phone
+                                    {% translate "Contact Phone" %}
                                 </label>
                                 <input
                                     type="text"
@@ -332,7 +333,7 @@
 
                         <div class="mt-3">
                             <label for="formFooterText" class="form-label fw-semibold">
-                                Footer Text
+                                {% translate "Footer Text" %}
                             </label>
                             <textarea
                                 class="form-control"
@@ -341,7 +342,7 @@
                                 rows="2"
                             >{{ settings_obj.footer_text }}</textarea>
                             <div class="form-text">
-                                Shown at the bottom of every page and under the sign-in box.
+                                {% translate "Shown at the bottom of every page and under the sign-in box." %}
                             </div>
                         </div>
 
@@ -377,9 +378,9 @@
                 <div class="card-body">
 
                     <p class="text-body-secondary">
-                        The lending rules for the whole library. They are
+                        {% translate "The lending rules for the whole library. They are
                         enforced when a book is issued or renewed, whatever
-                        the form on screen allows.
+                        the form on screen allows." %}
                     </p>
 
                     {% if policy_error %}
@@ -397,7 +398,7 @@
 
                             <div class="col-12 col-md-4">
                                 <label for="formLoanPeriod" class="form-label fw-semibold">
-                                    Loan period (days)
+                                    {% translate "Loan period (days)" %}
                                 </label>
                                 <input
                                     type="number"
@@ -418,7 +419,7 @@
 
                             <div class="col-12 col-md-4">
                                 <label for="formMaxLoans" class="form-label fw-semibold">
-                                    Maximum books per borrower
+                                    {% translate "Maximum books per borrower" %}
                                 </label>
                                 <input
                                     type="number"
@@ -431,15 +432,15 @@
                                     placeholder="0"
                                 >
                                 <div class="form-text">
-                                    How many a borrower may hold at once.
+                                    {% translate "How many a borrower may hold at once.
                                     Blank or 0 means no limit. Returned books
-                                    do not count.
+                                    do not count." %}
                                 </div>
                             </div>
 
                             <div class="col-12 col-md-4">
                                 <label for="formMaxRenewals" class="form-label fw-semibold">
-                                    Renewal limit
+                                    {% translate "Renewal limit" %}
                                 </label>
                                 <input
                                     type="number"
@@ -452,8 +453,8 @@
                                     placeholder="0"
                                 >
                                 <div class="form-text">
-                                    How many times one loan may be extended.
-                                    Blank or 0 means no limit.
+                                    {% translate "How many times one loan may be extended.
+                                    Blank or 0 means no limit." %}
                                 </div>
                             </div>
 
@@ -468,12 +469,12 @@
                                 {% if settings_obj.block_when_overdue %}checked{% endif %}
                             >
                             <label class="form-check-label" for="formBlockOverdue">
-                                Stop borrowing while anything is overdue
+                                {% translate "Stop borrowing while anything is overdue" %}
                             </label>
                             <div class="form-text">
-                                A borrower holding an overdue book cannot take
+                                {% translate "A borrower holding an overdue book cannot take
                                 another out until it comes back. Off by
-                                default.
+                                default." %}
                             </div>
                         </div>
 

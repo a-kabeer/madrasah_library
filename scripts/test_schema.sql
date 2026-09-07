@@ -394,8 +394,29 @@ CREATE TABLE public.users (
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
     last_login timestamp without time zone,
     theme_preference character varying(10),
-    CONSTRAINT check_user_role CHECK (((role)::text = ANY ((ARRAY['Admin'::character varying, 'Librarian'::character varying, 'Assistant'::character varying])::text[])))
+    language_preference character varying(5),
+    CONSTRAINT check_user_role CHECK (((role)::text = ANY ((ARRAY['SuperAdmin'::character varying, 'Admin'::character varying, 'Librarian'::character varying, 'Assistant'::character varying])::text[])))
 );
+
+
+--
+-- Name: role_features; Type: TABLE; Schema: public
+--
+-- Menu-permission overrides. Empty means "every role holds whatever
+-- library/features.py gives it by default", which is the state a fresh
+-- install and the test database are both in. The foreign key and the
+-- unique index are added further down with the others.
+--
+
+CREATE TABLE public.role_features (
+    id integer GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    role character varying(30) NOT NULL,
+    feature_key character varying(50) NOT NULL,
+    allowed boolean NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    updated_by integer
+);
+
 
 
 ALTER TABLE public.users OWNER TO postgres;
@@ -591,6 +612,16 @@ ALTER TABLE ONLY public.book_volumes
 
 ALTER TABLE ONLY public.shelves
     ADD CONSTRAINT unique_shelf_per_location UNIQUE (location_id, shelf_code);
+
+
+--
+-- Name: unique_role_feature; Type: INDEX; Schema: public
+--
+-- One (role, feature) pair, one answer.
+--
+
+CREATE UNIQUE INDEX unique_role_feature
+    ON public.role_features (role, feature_key);
 
 
 --
@@ -797,6 +828,14 @@ CREATE UNIQUE INDEX unique_publisher_name ON public.publishers USING btree (name
 
 ALTER TABLE ONLY public.activity_logs
     ADD CONSTRAINT fk_activity_user FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: role_features fk_role_features_user; Type: FK CONSTRAINT; Schema: public
+--
+
+ALTER TABLE ONLY public.role_features
+    ADD CONSTRAINT fk_role_features_user FOREIGN KEY (updated_by) REFERENCES public.users(id);
 
 
 --

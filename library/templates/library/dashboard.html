@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 {% comment %}
   `layout` rather than base.html by name: an ordinary request renders the
   whole application shell, an HTMX navigation renders only the main-content
@@ -33,13 +34,13 @@
 
         <h2 class="fw-bold mb-1">
 
-            Library Dashboard
+            {% translate "Library Dashboard" %}
 
         </h2>
 
         <p class="text-body-secondary mb-0">
 
-            Overview of your library, circulation, and recent activity.
+            {% translate "Overview of your library, circulation, and recent activity." %}
 
         </p>
 
@@ -106,7 +107,7 @@
                         ></i>
                         <div>
                             <h3 class="fw-bold mb-0">{{ due_today_loans }}</h3>
-                            <p class="text-body-secondary mb-0">Due today</p>
+                            <p class="text-body-secondary mb-0">{% translate "Due today" %}</p>
                         </div>
                     </div>
                 </div>
@@ -127,7 +128,7 @@
                         <div>
                             <h3 class="fw-bold mb-0">{{ active_loans }}</h3>
                             <p class="text-body-secondary mb-0">
-                                Currently out
+                                {% translate "Currently out" %}
                             </p>
                         </div>
                     </div>
@@ -199,7 +200,7 @@
                     <div class="card-body">
 
                         <p class="text-body-secondary mb-2">
-                            Total Books
+                            {% translate "Total Books" %}
                         </p>
 
                         <h3 class="fw-bold mb-0">
@@ -228,7 +229,7 @@
                     <div class="card-body">
 
                         <p class="text-body-secondary mb-2">
-                            Total Copies
+                            {% translate "Total Copies" %}
                         </p>
 
                         <h3 class="fw-bold mb-0">
@@ -257,7 +258,7 @@
                     <div class="card-body">
 
                         <p class="text-body-secondary mb-2">
-                            Available Copies
+                            {% translate "Available Copies" %}
                         </p>
 
                         <h3 class="fw-bold mb-0">
@@ -286,7 +287,7 @@
                     <div class="card-body">
 
                         <p class="text-body-secondary mb-2">
-                            Issued Copies
+                            {% translate "Issued Copies" %}
                         </p>
 
                         <h3 class="fw-bold mb-0">
@@ -314,7 +315,7 @@
                     <div class="card-body">
 
                         <p class="text-body-secondary mb-2">
-                            Total Borrowers
+                            {% translate "Total Borrowers" %}
                         </p>
 
                         <h3 class="fw-bold mb-0">
@@ -343,7 +344,7 @@
                     <div class="card-body">
 
                         <p class="text-body-secondary mb-2">
-                            Active Borrowers
+                            {% translate "Active Borrowers" %}
                         </p>
 
                         <h3 class="fw-bold mb-0">
@@ -373,11 +374,11 @@
                     <div class="card-body text-center">
 
                         <p class="text-body-secondary mb-2">
-                            Circulation
+                            {% translate "Circulation" %}
                         </p>
 
                         <h5 class="fw-bold mb-0 text-primary">
-                            Issue / Return
+                            {% translate "Issue / Return" %}
                         </h5>
 
                     </div>
@@ -410,7 +411,7 @@
                     <div class="card-body">
 
                         <p class="text-body-secondary mb-2">
-                            Authors
+                            {% translate "Authors" %}
                         </p>
 
                         <h4 class="fw-bold mb-0">
@@ -439,7 +440,7 @@
                     <div class="card-body">
 
                         <p class="text-body-secondary mb-2">
-                            Categories
+                            {% translate "Categories" %}
                         </p>
 
                         <h4 class="fw-bold mb-0">
@@ -468,7 +469,7 @@
                     <div class="card-body">
 
                         <p class="text-body-secondary mb-2">
-                            Publishers
+                            {% translate "Publishers" %}
                         </p>
 
                         <h4 class="fw-bold mb-0">
@@ -505,7 +506,7 @@
 
                         <h5 class="mb-0">
 
-                            Recently Issued
+                            {% translate "Recently Issued" %}
 
                         </h5>
 
@@ -581,7 +582,7 @@
 
                         <p class="text-body-secondary mb-0">
 
-                            No recent loans found.
+                            {% translate "No recent loans found." %}
 
                         </p>
 
@@ -612,7 +613,7 @@
 
                         <h5 class="mb-0">
 
-                            Recently Returned
+                            {% translate "Recently Returned" %}
 
                         </h5>
 
@@ -671,7 +672,7 @@
                     {% else %}
 
                         <p class="text-body-secondary mb-0">
-                            Nothing has been returned yet.
+                            {% translate "Nothing has been returned yet." %}
                         </p>
 
                     {% endif %}
@@ -695,7 +696,7 @@
 
                         <h5 class="mb-0">
 
-                            Recent Activity
+                            {% translate "Recent Activity" %}
 
                         </h5>
 
@@ -746,7 +747,7 @@
 
                         <p class="text-body-secondary mb-0">
 
-                            No recent activity found.
+                            {% translate "No recent activity found." %}
 
                         </p>
 

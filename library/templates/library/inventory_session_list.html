@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     Stock Check | {{ branding.display_name }}
@@ -14,11 +15,11 @@
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <div>
-            <h2 class="fw-bold mb-1">Stock Check</h2>
+            <h2 class="fw-bold mb-1">{% translate "Stock Check" %}</h2>
             <p class="text-body-secondary mb-0">
-                Counting the shelves against the record. Nothing here
+                {% translate "Counting the shelves against the record. Nothing here
                 changes a copy — what is not found is reported, and what to
-                do about it stays your decision.
+                do about it stays your decision." %}
             </p>
         </div>
 
@@ -36,11 +37,11 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-secondary">
                         <tr>
-                            <th>Check</th>
-                            <th>Covers</th>
-                            <th>Found</th>
-                            <th>Started</th>
-                            <th>Status</th>
+                            <th>{% translate "Check" %}</th>
+                            <th>{% translate "Covers" %}</th>
+                            <th>{% translate "Found" %}</th>
+                            <th>{% translate "Started" %}</th>
+                            <th>{% translate "Status" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -99,9 +100,9 @@
         <div class="card shadow-sm border-0">
             <div class="card-body text-center text-body-secondary py-5">
                 <i class="bi bi-clipboard-check fs-1 d-block mb-2" aria-hidden="true"></i>
-                <p class="mb-1 fw-semibold">No stock check has been run yet.</p>
+                <p class="mb-1 fw-semibold">{% translate "No stock check has been run yet." %}</p>
                 <p class="mb-0 small">
-                    Start one for a shelf, a location, or the whole library.
+                    {% translate "Start one for a shelf, a location, or the whole library." %}
                 </p>
             </div>
         </div>
