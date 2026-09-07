@@ -14,8 +14,8 @@ truth; `models.py` is a read/write mapping onto it, not the other way around.
 
 Django reads `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, and all `DB_*` values
 from the environment via `python-decouple` (see `config/settings.py`).
-`database.py` (the standalone psycopg helper used by the `test_*.py` scripts
-at the project root) reads the same `DB_*` variables.
+`scripts/manual_checks/db_connection.py` (the standalone psycopg helper the
+checks beside it use) reads the same `DB_*` variables.
 
 ## Entity-relationship overview
 
@@ -94,7 +94,7 @@ has a plain b-tree index, and free-text search fields additionally have
   dedicated b-tree index.
 - **Trigram (`gin_trgm_ops`) indexes** for fuzzy/substring search on
   `authors.name`, `books.title`, `book_contents.title`, `borrowers.name` —
-  backs the `icontains` searches used throughout `views.py`.
+  backs the `icontains` searches used throughout `library/views/`.
 - **Partial indexes** for the two hottest query shapes in the app:
   - `idx_loans_active_due` — `loans(due_date) WHERE return_date IS NULL`,
     matching the overdue-loan query in `dashboard`/`loan_list`.
@@ -146,8 +146,8 @@ All other FKs (`book_contents.volume_id/parent_id`, `book_volumes.book_id`,
 matching their Django declarations. Everything else (`book_copies.*`,
 `loans.*`, `activity_logs.user_id`) is `NO ACTION`/`DO_NOTHING` on both
 sides — deletes are blocked at the DB level unless the corresponding view
-checks for dependents first (most do; see `views.py`'s various
-`*_delete` functions).
+checks for dependents first (most do; see the `*_delete` functions across
+`library/views/`).
 
 ## Acquisition suggestions
 

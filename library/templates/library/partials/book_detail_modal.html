@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 Book details for the shared #globalModal, served by `book_detail` when the
 request carries HX-Request. Opened from the book list so the user keeps
@@ -30,7 +31,7 @@ header by id, which saves any JavaScript for the title.
     {% else %}
         <div
             class="cover-modal cover-modal-empty align-self-start"
-            aria-label="No cover image"
+            aria-label="{% translate 'No cover image' %}"
         >
             <i class="bi bi-book" aria-hidden="true"></i>
         </div>
@@ -40,19 +41,19 @@ header by id, which saves any JavaScript for the title.
 
         <dl class="row mb-0 small">
 
-            <dt class="col-4 text-body-secondary fw-normal">Author</dt>
+            <dt class="col-4 text-body-secondary fw-normal">{% translate "Author" %}</dt>
             <dd class="col-8 fw-semibold">{{ book.author.name }}</dd>
 
-            <dt class="col-4 text-body-secondary fw-normal">Category</dt>
+            <dt class="col-4 text-body-secondary fw-normal">{% translate "Category" %}</dt>
             <dd class="col-8">
                 {% if book.category %}
                     <span class="badge bg-secondary">{{ book.category.name }}</span>
                 {% else %}
-                    <span class="text-body-secondary">Not set</span>
+                    <span class="text-body-secondary">{% translate "Not set" %}</span>
                 {% endif %}
             </dd>
 
-            <dt class="col-4 text-body-secondary fw-normal">Publisher</dt>
+            <dt class="col-4 text-body-secondary fw-normal">{% translate "Publisher" %}</dt>
             <dd class="col-8 fw-semibold">
                 {% if book.publisher %}
                     {{ book.publisher.name }}
@@ -62,11 +63,11 @@ header by id, which saves any JavaScript for the title.
                         </span>
                     {% endif %}
                 {% else %}
-                    <span class="text-body-secondary fw-normal">Not set</span>
+                    <span class="text-body-secondary fw-normal">{% translate "Not set" %}</span>
                 {% endif %}
             </dd>
 
-            <dt class="col-4 text-body-secondary fw-normal">Volumes</dt>
+            <dt class="col-4 text-body-secondary fw-normal">{% translate "Volumes" %}</dt>
             <dd class="col-8 fw-semibold mb-0">{{ volumes|length }}</dd>
 
         </dl>
@@ -82,7 +83,7 @@ header by id, which saves any JavaScript for the title.
 
     <h6 class="fw-bold mb-2">
         <i class="bi bi-collection me-1" aria-hidden="true"></i>
-        Volumes &amp; Copies
+        {% translate "Volumes &amp; Copies" %}
     </h6>
 
     <ul class="list-unstyled mb-0 small modal-volume-list">
@@ -92,8 +93,10 @@ header by id, which saves any JavaScript for the title.
             <li class="mb-2">
 
                 <span class="fw-semibold">
-                    Volume {{ volume.volume_number }}
-                </span>
+                                              {% blocktranslate trimmed with volume_number=volume.volume_number %}
+                                                  Volume {{ volume_number }}
+                                              {% endblocktranslate %}
+                                          </span>
 
                 {% if volume.title %}
                     <span class="text-body-secondary">— {{ volume.title }}</span>
@@ -112,10 +115,9 @@ header by id, which saves any JavaScript for the title.
                                 <code>{{ copy.copy_code }}</code>
                                 <span class="badge bg-secondary">{{ copy.status }}</span>
                                 {% if copy.shelf %}
-                                    — {{ copy.shelf.location.name }},
-                                    shelf {{ copy.shelf.shelf_code }}
+                                    — {% blocktranslate with place=copy.shelf.location.name code=copy.shelf.shelf_code %}{{ place }}, shelf {{ code }}{% endblocktranslate %}
                                 {% else %}
-                                    — <span class="fst-italic">no shelf assigned</span>
+                                    — <span class="fst-italic">{% translate "no shelf assigned" %}</span>
                                 {% endif %}
                             </li>
                         {% endif %}
@@ -134,7 +136,7 @@ header by id, which saves any JavaScript for the title.
     <hr>
 
     <p class="text-body-secondary small mb-0">
-        No volumes have been added for this book yet.
+        {% translate "No volumes have been added for this book yet." %}
     </p>
 
 {% endif %}
@@ -144,5 +146,5 @@ header by id, which saves any JavaScript for the title.
 
 <a href="{% url 'book_detail' book.id %}" class="btn btn-sm btn-outline-secondary">
     <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>
-    Open full details page
+    {% translate "Open full details page" %}
 </a>

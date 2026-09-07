@@ -1,11 +1,12 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
-    Book Copies | {{ branding.display_name }}
+{% translate "Book Copies" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Book Copies
+    {% translate "Book Copies" %}
 {% endblock %}
 
 {% block content %}
@@ -15,14 +16,14 @@
     <!-- Page Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
-            <h2 class="fw-bold mb-1">Book Copies</h2>
+            <h2 class="fw-bold mb-1">{% translate "Book Copies" %}</h2>
             <p class="text-body-secondary mb-0">
-                Every physical copy, where it is kept and what it is doing.
+                {% translate "Every physical copy, where it is kept and what it is doing." %}
             </p>
         </div>
         {% if can_edit %}
             <a href="{% url 'book_copy_add' %}" class="btn btn-primary">
-                <i class="bi bi-plus-lg me-1"></i> Add Copy
+                <i class="bi bi-plus-lg me-1"></i> {% translate "Add Copy" %}
             </a>
         {% endif %}
     </div>
@@ -55,7 +56,7 @@
 
                     <div class="col-12 col-lg-4">
                         <label for="copySearch" class="form-label fw-semibold">
-                            Search
+                            {% translate "Search" %}
                         </label>
                         <input
                             type="search"
@@ -63,13 +64,13 @@
                             id="copySearch"
                             name="search"
                             value="{{ search }}"
-                            placeholder="Copy code or book title..."
+                            placeholder="{% translate 'Copy code or book title...' %}"
                         >
                     </div>
 
                     <div class="col-6 col-lg-3">
                         <label for="copyLocation" class="form-label fw-semibold">
-                            Location
+                            {% translate "Location" %}
                         </label>
                         {% comment %}
                           Changing this reloads the Shelf options for that
@@ -94,7 +95,7 @@
 
                     <div class="col-6 col-lg-2">
                         <label for="copyShelf" class="form-label fw-semibold">
-                            Shelf
+                            {% translate "Shelf" %}
                         </label>
                         <select class="form-select" id="copyShelf" name="shelf">
                             {% include "library/partials/shelf_options.html" with shelves=shelves selected_id=shelf_id has_location=location_id %}
@@ -103,10 +104,10 @@
 
                     <div class="col-6 col-lg-2">
                         <label for="copyStatus" class="form-label fw-semibold">
-                            Status
+                            {% translate "Status" %}
                         </label>
                         <select class="form-select" id="copyStatus" name="status">
-                            <option value="">Any status</option>
+                            <option value="">{% translate "Any status" %}</option>
                             {% for option in state_options %}
                                 <option
                                     value="{{ option.value }}"
@@ -121,15 +122,17 @@
                     <div class="col-6 col-lg-1 d-flex gap-2">
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="bi bi-search"></i>
-                            <span class="visually-hidden">Search</span>
+                            <span class="visually-hidden">{% translate "Search" %}</span>
                         </button>
                     </div>
 
                 </div>
 
                 <div class="form-text mt-2">
-                    <strong>Unshelved</strong> finds copies that have arrived
-                    but have not been placed on a shelf yet.
+                    {% blocktranslate trimmed %}
+                        <strong>Unshelved</strong> finds copies that have
+                        arrived but have not been placed on a shelf yet.
+                    {% endblocktranslate %}
                 </div>
 
             </form>
@@ -164,15 +167,15 @@
             <div class="card-body d-flex flex-wrap align-items-end gap-3">
 
                 <div>
-                    <span class="fw-semibold d-block">Move selected copies</span>
+                    <span class="fw-semibold d-block">{% translate "Move selected copies" %}</span>
                     <span class="text-body-secondary small">
-                        <span data-copy-selected-count>0</span> selected
+                        <span data-copy-selected-count>0</span> {% translate "selected" %}
                     </span>
                 </div>
 
                 <div>
                     <label for="copyMoveLocation" class="form-label small mb-1">
-                        Location
+                        {% translate "Location" %}
                     </label>
                     <select
                         class="form-select form-select-sm"
@@ -191,7 +194,7 @@
 
                 <div>
                     <label for="copyMoveShelf" class="form-label small mb-1">
-                        Shelf
+                        {% translate "Shelf" %}
                     </label>
                     <select
                         class="form-select form-select-sm"
@@ -203,7 +206,7 @@
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-sm">
-                    <i class="bi bi-arrow-left-right me-1"></i> Move Copies
+                    <i class="bi bi-arrow-left-right me-1"></i> {% translate "Move Copies" %}
                 </button>
 
                 {% comment %}
@@ -225,7 +228,7 @@
                     hx-swap="innerHTML"
                     hx-push-url="true"
                 >
-                    <i class="bi bi-upc me-1"></i> Print Labels
+                    <i class="bi bi-upc me-1"></i> {% translate "Print Labels" %}
                 </button>
 
                 <button
@@ -233,7 +236,7 @@
                     class="btn btn-outline-secondary btn-sm"
                     data-copy-clear-selection
                 >
-                    Clear selection
+                    {% translate "Clear selection" %}
                 </button>
 
             </div>

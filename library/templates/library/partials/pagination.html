@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 Bootstrap pagination for the book list.
 
@@ -34,11 +35,13 @@ Expected context:
     >
 
         <p class="text-body-secondary small mb-0">
-            Showing
-            <strong>{{ page_obj.start_index }}</strong>–<strong>{{ page_obj.end_index }}</strong>
-            of
-            <strong>{{ page_obj.paginator.count }}</strong>
-        </p>
+                                                      {% blocktranslate trimmed with start_index=page_obj.start_index end_index=page_obj.end_index count=page_obj.paginator.count %}
+                                                          Showing
+                                                          <strong>{{ start_index }}</strong>–<strong>{{ end_index }}</strong>
+                                                          of
+                                                          <strong>{{ count }}</strong>
+                                                      {% endblocktranslate %}
+                                                  </p>
 
         <ul class="pagination pagination-sm mb-0">
 
@@ -51,7 +54,7 @@ Expected context:
                         rel="prev"
                     >
                         <i class="bi bi-chevron-left" aria-hidden="true"></i>
-                        <span class="visually-hidden">Previous page</span>
+                        <span class="visually-hidden">{% translate "Previous page" %}</span>
                     </a>
                 {% else %}
                     <span class="page-link" aria-hidden="true">
@@ -99,7 +102,7 @@ Expected context:
                         rel="next"
                     >
                         <i class="bi bi-chevron-right" aria-hidden="true"></i>
-                        <span class="visually-hidden">Next page</span>
+                        <span class="visually-hidden">{% translate "Next page" %}</span>
                     </a>
                 {% else %}
                     <span class="page-link" aria-hidden="true">

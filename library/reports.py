@@ -23,6 +23,7 @@ from django.db import models
 from django.utils import timezone
 
 from .models import ActivityLog, Book, BookCopy, Borrower, Loan
+from .queries import active_loan_copies, overdue_loan_copies
 
 
 # A month back, which is the period most of these questions are about when
@@ -242,13 +243,6 @@ def inventory_counts(copies, today, states=INVENTORY_STATES):
     are counted as conditional aggregates over the filtered set in one
     pass, using the same definitions `filter_copies_by_state` applies.
     """
-
-    # Imported here rather than at the top: views.py imports this module,
-    # so the other direction can only be taken at call time. These two are
-    # the definitions the copy list itself filters by, and writing them out
-    # again here is exactly the second definition this module exists to
-    # avoid.
-    from .views import active_loan_copies, overdue_loan_copies
 
     conditions = {
         "available": models.Q(

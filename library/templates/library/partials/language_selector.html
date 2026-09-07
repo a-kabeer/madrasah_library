@@ -1,0 +1,101 @@
+{% load i18n %}
+{% comment %}
+English / اردو / العربية for the topbar.
+
+Beside the theme selector and built the same way - the Bootstrap dropdown
+the topbar already uses - but working differently underneath, and the
+difference is the point.
+
+A theme is applied by the browser, so that control changes the page itself
+and saves in the background. A language is applied by the *server*: the page
+in front of the reader is already rendered in the old one, so choosing a
+language has to fetch the page again. Each option is therefore a real form
+submission, which is also what makes it work with no JavaScript at all.
+
+One form, not one per language. Which language was picked rides on the
+submit button's own name/value - `<button name="language" value="ur">` -
+because a clicked submit button sends its value with the form. Three forms
+would mean three CSRF tokens and three copies of `next` on every page in
+the application, and this partial is included on the public catalogue,
+where "how many forms does this page have" is a property the tests check.
+
+The menu is a <div> rather than a <ul> so the form can sit inside it:
+Bootstrap finds the menu as the toggle's next sibling, so the form cannot
+wrap the menu, and a <form> is not a legal child of <ul>.
+
+Two actions, depending on who is asking:
+
+  * signed in    -> `language_set`, which stores the choice on the account
+                    so it follows them to another machine, and redirects
+                    back to the page they were on.
+  * not signed in -> Django's own `set_language`, which writes the session
+                    and a cookie. The login page and the public catalogue
+                    both need this, and neither has an account to store
+                    anything on.
+
+Both read `language`, and both read `next` for where to go back to, so one
+set of fields serves either. `next` carries the current page so the reader
+lands back where they were rather than at the dashboard.
+{% endcomment %}
+
+{% get_current_language as current_language %}
+{% get_available_languages as available_languages %}
+
+<div class="dropdown">
+
+    <button
+        type="button"
+        class="btn theme-toggle"
+        id="languageToggle"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+        aria-label="{% translate 'Language' %}"
+        title="{% translate 'Language' %}"
+    >
+        <i class="bi bi-translate" aria-hidden="true"></i>
+    </button>
+
+    <div
+        class="dropdown-menu dropdown-menu-end"
+        aria-labelledby="languageToggle"
+    >
+
+        <form
+            method="post"
+            action="{% if request.user.is_authenticated %}{% url 'language_set' %}{% else %}{% url 'set_language' %}{% endif %}"
+        >
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+
+            {% for code, name in available_languages %}
+
+                <button
+                    type="submit"
+                    name="language"
+                    value="{{ code }}"
+                    class="dropdown-item d-flex align-items-center gap-2"
+                    {% if code == current_language %}aria-current="true"{% endif %}
+                >
+                    {% if code == current_language %}
+                        <i class="bi bi-check-lg text-success" aria-hidden="true"></i>
+                    {% else %}
+                        <i class="bi" aria-hidden="true" style="width: 1em;"></i>
+                    {% endif %}
+
+                    {% comment %}
+                      Each language's own name, in its own script -
+                      never translated. Somebody looking for Urdu is
+                      looking for "اردو", and would not find it behind
+                      the word "Urdu" on a page they cannot read.
+                    {% endcomment %}
+                    <span dir="auto">{{ name }}</span>
+
+                </button>
+
+            {% endfor %}
+
+        </form>
+
+    </div>
+
+</div>

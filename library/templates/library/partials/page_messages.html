@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 Django's messages, rendered inside the main-content region.
 
@@ -21,7 +22,7 @@ appear, and it can only do that if it lives inside the part that is swapped.
                 type="button"
                 class="btn-close"
                 data-bs-dismiss="alert"
-                aria-label="Close"
+                aria-label="{% translate 'Close' %}"
             ></button>
 
         </div>

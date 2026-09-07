@@ -1,11 +1,12 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
-    Reservations | {{ branding.display_name }}
+{% translate "Reservations" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Reservations
+    {% translate "Reservations" %}
 {% endblock %}
 
 {% block content %}
@@ -13,11 +14,9 @@
 <div class="container-fluid px-0">
 
     <div class="mb-4">
-        <h2 class="fw-bold mb-1">Reservations</h2>
+        <h2 class="fw-bold mb-1">{% translate "Reservations" %}</h2>
         <p class="text-body-secondary mb-0">
-            Who is waiting, and since when. A reservation is on the book,
-            not on a copy — nothing here is held back on a shelf, and
-            nothing happens on its own when one comes in.
+            {% translate "Who is waiting, and since when. A reservation is on the book, not on a copy — nothing here is held back on a shelf, and nothing happens on its own when one comes in." %}
         </p>
     </div>
 
@@ -34,8 +33,10 @@
         {% endfor %}
 
         <span class="text-body-secondary small ms-2">
-            {{ active_total }} waiting in all.
-        </span>
+                                                         {% blocktranslate trimmed %}
+                                                             {{ active_total }} waiting in all.
+                                                         {% endblocktranslate %}
+                                                     </span>
     </div>
 
     {% if reservations %}
@@ -44,11 +45,11 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-secondary">
                         <tr>
-                            <th>Borrower</th>
-                            <th>Book</th>
-                            <th>Asked</th>
-                            <th>Status</th>
-                            <th class="text-end">Actions</th>
+                            <th>{% translate "Borrower" %}</th>
+                            <th>{% translate "Book" %}</th>
+                            <th>{% translate "Asked" %}</th>
+                            <th>{% translate "Status" %}</th>
+                            <th class="text-end">{% translate "Actions" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -76,11 +77,11 @@
                                 </td>
                                 <td>
                                     {% if reservation.is_active %}
-                                        <span class="badge text-bg-info">Waiting</span>
+                                        <span class="badge text-bg-info">{% translate "Waiting" %}</span>
                                     {% elif reservation.status == "Fulfilled" %}
-                                        <span class="badge text-bg-success">Fulfilled</span>
+                                        <span class="badge text-bg-success">{% translate "Fulfilled" %}</span>
                                     {% else %}
-                                        <span class="badge text-bg-secondary">Cancelled</span>
+                                        <span class="badge text-bg-secondary">{% translate "Cancelled" %}</span>
                                     {% endif %}
                                 </td>
                                 <td class="text-end">
@@ -101,7 +102,7 @@
                                                    value="{{ request.get_full_path }}">
                                             <button type="submit"
                                                     class="btn btn-sm btn-outline-danger">
-                                                Cancel
+                                                {% translate "Cancel" %}
                                             </button>
                                         </form>
                                     {% else %}
@@ -123,9 +124,9 @@
         <div class="card shadow-sm border-0">
             <div class="card-body text-center text-body-secondary py-5">
                 <i class="bi bi-bookmark-star fs-1 d-block mb-2" aria-hidden="true"></i>
-                <p class="mb-1 fw-semibold">Nobody is on this list.</p>
+                <p class="mb-1 fw-semibold">{% translate "Nobody is on this list." %}</p>
                 <p class="mb-0 small">
-                    A borrower joins a queue from the book's own page.
+                    {% translate "A borrower joins a queue from the book's own page." %}
                 </p>
             </div>
         </div>

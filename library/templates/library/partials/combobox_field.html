@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 Searchable dropdown ("combobox") for picking an Author / Category / Publisher,
 with the option to create a missing one without leaving the page.
@@ -131,9 +132,9 @@ whatever the surrounding page happens to have.
     {% if not compact %}
         <div class="form-text">
             {% if allow_create %}
-                Start typing to search. If it does not exist yet, you can add it from here.
+                {% translate "Start typing to search. If it does not exist yet, you can add it from here." %}
             {% else %}
-                Start typing to search, then pick a result.
+                {% translate "Start typing to search, then pick a result." %}
             {% endif %}
         </div>
     {% endif %}

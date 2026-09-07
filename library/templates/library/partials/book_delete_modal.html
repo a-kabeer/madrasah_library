@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 Delete Book confirmation, served into #formModal by `book_delete`.
 
@@ -8,7 +9,7 @@ database's foreign keys. See `book_delete_blocker`.
 {% endcomment %}
 
 <h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
-    <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>Delete Book?
+    <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{% translate "Delete Book?" %}
 </h5>
 
 <div id="bookDeleteBody">
@@ -21,8 +22,10 @@ database's foreign keys. See `book_delete_blocker`.
         </div>
 
         <p class="text-body-secondary">
-            <strong class="text-body">{{ book.title }}</strong> stays as it is.
-        </p>
+                                           {% blocktranslate trimmed with title=book.title %}
+                                               <strong class="text-body">{{ title }}</strong> stays as it is.
+                                           {% endblocktranslate %}
+                                       </p>
 
         {% comment %}
           A real link rather than another dialog: archiving asks its own
@@ -31,47 +34,51 @@ database's foreign keys. See `book_delete_blocker`.
         {% endcomment %}
         {% if not book.is_archived %}
             <p class="text-body-secondary">
-                Archiving keeps all of that and takes the book out of the active catalogue instead.
+                {% translate "Archiving keeps all of that and takes the book out of the active catalogue instead." %}
             </p>
 
             <a href="{% url 'book_archive' book.id %}" class="btn btn-warning">
-                <i class="bi bi-archive me-1"></i> Archive instead
+                <i class="bi bi-archive me-1"></i> {% translate "Archive instead" %}
             </a>
         {% endif %}
 
         <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
             <a href="{% url 'book_detail' book.id %}" class="btn btn-outline-primary">
                 <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>
-                Open the book
+                {% translate "Open the book" %}
             </a>
             <button
                 type="button"
                 class="btn btn-outline-secondary ms-auto"
                 data-bs-dismiss="modal"
             >
-                Close
+                {% translate "Close" %}
             </button>
         </div>
 
     {% else %}
 
-        <p class="mb-2">You are about to delete:</p>
+        <p class="mb-2">{% translate "You are about to delete:" %}</p>
 
         <p class="fs-5 fw-semibold mb-3">{{ book.title }}</p>
 
         <p class="text-body-secondary">
             {% if volume_count %}
-                Its {{ volume_count }}
-                volume{{ volume_count|pluralize }} will be removed too.
-                It has no physical copies, so nothing on a shelf is affected.
+                {% blocktranslate trimmed count n=volume_count %}
+                    Its {{ n }} volume will be removed too. It has no physical
+                    copies, so nothing on a shelf is affected.
+                {% plural %}
+                    Its {{ n }} volumes will be removed too. It has no physical
+                    copies, so nothing on a shelf is affected.
+                {% endblocktranslate %}
             {% else %}
-                It has no volumes and no physical copies.
+                {% translate "It has no volumes and no physical copies." %}
             {% endif %}
         </p>
 
         <p class="text-danger small mb-0">
             <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
-            This cannot be undone.
+            {% translate "This cannot be undone." %}
         </p>
 
         <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
@@ -85,7 +92,7 @@ database's foreign keys. See `book_delete_blocker`.
             >
                 {% csrf_token %}
                 <button type="submit" class="btn btn-danger">
-                    <i class="bi bi-trash me-1" aria-hidden="true"></i> Delete
+                    <i class="bi bi-trash me-1" aria-hidden="true"></i> {% translate "Delete" %}
                 </button>
             </form>
 
@@ -94,7 +101,7 @@ database's foreign keys. See `book_delete_blocker`.
                 class="btn btn-outline-secondary ms-auto"
                 data-bs-dismiss="modal"
             >
-                Cancel
+                {% translate "Cancel" %}
             </button>
 
         </div>

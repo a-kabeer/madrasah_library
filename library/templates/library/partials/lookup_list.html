@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 The Authors, Categories and Publishers page - one page, three nouns.
 
@@ -66,7 +67,7 @@ Expected context:
                 hx-swap="innerHTML"
             >
                 <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
-                Add {{ noun|title }}
+                {% blocktranslate with noun=noun|title %}Add {{ noun }}{% endblocktranslate %}
             </a>
         {% endif %}
     </div>
@@ -102,12 +103,12 @@ Expected context:
                 >
 
                 <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-search me-1" aria-hidden="true"></i> Search
+                    <i class="bi bi-search me-1" aria-hidden="true"></i> {% translate "Search" %}
                 </button>
 
                 {% if search %}
                     <a href="{{ list_url }}" class="btn btn-outline-secondary">
-                        <i class="bi bi-x-lg me-1" aria-hidden="true"></i> Clear
+                        <i class="bi bi-x-lg me-1" aria-hidden="true"></i> {% translate "Clear" %}
                     </a>
                 {% endif %}
 
@@ -120,15 +121,25 @@ Expected context:
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
 
         <p class="text-body-secondary mb-0">
-            Found <strong>{{ paginator.count }}</strong>
-            {% if paginator.count == 1 %}{{ noun }}{% else %}{{ noun_plural }}{% endif %}{% if search %}
-                matching <strong>{{ search }}</strong>{% endif %}.
+            {% if search %}
+                {% blocktranslate trimmed count n=paginator.count with one=noun many=noun_plural term=search %}
+                    Found <strong>{{ n }}</strong> {{ one }} matching <strong>{{ term }}</strong>.
+                {% plural %}
+                    Found <strong>{{ n }}</strong> {{ many }} matching <strong>{{ term }}</strong>.
+                {% endblocktranslate %}
+            {% else %}
+                {% blocktranslate trimmed count n=paginator.count with one=noun many=noun_plural %}
+                    Found <strong>{{ n }}</strong> {{ one }}.
+                {% plural %}
+                    Found <strong>{{ n }}</strong> {{ many }}.
+                {% endblocktranslate %}
+            {% endif %}
         </p>
 
         <div class="d-flex align-items-center gap-2">
 
             <label for="pageSize" class="text-body-secondary small mb-0">
-                Show
+                {% translate "Show" %}
             </label>
 
             {% comment %}
@@ -149,7 +160,7 @@ Expected context:
                 hx-target="#mainContent"
                 hx-swap="innerHTML"
                 hx-push-url="true"
-                aria-label="Rows per page"
+                aria-label="{% translate 'Rows per page' %}"
             >
                 {% for option in page_size_options %}
                     <option
@@ -161,7 +172,7 @@ Expected context:
                 {% endfor %}
             </select>
 
-            <span class="text-body-secondary small">per page</span>
+            <span class="text-body-secondary small">{% translate "per page" %}</span>
 
         </div>
 
@@ -197,7 +208,7 @@ Expected context:
                           empty strip, so it goes altogether.
                         {% endcomment %}
                         {% if can_edit %}
-                            <th class="text-end">Actions</th>
+                            <th class="text-end">{% translate "Actions" %}</th>
                         {% endif %}
 
                     </tr>
@@ -255,7 +266,7 @@ Expected context:
                                     </span>
                                 {% else %}
                                     <span class="text-body-secondary small">
-                                        No books
+                                        {% translate "No books" %}
                                     </span>
                                 {% endif %}
                             </td>
@@ -266,7 +277,7 @@ Expected context:
                                         <a
                                             href="{% url edit_route row.id %}"
                                             class="btn btn-sm btn-outline-warning"
-                                            title="Edit"
+                                            title="{% translate 'Edit' %}"
                                             aria-label="Edit {{ row.name }}"
                                             data-form-modal
                                             hx-get="{% url edit_route row.id %}?modal=1"
@@ -278,7 +289,7 @@ Expected context:
                                         <a
                                             href="{% url delete_route row.id %}"
                                             class="btn btn-sm btn-outline-danger"
-                                            title="Delete"
+                                            title="{% translate 'Delete' %}"
                                             aria-label="Delete {{ row.name }}"
                                             data-form-modal
                                             hx-get="{% url delete_route row.id %}?modal=1"
@@ -303,13 +314,16 @@ Expected context:
                             <td colspan="{% if can_edit %}3{% else %}2{% endif %}"
                                 class="text-center text-body-secondary py-4">
                                 {% if search %}
-                                    No {{ noun_plural }} match
-                                    <strong>{{ search }}</strong>.
+                                    {% blocktranslate trimmed with many=noun_plural term=search %}
+                                        No {{ many }} match <strong>{{ term }}</strong>.
+                                    {% endblocktranslate %}
                                     <a href="{{ list_url }}" class="d-block small mt-2">
-                                        Clear the search
+                                        {% translate "Clear the search" %}
                                     </a>
                                 {% else %}
-                                    No {{ noun_plural }} yet.
+                                    {% blocktranslate trimmed with many=noun_plural %}
+                                        No {{ many }} yet.
+                                    {% endblocktranslate %}
                                 {% endif %}
                             </td>
                         </tr>

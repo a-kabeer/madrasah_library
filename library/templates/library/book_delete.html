@@ -1,11 +1,12 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
-    Delete Book | {{ branding.display_name }}
+{% translate "Delete Book" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Delete Book
+    {% translate "Delete Book" %}
 {% endblock %}
 
 {% block content %}
@@ -22,7 +23,7 @@
                         <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3rem;"></i>
                     </div>
 
-                    <h4 class="fw-bold mb-3">Delete Book?</h4>
+                    <h4 class="fw-bold mb-3">{% translate "Delete Book?" %}</h4>
 
                     {% comment %}
                       `blocker` says why the book has to stay — copies still
@@ -39,9 +40,11 @@
                         </div>
 
                         <p class="text-body-secondary mb-4">
-                            <strong class="text-body">{{ book.title }}</strong>
-                            stays as it is.
-                        </p>
+                                                                {% blocktranslate trimmed with title=book.title %}
+                                                                    <strong class="text-body">{{ title }}</strong>
+                                                                    stays as it is.
+                                                                {% endblocktranslate %}
+                                                            </p>
 
                         {% comment %}
                           The way out, offered where the refusal happens:
@@ -50,32 +53,38 @@
                         {% endcomment %}
                         {% if not book.is_archived %}
                             <p class="text-body-secondary mb-4">
-                                Archiving keeps all of that and takes the book out of the active catalogue instead.
+                                {% translate "Archiving keeps all of that and takes the book out of the active catalogue instead." %}
                             </p>
 
                             <a href="{% url 'book_archive' book.id %}" class="btn btn-warning">
-                                <i class="bi bi-archive me-1"></i> Archive instead
+                                <i class="bi bi-archive me-1"></i> {% translate "Archive instead" %}
                             </a>
                         {% endif %}
 
                     {% else %}
 
                         <p class="text-body-secondary mb-4">
-                            Are you sure you want to delete:<br>
-                            <strong class="text-body">{{ book.title }}</strong>?
-                        </p>
+                                                                {% blocktranslate trimmed with title=book.title %}
+                                                                    Are you sure you want to delete:<br>
+                                                                    <strong class="text-body">{{ title }}</strong>?
+                                                                {% endblocktranslate %}
+                                                            </p>
 
                         {% if volume_count %}
                             <p class="text-body-secondary small mb-4">
-                                Its {{ volume_count }}
-                                volume{{ volume_count|pluralize }} will be
-                                removed too. It has no physical copies.
+                                {% blocktranslate trimmed count n=volume_count %}
+                                    Its {{ n }} volume will be removed too. It
+                                    has no physical copies.
+                                {% plural %}
+                                    Its {{ n }} volumes will be removed too. It
+                                    has no physical copies.
+                                {% endblocktranslate %}
                             </p>
                         {% endif %}
 
                         <p class="text-danger small mb-4">
                             <i class="bi bi-info-circle me-1"></i>
-                            This action cannot be undone.
+                            {% translate "This action cannot be undone." %}
                         </p>
 
                     {% endif %}
@@ -83,18 +92,18 @@
                     <div class="d-flex justify-content-center gap-2">
                         {% if from_page == "detail" %}
                             <a href="{% url 'book_detail' book.id %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-lg me-1"></i> Cancel
+                                <i class="bi bi-x-lg me-1"></i> {% translate "Cancel" %}
                             </a>
                         {% else %}
                             <a href="{% url 'book_list' %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-lg me-1"></i> Cancel
+                                <i class="bi bi-x-lg me-1"></i> {% translate "Cancel" %}
                             </a>
                         {% endif %}
                         {% if not blocker %}
                             <form method="post" class="d-inline">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-danger">
-                                    <i class="bi bi-trash me-1"></i> Yes, Delete
+                                    <i class="bi bi-trash me-1"></i> {% translate "Yes, Delete" %}
                                 </button>
                             </form>
                         {% endif %}

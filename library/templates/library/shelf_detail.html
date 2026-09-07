@@ -1,18 +1,19 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     {{ shelf.shelf_code }} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Shelf
+    {% translate "Shelf" %}
 {% endblock %}
 
 {% block breadcrumbs %}
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
-                <a href="{% url 'location_list' %}">Locations</a>
+                <a href="{% url 'location_list' %}">{% translate "Locations" %}</a>
             </li>
             <li class="breadcrumb-item">
                 <a href="{% url 'location_detail' shelf.location.id %}">
@@ -38,17 +39,20 @@
             </a>
             <h2 class="fw-bold mb-1 mt-1">{{ shelf.shelf_code }}</h2>
             <p class="text-body-secondary mb-0">
-                {{ paginator.count }} cop{{ paginator.count|pluralize:"y,ies" }}
-                across {{ title_count }} title{{ title_count|pluralize }}{% if shelf.description %} · {{ shelf.description }}{% endif %}
+                {% blocktranslate trimmed count n=paginator.count with titles=title_count %}
+                    {{ n }} copy across {{ titles }} titles
+                {% plural %}
+                    {{ n }} copies across {{ titles }} titles
+                {% endblocktranslate %}{% if shelf.description %} · {{ shelf.description }}{% endif %}
             </p>
         </div>
         {% if can_edit %}
             <div class="d-flex flex-wrap gap-2">
                 <a href="{% url 'shelf_edit' shelf.id %}" class="btn btn-warning">
-                    <i class="bi bi-pencil me-1"></i> Edit
+                    <i class="bi bi-pencil me-1"></i> {% translate "Edit" %}
                 </a>
                 <a href="{% url 'shelf_delete' shelf.id %}" class="btn btn-outline-danger">
-                    <i class="bi bi-trash me-1"></i> Delete
+                    <i class="bi bi-trash me-1"></i> {% translate "Delete" %}
                 </a>
             </div>
         {% endif %}
@@ -64,7 +68,7 @@
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header bg-body">
                 <h5 class="mb-0 fw-bold">
-                    <i class="bi bi-book me-2"></i>Books on this shelf
+                    <i class="bi bi-book me-2"></i>{% translate "Books on this shelf" %}
                 </h5>
             </div>
             <div class="card-body">
@@ -91,16 +95,16 @@
                     class="form-control"
                     name="search"
                     value="{{ search }}"
-                    placeholder="Copy code or book title..."
+                    placeholder="{% translate 'Copy code or book title...' %}"
                     style="max-width: 26rem;"
-                    aria-label="Search copies on this shelf"
+                    aria-label="{% translate 'Search copies on this shelf' %}"
                 >
                 <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-search me-1"></i> Search
+                    <i class="bi bi-search me-1"></i> {% translate "Search" %}
                 </button>
                 {% if search %}
                     <a href="{% url 'shelf_detail' shelf.id %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-x-lg me-1"></i> Clear
+                        <i class="bi bi-x-lg me-1"></i> {% translate "Clear" %}
                     </a>
                 {% endif %}
             </form>
@@ -111,7 +115,7 @@
     <div class="card shadow-sm border-0">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
             <h5 class="mb-0 fw-bold">
-                <i class="bi bi-collection me-2"></i>Copies
+                <i class="bi bi-collection me-2"></i>{% translate "Copies" %}
             </h5>
             <div class="d-flex flex-wrap gap-2">
                 {% comment %}
@@ -119,11 +123,11 @@
                   and moving several at once already lives.
                 {% endcomment %}
                 <a href="{% url 'book_copy_list' %}?shelf={{ shelf.id }}" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-list-ul me-1"></i> Manage copies
+                    <i class="bi bi-list-ul me-1"></i> {% translate "Manage copies" %}
                 </a>
                 {% if can_edit %}
                     <a href="{% url 'book_copy_add' %}" class="btn btn-sm btn-primary">
-                        <i class="bi bi-plus-lg me-1"></i> Add Copy
+                        <i class="bi bi-plus-lg me-1"></i> {% translate "Add Copy" %}
                     </a>
                 {% endif %}
             </div>
@@ -132,11 +136,11 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-secondary">
                     <tr>
-                        <th>Copy Code</th>
-                        <th>Book</th>
-                        <th>Volume</th>
-                        <th>Status</th>
-                        <th class="text-end">Actions</th>
+                        <th>{% translate "Copy Code" %}</th>
+                        <th>{% translate "Book" %}</th>
+                        <th>{% translate "Volume" %}</th>
+                        <th>{% translate "Status" %}</th>
+                        <th class="text-end">{% translate "Actions" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -161,7 +165,7 @@
                                 {% if copy.volume.volume_number == 1 and not copy.volume.title %}
                                     —
                                 {% else %}
-                                    Volume {{ copy.volume.volume_number }}
+                                    {% blocktranslate with number=copy.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}
                                 {% endif %}
                             </td>
                             <td>
@@ -175,7 +179,7 @@
                                         <a
                                             href="{% url 'book_copy_edit' copy.id %}?from=shelf"
                                             class="btn btn-sm btn-outline-warning"
-                                            title="Edit"
+                                            title="{% translate 'Edit' %}"
                                             aria-label="Edit copy {{ copy.copy_code }}"
                                         >
                                             <i class="bi bi-pencil"></i>
@@ -183,7 +187,7 @@
                                         <a
                                             href="{% url 'book_copy_move' copy.id %}?from=shelf"
                                             class="btn btn-sm btn-outline-primary"
-                                            title="Move"
+                                            title="{% translate 'Move' %}"
                                             aria-label="Move copy {{ copy.copy_code }}"
                                         >
                                             <i class="bi bi-arrow-left-right"></i>
@@ -192,7 +196,7 @@
                                         <a
                                             href="{% url 'book_copy_detail' copy.id %}?from=shelf"
                                             class="btn btn-sm btn-outline-secondary"
-                                            title="Open"
+                                            title="{% translate 'Open' %}"
                                             aria-label="Open copy {{ copy.copy_code }}"
                                         >
                                             <i class="bi bi-box-arrow-up-right"></i>
@@ -205,9 +209,9 @@
                         <tr>
                             <td colspan="5" class="text-center text-body-secondary py-4">
                                 {% if search %}
-                                    Nothing on this shelf matches that.
+                                    {% translate "Nothing on this shelf matches that." %}
                                 {% else %}
-                                    This shelf is empty.
+                                    {% translate "This shelf is empty." %}
                                 {% endif %}
                             </td>
                         </tr>

@@ -1,11 +1,12 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
-    Add User | {{ branding.display_name }}
+{% translate "Add User" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Add User
+    {% translate "Add User" %}
 {% endblock %}
 
 {% block content %}
@@ -17,45 +18,45 @@
   separate job.
 {% endcomment %}
 <div class="container-fluid px-0 legacy-page">
-<h1>Add User</h1>
+<h1>{% translate "Add User" %}</h1>
 
 <form method="post">
     {% csrf_token %}
 
-    <label>Username:</label>
+    <label>{% translate "Username:" %}</label>
     <input type="text" name="username" required>
 
     <br><br>
 
-    <label>Full Name:</label>
+    <label>{% translate "Full Name:" %}</label>
     <input type="text" name="full_name" required>
 
     <br><br>
 
-    <label>Password Hash:</label>
+    <label>{% translate "Password Hash:" %}</label>
     <input type="text" name="password_hash" required>
 
     <br><br>
 
-<label>Role:</label>
+<label>{% translate "Role:" %}</label>
 
 <select name="role" required>
-    <option value="">Select Role</option>
-    <option value="Admin">Admin</option>
-    <option value="Librarian">Librarian</option>
-    <option value="Assistant">Assistant</option>
+    <option value="">{% translate "Select Role" %}</option>
+    <option value="Admin">{% translate "Admin" %}</option>
+    <option value="Librarian">{% translate "Librarian" %}</option>
+    <option value="Assistant">{% translate "Assistant" %}</option>
 </select>
     <br><br>
 
     <button type="submit">
-        Add User
+        {% translate "Add User" %}
     </button>
 </form>
 
 <br>
 
 <a href="{% url 'user_list' %}">
-    Back to Users
+    {% translate "Back to Users" %}
 </a>
 </div>
 

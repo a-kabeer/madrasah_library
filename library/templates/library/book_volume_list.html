@@ -1,21 +1,22 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
-    Book Volumes | {{ branding.display_name }}
+{% translate "Book Volumes" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Book Volumes
+    {% translate "Book Volumes" %}
 {% endblock %}
 
 {% block breadcrumbs %}
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
-                <a href="{% url 'book_list' %}">Books</a>
+                <a href="{% url 'book_list' %}">{% translate "Books" %}</a>
             </li>
             <li class="breadcrumb-item active" aria-current="page">
-                Volumes
+                {% translate "Volumes" %}
             </li>
         </ol>
     </nav>
@@ -27,9 +28,9 @@
 
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
-            <h2 class="fw-bold mb-1">Book Volumes</h2>
+            <h2 class="fw-bold mb-1">{% translate "Book Volumes" %}</h2>
             <p class="text-body-secondary mb-0">
-                Every volume in the catalogue, across all books.
+                {% translate "Every volume in the catalogue, across all books." %}
             </p>
         </div>
         {% comment %}
@@ -37,7 +38,7 @@
           @role_required("Admin", "Librarian") and is what enforces it.
         {% endcomment %}
         <a href="{% url 'book_volume_add' %}" class="btn btn-primary">
-            <i class="bi bi-plus-lg me-1"></i> Add Volume
+            <i class="bi bi-plus-lg me-1"></i> {% translate "Add Volume" %}
         </a>
     </div>
 
@@ -47,7 +48,7 @@
 
                 <div class="col-12 col-lg-5">
                     <label for="volumeSearch" class="form-label fw-semibold">
-                        Search
+                        {% translate "Search" %}
                     </label>
                     <input
                         type="text"
@@ -55,16 +56,16 @@
                         id="volumeSearch"
                         name="search"
                         value="{{ search }}"
-                        placeholder="Search book volumes..."
+                        placeholder="{% translate 'Search book volumes...' %}"
                     >
                 </div>
 
                 <div class="col-12 col-lg-5">
                     <label for="book" class="form-label fw-semibold">
-                        Book
+                        {% translate "Book" %}
                     </label>
                     <select class="form-select" name="book" id="book">
-                        <option value="">All Books</option>
+                        <option value="">{% translate "All Books" %}</option>
                         {% for book in books %}
                             <option
                                 value="{{ book.id }}"
@@ -78,12 +79,12 @@
 
                 <div class="col-12 col-lg-2 d-flex gap-2">
                     <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-search me-1"></i> Search
+                        <i class="bi bi-search me-1"></i> {% translate "Search" %}
                     </button>
                     {% if search or book_id %}
                         <a href="{% url 'book_volume_list' %}" class="btn btn-outline-secondary">
                             <i class="bi bi-x-lg"></i>
-                            <span class="visually-hidden">Clear</span>
+                            <span class="visually-hidden">{% translate "Clear" %}</span>
                         </a>
                     {% endif %}
                 </div>
@@ -98,8 +99,11 @@
     {% endcomment %}
     {% if search or book_id %}
         <p class="text-body-secondary mb-3">
-            Found <strong>{{ volumes.paginator.count }}</strong>
-            volume{{ volumes.paginator.count|pluralize }}.
+            {% blocktranslate trimmed count n=volumes.paginator.count %}
+                Found <strong>{{ n }}</strong> volume.
+            {% plural %}
+                Found <strong>{{ n }}</strong> volumes.
+            {% endblocktranslate %}
         </p>
     {% endif %}
 
@@ -108,11 +112,11 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-secondary">
                     <tr>
-                        <th>ID</th>
-                        <th>Book</th>
-                        <th>Volume</th>
-                        <th>Title</th>
-                        <th class="text-end">Actions</th>
+                        <th>{% translate "ID" %}</th>
+                        <th>{% translate "Book" %}</th>
+                        <th>{% translate "Volume" %}</th>
+                        <th>{% translate "Title" %}</th>
+                        <th class="text-end">{% translate "Actions" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -125,28 +129,32 @@
                                     {{ volume.book.title }}
                                 </a>
                             </td>
-                            <td>Volume {{ volume.volume_number }}</td>
+                            <td>
+                                    {% blocktranslate trimmed with volume_number=volume.volume_number %}
+                                        Volume {{ volume_number }}
+                                    {% endblocktranslate %}
+                                </td>
                             <td>{{ volume.title }}</td>
                             <td class="text-end">
                                 <div class="d-inline-flex gap-1">
                                     <a
                                         href="{% url 'book_volume_detail' volume.id %}"
                                         class="btn btn-sm btn-outline-secondary"
-                                        title="View Details"
+                                        title="{% translate 'View Details' %}"
                                     >
                                         <i class="bi bi-box-arrow-up-right"></i>
                                     </a>
                                     <a
                                         href="{% url 'book_volume_edit' volume.id %}"
                                         class="btn btn-sm btn-outline-warning"
-                                        title="Edit"
+                                        title="{% translate 'Edit' %}"
                                     >
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                     <a
                                         href="{% url 'book_volume_delete' volume.id %}"
                                         class="btn btn-sm btn-outline-danger"
-                                        title="Delete"
+                                        title="{% translate 'Delete' %}"
                                     >
                                         <i class="bi bi-trash"></i>
                                     </a>
@@ -156,7 +164,7 @@
                     {% empty %}
                         <tr>
                             <td colspan="5" class="text-center text-body-secondary py-4">
-                                No volumes found.
+                                {% translate "No volumes found." %}
                             </td>
                         </tr>
                     {% endfor %}

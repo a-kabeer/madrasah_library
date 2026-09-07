@@ -17,27 +17,146 @@
   can never drift apart again.
 */
 :root {
+    /* 1 in LTR, -1 in RTL. Used by anything that cannot be expressed with
+       a logical property - which is `translateX` and nothing else. */
+    --dir: 1;
+
     --sidebar-width: 260px;
     --topbar-height: 70px;
 
-    --brand-primary: #0d6efd;
-    --brand-secondary: #6c757d;
-    --brand-accent: #198754;
+    /* ---------------------------------------------------------------
+       BRAND
 
-    /* Readable foreground for filled brand-coloured surfaces. Overridden
-       in the dark block only where the surface itself changes. */
+       One hue, used only for what is primary, active, selected or
+       focused. Everything else in the interface is neutral, which is
+       what stops a library catalogue from looking like a marketing
+       page.
+
+       Indigo is the default because it is distinct from every status
+       colour the app already uses - green for available, amber for due
+       soon, red for overdue - so a brand-coloured button can never be
+       misread as a status.
+
+       An installation overrides these three from Settings > Branding
+       and base.html emits them inline. Everything downstream reads the
+       token, so nothing else needs to know a colour was configured.
+       --------------------------------------------------------------- */
+    --brand-primary: #4f46e5;
+    --brand-secondary: #64748b;
+    --brand-accent: #059669;
+
+    /* Readable foreground for filled brand-coloured surfaces. */
     --brand-on-primary: #fff;
 
-    --sidebar-bg: #212529;
-    --sidebar-hover: #343a40;
-    --sidebar-text: #ced4da;
-    --sidebar-text-strong: #fff;
-    --sidebar-section: #adb5bd;
-    --sidebar-border: rgba(255, 255, 255, 0.1);
+    /* ---------------------------------------------------------------
+       NEUTRAL RAMP
 
-    --scrim: rgba(0, 0, 0, 0.5);
-    --shadow-soft: rgba(0, 0, 0, 0.15);
-    --shadow-strong: rgba(0, 0, 0, 0.25);
+       One family - slate - for every surface, border and non-brand
+       text in the application. A single ramp is what makes the greys
+       agree with each other; mixing families leaves borders looking
+       faintly warm against cool text, which reads as sloppiness
+       without ever being obviously wrong.
+       --------------------------------------------------------------- */
+    --slate-50: #f8fafc;
+    --slate-100: #f1f5f9;
+    --slate-200: #e2e8f0;
+    --slate-300: #cbd5e1;
+    --slate-400: #94a3b8;
+    --slate-500: #64748b;
+    --slate-700: #334155;
+    --slate-800: #1e293b;
+    --slate-900: #0f172a;
+    --slate-950: #0b1120;
+
+    --scrim: rgba(15, 23, 42, 0.5);
+    --shadow-soft: rgba(15, 23, 42, 0.06);
+    --shadow-strong: rgba(15, 23, 42, 0.12);
+}
+
+
+/*
+  ===================================================================
+  SURFACES
+
+  Three planes, and the rule is the same in both themes:
+
+      chrome   lowest    sidebar, topbar, mobile drawer
+      page     middle    the ground content sits on
+      card     highest   the content itself
+
+  A 1px border sits between them. That ordering is what separates
+  navigation from content, so the sidebar does not need to be a
+  permanently dark rail in order to do it - and because the rule is
+  identical in both themes, Light and Dark are one design rather than
+  two.
+
+  --surface-inset is the exception: a recess rather than a plane, for
+  table headers, disabled inputs and striped rows.
+  ===================================================================
+*/
+
+[data-bs-theme="light"] {
+    color-scheme: light;
+
+    --surface-chrome: var(--slate-100);
+    --surface-page: var(--slate-50);
+    --surface-card: #fff;
+    --surface-raised: #fff;
+    --surface-inset: var(--slate-100);
+    --surface-hover: var(--slate-100);
+
+    --border-subtle: var(--slate-200);
+    --border-strong: var(--slate-300);
+
+    --text-primary: var(--slate-900);
+    --text-secondary: var(--slate-500);
+    --text-muted: var(--slate-400);
+}
+
+[data-bs-theme="dark"] {
+    color-scheme: dark;
+
+    /* Chrome and page share a ground here; the border between them and
+       the lighter cards carry the hierarchy instead. Going a step
+       darker than the page for the sidebar would mean near-black on
+       black, which is a difference nobody can see. */
+    --surface-chrome: var(--slate-950);
+    --surface-page: var(--slate-950);
+    --surface-card: var(--slate-900);
+    --surface-raised: var(--slate-800);
+    --surface-inset: var(--slate-800);
+    --surface-hover: var(--slate-800);
+
+    --border-subtle: var(--slate-800);
+    --border-strong: var(--slate-700);
+
+    --text-primary: var(--slate-50);
+    --text-secondary: var(--slate-400);
+    --text-muted: var(--slate-500);
+
+    /* A soft grey shadow is invisible on a dark ground, so both the
+       shadows and the mobile scrim carry more weight here. */
+    --scrim: rgba(0, 0, 0, 0.6);
+    --shadow-soft: rgba(0, 0, 0, 0.4);
+    --shadow-strong: rgba(0, 0, 0, 0.6);
+}
+
+
+/*
+  The chrome tokens the sidebar rules already read, now pointed at the
+  surfaces above rather than carrying colours of their own. Re-aliasing
+  them here rather than editing those rules is what makes the sidebar
+  follow the theme without a single selector changing.
+*/
+:root,
+[data-bs-theme="light"],
+[data-bs-theme="dark"] {
+    --sidebar-bg: var(--surface-chrome);
+    --sidebar-hover: var(--surface-hover);
+    --sidebar-text: var(--text-secondary);
+    --sidebar-text-strong: var(--text-primary);
+    --sidebar-section: var(--text-muted);
+    --sidebar-border: var(--border-subtle);
 }
 
 /*
@@ -54,7 +173,7 @@
 
     /* Channels for the default brand colour. base.html overrides this from
        the configured colour, since CSS cannot split a hex into channels. */
-    --bs-primary-rgb: 13, 110, 253;
+    --bs-primary-rgb: 79, 70, 229;
 
     /* Kept as an alias of the brand token — it used to be a separate
        hardcoded colour, which meant the sidebar and Bootstrap disagreed. */
@@ -62,17 +181,308 @@
 }
 
 /*
-  Dark mode variable overrides.
-  Bootstrap handles component colors via data-bs-theme.
-  These custom variables adapt our custom chrome (sidebar, etc).
-*/
-[data-bs-theme="dark"] {
-    --sidebar-bg: #1a1d21;
-    --sidebar-hover: #2d3238;
+  ===================================================================
+  BOOTSTRAP NEUTRALS
 
-    /* Shadows and the mobile scrim need more weight on a dark ground. */
-    --shadow-soft: rgba(0, 0, 0, 0.5);
-    --shadow-strong: rgba(0, 0, 0, 0.7);
+  Bootstrap 5.3 themes itself from these root variables, so pointing
+  them at the surfaces above re-skins tables, forms, dropdowns,
+  modals, offcanvas, pagination, alerts, toasts, tooltips, popovers,
+  accordions and tabs at once - in both themes, with no template
+  touched and no component stylesheet overridden.
+
+  This block is the reason the theme is not scattered: a colour is
+  named once in the surface palette, and every Bootstrap component
+  reads it from here.
+  ===================================================================
+*/
+
+[data-bs-theme="light"],
+[data-bs-theme="dark"] {
+    --bs-body-bg: var(--surface-page);
+    --bs-body-color: var(--text-primary);
+    --bs-emphasis-color: var(--text-primary);
+    --bs-heading-color: var(--text-primary);
+
+    --bs-secondary-color: var(--text-secondary);
+    --bs-tertiary-color: var(--text-muted);
+
+    --bs-secondary-bg: var(--surface-inset);
+    --bs-tertiary-bg: var(--surface-inset);
+
+    --bs-border-color: var(--border-subtle);
+    --bs-border-color-translucent: var(--border-subtle);
+}
+
+
+/*
+  ===================================================================
+  BOOTSTRAP COMPONENTS
+
+  The variables above are read from :root, so declaring them there is
+  enough. These are not: Bootstrap declares each component's own
+  variables inside that component's rule - `.card` sets
+  --bs-card-bg itself - and a local declaration beats an inherited
+  one. So each has to be said on a selector that matches the
+  component. Same specificity as Bootstrap's, but this file loads
+  after it, so source order decides.
+
+  Left at Bootstrap's defaults, every one of these would take the page
+  colour and the three planes would collapse into one flat sheet.
+  ===================================================================
+*/
+
+.card {
+    --bs-card-bg: var(--surface-card);
+    --bs-card-border-color: var(--border-subtle);
+    --bs-card-cap-bg: transparent;
+    --bs-card-color: var(--text-primary);
+}
+
+.modal {
+    --bs-modal-bg: var(--surface-card);
+    --bs-modal-border-color: var(--border-subtle);
+    --bs-modal-color: var(--text-primary);
+    --bs-modal-header-border-color: var(--border-subtle);
+    --bs-modal-footer-border-color: var(--border-subtle);
+}
+
+/* Raised rather than card: a menu floats above whatever it opened
+   from, and on a dark ground that only reads if it is lighter. */
+.dropdown-menu {
+    --bs-dropdown-bg: var(--surface-raised);
+    --bs-dropdown-border-color: var(--border-subtle);
+    --bs-dropdown-color: var(--text-primary);
+    --bs-dropdown-link-color: var(--text-primary);
+    --bs-dropdown-link-hover-bg: var(--surface-hover);
+    --bs-dropdown-link-hover-color: var(--text-primary);
+    --bs-dropdown-link-active-bg: var(--brand-primary);
+    --bs-dropdown-link-active-color: var(--brand-on-primary);
+    --bs-dropdown-header-color: var(--text-muted);
+    --bs-dropdown-divider-bg: var(--border-subtle);
+}
+
+.offcanvas,
+.offcanvas-start,
+.offcanvas-end,
+.offcanvas-top,
+.offcanvas-bottom {
+    --bs-offcanvas-bg: var(--surface-chrome);
+    --bs-offcanvas-color: var(--text-primary);
+    --bs-offcanvas-border-color: var(--border-subtle);
+}
+
+.list-group {
+    --bs-list-group-bg: var(--surface-card);
+    --bs-list-group-color: var(--text-primary);
+    --bs-list-group-border-color: var(--border-subtle);
+    --bs-list-group-action-hover-bg: var(--surface-hover);
+    --bs-list-group-action-hover-color: var(--text-primary);
+    --bs-list-group-active-bg: var(--brand-primary);
+    --bs-list-group-active-border-color: var(--brand-primary);
+    --bs-list-group-active-color: var(--brand-on-primary);
+}
+
+.pagination {
+    --bs-pagination-bg: var(--surface-card);
+    --bs-pagination-color: var(--text-secondary);
+    --bs-pagination-border-color: var(--border-subtle);
+    --bs-pagination-hover-bg: var(--surface-hover);
+    --bs-pagination-hover-color: var(--text-primary);
+    --bs-pagination-hover-border-color: var(--border-subtle);
+    --bs-pagination-focus-bg: var(--surface-hover);
+    --bs-pagination-focus-color: var(--text-primary);
+    --bs-pagination-active-bg: var(--brand-primary);
+    --bs-pagination-active-border-color: var(--brand-primary);
+    --bs-pagination-active-color: var(--brand-on-primary);
+    --bs-pagination-disabled-bg: var(--surface-card);
+    --bs-pagination-disabled-color: var(--text-muted);
+    --bs-pagination-disabled-border-color: var(--border-subtle);
+}
+
+.accordion {
+    --bs-accordion-bg: var(--surface-card);
+    --bs-accordion-color: var(--text-primary);
+    --bs-accordion-border-color: var(--border-subtle);
+    --bs-accordion-btn-color: var(--text-primary);
+    --bs-accordion-active-bg: var(--surface-inset);
+    --bs-accordion-active-color: var(--text-primary);
+}
+
+.popover {
+    --bs-popover-bg: var(--surface-raised);
+    --bs-popover-border-color: var(--border-subtle);
+    --bs-popover-body-color: var(--text-primary);
+    --bs-popover-header-bg: var(--surface-inset);
+    --bs-popover-header-color: var(--text-primary);
+}
+
+/* A tooltip is deliberately the inverse of the surface it sits on -
+   it is transient, and inverting it is what makes it read as an
+   overlay rather than another panel. */
+.tooltip {
+    --bs-tooltip-bg: var(--text-primary);
+    --bs-tooltip-color: var(--surface-card);
+    --bs-tooltip-opacity: 1;
+}
+
+.toast {
+    --bs-toast-bg: var(--surface-raised);
+    --bs-toast-color: var(--text-primary);
+    --bs-toast-border-color: var(--border-subtle);
+    --bs-toast-header-bg: var(--surface-inset);
+    --bs-toast-header-color: var(--text-secondary);
+    --bs-toast-header-border-color: var(--border-subtle);
+}
+
+.nav-tabs {
+    --bs-nav-tabs-border-color: var(--border-subtle);
+    --bs-nav-tabs-link-hover-border-color: var(--border-subtle);
+    --bs-nav-tabs-link-active-bg: var(--surface-card);
+    --bs-nav-tabs-link-active-color: var(--text-primary);
+    --bs-nav-tabs-link-active-border-color: var(--border-subtle);
+    --bs-nav-link-color: var(--text-secondary);
+    --bs-nav-link-hover-color: var(--text-primary);
+}
+
+.progress,
+.progress-stacked {
+    --bs-progress-bg: var(--surface-inset);
+    --bs-progress-bar-bg: var(--brand-primary);
+}
+
+/*
+  Tables draw their own lines rather than inheriting the card's, and
+  --bs-table-bg has to stay transparent so a table inside a card takes
+  the card's colour instead of painting over it.
+*/
+.table {
+    --bs-table-color: var(--text-primary);
+    --bs-table-bg: transparent;
+    --bs-table-border-color: var(--border-subtle);
+    --bs-table-striped-bg: var(--surface-inset);
+    --bs-table-striped-color: var(--text-primary);
+    --bs-table-hover-bg: var(--surface-hover);
+    --bs-table-hover-color: var(--text-primary);
+    --bs-table-active-bg: var(--surface-hover);
+    --bs-table-active-color: var(--text-primary);
+}
+
+/*
+  A table header is a recess, not a plane - it belongs to the table
+  rather than floating above it - and it stays put while the body
+  scrolls, so it must be opaque.
+*/
+.table > thead {
+    --bs-table-bg: var(--surface-inset);
+    --bs-table-color: var(--text-secondary);
+}
+
+
+/*
+  ===================================================================
+  FORMS
+
+  Inputs sit on the card plane rather than the page, so a form inside
+  a card does not dissolve into it. The focus ring is the brand colour
+  at low alpha - one of only three places, with an active nav item and
+  a primary button, where the brand is allowed to show.
+  ===================================================================
+*/
+
+.form-control,
+.form-select {
+    background-color: var(--surface-card);
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: var(--surface-card);
+    border-color: var(--brand-primary);
+    color: var(--text-primary);
+    box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.2);
+}
+
+.form-control::placeholder {
+    color: var(--text-muted);
+    opacity: 1;
+}
+
+.form-control:disabled,
+.form-select:disabled {
+    background-color: var(--surface-inset);
+    color: var(--text-muted);
+}
+
+.input-group-text {
+    background-color: var(--surface-inset);
+    border-color: var(--border-strong);
+    color: var(--text-secondary);
+}
+
+.form-check-input {
+    background-color: var(--surface-card);
+    border-color: var(--border-strong);
+}
+
+.form-check-input:checked {
+    background-color: var(--brand-primary);
+    border-color: var(--brand-primary);
+}
+
+.form-check-input:focus {
+    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.2);
+}
+
+/*
+  Every focusable thing gets the same ring, so keyboard position is
+  never ambiguous - and it is the brand colour, so it is never
+  mistaken for a status.
+*/
+:focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
+}
+
+
+/*
+  ===================================================================
+  SCROLLBARS
+
+  `color-scheme` in the surface blocks already hands native scrollbars
+  to the OS in the right shade, which is all Firefox and Safari need.
+  These rules are for Chromium, which keeps a light scrollbar until
+  told otherwise - the one place a dark interface reliably leaks
+  white.
+  ===================================================================
+*/
+
+* {
+    scrollbar-color: var(--border-strong) transparent;
+}
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border: 2px solid transparent;
+    border-radius: 6px;
+    background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+    border: 2px solid transparent;
+    background-clip: content-box;
 }
 
 
@@ -183,8 +593,10 @@
 
 body {
     margin: 0;
-    background: var(--bs-tertiary-bg);
-    color: var(--bs-body-color);
+
+    /* The page plane. Cards sit above this, chrome below it. */
+    background: var(--surface-page);
+    color: var(--text-primary);
 }
 
 
@@ -205,7 +617,7 @@ body {
     position: fixed;
 
     top: 0;
-    left: 0;
+    inset-inline-start: 0;
 
     width: var(--sidebar-width);
     height: 100vh;
@@ -372,7 +784,7 @@ body {
 ========================= */
 
 .main-area {
-    margin-left: var(--sidebar-width);
+    margin-inline-start: var(--sidebar-width);
 
     min-height: 100vh;
 }
@@ -385,12 +797,13 @@ body {
 .topbar {
     height: var(--topbar-height);
 
-    background: var(--bs-body-bg);
+    /* Chrome, like the sidebar - not the page it sits above. */
+    background: var(--surface-chrome);
 
     border-bottom:
 
         1px solid
-        var(--bs-border-color);
+        var(--border-subtle);
 
     display: flex;
 
@@ -510,7 +923,7 @@ body {
 .notification-badge-slot {
     position: absolute;
     top: 0.05rem;
-    right: 0.05rem;
+    inset-inline-end: 0.05rem;
 
     line-height: 0;
 }
@@ -646,7 +1059,7 @@ a.notification-title:hover {
 /* The tick marks the active choice; it also carries the meaning conveyed to
    assistive tech via aria-checked on the same button. */
 .theme-option-check {
-    margin-left: auto;
+    margin-inline-start: auto;
 
     visibility: hidden;
 }
@@ -1049,7 +1462,7 @@ a.notification-title:hover {
 
 /* Room for the spinner and clear button sitting inside the field. */
 .combobox-input {
-    padding-right: 4.5rem;
+    padding-inline-end: 4.5rem;
 }
 
 
@@ -1057,7 +1470,7 @@ a.notification-title:hover {
     position: absolute;
 
     top: 50%;
-    right: 2.25rem;
+    inset-inline-end: 2.25rem;
 
     transform: translateY(-50%);
 
@@ -1128,7 +1541,7 @@ a.notification-title:hover {
     width: 1.5rem;
     height: 1.5rem;
 
-    margin-right: 0.4rem;
+    margin-inline-end: 0.4rem;
 
     border-radius: 50%;
 
@@ -1153,7 +1566,7 @@ a.notification-title:hover {
    The accent edge is what marks it as something acting on a selection
    rather than another panel that was always there. */
 .copy-move-bar {
-    border-left: 3px solid var(--brand-primary) !important;
+    border-inline-start: 3px solid var(--brand-primary) !important;
 }
 
 
@@ -1174,7 +1587,7 @@ a.notification-title:hover {
     position: absolute;
 
     top: 50%;
-    right: 0.5rem;
+    inset-inline-end: 0.5rem;
 
     transform: translateY(-50%);
 
@@ -1206,8 +1619,8 @@ a.notification-title:hover {
     position: absolute;
 
     top: calc(100% + 0.25rem);
-    left: 0;
-    right: 0;
+    inset-inline-start: 0;
+    inset-inline-end: 0;
 
     z-index: 1050;
 
@@ -1251,7 +1664,7 @@ a.notification-title:hover {
 
     color: var(--bs-body-color);
 
-    text-align: left;
+    text-align: start;
 
     cursor: pointer;
 }
@@ -1366,7 +1779,7 @@ a.notification-title:hover {
     position: fixed;
 
     top: 0;
-    left: 0;
+    inset-inline-start: 0;
 
     /* Below Bootstrap's modal backdrop (1050) and dialog (1055): the book
        name both shows this preview and opens a dialog, and a pointer-
@@ -1445,7 +1858,10 @@ a.notification-title:hover {
 @media (max-width: 991.98px) {
 
     .sidebar {
-        transform: translateX(-100%);
+        /* translateX has no logical form, so the direction is a
+           variable: 1 in LTR, -1 in RTL (set on :root below). The sidebar
+           slides in from whichever side the language starts on. */
+        transform: translateX(calc(-100% * var(--dir)));
     }
 
     .sidebar.show {
@@ -1453,7 +1869,7 @@ a.notification-title:hover {
     }
 
     .main-area {
-        margin-left: 0;
+        margin-inline-start: 0;
     }
 
     .menu-button {
@@ -1764,7 +2180,7 @@ a.notification-title:hover {
 }
 
 .public-tagline {
-    margin-left: auto;
+    margin-inline-start: auto;
 
     color: var(--bs-secondary-color);
     font-size: 0.9rem;
@@ -1975,11 +2391,11 @@ a.notification-title:hover {
     }
 
     .public-result-availability {
-        margin-left: 3.75rem;
+        margin-inline-start: 3.75rem;
     }
 
     .public-tagline {
-        margin-left: 0;
+        margin-inline-start: 0;
         width: 100%;
     }
 
@@ -2167,4 +2583,152 @@ a.notification-title:hover {
     .label-sheet {
         justify-content: start;
     }
+}
+
+
+/* ==========================================================================
+   RIGHT-TO-LEFT (Urdu, Arabic)
+   ==========================================================================
+
+   Almost nothing is needed here, and that is the point: the rules above use
+   logical properties, and the markup uses Bootstrap's logical utilities
+   (`ms-`/`me-`/`ps-`/`pe-`/`text-start`) throughout - 376 of them, and not
+   one of the physical `ml-`/`mr-`/`text-left` kind. Bootstrap's own RTL
+   build handles its components.
+
+   What is left is the two things a stylesheet cannot infer.
+   ========================================================================== */
+
+[dir="rtl"] {
+    --dir: -1;
+}
+
+/* Directional icons point the wrong way when the page is mirrored. Only the
+   ones that mean "forward" or "back" - a chevron in a breadcrumb, an arrow
+   on a pagination control. Icons that mean a *thing* (a book, a shelf) are
+   not mirrored, and neither is anything that would read as a mistake
+   reversed. */
+[dir="rtl"] .bi-arrow-left,
+[dir="rtl"] .bi-arrow-right,
+[dir="rtl"] .bi-arrow-left-short,
+[dir="rtl"] .bi-arrow-right-short,
+[dir="rtl"] .bi-chevron-left,
+[dir="rtl"] .bi-chevron-right,
+[dir="rtl"] .bi-box-arrow-right,
+[dir="rtl"] .bi-box-arrow-in-left,
+[dir="rtl"] .bi-box-arrow-up-right {
+    transform: scaleX(-1);
+}
+
+
+/* ==========================================================================
+   ARABIC-SCRIPT TYPOGRAPHY
+   ==========================================================================
+
+   Four self-hosted WOFF2 faces, 481 KB in total, in
+   library/static/library/fonts/ - see the README beside them for where
+   they came from and how the TTFs were converted.
+
+   Nastaliq for Urdu and Naskh for Arabic, which is not interchangeable:
+   Urdu is conventionally set in Nastaliq, and Naskh reads as a foreign
+   typographic convention to an Urdu reader even though every letter of it
+   is legible.
+
+   `unicode-range` is what makes this cheap and is the whole trick: the
+   browser downloads these faces only when Arabic-script characters are
+   actually on the page, and Latin text and digits keep the system stack. So
+   a copy code reads `CP-00042` on an Urdu page, and an Arabic book title
+   renders correctly on an English one.
+   ========================================================================== */
+
+@font-face {
+    font-family: "Noto Nastaliq Urdu";
+    src: url("../fonts/NotoNastaliqUrdu-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-display: swap;
+    unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF,
+                   U+FE70-FEFF;
+}
+
+@font-face {
+    font-family: "Noto Nastaliq Urdu";
+    src: url("../fonts/NotoNastaliqUrdu-Bold.woff2") format("woff2");
+    font-weight: 700;
+    font-display: swap;
+    unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF,
+                   U+FE70-FEFF;
+}
+
+@font-face {
+    font-family: "Noto Naskh Arabic";
+    src: url("../fonts/NotoNaskhArabic-Regular.woff2") format("woff2");
+    font-weight: 400;
+    font-display: swap;
+    unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF,
+                   U+FE70-FEFF;
+}
+
+@font-face {
+    font-family: "Noto Naskh Arabic";
+    src: url("../fonts/NotoNaskhArabic-Bold.woff2") format("woff2");
+    font-weight: 700;
+    font-display: swap;
+    unicode-range: U+0600-06FF, U+0750-077F, U+08A0-08FF, U+FB50-FDFF,
+                   U+FE70-FEFF;
+}
+
+/* Nastaliq is a hanging script: its descenders reach well below the
+   baseline, and at the line-height a Latin face is comfortable at they are
+   simply cut off. This is the single most common way an Urdu page comes out
+   broken, so it is set once, high, on the language itself. */
+[lang="ur"] {
+    /* Both the variable and the property. Bootstrap sets
+       `body { font-family: var(--bs-body-font-family) }`, and `body` is a
+       descendant of the <html> this attribute sits on - so the declaration
+       below alone was silently overridden for every element on the page,
+       and Urdu rendered in the system stack with the Nastaliq face
+       downloaded and unused. Setting the variable is what actually
+       reaches Bootstrap. */
+    --bs-body-font-family: "Noto Nastaliq Urdu", system-ui, sans-serif;
+
+    font-family: "Noto Nastaliq Urdu", system-ui, sans-serif;
+    line-height: 2.2;
+    /* Nastaliq renders optically smaller than a Latin face at the same
+       size. */
+    font-size: 1.08rem;
+}
+
+[lang="ar"] {
+    --bs-body-font-family: "Noto Naskh Arabic", system-ui, sans-serif;
+
+    font-family: "Noto Naskh Arabic", system-ui, sans-serif;
+    line-height: 1.9;
+}
+
+/* The same descenders need room inside anything with a fixed height. Every
+   one of these clips Urdu text at its Latin height. */
+[lang="ur"] .nav-link-custom,
+[lang="ur"] .btn,
+[lang="ur"] .form-control,
+[lang="ur"] .form-select,
+[lang="ur"] .badge,
+[lang="ur"] .page-link,
+[lang="ur"] .table > :not(caption) > * > * {
+    line-height: 2.1;
+    padding-block: 0.45rem;
+}
+
+[lang="ur"] .nav-section-title {
+    line-height: 1.9;
+}
+
+/* Identifiers stay Latin whatever the page language is: a copy code, an
+   ISBN or a shelf code is read off a spine and typed into a scanner, and
+   Nastaliq numerals would be a different string to the eye. */
+[lang="ur"] .copy-code,
+[lang="ar"] .copy-code,
+[lang="ur"] code,
+[lang="ar"] code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    line-height: 1.5;
 }

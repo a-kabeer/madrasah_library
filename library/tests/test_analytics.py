@@ -40,6 +40,7 @@ from library.models import (
 )
 
 from .helpers import (
+    main_content,
     make_author,
     make_book,
     make_borrower,
@@ -1259,7 +1260,11 @@ class PermissionTests(AnalyticsTestCase):
         self.assertEqual(Loan.objects.count(), loans)
 
     def test_there_is_no_form_that_writes(self):
-        body = self.page().content.decode()
+        # The analytics page itself writes nothing. The shell around it
+        # does contain one POST form - the topbar language switcher, which
+        # is on every staff page - so the question is asked of the report,
+        # which is what this test is about.
+        body = main_content(self.page().content.decode())
 
         self.assertNotIn("csrfmiddlewaretoken", body)
         self.assertNotIn('method="post"', body.lower())

@@ -1,11 +1,12 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
-    Activity Logs | {{ branding.display_name }}
+{% translate "Activity Logs" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Activity Logs
+    {% translate "Activity Logs" %}
 {% endblock %}
 
 {% block content %}
@@ -17,27 +18,27 @@
   separate job.
 {% endcomment %}
 <div class="container-fluid px-0 legacy-page">
-<h1>Activity Logs</h1>
+<h1>{% translate "Activity Logs" %}</h1>
 
 <form method="get">
 
-    <label>Search:</label>
+    <label>{% translate "Search:" %}</label>
 
     <input
         type="text"
         name="search"
         value="{{ search }}"
-        placeholder="Search activity logs..."
+        placeholder="{% translate 'Search activity logs...' %}"
     >
 
     <br><br>
 
-    <label>User:</label>
+    <label>{% translate "User:" %}</label>
 
     <select name="user">
 
         <option value="">
-            All Users
+            {% translate "All Users" %}
         </option>
 
         {% for user in users %}
@@ -57,12 +58,12 @@
 
     <br><br>
 
-    <label>Action:</label>
+    <label>{% translate "Action:" %}</label>
 
     <select name="action">
 
         <option value="">
-            All Actions
+            {% translate "All Actions" %}
         </option>
 
         {% for item in actions %}
@@ -82,12 +83,12 @@
 
     <br><br>
 
-    <label>Entity Type:</label>
+    <label>{% translate "Entity Type:" %}</label>
 
     <select name="entity_type">
 
         <option value="">
-            All Entity Types
+            {% translate "All Entity Types" %}
         </option>
 
         {% for item in entity_types %}
@@ -107,7 +108,7 @@
 
     <br><br>
 
-    <label>Date:</label>
+    <label>{% translate "Date:" %}</label>
 
     <input
         type="date"
@@ -118,11 +119,11 @@
     <br><br>
 
     <button type="submit">
-        Search / Filter
+        {% translate "Search / Filter" %}
     </button>
 
     <a href="{% url 'activity_log_list' %}">
-        Clear Filters
+        {% translate "Clear Filters" %}
     </a>
 
 </form>
@@ -130,8 +131,10 @@
 <br>
 
 <p>
-    Found {{ logs.paginator.count }} log(s).
-</p>
+       {% blocktranslate trimmed with count=logs.paginator.count %}
+           Found {{ count }} log(s).
+       {% endblocktranslate %}
+   </p>
 
 <ul>
 
@@ -139,24 +142,24 @@
 
         <li>
 
-            ID: {{ log.id }}
+            {% translate "ID:" %} {{ log.id }}
 
-            - User:
+            - {% translate "User:" %}
 
             {% if log.user %}
                 {{ log.user.full_name }}
             {% else %}
-                System
+                {% translate "System" %}
             {% endif %}
 
-            - Action: {{ log.action }}
+            - {% translate "Action:" %} {{ log.action }}
 
             {% if log.entity_type %}
-                - Entity: {{ log.entity_type }}
+                - {% translate "Entity:" %} {{ log.entity_type }}
             {% endif %}
 
             {% if log.entity_id %}
-                - ID: {{ log.entity_id }}
+                - {% translate "ID:" %} {{ log.entity_id }}
             {% endif %}
 
             {% if log.description %}
@@ -169,7 +172,7 @@
 
     {% empty %}
 
-        <li>No activity logs found.</li>
+        <li>{% translate "No activity logs found." %}</li>
 
     {% endfor %}
 

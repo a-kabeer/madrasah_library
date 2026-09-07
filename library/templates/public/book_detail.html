@@ -1,4 +1,5 @@
 {% extends "public/base.html" %}
+{% load i18n %}
 
 {% block title %}{{ book.title }} | {{ branding.display_name }}{% endblock %}
 
@@ -7,7 +8,7 @@
 <p class="mb-3">
     <a href="{% url 'public_book_list' %}" class="text-decoration-none">
         <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>
-        Back to the catalogue
+        {% translate "Back to the catalogue" %}
     </a>
 </p>
 
@@ -50,7 +51,7 @@
 
         <dl class="row mb-0">
 
-            <dt class="col-sm-3 text-body-secondary fw-normal">Author</dt>
+            <dt class="col-sm-3 text-body-secondary fw-normal">{% translate "Author" %}</dt>
             <dd class="col-sm-9">
                 {% comment %}
                   A link back into the list, which is how the author filter
@@ -62,7 +63,7 @@
             </dd>
 
             {% if book.publisher %}
-                <dt class="col-sm-3 text-body-secondary fw-normal">Publisher</dt>
+                <dt class="col-sm-3 text-body-secondary fw-normal">{% translate "Publisher" %}</dt>
                 <dd class="col-sm-9">
                     <a href="{% url 'public_book_list' %}?publisher={{ book.publisher_id }}">
                         {{ book.publisher.name }}
@@ -71,7 +72,7 @@
             {% endif %}
 
             {% if book.category %}
-                <dt class="col-sm-3 text-body-secondary fw-normal">Category</dt>
+                <dt class="col-sm-3 text-body-secondary fw-normal">{% translate "Category" %}</dt>
                 <dd class="col-sm-9">
                     <a href="{% url 'public_book_list' %}?category={{ book.category_id }}">
                         {{ book.category.name }}
@@ -81,13 +82,24 @@
 
             {% if volumes %}
                 <dt class="col-sm-3 text-body-secondary fw-normal">
-                    Volume{{ volumes|length|pluralize }}
+                    {% comment %}
+                      `context` because "Volume" is also a plain field
+                      label in ten other templates, and gettext cannot hold
+                      one msgid both with and without a plural form. The
+                      context keeps this heading's singular/plural pair
+                      separate from that label.
+                    {% endcomment %}
+                    {% blocktranslate trimmed count n=volumes|length context "catalogue heading" %}
+                        Volume
+                    {% plural %}
+                        Volumes
+                    {% endblocktranslate %}
                 </dt>
                 <dd class="col-sm-9">
                     <ul class="list-unstyled mb-0">
                         {% for volume in volumes %}
                             <li>
-                                Volume {{ volume.volume_number }}{% if volume.title %} — {{ volume.title }}{% endif %}
+                                {% blocktranslate with number=volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% if volume.title %} — {{ volume.title }}{% endif %}
                             </li>
                         {% endfor %}
                     </ul>
@@ -97,7 +109,7 @@
         </dl>
 
         <p class="text-body-secondary small mt-4 mb-0">
-            To borrow this book, ask at the library desk.
+            {% translate "To borrow this book, ask at the library desk." %}
         </p>
 
     </div>

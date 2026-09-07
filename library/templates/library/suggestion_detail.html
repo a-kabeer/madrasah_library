@@ -1,18 +1,19 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     {{ suggestion.title }} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Suggestion
+    {% translate "Suggestion" %}
 {% endblock %}
 
 {% block breadcrumbs %}
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
-                <a href="{% url 'suggestion_list' %}">Suggestions</a>
+                <a href="{% url 'suggestion_list' %}">{% translate "Suggestions" %}</a>
             </li>
             <li class="breadcrumb-item active" aria-current="page">
                 {{ suggestion.title }}
@@ -41,16 +42,16 @@
 
                     <dl class="row mb-0">
 
-                        <dt class="col-sm-4 text-body-secondary fw-normal">Author</dt>
+                        <dt class="col-sm-4 text-body-secondary fw-normal">{% translate "Author" %}</dt>
                         <dd class="col-sm-8">{{ suggestion.author_name|default:"—" }}</dd>
 
-                        <dt class="col-sm-4 text-body-secondary fw-normal">Publisher</dt>
+                        <dt class="col-sm-4 text-body-secondary fw-normal">{% translate "Publisher" %}</dt>
                         <dd class="col-sm-8">{{ suggestion.publisher_name|default:"—" }}</dd>
 
-                        <dt class="col-sm-4 text-body-secondary fw-normal">ISBN</dt>
+                        <dt class="col-sm-4 text-body-secondary fw-normal">{% translate "ISBN" %}</dt>
                         <dd class="col-sm-8">{{ suggestion.isbn|default:"—" }}</dd>
 
-                        <dt class="col-sm-4 text-body-secondary fw-normal">Why this book</dt>
+                        <dt class="col-sm-4 text-body-secondary fw-normal">{% translate "Why this book" %}</dt>
                         <dd class="col-sm-8">
                             {% if suggestion.notes %}
                                 {{ suggestion.notes|linebreaksbr }}
@@ -59,18 +60,18 @@
                             {% endif %}
                         </dd>
 
-                        <dt class="col-sm-4 text-body-secondary fw-normal">Suggested by</dt>
+                        <dt class="col-sm-4 text-body-secondary fw-normal">{% translate "Suggested by" %}</dt>
                         <dd class="col-sm-8">
                             {% if suggestion.suggested_by %}
                                 {{ suggestion.suggested_by.full_name }}
                             {% else %}
                                 <span class="text-body-secondary">
-                                    account removed
+                                    {% translate "account removed" %}
                                 </span>
                             {% endif %}
                         </dd>
 
-                        <dt class="col-sm-4 text-body-secondary fw-normal">Asked</dt>
+                        <dt class="col-sm-4 text-body-secondary fw-normal">{% translate "Asked" %}</dt>
                         <dd class="col-sm-8">
                             {{ suggestion.created_at|date:"j M Y, H:i" }}
                         </dd>
@@ -82,20 +83,20 @@
                         {% endcomment %}
                         {% if suggestion.was_reviewed %}
                             <dt class="col-sm-4 text-body-secondary fw-normal">
-                                Decided by
+                                {% translate "Decided by" %}
                             </dt>
                             <dd class="col-sm-8">
                                 {% if suggestion.reviewed_by %}
                                     {{ suggestion.reviewed_by.full_name }}
                                 {% else %}
                                     <span class="text-body-secondary">
-                                        account removed
+                                        {% translate "account removed" %}
                                     </span>
                                 {% endif %}
                             </dd>
 
                             <dt class="col-sm-4 text-body-secondary fw-normal">
-                                Decided
+                                {% translate "Decided" %}
                             </dt>
                             <dd class="col-sm-8">
                                 {{ suggestion.reviewed_at|date:"j M Y, H:i" }}
@@ -121,7 +122,7 @@
             {% if suggestion.is_pending and can_review %}
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-body">
-                        <h6 class="mb-0 fw-bold">Decide</h6>
+                        <h6 class="mb-0 fw-bold">{% translate "Decide" %}</h6>
                     </div>
                     <div class="card-body d-flex flex-wrap gap-2">
 
@@ -131,7 +132,7 @@
                             <input type="hidden" name="status" value="Approved">
                             <button type="submit" class="btn btn-success">
                                 <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
-                                Approve
+                                {% translate "Approve" %}
                             </button>
                         </form>
 
@@ -141,12 +142,12 @@
                             <input type="hidden" name="status" value="Rejected">
                             <button type="submit" class="btn btn-outline-danger">
                                 <i class="bi bi-x-lg me-1" aria-hidden="true"></i>
-                                Reject
+                                {% translate "Reject" %}
                             </button>
                         </form>
 
                         <p class="text-body-secondary small mb-0 ms-auto align-self-center">
-                            Neither can be undone.
+                            {% translate "Neither can be undone." %}
                         </p>
 
                     </div>
@@ -157,7 +158,7 @@
             {% if suggestion.is_approved %}
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-body">
-                        <h6 class="mb-0 fw-bold">Approved — next step</h6>
+                        <h6 class="mb-0 fw-bold">{% translate "Approved — next step" %}</h6>
                     </div>
                     <div class="card-body">
 
@@ -177,10 +178,7 @@
                         {% endcomment %}
                         {% if can_catalogue %}
                             <p class="text-body-secondary">
-                                Opens the ordinary Add Book form with what
-                                is known filled in. Nothing is added until
-                                you save it there, and the usual checks
-                                still apply.
+                                {% translate "Opens the ordinary Add Book form with what is known filled in. Nothing is added until you save it there, and the usual checks still apply." %}
                             </p>
 
                             <div class="d-flex flex-wrap gap-2">
@@ -189,7 +187,7 @@
                                     class="btn btn-primary"
                                 >
                                     <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
-                                    Add to catalogue
+                                    {% translate "Add to catalogue" %}
                                 </a>
 
                                 {% if can_review %}
@@ -205,15 +203,14 @@
                                                value="Acquired">
                                         <button type="submit"
                                                 class="btn btn-outline-secondary">
-                                            Already acquired
+                                            {% translate "Already acquired" %}
                                         </button>
                                     </form>
                                 {% endif %}
                             </div>
                         {% else %}
                             <p class="text-body-secondary mb-0">
-                                Approved. Adding it to the catalogue is a
-                                librarian's job.
+                                {% translate "Approved. Adding it to the catalogue is a librarian's job." %}
                             </p>
                         {% endif %}
 
@@ -225,15 +222,17 @@
             {% if suggestion.is_closed %}
                 <p class="text-body-secondary small">
                     <i class="bi bi-lock me-1" aria-hidden="true"></i>
-                    This suggestion is finished and cannot be changed. If it
-                    should be looked at again, suggest it afresh.
+                    {% blocktranslate trimmed %}
+                        This suggestion is finished and cannot be changed. If it
+                        should be looked at again, suggest it afresh.
+                    {% endblocktranslate %}
                 </p>
             {% endif %}
 
 
             <a href="{% url 'suggestion_list' %}" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>
-                Back to suggestions
+                {% translate "Back to suggestions" %}
             </a>
 
         </div>

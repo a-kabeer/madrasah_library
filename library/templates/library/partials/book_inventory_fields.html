@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 The physical side of a new book: volumes, how many copies of each, and
 where they go.
@@ -28,7 +29,7 @@ max_total_copies, id_prefix.
 {% comment %} ---------- Step 2: volumes ---------- {% endcomment %}
 <div data-book-step="2" class="book-step">
 
-    <p class="fw-semibold mb-2">Does this book have more than one volume?</p>
+    <p class="fw-semibold mb-2">{% translate "Does this book have more than one volume?" %}</p>
 
     <div class="d-flex flex-wrap gap-3 mb-3">
 
@@ -43,7 +44,7 @@ max_total_copies, id_prefix.
                 {% if inventory.mode != "multiple" %}checked{% endif %}
             >
             <label class="form-check-label" for="{{ id_prefix }}VolumeSingle">
-                Single volume
+                {% translate "Single volume" %}
             </label>
         </div>
 
@@ -58,14 +59,14 @@ max_total_copies, id_prefix.
                 {% if inventory.mode == "multiple" %}checked{% endif %}
             >
             <label class="form-check-label" for="{{ id_prefix }}VolumeMultiple">
-                Multiple volumes
+                {% translate "Multiple volumes" %}
             </label>
         </div>
 
     </div>
 
     <div class="form-text mb-3" data-volume-single-note>
-        Nothing more to fill in — the book is recorded as one volume.
+        {% translate "Nothing more to fill in — the book is recorded as one volume." %}
     </div>
 
     {% comment %}
@@ -80,7 +81,7 @@ max_total_copies, id_prefix.
             {% for row in inventory.rows %}
                 <div class="row g-2 align-items-end mb-2" data-volume-row>
                     <div class="col-4 col-sm-3">
-                        <label class="form-label small mb-1">Volume no.</label>
+                        <label class="form-label small mb-1">{% translate "Volume no." %}</label>
                         <input
                             type="number"
                             min="1"
@@ -90,7 +91,7 @@ max_total_copies, id_prefix.
                         >
                     </div>
                     <div class="col">
-                        <label class="form-label small mb-1">Volume title (optional)</label>
+                        <label class="form-label small mb-1">{% translate "Volume title (optional)" %}</label>
                         <input
                             type="text"
                             class="form-control form-control-sm"
@@ -103,7 +104,7 @@ max_total_copies, id_prefix.
                             type="button"
                             class="btn btn-sm btn-outline-danger"
                             data-remove-volume
-                            aria-label="Remove this volume"
+                            aria-label="{% translate 'Remove this volume' %}"
                         >
                             <i class="bi bi-x-lg" aria-hidden="true"></i>
                         </button>
@@ -120,7 +121,7 @@ max_total_copies, id_prefix.
         class="btn btn-sm btn-outline-primary"
         data-add-volume
     >
-        <i class="bi bi-plus-lg me-1"></i> Add volume
+        <i class="bi bi-plus-lg me-1"></i> {% translate "Add volume" %}
     </button>
 
 </div>
@@ -129,7 +130,7 @@ max_total_copies, id_prefix.
 {% comment %} ---------- Step 3: copies ---------- {% endcomment %}
 <div data-book-step="3" class="book-step">
 
-    <p class="fw-semibold mb-2">Would you like to add physical copies now?</p>
+    <p class="fw-semibold mb-2">{% translate "Would you like to add physical copies now?" %}</p>
 
     <div class="d-flex flex-wrap gap-3 mb-3">
 
@@ -144,7 +145,7 @@ max_total_copies, id_prefix.
                 {% if inventory.copies_mode == "add" %}checked{% endif %}
             >
             <label class="form-check-label" for="{{ id_prefix }}CopiesAdd">
-                Add copies now
+                {% translate "Add copies now" %}
             </label>
         </div>
 
@@ -159,15 +160,14 @@ max_total_copies, id_prefix.
                 {% if inventory.copies_mode != "add" %}checked{% endif %}
             >
             <label class="form-check-label" for="{{ id_prefix }}CopiesSkip">
-                Skip for now
+                {% translate "Skip for now" %}
             </label>
         </div>
 
     </div>
 
     <div class="form-text mb-3" data-copies-skip-note>
-        The book is catalogued without copies. Add them later from the
-        book's own page, whenever you know where they will live.
+        {% translate "The book is catalogued without copies. Add them later from the book's own page, whenever you know where they will live." %}
     </div>
 
     <div data-copies-panel>
@@ -185,7 +185,7 @@ max_total_copies, id_prefix.
                     <div class="row g-2 align-items-center mb-2" data-copy-qty-row>
                         <div class="col">
                             <span class="small text-body-secondary">
-                                Volume {{ row.number|default:"?" }}
+                                {% blocktranslate with number=row.number|default:"?" %}Volume {{ number }}{% endblocktranslate %}
                                 {% if row.title %}— {{ row.title }}{% endif %}
                             </span>
                         </div>
@@ -197,7 +197,7 @@ max_total_copies, id_prefix.
                                 class="form-control form-control-sm"
                                 name="copy_qty"
                                 value="{{ row.quantity|default:'0' }}"
-                                aria-label="Number of copies"
+                                aria-label="{% translate 'Number of copies' %}"
                             >
                         </div>
                     </div>
@@ -208,7 +208,7 @@ max_total_copies, id_prefix.
                 <div class="row g-2 align-items-center" data-copy-qty-row>
                     <div class="col">
                         <label class="form-label small mb-0" for="{{ id_prefix }}CopyQty">
-                            Number of copies
+                            {% translate "Number of copies" %}
                         </label>
                     </div>
                     <div class="col-4 col-sm-3">
@@ -229,11 +229,13 @@ max_total_copies, id_prefix.
         </div>
 
         <div class="form-text mb-3">
-            Up to {{ max_copies_per_volume }} per volume,
-            {{ max_total_copies }} in one go.
-        </div>
+                                        {% blocktranslate trimmed %}
+                                            Up to {{ max_copies_per_volume }} per volume,
+                                            {{ max_total_copies }} in one go.
+                                        {% endblocktranslate %}
+                                    </div>
 
-        <p class="fw-semibold mb-2">Copy codes</p>
+        <p class="fw-semibold mb-2">{% translate "Copy codes" %}</p>
 
         <div class="d-flex flex-wrap gap-3 mb-2">
 
@@ -248,7 +250,7 @@ max_total_copies, id_prefix.
                     {% if inventory.code_mode != "manual" %}checked{% endif %}
                 >
                 <label class="form-check-label" for="{{ id_prefix }}CodeAuto">
-                    Generate automatically
+                    {% translate "Generate automatically" %}
                 </label>
             </div>
 
@@ -263,15 +265,14 @@ max_total_copies, id_prefix.
                     {% if inventory.code_mode == "manual" %}checked{% endif %}
                 >
                 <label class="form-check-label" for="{{ id_prefix }}CodeManual">
-                    Enter manually
+                    {% translate "Enter manually" %}
                 </label>
             </div>
 
         </div>
 
         <div class="form-text mb-3" data-code-auto-note>
-            Each copy gets its own permanent code. The code never changes,
-            even if the book is retitled, and is never given to another copy.
+            {% translate "Each copy gets its own permanent code. The code never changes, even if the book is retitled, and is never given to another copy." %}
         </div>
 
         {% comment %}
@@ -287,8 +288,8 @@ max_total_copies, id_prefix.
                         class="form-control form-control-sm mb-2"
                         name="copy_code"
                         value="{{ code }}"
-                        placeholder="Copy code"
-                        aria-label="Copy code"
+                        placeholder="{% translate 'Copy code' %}"
+                        aria-label="{% translate 'Copy code' %}"
                     >
                 {% endfor %}
             {% endif %}
@@ -303,12 +304,12 @@ max_total_copies, id_prefix.
 {% comment %} ---------- Step 4: where the copies live ---------- {% endcomment %}
 <div data-book-step="4" class="book-step">
 
-    <p class="fw-semibold mb-3">Where will the copies be kept?</p>
+    <p class="fw-semibold mb-3">{% translate "Where will the copies be kept?" %}</p>
 
     <div class="mb-3">
 
         <label for="{{ id_prefix }}Location" class="form-label fw-semibold">
-            Location
+            {% translate "Location" %}
         </label>
 
         <div class="d-flex gap-2">
@@ -337,13 +338,13 @@ max_total_copies, id_prefix.
                 data-quick-add-toggle="location"
             >
                 <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                <span class="d-none d-sm-inline ms-1">New</span>
+                <span class="d-none d-sm-inline ms-1">{% translate "New" %}</span>
             </button>
         </div>
 
         <div class="quick-add mt-2" data-quick-add="location" hidden>
             <label class="form-label small mb-1" for="{{ id_prefix }}NewLocation">
-                New location name
+                {% translate "New location name" %}
             </label>
             <div class="d-flex gap-2">
                 {% comment %}
@@ -356,7 +357,7 @@ max_total_copies, id_prefix.
                     class="form-control form-control-sm"
                     id="{{ id_prefix }}NewLocation"
                     data-quick-add-name="location"
-                    placeholder="e.g. Main Hall"
+                    placeholder="{% translate 'e.g. Main Hall' %}"
                 >
                 <button
                     type="button"
@@ -366,7 +367,7 @@ max_total_copies, id_prefix.
                     hx-target="#{{ id_prefix }}Location"
                     hx-swap="innerHTML"
                 >
-                    Save
+                    {% translate "Save" %}
                 </button>
             </div>
             <div data-quick-add-error class="form-text text-danger"></div>
@@ -377,7 +378,7 @@ max_total_copies, id_prefix.
     <div class="mb-3">
 
         <label for="{{ id_prefix }}Shelf" class="form-label fw-semibold">
-            Shelf
+            {% translate "Shelf" %}
         </label>
 
         <div class="d-flex gap-2">
@@ -396,13 +397,13 @@ max_total_copies, id_prefix.
                 data-quick-add-toggle="shelf"
             >
                 <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                <span class="d-none d-sm-inline ms-1">New</span>
+                <span class="d-none d-sm-inline ms-1">{% translate "New" %}</span>
             </button>
         </div>
 
         <div class="quick-add mt-2" data-quick-add="shelf" hidden>
             <label class="form-label small mb-1" for="{{ id_prefix }}NewShelf">
-                New shelf code, in the location chosen above
+                {% translate "New shelf code, in the location chosen above" %}
             </label>
             <div class="d-flex gap-2">
                 <input
@@ -410,7 +411,7 @@ max_total_copies, id_prefix.
                     class="form-control form-control-sm"
                     id="{{ id_prefix }}NewShelf"
                     data-quick-add-name="shelf"
-                    placeholder="e.g. A-1"
+                    placeholder="{% translate 'e.g. A-1' %}"
                 >
                 <button
                     type="button"
@@ -420,7 +421,7 @@ max_total_copies, id_prefix.
                     hx-target="#{{ id_prefix }}Shelf"
                     hx-swap="innerHTML"
                 >
-                    Save
+                    {% translate "Save" %}
                 </button>
             </div>
             <div data-quick-add-error class="form-text text-danger"></div>

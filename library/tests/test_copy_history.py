@@ -26,6 +26,7 @@ from library.models import (
 )
 
 from .helpers import (
+    main_content,
     make_author,
     make_book,
     make_borrower,
@@ -461,9 +462,12 @@ class HistoryPermissionTests(HistoryTestCase):
         # There is no writer: no URL, no form, no button anywhere on it.
         make_loan(copy=self.copy, borrower=self.borrower)
 
-        body = self.page().content.decode()
-        section = body[body.index("bi-clock-history"):]
+        # Scoped to the page's own content: `bi-clock-history` is also
+        # the sidebar's Activity Log icon, so slicing from its first
+        # occurrence started in the shell and swept in the topbar.
+        section = main_content(self.page().content.decode())
 
+        self.assertIn("bi-clock-history", section)
         self.assertNotIn("<form", section)
 
     def test_an_assistant_still_cannot_edit_the_copy(self):

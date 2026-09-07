@@ -1,20 +1,21 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
-    Suggest a Book | {{ branding.display_name }}
+{% translate "Suggest a Book" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Suggest a Book
+    {% translate "Suggest a Book" %}
 {% endblock %}
 
 {% block breadcrumbs %}
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
-                <a href="{% url 'suggestion_list' %}">Suggestions</a>
+                <a href="{% url 'suggestion_list' %}">{% translate "Suggestions" %}</a>
             </li>
-            <li class="breadcrumb-item active" aria-current="page">New</li>
+            <li class="breadcrumb-item active" aria-current="page">{% translate "New" %}</li>
         </ol>
     </nav>
 {% endblock %}
@@ -30,17 +31,13 @@
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
                         <i class="bi bi-lightbulb me-2" aria-hidden="true"></i>
-                        Suggest a Book
+                        {% translate "Suggest a Book" %}
                     </h5>
                 </div>
                 <div class="card-body">
 
                     <p class="text-body-secondary">
-                        Write down what you know. Only the title is
-                        required — a suggestion is a note for whoever
-                        decides what the library buys, not a catalogue
-                        entry, so an approximate author or a half-remembered
-                        ISBN is still worth having.
+                        {% translate "Write down what you know. Only the title is required — a suggestion is a note for whoever decides what the library buys, not a catalogue entry, so an approximate author or a half-remembered ISBN is still worth having." %}
                     </p>
 
                     {% if error %}
@@ -80,7 +77,7 @@
 
                         <div class="mb-3">
                             <label for="suggestionTitle" class="form-label fw-semibold">
-                                Title <span class="text-danger">*</span>
+                                {% translate "Title" %} <span class="text-danger">*</span>
                             </label>
                             <input
                                 type="text"
@@ -96,7 +93,7 @@
                         <div class="row g-3">
                             <div class="col-12 col-md-6">
                                 <label for="suggestionAuthor" class="form-label fw-semibold">
-                                    Author
+                                    {% translate "Author" %}
                                 </label>
                                 {% comment %}
                                   Free text, and deliberately not the
@@ -115,14 +112,13 @@
                                     maxlength="255"
                                 >
                                 <div class="form-text">
-                                    As you know it. No author record is
-                                    created from this.
+                                    {% translate "As you know it. No author record is created from this." %}
                                 </div>
                             </div>
 
                             <div class="col-12 col-md-6">
                                 <label for="suggestionPublisher" class="form-label fw-semibold">
-                                    Publisher
+                                    {% translate "Publisher" %}
                                 </label>
                                 <input
                                     type="text"
@@ -136,7 +132,7 @@
 
                             <div class="col-12 col-md-6">
                                 <label for="suggestionIsbn" class="form-label fw-semibold">
-                                    ISBN
+                                    {% translate "ISBN" %}
                                 </label>
                                 <input
                                     type="text"
@@ -147,14 +143,14 @@
                                     maxlength="32"
                                 >
                                 <div class="form-text">
-                                    Copied off the cover is fine.
+                                    {% translate "Copied off the cover is fine." %}
                                 </div>
                             </div>
                         </div>
 
                         <div class="mt-3">
                             <label for="suggestionNotes" class="form-label fw-semibold">
-                                Why this book
+                                {% translate "Why this book" %}
                             </label>
                             <textarea
                                 class="form-control"
@@ -180,8 +176,7 @@
                                     value="1"
                                 >
                                 <label class="form-check-label" for="suggestionConfirm">
-                                    I have looked, and this is a different
-                                    book — suggest it anyway.
+                                    {% translate "I have looked, and this is a different book — suggest it anyway." %}
                                 </label>
                             </div>
                         {% endif %}
@@ -189,11 +184,11 @@
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
-                                Suggest it
+                                {% translate "Suggest it" %}
                             </button>
                             <a href="{% url 'suggestion_list' %}" class="btn btn-outline-secondary">
                                 <i class="bi bi-x-lg me-1" aria-hidden="true"></i>
-                                Cancel
+                                {% translate "Cancel" %}
                             </a>
                         </div>
 

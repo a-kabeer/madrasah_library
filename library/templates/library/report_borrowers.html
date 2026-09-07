@@ -1,20 +1,21 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
-    Borrower Activity | {{ branding.display_name }}
+{% translate "Borrower Activity" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Borrower Activity
+    {% translate "Borrower Activity" %}
 {% endblock %}
 
 {% block breadcrumbs %}
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
-                <a href="{% url 'reports_home' %}">Reports</a>
+                <a href="{% url 'reports_home' %}">{% translate "Reports" %}</a>
             </li>
-            <li class="breadcrumb-item active" aria-current="page">Borrower Activity</li>
+            <li class="breadcrumb-item active" aria-current="page">{% translate "Borrower Activity" %}</li>
         </ol>
     </nav>
 {% endblock %}
@@ -37,12 +38,12 @@
             <div class="row g-2 align-items-end">
 
                 <div class="col-6 col-md-3">
-                    <label for="startDate" class="form-label small mb-1">From</label>
+                    <label for="startDate" class="form-label small mb-1">{% translate "From" %}</label>
                     <input type="date" class="form-control form-control-sm"
                            id="startDate" name="start" value="{{ start }}">
                 </div>
                 <div class="col-6 col-md-3">
-                    <label for="endDate" class="form-label small mb-1">To</label>
+                    <label for="endDate" class="form-label small mb-1">{% translate "To" %}</label>
                     <input type="date" class="form-control form-control-sm"
                            id="endDate" name="end" value="{{ end }}">
                 </div>
@@ -52,7 +53,7 @@
                 </div>
                 <div class="col-12 col-md-auto">
                     <button type="submit" class="btn btn-primary btn-sm">
-                        <i class="bi bi-funnel me-1"></i> Apply
+                        <i class="bi bi-funnel me-1"></i> {% translate "Apply" %}
                     </button>
                 </div>
             </div>
@@ -78,9 +79,9 @@
                 <table class="table table-sm align-middle mb-0">
                     <thead class="table-secondary">
                         <tr>
-                            <th>Borrower</th><th>Reg. no</th>
-                            <th>Issued</th><th>Returned</th>
-                            <th>Out now</th><th>Overdue</th>
+                            <th>{% translate "Borrower" %}</th><th>{% translate "Reg. no" %}</th>
+                            <th>{% translate "Issued" %}</th><th>{% translate "Returned" %}</th>
+                            <th>{% translate "Out now" %}</th><th>{% translate "Overdue" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -103,7 +104,7 @@
                         {% empty %}
                             <tr>
                                 <td colspan="6" class="text-center text-body-secondary py-4">
-                                    Nobody borrowed anything in this period.
+                                    {% translate "Nobody borrowed anything in this period." %}
                                 </td>
                             </tr>
                         {% endfor %}

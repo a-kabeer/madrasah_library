@@ -1,15 +1,16 @@
 {% extends layout %}
+{% load i18n %}
 
-{% block title %}Circulation | {{ branding.display_name }}{% endblock %}
+{% block title %}{% translate "Circulation" %} | {{ branding.display_name }}{% endblock %}
 
-{% block page_title %}Circulation{% endblock %}
+{% block page_title %}{% translate "Circulation" %}{% endblock %}
 
 {% block content %}
 <div class="container-fluid px-0">
 
     <div class="mb-4">
-        <h2 class="fw-bold mb-1">Circulation</h2>
-        <p class="text-body-secondary mb-0">Issue books, returns, and manage active loans.</p>
+        <h2 class="fw-bold mb-1">{% translate "Circulation" %}</h2>
+        <p class="text-body-secondary mb-0">{% translate "Issue books, returns, and manage active loans." %}</p>
     </div>
 
     <div class="row g-3 mb-4">
@@ -25,8 +26,8 @@
                                 </svg>
                             </span>
                         </div>
-                        <h5 class="card-title text-body">Issue Books</h5>
-                        <p class="text-body-secondary mb-0 small">Issue copies to a borrower</p>
+                        <h5 class="card-title text-body">{% translate "Issue Books" %}</h5>
+                        <p class="text-body-secondary mb-0 small">{% translate "Issue copies to a borrower" %}</p>
                     </div>
                 </div>
             </a>
@@ -43,8 +44,8 @@
                                 </svg>
                             </span>
                         </div>
-                        <h5 class="card-title text-body">Return Books</h5>
-                        <p class="text-body-secondary mb-0 small">Scan or enter copy code</p>
+                        <h5 class="card-title text-body">{% translate "Return Books" %}</h5>
+                        <p class="text-body-secondary mb-0 small">{% translate "Scan or enter copy code" %}</p>
                     </div>
                 </div>
             </a>
@@ -54,7 +55,7 @@
             <a href="{% url 'circulation_active_loans' %}" class="text-decoration-none">
                 <div class="card shadow-sm border-0 h-100">
                     <div class="card-body">
-                        <p class="text-body-secondary mb-2">Active Loans</p>
+                        <p class="text-body-secondary mb-2">{% translate "Active Loans" %}</p>
                         <h3 class="fw-bold mb-0">{{ active_count }}</h3>
                     </div>
                 </div>
@@ -65,7 +66,7 @@
             <a href="{% url 'loan_list' %}?status=overdue" class="text-decoration-none">
                 <div class="card shadow-sm border-0 h-100 {% if overdue_count > 0 %}border-start border-4 border-danger{% endif %}">
                     <div class="card-body">
-                        <p class="text-body-secondary mb-2">Overdue</p>
+                        <p class="text-body-secondary mb-2">{% translate "Overdue" %}</p>
                         <h3 class="fw-bold mb-0 {% if overdue_count > 0 %}text-danger{% endif %}">{{ overdue_count }}</h3>
                     </div>
                 </div>
@@ -80,7 +81,7 @@
             <a href="{% url 'loan_list' %}?status=due_today" class="text-decoration-none">
                 <div class="card shadow-sm border-0 h-100 {% if due_today_count > 0 %}border-start border-4 border-warning{% endif %}">
                     <div class="card-body">
-                        <p class="text-body-secondary mb-2">Due Today</p>
+                        <p class="text-body-secondary mb-2">{% translate "Due Today" %}</p>
                         <h3 class="fw-bold mb-0 {% if due_today_count > 0 %}text-warning{% endif %}">{{ due_today_count }}</h3>
                     </div>
                 </div>
@@ -91,8 +92,8 @@
             <a href="{% url 'loan_list' %}" class="text-decoration-none">
                 <div class="card shadow-sm border-0 h-100">
                     <div class="card-body text-center">
-                        <h5 class="card-title text-body">View All Loans</h5>
-                        <p class="text-body-secondary mb-0 small">Search, filter &amp; manage</p>
+                        <h5 class="card-title text-body">{% translate "View All Loans" %}</h5>
+                        <p class="text-body-secondary mb-0 small">{% translate "Search, filter &amp; manage" %}</p>
                     </div>
                 </div>
             </a>
@@ -102,8 +103,8 @@
             <a href="{% url 'borrower_list' %}" class="text-decoration-none">
                 <div class="card shadow-sm border-0 h-100">
                     <div class="card-body text-center">
-                        <h5 class="card-title text-body">Borrowers</h5>
-                        <p class="text-body-secondary mb-0 small">Manage borrower records</p>
+                        <h5 class="card-title text-body">{% translate "Borrowers" %}</h5>
+                        <p class="text-body-secondary mb-0 small">{% translate "Manage borrower records" %}</p>
                     </div>
                 </div>
             </a>

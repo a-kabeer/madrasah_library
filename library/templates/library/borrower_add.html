@@ -1,11 +1,12 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
-    Add Borrower | {{ branding.display_name }}
+{% translate "Add Borrower" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Add Borrower
+    {% translate "Add Borrower" %}
 {% endblock %}
 
 {% block content %}
@@ -18,7 +19,7 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-person-plus me-2"></i>Add Borrower
+                        <i class="bi bi-person-plus me-2"></i>{% translate "Add Borrower" %}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -41,7 +42,7 @@
 
                             <div class="col-12 col-sm-6">
                                 <label for="formName" class="form-label fw-semibold">
-                                    Name <span class="text-danger">*</span>
+                                    {% translate "Name" %} <span class="text-danger">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -55,7 +56,7 @@
 
                             <div class="col-12 col-sm-6">
                                 <label for="formPhone" class="form-label fw-semibold">
-                                    Phone <span class="text-danger">*</span>
+                                    {% translate "Phone" %} <span class="text-danger">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -66,17 +67,16 @@
                                     required
                                 >
                                 <div class="form-text">
-                                    Used to spot a borrower who is already
-                                    registered.
+                                    {% translate "Used to spot a borrower who is already registered." %}
                                 </div>
                             </div>
 
                             <div class="col-12 col-sm-6">
                                 <label for="formType" class="form-label fw-semibold">
-                                    Type <span class="text-danger">*</span>
+                                    {% translate "Type" %} <span class="text-danger">*</span>
                                 </label>
                                 <select class="form-select" id="formType" name="borrower_type" required>
-                                    <option value="">Select type&hellip;</option>
+                                    <option value="">{% translate "Select type&hellip;" %}</option>
                                     {% for option in borrower_types %}
                                         <option
                                             value="{{ option }}"
@@ -90,7 +90,7 @@
 
                             <div class="col-12 col-sm-6">
                                 <label for="formRegistrationNo" class="form-label fw-semibold">
-                                    Registration No
+                                    {% translate "Registration No" %}
                                 </label>
                                 <input
                                     type="text"
@@ -100,13 +100,13 @@
                                     value="{{ form_data.registration_no }}"
                                 >
                                 <div class="form-text">
-                                    Optional, but has to be unique when given.
+                                    {% translate "Optional, but has to be unique when given." %}
                                 </div>
                             </div>
 
                             <div class="col-12">
                                 <label for="formDepartment" class="form-label fw-semibold">
-                                    Department
+                                    {% translate "Department" %}
                                 </label>
                                 <input
                                     type="text"
@@ -119,7 +119,7 @@
 
                             <div class="col-12">
                                 <label for="formAddress" class="form-label fw-semibold">
-                                    Address
+                                    {% translate "Address" %}
                                 </label>
                                 <textarea
                                     class="form-control"
@@ -131,7 +131,7 @@
 
                             <div class="col-12">
                                 <label for="formNotes" class="form-label fw-semibold">
-                                    Notes
+                                    {% translate "Notes" %}
                                 </label>
                                 <textarea
                                     class="form-control"
@@ -145,10 +145,10 @@
 
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-1"></i> Add Borrower
+                                <i class="bi bi-check-lg me-1"></i> {% translate "Add Borrower" %}
                             </button>
                             <a href="{% url 'borrower_list' %}" class="btn btn-outline-secondary">
-                                <i class="bi bi-x-lg me-1"></i> Cancel
+                                <i class="bi bi-x-lg me-1"></i> {% translate "Cancel" %}
                             </a>
                         </div>
 

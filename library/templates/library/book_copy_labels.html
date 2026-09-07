@@ -1,20 +1,21 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
-    Copy Labels | {{ branding.display_name }}
+{% translate "Copy Labels" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Copy Labels
+    {% translate "Copy Labels" %}
 {% endblock %}
 
 {% block breadcrumbs %}
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
-                <a href="{% url 'book_copy_list' %}">Book Copies</a>
+                <a href="{% url 'book_copy_list' %}">{% translate "Book Copies" %}</a>
             </li>
-            <li class="breadcrumb-item active" aria-current="page">Labels</li>
+            <li class="breadcrumb-item active" aria-current="page">{% translate "Labels" %}</li>
         </ol>
     </nav>
 {% endblock %}
@@ -32,14 +33,14 @@
 
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <div>
-                <h2 class="fw-bold mb-1">Copy Labels</h2>
+                <h2 class="fw-bold mb-1">{% translate "Copy Labels" %}</h2>
                 <p class="text-body-secondary mb-0">
-                    {% if shown == 1 %}
+                    {% blocktranslate trimmed count n=shown %}
                         One label, ready to print.
-                    {% else %}
-                        {{ shown }} labels, ready to print.
-                    {% endif %}
-                    Each carries the copy code the scanner already reads.
+                    {% plural %}
+                        {{ n }} labels, ready to print.
+                    {% endblocktranslate %}
+                    {% translate "Each carries the copy code the scanner already reads." %}
                 </p>
             </div>
 
@@ -55,26 +56,32 @@
                     class="btn btn-primary"
                     onclick="window.print()"
                 >
-                    <i class="bi bi-printer me-1"></i> Print
+                    <i class="bi bi-printer me-1"></i> {% translate "Print" %}
                 </button>
 
                 <a
                     href="{% url 'book_copy_list' %}"
                     class="btn btn-outline-secondary"
                 >
-                    Back to copies
+                    {% translate "Back to copies" %}
                 </a>
             </div>
         </div>
 
         {% if capped %}
             <div class="alert alert-warning" role="alert">
-                <strong>{{ total }} copies matched, and the first
-                {{ limit }} are here.</strong>
+                <strong>
+                    {% blocktranslate trimmed with matched=total shown_here=limit %}
+                        {{ matched }} copies matched, and the first
+                        {{ shown_here }} are here.
+                    {% endblocktranslate %}
+                </strong>
                 <span class="d-block small">
-                    A sheet longer than that is not something anyone is
-                    about to print. Narrow the filters, or tick the copies
-                    you want, and come back.
+                    {% blocktranslate trimmed %}
+                        A sheet longer than that is not something anyone is
+                        about to print. Narrow the filters, or tick the copies
+                        you want, and come back.
+                    {% endblocktranslate %}
                 </span>
             </div>
         {% endif %}
@@ -83,10 +90,9 @@
             <div class="card shadow-sm border-0">
                 <div class="card-body text-center text-body-secondary py-5">
                     <i class="bi bi-upc fs-1 d-block mb-2" aria-hidden="true"></i>
-                    <p class="mb-1 fw-semibold">Nothing to print.</p>
+                    <p class="mb-1 fw-semibold">{% translate "Nothing to print." %}</p>
                     <p class="mb-0 small">
-                        Tick some copies on the list, or open a copy and
-                        print its label from there.
+                        {% translate "Tick some copies on the list, or open a copy and print its label from there." %}
                     </p>
                 </div>
             </div>
@@ -117,7 +123,7 @@
                         {{ copy.volume.book.author.name }}
                     {% endif %}
                     {% if copy.volume.volume_number != 1 or copy.volume.title %}
-                        · Vol {{ copy.volume.volume_number }}{% if copy.volume.title %} {{ copy.volume.title }}{% endif %}
+                        · {% blocktranslate with number=copy.volume.volume_number %}Vol {{ number }}{% endblocktranslate %}{% if copy.volume.title %} {{ copy.volume.title }}{% endif %}
                     {% endif %}
                 </div>
 
@@ -144,8 +150,12 @@
     {% endcomment %}
     <p class="print-only label-footer">
         {% include "library/partials/institution_print_line.html" %} —
-        {{ shown }} label{{ shown|pluralize }},
-        printed {{ printed_on|date:"j M Y, H:i" }}
+        {% blocktranslate trimmed count n=shown %}
+            {{ n }} label,
+        {% plural %}
+            {{ n }} labels,
+        {% endblocktranslate %}
+        {% translate "printed" %} {{ printed_on|date:"j M Y, H:i" }}
     </p>
 
 </div>

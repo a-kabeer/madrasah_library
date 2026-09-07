@@ -1,9 +1,10 @@
-import os
-import sys
+"""Does a plain psycopg connection to the configured database work?
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+Deliberately not Django: this is the check you run when Django itself will
+not start, to find out whether the database or the settings are at fault.
+"""
 
-from database import get_connection
+from db_connection import get_connection
 
 connection = get_connection()
 

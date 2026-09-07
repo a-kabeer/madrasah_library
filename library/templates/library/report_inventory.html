@@ -1,4 +1,5 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     {{ heading }} | {{ branding.display_name }}
@@ -9,10 +10,10 @@
 {% endblock %}
 
 {% block breadcrumbs %}
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
-                <a href="{% url 'reports_home' %}">Reports</a>
+                <a href="{% url 'reports_home' %}">{% translate "Reports" %}</a>
             </li>
             <li class="breadcrumb-item active" aria-current="page">{{ heading }}</li>
         </ol>
@@ -37,9 +38,9 @@
             <div class="row g-2 align-items-end">
 
                 <div class="col-12 col-md-3">
-                    <label for="filterLocation" class="form-label small mb-1">Location</label>
+                    <label for="filterLocation" class="form-label small mb-1">{% translate "Location" %}</label>
                     <select class="form-select form-select-sm" id="filterLocation" name="location">
-                        <option value="">All locations</option>
+                        <option value="">{% translate "All locations" %}</option>
                         {% for place in locations %}
                             <option value="{{ place.id }}"
                                 {% if location_id == place.id|stringformat:"s" %}selected{% endif %}
@@ -48,9 +49,9 @@
                     </select>
                 </div>
                 <div class="col-12 col-md-3">
-                    <label for="filterShelf" class="form-label small mb-1">Shelf</label>
+                    <label for="filterShelf" class="form-label small mb-1">{% translate "Shelf" %}</label>
                     <select class="form-select form-select-sm" id="filterShelf" name="shelf">
-                        <option value="">All shelves</option>
+                        <option value="">{% translate "All shelves" %}</option>
                         {% for shelf in shelves %}
                             <option value="{{ shelf.id }}"
                                 {% if shelf_id == shelf.id|stringformat:"s" %}selected{% endif %}
@@ -59,9 +60,9 @@
                     </select>
                 </div>
                 <div class="col-12 col-md-3">
-                    <label for="filterStatus" class="form-label small mb-1">Status</label>
+                    <label for="filterStatus" class="form-label small mb-1">{% translate "Status" %}</label>
                     <select class="form-select form-select-sm" id="filterStatus" name="status">
-                        <option value="">All of them</option>
+                        <option value="">{% translate "All of them" %}</option>
                         {% for value, label, count in states %}
                             <option value="{{ value }}"
                                 {% if state == value %}selected{% endif %}
@@ -71,7 +72,7 @@
                 </div>
                 <div class="col-12 col-md-auto">
                     <button type="submit" class="btn btn-primary btn-sm">
-                        <i class="bi bi-funnel me-1"></i> Apply
+                        <i class="bi bi-funnel me-1"></i> {% translate "Apply" %}
                     </button>
                 </div>
             </div>
@@ -82,7 +83,7 @@
         <div class="col-6 col-lg-2">
             <div class="card shadow-sm border-0 h-100">
                 <div class="card-body">
-                    <p class="text-body-secondary small mb-1">Total</p>
+                    <p class="text-body-secondary small mb-1">{% translate "Total" %}</p>
                     <p class="fs-4 fw-bold mb-0">{{ tallies.total }}</p>
                 </div>
             </div>
@@ -104,8 +105,8 @@
             <table class="table table-sm align-middle mb-0">
                 <thead class="table-secondary">
                     <tr>
-                        <th>Copy</th><th>Book</th><th>Location</th>
-                        <th>Shelf</th><th>Status</th>
+                        <th>{% translate "Copy" %}</th><th>{% translate "Book" %}</th><th>{% translate "Location" %}</th>
+                        <th>{% translate "Shelf" %}</th><th>{% translate "Status" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -127,14 +128,14 @@
                                 {% if copy.shelf %}{{ copy.shelf.location.name }}{% else %}-{% endif %}
                             </td>
                             <td class="text-body-secondary">
-                                {% if copy.shelf %}{{ copy.shelf.shelf_code }}{% else %}Unshelved{% endif %}
+                                {% if copy.shelf %}{{ copy.shelf.shelf_code }}{% else %}{% translate "Unshelved" %}{% endif %}
                             </td>
                             <td><span class="badge text-bg-secondary">{{ copy.status }}</span></td>
                         </tr>
                     {% empty %}
                         <tr>
                             <td colspan="5" class="text-center text-body-secondary py-4">
-                                No copies match.
+                                {% translate "No copies match." %}
                             </td>
                         </tr>
                     {% endfor %}

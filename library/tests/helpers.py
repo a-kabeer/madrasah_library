@@ -141,3 +141,30 @@ def make_loan(copy=None, borrower=None, issue_date=None, due_date=None,
     copy.save()
 
     return loan
+
+
+def main_content(body):
+    """The page's own content, without the shell around it.
+
+    Several tests ask a question about a page - "is there a form on it?",
+    "is this value printed?" - by searching the whole response. That worked
+    only for as long as the shell had nothing in it worth matching. The
+    sidebar, the topbar and the footer are on every staff page, so a search
+    over the whole document answers a different question than the one the
+    test is asking, and the answer changes when unrelated chrome does.
+
+    `<main id="mainContent">` is the boundary the layout already uses - it
+    is what HTMX swaps on a nav click - so it is the right one to test
+    against. Given a full page this returns what is inside it; given a
+    fragment, which has no shell to strip, it returns the fragment intact.
+    """
+
+    start = body.find('id="mainContent"')
+
+    if start == -1:
+        return body
+
+    opened = body.find(">", start) + 1
+    closed = body.find("</main>", opened)
+
+    return body[opened:closed if closed != -1 else len(body)]

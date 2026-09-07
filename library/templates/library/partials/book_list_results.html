@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 Results half of the book list: active filters, the count and rows-per-page
 control, the table, and pagination.
@@ -39,20 +40,20 @@ and history behaviour are inherited from #bookResults in book_list.html.
     {% if active_filters %}
         <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
 
-            <span class="text-body-secondary small">Filtered by:</span>
+            <span class="text-body-secondary small">{% translate "Filtered by:" %}</span>
 
             {% for filter in active_filters %}
                 <a href="{{ filter.url }}" hx-get="{{ filter.url }}" class="filter-chip">
                     <span class="text-body-secondary">{{ filter.label }}:</span>
                     <strong>{{ filter.value }}</strong>
                     <i class="bi bi-x-lg" aria-hidden="true"></i>
-                    <span class="visually-hidden">Remove this filter</span>
+                    <span class="visually-hidden">{% translate "Remove this filter" %}</span>
                 </a>
             {% endfor %}
 
             <a href="{% url 'book_list' %}?mode={{ mode }}"
                hx-get="{% url 'book_list' %}?mode={{ mode }}" class="small">
-                Clear all
+                {% translate "Clear all" %}
             </a>
 
         </div>
@@ -62,8 +63,19 @@ and history behaviour are inherited from #bookResults in book_list.html.
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
 
         <p class="text-body-secondary mb-0">
-            Found <strong>{{ paginator.count }}</strong>
-            {% if show_archived %}archived {% endif %}book(s).
+            {% if show_archived %}
+                {% blocktranslate trimmed count n=paginator.count %}
+                    Found <strong>{{ n }}</strong> archived book.
+                {% plural %}
+                    Found <strong>{{ n }}</strong> archived books.
+                {% endblocktranslate %}
+            {% else %}
+                {% blocktranslate trimmed count n=paginator.count %}
+                    Found <strong>{{ n }}</strong> book.
+                {% plural %}
+                    Found <strong>{{ n }}</strong> books.
+                {% endblocktranslate %}
+            {% endif %}
 
             {% comment %}
               The only way in and out of the archive. A plain link rather
@@ -72,10 +84,10 @@ and history behaviour are inherited from #bookResults in book_list.html.
               sorting and paging all keep working while you are there.
             {% endcomment %}
             {% if show_archived %}
-                {# Inside the results container, which declares the target and
+                {% comment %} Inside the results container, which declares the target and
                    swap for the fragment requests around it - inherited by
                    anything within, this link included. It is going somewhere
-                   else, so it names the shell's region instead. #}
+                   else, so it names the shell's region instead. {% endcomment %}
                 <a
                     href="{{ catalogue_url }}"
                     class="ms-2 text-decoration-none"
@@ -83,13 +95,13 @@ and history behaviour are inherited from #bookResults in book_list.html.
                     hx-swap="innerHTML"
                 >
                     <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>
-                    Back to the catalogue
+                    {% translate "Back to the catalogue" %}
                 </a>
             {% elif archived_total %}
-                {# Inside the results container, which declares the target and
+                {% comment %} Inside the results container, which declares the target and
                    swap for the fragment requests around it - inherited by
                    anything within, this link included. It is going somewhere
-                   else, so it names the shell's region instead. #}
+                   else, so it names the shell's region instead. {% endcomment %}
                 <a
                     href="{{ archived_url }}"
                     class="ms-2 text-decoration-none"
@@ -97,7 +109,7 @@ and history behaviour are inherited from #bookResults in book_list.html.
                     hx-swap="innerHTML"
                 >
                     <i class="bi bi-archive me-1" aria-hidden="true"></i>
-                    {{ archived_total }} archived
+                    {% blocktranslate count n=archived_total %}{{ n }} archived{% plural %}{{ n }} archived{% endblocktranslate %}
                 </a>
             {% endif %}
         </p>
@@ -105,7 +117,7 @@ and history behaviour are inherited from #bookResults in book_list.html.
         <div class="d-flex align-items-center gap-2">
 
             <label for="pageSize" class="text-body-secondary small mb-0">
-                Show
+                {% translate "Show" %}
             </label>
 
             {% comment %}
@@ -121,7 +133,7 @@ and history behaviour are inherited from #bookResults in book_list.html.
                 hx-trigger="change"
                 hx-include="this"
                 name="page_size"
-                aria-label="Rows per page"
+                aria-label="{% translate 'Rows per page' %}"
             >
                 {% for option in page_size_options %}
                     <option
@@ -133,7 +145,7 @@ and history behaviour are inherited from #bookResults in book_list.html.
                 {% endfor %}
             </select>
 
-            <span class="text-body-secondary small">per page</span>
+            <span class="text-body-secondary small">{% translate "per page" %}</span>
 
         </div>
 
@@ -170,9 +182,9 @@ and history behaviour are inherited from #bookResults in book_list.html.
                           on every click. The Availability filter is the
                           way to narrow by it.
                         {% endcomment %}
-                        <th>Copies</th>
+                        <th>{% translate "Copies" %}</th>
 
-                        <th class="text-end">Actions</th>
+                        <th class="text-end">{% translate "Actions" %}</th>
 
                     </tr>
                 </thead>
@@ -216,26 +228,32 @@ and history behaviour are inherited from #bookResults in book_list.html.
                                 {% if book.total_copies %}
                                     {% if book.available_copies %}
                                         <span class="badge text-bg-success">
-                                            {{ book.available_copies }} available
-                                        </span>
+                                                                                {% blocktranslate trimmed with available_copies=book.available_copies %}
+                                                                                    {{ available_copies }} available
+                                                                                {% endblocktranslate %}
+                                                                            </span>
                                     {% endif %}
                                     {% if book.issued_copies %}
                                         <span class="badge text-bg-info">
-                                            {{ book.issued_copies }} out
-                                        </span>
+                                                                             {% blocktranslate trimmed with issued_copies=book.issued_copies %}
+                                                                                 {{ issued_copies }} out
+                                                                             {% endblocktranslate %}
+                                                                         </span>
                                     {% endif %}
                                     {% if not book.available_copies and not book.issued_copies %}
                                         <span class="badge text-bg-secondary">
-                                            None available
+                                            {% translate "None available" %}
                                         </span>
                                     {% endif %}
                                     {% if book.total_copies != book.available_copies %}
                                         <span class="d-block small text-body-secondary">
-                                            {{ book.total_copies }} in all
-                                        </span>
+                                                                                            {% blocktranslate trimmed with total_copies=book.total_copies %}
+                                                                                                {{ total_copies }} in all
+                                                                                            {% endblocktranslate %}
+                                                                                        </span>
                                     {% endif %}
                                 {% else %}
-                                    <span class="text-body-secondary">No copies</span>
+                                    <span class="text-body-secondary">{% translate "No copies" %}</span>
                                 {% endif %}
                             </td>
 
@@ -262,7 +280,7 @@ and history behaviour are inherited from #bookResults in book_list.html.
                                     <a
                                         href="{% url 'book_edit' book.id %}"
                                         class="btn btn-sm btn-outline-warning"
-                                        title="Edit"
+                                        title="{% translate 'Edit' %}"
                                         aria-label="Edit {{ book.title }}"
                                         data-form-modal
                                         hx-get="{% url 'book_edit' book.id %}?modal=1"
@@ -276,7 +294,7 @@ and history behaviour are inherited from #bookResults in book_list.html.
                                     <a
                                         href="{% url 'book_delete' book.id %}"
                                         class="btn btn-sm btn-outline-danger"
-                                        title="Delete"
+                                        title="{% translate 'Delete' %}"
                                         aria-label="Delete {{ book.title }}"
                                         data-form-modal
                                         hx-get="{% url 'book_delete' book.id %}?modal=1"
@@ -294,7 +312,7 @@ and history behaviour are inherited from #bookResults in book_list.html.
                     {% empty %}
                         <tr>
                             <td colspan="4" class="text-center text-body-secondary py-4">
-                                No books found.
+                                {% translate "No books found." %}
                             </td>
                         </tr>
                     {% endfor %}

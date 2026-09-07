@@ -1,5 +1,6 @@
 {% load static %}
 
+{% load i18n %}
 <!DOCTYPE html>
 
 {% comment %}
@@ -30,7 +31,7 @@ running that script here would mean shipping script to a page that needs
 none.
 {% endcomment %}
 
-<html lang="en" data-bs-theme="light">
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}" data-bs-theme="light">
 
 <head>
 
@@ -48,7 +49,13 @@ none.
     </title>
 
     <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+        {% comment %}
+          The RTL build for Urdu and Arabic, same as the staff shell. The
+          public catalogue is reached without signing in, so its language
+          comes from the browser or the switcher below, never from a stored
+          preference.
+        {% endcomment %}
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap{% if LANGUAGE_BIDI %}.rtl{% endif %}.min.css"
         rel="stylesheet"
     >
 
@@ -125,7 +132,26 @@ none.
 
         </a>
 
-        <span class="public-tagline">Library catalogue</span>
+        <span class="public-tagline">{% translate "Library catalogue" %}</span>
+
+        {% comment %}
+          There is deliberately no language switcher here, and it is worth
+          saying why so that nobody drops the staff one back in.
+
+          This page loads no JavaScript at all - by design, and there is a
+          test that keeps it that way. The topbar switcher is a Bootstrap
+          dropdown, so on this page it would render a button that cannot
+          open: dead UI. It also posts, and every POST form brings a CSRF
+          token, which would break the three properties this catalogue is
+          built around - one GET form and nothing else, no token, and an
+          archived book's page being byte-identical to an unused id's.
+
+          A public switcher therefore has to be scriptless and formless:
+          plain links carrying the language in the query string, honoured
+          per-request without touching the session. That is a small change
+          and it is not made here, so for now an anonymous reader gets the
+          language their browser asks for.
+        {% endcomment %}
 
     </div>
 

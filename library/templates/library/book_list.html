@@ -1,11 +1,12 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
-    Books | {{ branding.display_name }}
+{% translate "Books" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Books
+    {% translate "Books" %}
 {% endblock %}
 
 {% block content %}
@@ -15,8 +16,8 @@
     <!-- Page Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
-            <h2 class="fw-bold mb-1">Books</h2>
-            <p class="text-body-secondary mb-0">Manage your library's book collection.</p>
+            <h2 class="fw-bold mb-1">{% translate "Books" %}</h2>
+            <p class="text-body-secondary mb-0">{% translate "Manage your library's book collection." %}</p>
         </div>
         {% comment %}
           Opens the Add Book dialog rather than navigating, so the list
@@ -30,12 +31,12 @@
           which `role_required` on the views enforces.
         {% endcomment %}
         <a href="{% url 'book_import' %}" class="btn btn-outline-primary">
-            <i class="bi bi-upload me-1"></i> Import
+            <i class="bi bi-upload me-1"></i> {% translate "Import" %}
         </a>
-        {# A file, not a page: a background fetch would swap a
-           spreadsheet into the layout. #}
+        {% comment %} A file, not a page: a background fetch would swap a
+           spreadsheet into the layout. {% endcomment %}
         <a href="{% url 'book_export' %}" hx-boost="false" class="btn btn-outline-secondary">
-            <i class="bi bi-download me-1"></i> Export
+            <i class="bi bi-download me-1"></i> {% translate "Export" %}
         </a>
         <a
             href="{% url 'book_add' %}"
@@ -45,7 +46,7 @@
             hx-target="#formModal .modal-body"
             hx-swap="innerHTML"
         >
-            <i class="bi bi-plus-lg me-1"></i> Add Book
+            <i class="bi bi-plus-lg me-1"></i> {% translate "Add Book" %}
         </a>
     </div>
 

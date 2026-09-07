@@ -1,4 +1,5 @@
 {% extends "library/base.html" %}
+{% load i18n %}
 
 {% comment %}
 Extends the shared layout for the head only — branding, favicon, colours,
@@ -7,7 +8,7 @@ because there is no sidebar or topbar to show before signing in.
 {% endcomment %}
 
 {% block title %}
-    Sign in | {{ branding.display_name }}
+{% translate "Sign in" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block body %}
@@ -22,6 +23,15 @@ because there is no sidebar or topbar to show before signing in.
           pre-paint script reads on the next visit.
         {% endcomment %}
         <div class="d-flex justify-content-end mb-2">
+            {% comment %}
+              The language switcher belongs here most of all: this is
+              the one page somebody who cannot read English has to get
+              through before they can set a preference on their account.
+              It posts to Django's `set_language`, since there is no
+              account to store anything on yet.
+            {% endcomment %}
+            {% include "library/partials/language_selector.html" %}
+
             {% include "library/partials/theme_selector.html" %}
         </div>
 
@@ -40,7 +50,7 @@ because there is no sidebar or topbar to show before signing in.
         <div class="card shadow-sm border-0">
             <div class="card-body p-4">
 
-                <h2 class="h6 text-body-secondary mb-3">Sign in to continue</h2>
+                <h2 class="h6 text-body-secondary mb-3">{% translate "Sign in to continue" %}</h2>
 
                 {% if error %}
                     <div class="alert alert-danger d-flex align-items-center" role="alert">
@@ -54,7 +64,7 @@ because there is no sidebar or topbar to show before signing in.
                     <input type="hidden" name="next" value="{{ request.GET.next }}">
 
                     <div class="mb-3">
-                        <label for="username" class="form-label fw-semibold">Username</label>
+                        <label for="username" class="form-label fw-semibold">{% translate "Username" %}</label>
                         <input
                             type="text"
                             class="form-control"
@@ -67,7 +77,7 @@ because there is no sidebar or topbar to show before signing in.
                     </div>
 
                     <div class="mb-4">
-                        <label for="password" class="form-label fw-semibold">Password</label>
+                        <label for="password" class="form-label fw-semibold">{% translate "Password" %}</label>
                         <input
                             type="password"
                             class="form-control"
@@ -79,7 +89,7 @@ because there is no sidebar or topbar to show before signing in.
                     </div>
 
                     <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-box-arrow-in-right me-1"></i> Log In
+                        <i class="bi bi-box-arrow-in-right me-1"></i> {% translate "Log In" %}
                     </button>
                 </form>
 

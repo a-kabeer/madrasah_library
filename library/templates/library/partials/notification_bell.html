@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 The notification indicator, in the topbar beside the appearance menu.
 
@@ -38,8 +39,8 @@ Three things worth knowing about the wiring:
         data-bs-toggle="dropdown"
         data-bs-auto-close="outside"
         aria-expanded="false"
-        aria-label="Notifications"
-        title="Notifications"
+        aria-label="{% translate 'Notifications' %}"
+        title="{% translate 'Notifications' %}"
         hx-get="{% url 'notification_panel' %}"
         hx-target="#notificationPanelBody"
         hx-swap="innerHTML"
@@ -77,10 +78,10 @@ Three things worth knowing about the wiring:
             <div class="p-3 text-body-secondary small">
                 <span class="spinner-border spinner-border-sm me-2"
                       role="status" aria-hidden="true"></span>
-                Loading notifications&hellip;
+                {% translate "Loading notifications&hellip;" %}
 
                 <a class="d-block mt-2" href="{% url 'notification_list' %}">
-                    All notifications
+                    {% translate "All notifications" %}
                 </a>
             </div>
 

@@ -61,11 +61,23 @@ class RolePermissionTests(TestCase):
         self.assertEqual(response.status_code, 403)
 
     def test_librarian_can_reach_category_delete(self):
+        # Deleting a category is a dialog now, not a page: a plain GET has
+        # no page to answer with and goes to the list. What this asserts is
+        # what it always did - a Librarian is not refused, where an
+        # Assistant is - so it checks both shapes of the request.
         self.login_as(self.librarian)
-        response = self.client.get(
+
+        plain = self.client.get(
             reverse("category_delete", args=[self.category.id])
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(plain.status_code, 302)
+
+        dialog = self.client.get(
+            reverse("category_delete", args=[self.category.id]),
+            {"modal": "1"},
+            headers={"HX-Request": "true"},
+        )
+        self.assertEqual(dialog.status_code, 200)
 
     # --- Borrower management: all three roles allowed ---
 

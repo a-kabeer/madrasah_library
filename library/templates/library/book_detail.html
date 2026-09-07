@@ -1,18 +1,19 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
     {{ book.title }} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Book
+    {% translate "Book" %}
 {% endblock %}
 
 {% block breadcrumbs %}
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
-                <a href="{% url 'book_list' %}">Books</a>
+                <a href="{% url 'book_list' %}">{% translate "Books" %}</a>
             </li>
             <li class="breadcrumb-item active" aria-current="page">
                 {{ book.title }}
@@ -28,7 +29,7 @@
     <!-- Navigation & Actions -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <a href="{% url 'book_list' %}" class="text-decoration-none">
-            <i class="bi bi-arrow-left me-1"></i> Back to Books
+            <i class="bi bi-arrow-left me-1"></i> {% translate "Back to Books" %}
         </a>
         {% comment %}
           `book_edit` and `book_delete` both carry
@@ -47,18 +48,18 @@
                     <form method="post" action="{% url 'book_restore' book.id %}" class="d-inline">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i> Restore to Catalogue
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> {% translate "Restore to Catalogue" %}
                         </button>
                     </form>
                 {% else %}
                     <a href="{% url 'book_edit' book.id %}?from=detail" class="btn btn-warning">
-                        <i class="bi bi-pencil me-1"></i> Edit Book
+                        <i class="bi bi-pencil me-1"></i> {% translate "Edit Book" %}
                     </a>
                     <a href="{% url 'book_archive' book.id %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-archive me-1"></i> Archive
+                        <i class="bi bi-archive me-1"></i> {% translate "Archive" %}
                     </a>
                     <a href="{% url 'book_delete' book.id %}?from=detail" class="btn btn-danger">
-                        <i class="bi bi-trash me-1"></i> Delete Book
+                        <i class="bi bi-trash me-1"></i> {% translate "Delete Book" %}
                     </a>
                 {% endif %}
             </div>
@@ -70,11 +71,13 @@
         <div class="alert alert-secondary d-flex align-items-start gap-2" role="alert">
             <i class="bi bi-archive-fill mt-1" aria-hidden="true"></i>
             <div>
-                <strong>Archived on {{ book.archived_at|date:"j M Y" }}.</strong>
-                This book is out of the active catalogue and its copies are
-                not offered for issue. Everything below — its volumes,
-                copies and loan history — is kept exactly as it was.
-            </div>
+                     {% blocktranslate trimmed with archived_at=book.archived_at|date:"j M Y" %}
+                         <strong>Archived on {{ archived_at }}.</strong>
+                         This book is out of the active catalogue and its copies are
+                         not offered for issue. Everything below — its volumes,
+                         copies and loan history — is kept exactly as it was.
+                     {% endblocktranslate %}
+                 </div>
         </div>
     {% endif %}
 
@@ -97,7 +100,7 @@
                 aria-controls="paneOverview"
                 aria-selected="{% if tab == 'overview' %}true{% else %}false{% endif %}"
             >
-                <i class="bi bi-info-circle me-1"></i> Overview
+                <i class="bi bi-info-circle me-1"></i> {% translate "Overview" %}
             </a>
         </li>
 
@@ -111,7 +114,7 @@
                 aria-controls="paneVolumes"
                 aria-selected="{% if tab == 'volumes' %}true{% else %}false{% endif %}"
             >
-                <i class="bi bi-collection me-1"></i> Volumes
+                <i class="bi bi-collection me-1"></i> {% translate "Volumes" %}
                 <span class="badge text-bg-secondary ms-1">{{ volumes|length }}</span>
             </a>
         </li>
@@ -126,7 +129,7 @@
                 aria-controls="paneCopies"
                 aria-selected="{% if tab == 'copies' %}true{% else %}false{% endif %}"
             >
-                <i class="bi bi-stack me-1"></i> Copies
+                <i class="bi bi-stack me-1"></i> {% translate "Copies" %}
                 <span class="badge text-bg-secondary ms-1">{{ total_copies }}</span>
             </a>
         </li>
@@ -141,7 +144,7 @@
                 aria-controls="paneContents"
                 aria-selected="{% if tab == 'contents' %}true{% else %}false{% endif %}"
             >
-                <i class="bi bi-file-earmark-text me-1"></i> Contents
+                <i class="bi bi-file-earmark-text me-1"></i> {% translate "Contents" %}
                 <span class="badge text-bg-secondary ms-1">{{ content_total }}</span>
             </a>
         </li>
@@ -156,7 +159,7 @@
                 aria-controls="paneLoans"
                 aria-selected="{% if tab == 'loans' %}true{% else %}false{% endif %}"
             >
-                <i class="bi bi-clock-history me-1"></i> Loan History
+                <i class="bi bi-clock-history me-1"></i> {% translate "Loan History" %}
                 <span class="badge text-bg-secondary ms-1">{{ paginator.count }}</span>
             </a>
         </li>
@@ -171,7 +174,7 @@
                 aria-controls="paneReservations"
                 aria-selected="{% if tab == 'reservations' %}true{% else %}false{% endif %}"
             >
-                <i class="bi bi-bookmark-star me-1"></i> Reservations
+                <i class="bi bi-bookmark-star me-1"></i> {% translate "Reservations" %}
                 <span class="badge text-bg-secondary ms-1">{{ reservation_count }}</span>
             </a>
         </li>
@@ -192,7 +195,7 @@
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-book me-2"></i>Book Information
+                        <i class="bi bi-book me-2"></i>{% translate "Book Information" %}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -210,11 +213,11 @@
                             <h3 class="fw-bold mb-3">{{ book.title }}</h3>
                             <div class="row g-3">
                                 <div class="col-12 col-lg-4">
-                                    <p class="mb-1 text-body-secondary small">Author</p>
+                                    <p class="mb-1 text-body-secondary small">{% translate "Author" %}</p>
                                     <p class="fw-semibold mb-0">{{ book.author.name }}</p>
                                 </div>
                                 <div class="col-12 col-lg-4">
-                                    <p class="mb-1 text-body-secondary small">Category</p>
+                                    <p class="mb-1 text-body-secondary small">{% translate "Category" %}</p>
                                     <p class="fw-semibold mb-0">
                                         {% if book.category %}
                                             <span class="badge bg-secondary">{{ book.category.name }}</span>
@@ -224,7 +227,7 @@
                                     </p>
                                 </div>
                                 <div class="col-12 col-lg-4">
-                                    <p class="mb-1 text-body-secondary small">Publisher</p>
+                                    <p class="mb-1 text-body-secondary small">{% translate "Publisher" %}</p>
                                     <p class="fw-semibold mb-0">
                                         {% if book.publisher %}
                                             {{ book.publisher.name }}
@@ -249,7 +252,7 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-clipboard-check me-2"></i>Availability
+                        <i class="bi bi-clipboard-check me-2"></i>{% translate "Availability" %}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -258,7 +261,7 @@
 
                             <div class="col-6 col-lg-3">
                                 <div class="border rounded p-3 h-100">
-                                    <p class="text-body-secondary small mb-1">Total Copies</p>
+                                    <p class="text-body-secondary small mb-1">{% translate "Total Copies" %}</p>
                                     <p class="fs-4 fw-bold mb-0">{{ total_copies }}</p>
                                 </div>
                             </div>
@@ -279,7 +282,7 @@
                         </div>
                     {% else %}
                         <p class="text-body-secondary mb-0">
-                            No physical copies have been added for this book yet.
+                            {% translate "No physical copies have been added for this book yet." %}
                         </p>
                     {% endif %}
                 </div>
@@ -298,11 +301,11 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-collection me-2"></i>Volumes
+                        <i class="bi bi-collection me-2"></i>{% translate "Volumes" %}
                     </h5>
                     {% if can_edit and not book.is_archived %}
                         <a href="{% url 'book_volume_add' %}?book={{ book.id }}" class="btn btn-sm btn-primary">
-                            <i class="bi bi-plus-lg me-1"></i> Add Volume
+                            <i class="bi bi-plus-lg me-1"></i> {% translate "Add Volume" %}
                         </a>
                     {% endif %}
                 </div>
@@ -318,20 +321,24 @@
 
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                             <span class="text-body-secondary">
-                                This book is recorded as a single volume with
-                                <strong>{{ volume_copies|length }}</strong>
-                                cop{{ volume_copies|length|pluralize:"y,ies" }}.
+                                {% blocktranslate trimmed count n=volume_copies|length %}
+                                    This book is recorded as a single volume
+                                    with <strong>{{ n }}</strong> copy.
+                                {% plural %}
+                                    This book is recorded as a single volume
+                                    with <strong>{{ n }}</strong> copies.
+                                {% endblocktranslate %}
                             </span>
                             <div class="d-flex flex-wrap gap-2">
                                 <a href="{% url 'book_copy_list' %}?volume={{ single_volume.id }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-list-ul me-1"></i> Manage copies
+                                    <i class="bi bi-list-ul me-1"></i> {% translate "Manage copies" %}
                                 </a>
                                 <a href="{% url 'book_content_list' %}?volume={{ single_volume.id }}" class="btn btn-sm btn-outline-secondary">
-                                    <i class="bi bi-file-earmark-text me-1"></i> Contents
+                                    <i class="bi bi-file-earmark-text me-1"></i> {% translate "Contents" %}
                                 </a>
                                 {% if can_edit and not book.is_archived %}
                                     <a href="{% url 'book_copy_add' %}?volume={{ single_volume.id }}" class="btn btn-sm btn-primary">
-                                        <i class="bi bi-plus-lg me-1"></i> Add Copy
+                                        <i class="bi bi-plus-lg me-1"></i> {% translate "Add Copy" %}
                                     </a>
                                 {% endif %}
                             </div>
@@ -354,7 +361,7 @@
                                                 {% if copy.shelf %}
                                                     {{ copy.shelf.location.name }} — {{ copy.shelf.shelf_code }}
                                                 {% else %}
-                                                    Unshelved
+                                                    {% translate "Unshelved" %}
                                                 {% endif %}
                                             </span>
                                         </div>
@@ -366,7 +373,7 @@
                             </div>
                         {% else %}
                             <p class="text-body-secondary mb-0">
-                                No physical copies yet.
+                                {% translate "No physical copies yet." %}
                             </p>
                         {% endif %}
 
@@ -387,7 +394,11 @@
                                         href="{% url 'book_volume_detail' volume.id %}"
                                         class="text-decoration-none flex-grow-1"
                                     >
-                                        <span class="fw-semibold">Volume {{ volume.volume_number }}</span>
+                                        <span class="fw-semibold">
+                                                                      {% blocktranslate trimmed with volume_number=volume.volume_number %}
+                                                                          Volume {{ volume_number }}
+                                                                      {% endblocktranslate %}
+                                                                  </span>
                                         {% if volume.title %}
                                             <span class="text-body-secondary"> — {{ volume.title }}</span>
                                         {% endif %}
@@ -399,18 +410,29 @@
                                             aria-label="Contents of volume {{ volume.volume_number }}"
                                         >
                                             <span class="badge text-bg-light">
-                                                {{ volume.content_count }}
-                                                content{{ volume.content_count|pluralize }}
+                                                {% blocktranslate trimmed count n=volume.content_count %}
+                                                    {{ n }} content
+                                                {% plural %}
+                                                    {{ n }} contents
+                                                {% endblocktranslate %}
                                             </span>
                                         </a>
+                                        {% blocktranslate trimmed asvar manage_copies_label count n=volume.copy_count with number=volume.volume_number %}
+                                            Manage the {{ n }} copy of volume {{ number }}
+                                        {% plural %}
+                                            Manage the {{ n }} copies of volume {{ number }}
+                                        {% endblocktranslate %}
                                         <a
                                             href="{% url 'book_copy_list' %}?volume={{ volume.id }}"
                                             class="text-decoration-none"
-                                            aria-label="Manage the {{ volume.copy_count }} cop{{ volume.copy_count|pluralize:'y,ies' }} of volume {{ volume.volume_number }}"
+                                            aria-label="{{ manage_copies_label }}"
                                         >
                                             <span class="badge text-bg-secondary">
-                                                {{ volume.copy_count }}
-                                                cop{{ volume.copy_count|pluralize:"y,ies" }}
+                                                {% blocktranslate trimmed count n=volume.copy_count %}
+                                                    {{ n }} copy
+                                                {% plural %}
+                                                    {{ n }} copies
+                                                {% endblocktranslate %}
                                                 <i class="bi bi-chevron-right ms-1" aria-hidden="true"></i>
                                             </span>
                                         </a>
@@ -420,7 +442,7 @@
                         </div>
 
                     {% else %}
-                        <p class="text-body-secondary mb-0">No volumes have been added yet.</p>
+                        <p class="text-body-secondary mb-0">{% translate "No volumes have been added yet." %}</p>
                     {% endif %}
                 </div>
             </div>
@@ -444,7 +466,7 @@
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-body">
                         <h5 class="mb-0 fw-bold">
-                            <i class="bi bi-geo-alt me-2"></i>Where they are
+                            <i class="bi bi-geo-alt me-2"></i>{% translate "Where they are" %}
                         </h5>
                     </div>
                     <div class="card-body d-flex flex-wrap gap-2">
@@ -462,7 +484,7 @@
                                     href="{% url 'book_copy_list' %}?book={{ book.id }}&status=unshelved"
                                     class="btn btn-sm btn-outline-warning"
                                 >
-                                    Unshelved
+                                    {% translate "Unshelved" %}
                                     <span class="badge text-bg-secondary ms-1">{{ place.count }}</span>
                                 </a>
                             {% endif %}
@@ -474,20 +496,20 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-stack me-2"></i>Copies
+                        <i class="bi bi-stack me-2"></i>{% translate "Copies" %}
                     </h5>
                     <a href="{% url 'book_copy_list' %}?book={{ book.id }}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-list-ul me-1"></i> Manage copies
+                        <i class="bi bi-list-ul me-1"></i> {% translate "Manage copies" %}
                     </a>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-secondary">
                             <tr>
-                                <th>Copy Code</th>
-                                <th>Volume</th>
-                                <th>Location / Shelf</th>
-                                <th>Status</th>
+                                <th>{% translate "Copy Code" %}</th>
+                                <th>{% translate "Volume" %}</th>
+                                <th>{% translate "Location / Shelf" %}</th>
+                                <th>{% translate "Status" %}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -502,7 +524,7 @@
                                 >
                                     <td class="fw-semibold">{{ copy.copy_code }}</td>
                                     <td>
-                                        Volume {{ copy.volume.volume_number }}
+                                        {% blocktranslate with number=copy.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}
                                         {% if copy.volume.title %}
                                             <span class="d-block small text-body-secondary">
                                                 {{ copy.volume.title }}
@@ -516,7 +538,7 @@
                                                 {{ copy.shelf.shelf_code }}
                                             </span>
                                         {% else %}
-                                            <span class="text-body-secondary">Unshelved</span>
+                                            <span class="text-body-secondary">{% translate "Unshelved" %}</span>
                                         {% endif %}
                                     </td>
                                     <td>
@@ -525,7 +547,11 @@
                                         </span>
                                         {% if copy.days_overdue %}
                                             <span class="d-block small text-danger">
-                                                {{ copy.days_overdue }} day{{ copy.days_overdue|pluralize }} late
+                                                {% blocktranslate trimmed count n=copy.days_overdue %}
+                                                    {{ n }} day late
+                                                {% plural %}
+                                                    {{ n }} days late
+                                                {% endblocktranslate %}
                                             </span>
                                         {% endif %}
                                     </td>
@@ -533,7 +559,7 @@
                             {% empty %}
                                 <tr>
                                     <td colspan="4" class="text-center text-body-secondary py-4">
-                                        No copies have been added for this book yet.
+                                        {% translate "No copies have been added for this book yet." %}
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -555,11 +581,11 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-file-earmark-text me-2"></i>Contents
+                        <i class="bi bi-file-earmark-text me-2"></i>{% translate "Contents" %}
                     </h5>
                     {% if can_edit and volumes and not book.is_archived %}
                         <a href="{% url 'book_content_add' %}{% if single_volume %}?volume={{ single_volume.id }}{% endif %}" class="btn btn-sm btn-primary">
-                            <i class="bi bi-plus-lg me-1"></i> Add Content
+                            <i class="bi bi-plus-lg me-1"></i> {% translate "Add Content" %}
                         </a>
                     {% endif %}
                 </div>
@@ -580,14 +606,21 @@
                                     class="list-group-item list-group-item-action d-flex flex-wrap justify-content-between align-items-center gap-2"
                                 >
                                     <span>
-                                        <span class="fw-semibold">Volume {{ volume.volume_number }}</span>
+                                        <span class="fw-semibold">
+                                                                      {% blocktranslate trimmed with volume_number=volume.volume_number %}
+                                                                          Volume {{ volume_number }}
+                                                                      {% endblocktranslate %}
+                                                                  </span>
                                         {% if volume.title %}
                                             <span class="text-body-secondary"> — {{ volume.title }}</span>
                                         {% endif %}
                                     </span>
                                     <span class="badge text-bg-secondary">
-                                        {{ volume.content_count }}
-                                        entr{{ volume.content_count|pluralize:"y,ies" }}
+                                        {% blocktranslate trimmed count n=volume.content_count %}
+                                            {{ n }} entry
+                                        {% plural %}
+                                            {{ n }} entries
+                                        {% endblocktranslate %}
                                         <i class="bi bi-chevron-right ms-1" aria-hidden="true"></i>
                                     </span>
                                 </a>
@@ -595,8 +628,7 @@
                         </div>
                     {% else %}
                         <p class="text-body-secondary mb-0">
-                            Contents are recorded against a volume, and this
-                            book has none yet.
+                            {% translate "Contents are recorded against a volume, and this book has none yet." %}
                         </p>
                     {% endif %}
 
@@ -616,22 +648,26 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-clock-history me-2"></i>Loan History
+                        <i class="bi bi-clock-history me-2"></i>{% translate "Loan History" %}
                     </h5>
                     <span class="text-body-secondary small">
-                        {{ paginator.count }} loan{{ paginator.count|pluralize }} in all
+                        {% blocktranslate trimmed count n=paginator.count %}
+                            {{ n }} loan in all
+                        {% plural %}
+                            {{ n }} loans in all
+                        {% endblocktranslate %}
                     </span>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-secondary">
                             <tr>
-                                <th>Borrower</th>
-                                <th>Copy</th>
-                                <th>Issued</th>
-                                <th>Due</th>
-                                <th>Returned</th>
-                                <th class="text-end">Actions</th>
+                                <th>{% translate "Borrower" %}</th>
+                                <th>{% translate "Copy" %}</th>
+                                <th>{% translate "Issued" %}</th>
+                                <th>{% translate "Due" %}</th>
+                                <th>{% translate "Returned" %}</th>
+                                <th class="text-end">{% translate "Actions" %}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -649,8 +685,10 @@
                                             {{ loan.copy.copy_code }}
                                         </a>
                                         <span class="d-block small text-body-secondary">
-                                            Volume {{ loan.copy.volume.volume_number }}
-                                        </span>
+                                                                                            {% blocktranslate trimmed with volume_number=loan.copy.volume.volume_number %}
+                                                                                                Volume {{ volume_number }}
+                                                                                            {% endblocktranslate %}
+                                                                                        </span>
                                     </td>
                                     <td>{{ loan.issue_date }}</td>
                                     <td>{{ loan.due_date }}</td>
@@ -659,15 +697,19 @@
                                             {{ loan.return_date }}
                                         {% elif loan.days_overdue %}
                                             <span class="badge text-bg-danger">
-                                                Overdue by {{ loan.days_overdue }} day{{ loan.days_overdue|pluralize }}
+                                                {% blocktranslate trimmed count n=loan.days_overdue %}
+                                                    Overdue by {{ n }} day
+                                                {% plural %}
+                                                    Overdue by {{ n }} days
+                                                {% endblocktranslate %}
                                             </span>
                                         {% else %}
-                                            <span class="badge text-bg-info">Still out</span>
+                                            <span class="badge text-bg-info">{% translate "Still out" %}</span>
                                         {% endif %}
                                     </td>
                                     <td class="text-end">
                                         <a href="{% url 'loan_detail' loan.id %}"
-                                           class="btn btn-sm btn-outline-secondary" title="Open loan">
+                                           class="btn btn-sm btn-outline-secondary" title="{% translate 'Open loan' %}">
                                             <i class="bi bi-box-arrow-up-right"></i>
                                         </a>
                                     </td>
@@ -675,7 +717,7 @@
                             {% empty %}
                                 <tr>
                                     <td colspan="6" class="text-center text-body-secondary py-4">
-                                        This book has never been borrowed.
+                                        {% translate "This book has never been borrowed." %}
                                     </td>
                                 </tr>
                             {% endfor %}
@@ -712,13 +754,17 @@
                     <i class="bi bi-info-circle-fill mt-1" aria-hidden="true"></i>
                     <div>
                         <strong>
-                            {{ copies_available_now }}
-                            cop{{ copies_available_now|pluralize:"y,ies" }}
-                            can be issued right now.
+                            {% blocktranslate trimmed count n=copies_available_now %}
+                                {{ n }} copy can be issued right now.
+                            {% plural %}
+                                {{ n }} copies can be issued right now.
+                            {% endblocktranslate %}
                         </strong>
                         <span class="d-block small">
-                            Reserving is still allowed — somebody may want to
-                            be next in line — but nobody has to wait today.
+                            {% blocktranslate trimmed %}
+                                Reserving is still allowed — somebody may want to
+                                be next in line — but nobody has to wait today.
+                            {% endblocktranslate %}
                         </span>
                     </div>
                 </div>
@@ -742,14 +788,13 @@
                             </div>
                             <div class="col-12 col-md-auto">
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="bi bi-bookmark-plus me-1"></i> Reserve
+                                    <i class="bi bi-bookmark-plus me-1"></i> {% translate "Reserve" %}
                                 </button>
                             </div>
                         </div>
 
                         <div class="form-text">
-                            Only borrowers who are still active can be added,
-                            and an archived book cannot be reserved.
+                            {% translate "Only borrowers who are still active can be added, and an archived book cannot be reserved." %}
                         </div>
                     </form>
                 </div>
@@ -758,16 +803,16 @@
             {% if reservation_queue %}
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-body">
-                        <h5 class="mb-0 fw-bold">Waiting, in order</h5>
+                        <h5 class="mb-0 fw-bold">{% translate "Waiting, in order" %}</h5>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-secondary">
                                 <tr>
                                     <th style="width: 4rem;">#</th>
-                                    <th>Borrower</th>
-                                    <th>Asked</th>
-                                    <th class="text-end">Actions</th>
+                                    <th>{% translate "Borrower" %}</th>
+                                    <th>{% translate "Asked" %}</th>
+                                    <th class="text-end">{% translate "Actions" %}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -801,7 +846,7 @@
                                                        value="{{ request.get_full_path }}">
                                                 <button type="submit"
                                                         class="btn btn-sm btn-outline-danger">
-                                                    Cancel
+                                                    {% translate "Cancel" %}
                                                 </button>
                                             </form>
                                         </td>
@@ -813,7 +858,7 @@
                 </div>
             {% else %}
                 <p class="text-body-secondary mb-0">
-                    Nobody is waiting for this book.
+                    {% translate "Nobody is waiting for this book." %}
                 </p>
             {% endif %}
 

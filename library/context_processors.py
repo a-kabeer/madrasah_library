@@ -12,12 +12,11 @@ import os
 from django.conf import settings
 from django.core.cache import cache
 
+from . import features
 from .models import OrganizationSettings
-
 
 BRANDING_CACHE_KEY = "organization_branding"
 BRANDING_CACHE_TIMEOUT = 300
-
 
 def get_branding():
     """The organisation's branding, cached.
@@ -148,15 +147,30 @@ def is_main_nav_request(request):
 
 
 def navigation(request):
-    """`layout` for templates that support main-content navigation.
+    """`layout` and `allowed_features` for every template.
 
-    Templates that do not use it are unaffected: they still name base.html
-    directly, so nothing about their rendering changes.
+    Templates that do not use `layout` are unaffected: they still name
+    base.html directly, so nothing about their rendering changes.
+
+    `allowed_features` is the set of menu entries this person holds, so the
+    sidebar can ask `{% if "users" in allowed_features %}` instead of
+    testing the role by name. One cached read per request, not one per
+    entry - see library/features.py.
     """
+
+    # One read of the overrides, both answers out of it. Asking the two
+    # questions separately would be two reads on any installation whose
+    # cache is a no-op - which is exactly what the test suite runs with.
+    held = features.allowed_features(
+        getattr(request, "user", None),
+        features.overrides_for(request),
+    )
 
     return {
         "layout": (
             MAIN_LAYOUT if is_main_nav_request(request) else FULL_LAYOUT
         ),
         "main_content_id": MAIN_CONTENT_ID,
+        "allowed_features": held,
+        "allowed_sections": features.sections_for(held),
     }

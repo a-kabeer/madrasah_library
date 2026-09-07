@@ -4,6 +4,7 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from .helpers import (
+    main_content,
     make_author,
     make_book,
     make_category,
@@ -757,7 +758,10 @@ class InPlaceUpdateTests(BookListModeTestCase):
         response = self.get(mode="author")
         body = response.content.decode()
 
-        form = body[body.index("<form"):body.index(">", body.index("<form"))]
+        # The filter form, not merely the first one on the page: the
+        # topbar's language switcher is a form too, and it comes earlier.
+        content = main_content(body)
+        form = content[content.index("<form"):content.index(">", content.index("<form"))]
 
         self.assertIn("?partial=results", form)
         self.assertNotIn("hx-vals", form)

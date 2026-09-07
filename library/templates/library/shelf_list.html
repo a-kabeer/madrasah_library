@@ -1,11 +1,12 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
-    Shelves | {{ branding.display_name }}
+{% translate "Shelves" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Shelves
+    {% translate "Shelves" %}
 {% endblock %}
 
 {% block content %}
@@ -15,14 +16,14 @@
     <!-- Page Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
-            <h2 class="fw-bold mb-1">Shelves</h2>
+            <h2 class="fw-bold mb-1">{% translate "Shelves" %}</h2>
             <p class="text-body-secondary mb-0">
-                Every shelf in the library. Open one to see what is on it.
+                {% translate "Every shelf in the library. Open one to see what is on it." %}
             </p>
         </div>
         {% if can_edit %}
             <a href="{% url 'shelf_add' %}" class="btn btn-primary">
-                <i class="bi bi-plus-lg me-1"></i> Add Shelf
+                <i class="bi bi-plus-lg me-1"></i> {% translate "Add Shelf" %}
             </a>
         {% endif %}
     </div>
@@ -38,7 +39,7 @@
 
                 <div class="col-12 col-lg-5">
                     <label for="shelfSearch" class="form-label fw-semibold">
-                        Search
+                        {% translate "Search" %}
                     </label>
                     <input
                         type="search"
@@ -46,16 +47,16 @@
                         id="shelfSearch"
                         name="search"
                         value="{{ search }}"
-                        placeholder="Shelf code or location..."
+                        placeholder="{% translate 'Shelf code or location...' %}"
                     >
                 </div>
 
                 <div class="col-8 col-lg-4">
                     <label for="shelfLocation" class="form-label fw-semibold">
-                        Location
+                        {% translate "Location" %}
                     </label>
                     <select class="form-select" id="shelfLocation" name="location">
-                        <option value="">All locations</option>
+                        <option value="">{% translate "All locations" %}</option>
                         {% for location in locations %}
                             <option
                                 value="{{ location.id }}"
@@ -69,12 +70,12 @@
 
                 <div class="col-4 col-lg-3 d-flex gap-2">
                     <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-search me-1"></i> Search
+                        <i class="bi bi-search me-1"></i> {% translate "Search" %}
                     </button>
                     {% if search or location_id %}
                         <a href="{% url 'shelf_list' %}" class="btn btn-outline-secondary">
                             <i class="bi bi-x-lg"></i>
-                            <span class="visually-hidden">Clear</span>
+                            <span class="visually-hidden">{% translate "Clear" %}</span>
                         </a>
                     {% endif %}
                 </div>
@@ -90,18 +91,22 @@
         >
             <i class="bi bi-inbox" aria-hidden="true"></i>
             <span>
-                <strong>{{ unshelved_count }}</strong>
-                cop{{ unshelved_count|pluralize:"y,ies" }}
-                {{ unshelved_count|pluralize:"is,are" }} not on any
-                shelf yet.
+                {% blocktranslate trimmed count n=unshelved_count %}
+                    <strong>{{ n }}</strong> copy is not on any shelf yet.
+                {% plural %}
+                    <strong>{{ n }}</strong> copies are not on any shelf yet.
+                {% endblocktranslate %}
             </span>
             <i class="bi bi-chevron-right ms-auto" aria-hidden="true"></i>
         </a>
     {% endif %}
 
     <p class="text-body-secondary mb-3">
-        Found <strong>{{ paginator.count }}</strong>
-        sh{{ paginator.count|pluralize:"elf,elves" }}.
+        {% blocktranslate trimmed count n=paginator.count %}
+            Found <strong>{{ n }}</strong> shelf.
+        {% plural %}
+            Found <strong>{{ n }}</strong> shelves.
+        {% endblocktranslate %}
     </p>
 
     <div class="card shadow-sm border-0">
@@ -109,10 +114,10 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-secondary">
                     <tr>
-                        <th>Shelf</th>
-                        <th>Location</th>
-                        <th>Copies</th>
-                        <th class="text-end">Actions</th>
+                        <th>{% translate "Shelf" %}</th>
+                        <th>{% translate "Location" %}</th>
+                        <th>{% translate "Copies" %}</th>
+                        <th class="text-end">{% translate "Actions" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -144,7 +149,7 @@
                                         href="{% url 'shelf_detail' shelf.id %}"
                                         class="btn btn-sm btn-outline-secondary"
                                         data-row-primary
-                                        title="Open"
+                                        title="{% translate 'Open' %}"
                                         aria-label="Open shelf {{ shelf.shelf_code }}"
                                     >
                                         <i class="bi bi-box-arrow-up-right"></i>
@@ -153,7 +158,7 @@
                                         <a
                                             href="{% url 'shelf_edit' shelf.id %}"
                                             class="btn btn-sm btn-outline-warning"
-                                            title="Edit"
+                                            title="{% translate 'Edit' %}"
                                             aria-label="Edit shelf {{ shelf.shelf_code }}"
                                         >
                                             <i class="bi bi-pencil"></i>
@@ -161,7 +166,7 @@
                                         <a
                                             href="{% url 'shelf_delete' shelf.id %}"
                                             class="btn btn-sm btn-outline-danger"
-                                            title="Delete"
+                                            title="{% translate 'Delete' %}"
                                             aria-label="Delete shelf {{ shelf.shelf_code }}"
                                         >
                                             <i class="bi bi-trash"></i>
@@ -173,7 +178,7 @@
                     {% empty %}
                         <tr>
                             <td colspan="4" class="text-center text-body-secondary py-4">
-                                No shelves found.
+                                {% translate "No shelves found." %}
                             </td>
                         </tr>
                     {% endfor %}

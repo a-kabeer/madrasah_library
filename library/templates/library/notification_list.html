@@ -1,11 +1,12 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
-    Notifications | {{ branding.display_name }}
+{% translate "Notifications" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Notifications
+    {% translate "Notifications" %}
 {% endblock %}
 
 {% block content %}
@@ -13,14 +14,17 @@
 <div class="container-fluid px-0">
 
     <div class="mb-4">
-        <h2 class="fw-bold mb-1">Notifications</h2>
+        <h2 class="fw-bold mb-1">{% translate "Notifications" %}</h2>
         <p class="text-body-secondary mb-0">
-            Yours alone, newest first. A notification is something to act
-            on — a reserved book back on the shelf, a stock check that
-            finished with copies unaccounted for. What happened and who
-            did it is the
-            <a href="{% url 'activity_log_list' %}">activity log</a>,
-            which is a different question and a different page.
+            {% url 'activity_log_list' as activity_log_url %}
+            {% blocktranslate trimmed with url=activity_log_url %}
+                Yours alone, newest first. A notification is something to
+                act on — a reserved book back on the shelf, a stock check
+                that finished with copies unaccounted for. What happened
+                and who did it is the
+                <a href="{{ url }}">activity log</a>, which is a different
+                question and a different page.
+            {% endblocktranslate %}
         </p>
     </div>
 
@@ -34,12 +38,12 @@
         <a
             href="?"
             class="btn btn-sm {% if not unread_only %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-        >All</a>
+        >{% translate "All" %}</a>
 
         <a
             href="?unread=1"
             class="btn btn-sm {% if unread_only %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-        >Unread</a>
+        >{% translate "Unread" %}</a>
 
         {% if unread_count %}
             <form
@@ -51,17 +55,20 @@
                 <input type="hidden" name="next"
                        value="{{ request.get_full_path }}">
                 <button type="submit" class="btn btn-sm btn-outline-secondary">
-                    Mark all read
+                    {% translate "Mark all read" %}
                 </button>
             </form>
 
             <span class="text-body-secondary small">
-                {{ unread_count }}{% if unread_count >= unread_cap %}+{% endif %}
-                unread
+                {% if unread_count >= unread_cap %}
+                    {% blocktranslate with n=unread_count %}{{ n }}+ unread{% endblocktranslate %}
+                {% else %}
+                    {% blocktranslate count n=unread_count %}{{ n }} unread{% plural %}{{ n }} unread{% endblocktranslate %}
+                {% endif %}
             </span>
         {% else %}
             <span class="ms-auto text-body-secondary small">
-                Nothing unread.
+                {% translate "Nothing unread." %}
             </span>
         {% endif %}
 
@@ -109,7 +116,7 @@
                             <span class="notification-when">
                                 {{ note.created_at|date:"j M Y, H:i" }}
                                 {% if note.is_read %}
-                                    · read {{ note.read_at|date:"j M Y, H:i" }}
+                                    · {% translate "read" %} {{ note.read_at|date:"j M Y, H:i" }}
                                 {% endif %}
                             </span>
 
@@ -126,7 +133,7 @@
                                        value="{{ request.get_full_path }}">
                                 <button type="submit"
                                         class="btn btn-sm btn-outline-secondary">
-                                    Mark read
+                                    {% translate "Mark read" %}
                                 </button>
                             </form>
                         {% endif %}
@@ -148,15 +155,13 @@
                 <i class="bi bi-bell fs-1 d-block mb-2" aria-hidden="true"></i>
                 <p class="mb-1 fw-semibold">
                     {% if unread_only %}
-                        Nothing unread.
+                        {% translate "Nothing unread." %}
                     {% else %}
-                        Nothing here yet.
+                        {% translate "Nothing here yet." %}
                     {% endif %}
                 </p>
                 <p class="mb-0 small">
-                    Notifications arrive when a reserved book comes back,
-                    or when a stock check finishes with copies
-                    unaccounted for.
+                    {% translate "Notifications arrive when a reserved book comes back, or when a stock check finishes with copies unaccounted for." %}
                 </p>
             </div>
         </div>

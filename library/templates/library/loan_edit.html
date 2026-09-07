@@ -1,11 +1,12 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
-    Edit Loan | {{ branding.display_name }}
+{% translate "Edit Loan" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Edit Loan
+    {% translate "Edit Loan" %}
 {% endblock %}
 
 {% block content %}
@@ -20,16 +21,16 @@
     <p>
         {% if next_url %}
             <a href="{{ next_url }}">
-                ← Back
+                {% translate "← Back" %}
             </a>
         {% else %}
             <a href="{% url 'loan_list' %}">
-                ← Back to Loans
+                {% translate "← Back to Loans" %}
             </a>
         {% endif %}
     </p>
 
-    <h1>Edit Loan</h1>
+    <h1>{% translate "Edit Loan" %}</h1>
     {% if error_message %}
 
     <p>
@@ -42,17 +43,17 @@
     {% if loan.return_date %}
 
         <p>
-            <strong>Status: Returned</strong>
+            <strong>{% translate "Status: Returned" %}</strong>
         </p>
 
         <p>
-            This loan has already been returned.
+            {% translate "This loan has already been returned." %}
         </p>
 
     {% else %}
 
         <p>
-            <strong>Status: Active</strong>
+            <strong>{% translate "Status: Active" %}</strong>
         </p>
 
     {% endif %}
@@ -65,7 +66,7 @@
 
 
         <label for="copy">
-            Book Copy:
+            {% translate "Book Copy:" %}
         </label>
 
         {% if loan.return_date %}
@@ -110,7 +111,7 @@
 
 
         <label for="borrower">
-            Borrower:
+            {% translate "Borrower:" %}
         </label>
 
         <select
@@ -137,7 +138,7 @@
 
 
         <label for="issue_date">
-            Issue Date:
+            {% translate "Issue Date:" %}
         </label>
 
         <input
@@ -153,7 +154,7 @@
 
 
         <label for="due_date">
-            Due Date:
+            {% translate "Due Date:" %}
         </label>
 
         <input
@@ -172,15 +173,15 @@
 
             <hr>
 
-            <h3>Return Information</h3>
+            <h3>{% translate "Return Information" %}</h3>
 
             <p>
-                <strong>Return Date:</strong>
+                <strong>{% translate "Return Date:" %}</strong>
                 {{ loan.return_date }}
             </p>
 
             <p>
-                <strong>Returned To:</strong>
+                <strong>{% translate "Returned To:" %}</strong>
 
                 {% if loan.returned_to %}
 
@@ -202,7 +203,7 @@
 
 
         <label for="notes">
-            Notes:
+            {% translate "Notes:" %}
         </label>
 
         <br>
@@ -219,7 +220,7 @@
 
 
         <button type="submit">
-            Update Loan
+            {% translate "Update Loan" %}
         </button>
 
     </form>

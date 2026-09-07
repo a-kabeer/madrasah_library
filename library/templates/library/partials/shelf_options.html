@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 The Shelf dropdown's <option> list, for one location only.
 
@@ -12,9 +13,9 @@ Nothing but <option> elements — see location_options.html.
 {% endcomment %}
 
 {% if has_location %}
-    <option value="">Select shelf…</option>
+    <option value="">{% translate "Select shelf…" %}</option>
 {% else %}
-    <option value="">Choose a location first</option>
+    <option value="">{% translate "Choose a location first" %}</option>
 {% endif %}
 
 {% for shelf in shelves %}

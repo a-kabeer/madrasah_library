@@ -1,14 +1,16 @@
+{% load i18n %}
 {% if page_obj.has_other_pages %}
 <p>
     {% if page_obj.has_previous %}
-        <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">← Previous</a>
+        <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">{% translate "← Previous" %}</a>
     {% endif %}
 
-    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-    ({{ page_obj.paginator.count }} total)
+    {% blocktranslate trimmed with number=page_obj.number total=page_obj.paginator.num_pages count_all=page_obj.paginator.count %}
+        Page {{ number }} of {{ total }} ({{ count_all }} total)
+    {% endblocktranslate %}
 
     {% if page_obj.has_next %}
-        <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">Next →</a>
+        <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">{% translate "Next →" %}</a>
     {% endif %}
 </p>
 {% endif %}

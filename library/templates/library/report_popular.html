@@ -1,20 +1,21 @@
 {% extends layout %}
+{% load i18n %}
 
 {% block title %}
-    Popular Books | {{ branding.display_name }}
+{% translate "Popular Books" %} | {{ branding.display_name }}
 {% endblock %}
 
 {% block page_title %}
-    Popular Books
+    {% translate "Popular Books" %}
 {% endblock %}
 
 {% block breadcrumbs %}
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{% translate 'Breadcrumb' %}">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item">
-                <a href="{% url 'reports_home' %}">Reports</a>
+                <a href="{% url 'reports_home' %}">{% translate "Reports" %}</a>
             </li>
-            <li class="breadcrumb-item active" aria-current="page">Popular Books</li>
+            <li class="breadcrumb-item active" aria-current="page">{% translate "Popular Books" %}</li>
         </ol>
     </nav>
 {% endblock %}
@@ -37,18 +38,18 @@
             <div class="row g-2 align-items-end">
 
                 <div class="col-6 col-md-3">
-                    <label for="startDate" class="form-label small mb-1">From</label>
+                    <label for="startDate" class="form-label small mb-1">{% translate "From" %}</label>
                     <input type="date" class="form-control form-control-sm"
                            id="startDate" name="start" value="{{ start }}">
                 </div>
                 <div class="col-6 col-md-3">
-                    <label for="endDate" class="form-label small mb-1">To</label>
+                    <label for="endDate" class="form-label small mb-1">{% translate "To" %}</label>
                     <input type="date" class="form-control form-control-sm"
                            id="endDate" name="end" value="{{ end }}">
                 </div>
                 <div class="col-12 col-md-auto">
                     <button type="submit" class="btn btn-primary btn-sm">
-                        <i class="bi bi-funnel me-1"></i> Apply
+                        <i class="bi bi-funnel me-1"></i> {% translate "Apply" %}
                     </button>
                 </div>
             </div>
@@ -66,8 +67,8 @@
                 <thead class="table-secondary">
                     <tr>
                         <th style="width: 4rem;">#</th>
-                        <th>Book</th><th>Author</th>
-                        <th>Times issued</th><th>Copies available</th>
+                        <th>{% translate "Book" %}</th><th>{% translate "Author" %}</th>
+                        <th>{% translate "Times issued" %}</th><th>{% translate "Copies available" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -78,7 +79,7 @@
                                 <a href="{% url 'book_detail' book.id %}"
                                    class="text-decoration-none">{{ book.title }}</a>
                                 {% if book.archived_at %}
-                                    <span class="badge text-bg-secondary ms-1">Archived</span>
+                                    <span class="badge text-bg-secondary ms-1">{% translate "Archived" %}</span>
                                 {% endif %}
                             </td>
                             <td class="text-body-secondary">
@@ -90,7 +91,7 @@
                     {% empty %}
                         <tr>
                             <td colspan="5" class="text-center text-body-secondary py-4">
-                                Nothing was issued in this period.
+                                {% translate "Nothing was issued in this period." %}
                             </td>
                         </tr>
                     {% endfor %}

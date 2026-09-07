@@ -1,8 +1,9 @@
 {% extends layout %}
+{% load i18n %}
 
-{% block title %}Add Book Copy | {{ branding.display_name }}{% endblock %}
+{% block title %}{% translate "Add Book Copy" %} | {{ branding.display_name }}{% endblock %}
 
-{% block page_title %}Add Book Copy{% endblock %}
+{% block page_title %}{% translate "Add Book Copy" %}{% endblock %}
 
 {% block content %}
 
@@ -15,11 +16,11 @@
             <div class="mb-3">
                 {% if selected_volume %}
                     <a href="{% url 'book_volume_detail' selected_volume.id %}" class="text-decoration-none">
-                        <i class="bi bi-arrow-left me-1"></i> Back to Volume
+                        <i class="bi bi-arrow-left me-1"></i> {% translate "Back to Volume" %}
                     </a>
                 {% else %}
                     <a href="{% url 'book_copy_list' %}" class="text-decoration-none">
-                        <i class="bi bi-arrow-left me-1"></i> Back to Book Copies
+                        <i class="bi bi-arrow-left me-1"></i> {% translate "Back to Book Copies" %}
                     </a>
                 {% endif %}
             </div>
@@ -27,7 +28,7 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-body">
                     <h5 class="mb-0 fw-bold">
-                        <i class="bi bi-plus-lg me-2"></i>Add Book Copy
+                        <i class="bi bi-plus-lg me-2"></i>{% translate "Add Book Copy" %}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -43,13 +44,13 @@
                     <div class="alert alert-secondary d-flex align-items-start" role="note">
                         <i class="bi bi-info-circle me-2 mt-1"></i>
                         <div>
-                            <strong>Creating copy for:</strong>
+                            <strong>{% translate "Creating copy for:" %}</strong>
                             <span class="d-block">{{ selected_volume.book.title }}</span>
                             <span class="d-block small text-body-secondary">
-                                Volume {{ selected_volume.volume_number }}{% if selected_volume.title %} — {{ selected_volume.title }}{% endif %}
+                                {% blocktranslate with number=selected_volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% if selected_volume.title %} — {{ selected_volume.title }}{% endif %}
                             </span>
                             <span class="d-block small text-body-secondary mt-1">
-                                Volume cannot be changed after creation. If this is the wrong volume, cancel and start again.
+                                {% translate "Volume cannot be changed after creation. If this is the wrong volume, cancel and start again." %}
                             </span>
                         </div>
                     </div>
@@ -61,17 +62,17 @@
                         <!-- Volume (only shown when no pre-selected volume) -->
                         {% if not selected_volume %}
                         <div class="mb-3">
-                            <label for="volume" class="form-label fw-semibold">Volume</label>
+                            <label for="volume" class="form-label fw-semibold">{% translate "Volume" %}</label>
                             <select name="volume" id="volume" class="form-select" required>
-                                <option value="">Select Volume</option>
+                                <option value="">{% translate "Select Volume" %}</option>
                                 {% for volume in volumes %}
                                 <option value="{{ volume.id }}" {% if volume.id == form_data.volume_id %}selected{% endif %}>
-                                    {{ volume.book.title }} — Volume {{ volume.volume_number }}{% if volume.title %} — {{ volume.title }}{% endif %}
+                                    {{ volume.book.title }} — {% blocktranslate with number=volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% if volume.title %} — {{ volume.title }}{% endif %}
                                 </option>
                                 {% endfor %}
                             </select>
                             <div class="form-text">
-                                The volume cannot be changed after the copy is created. If filed incorrectly, the copy must be deleted and re-created.
+                                {% translate "The volume cannot be changed after the copy is created. If filed incorrectly, the copy must be deleted and re-created." %}
                             </div>
                         </div>
                         {% else %}
@@ -81,31 +82,31 @@
 
                         <!-- Shelf -->
                         <div class="mb-3">
-                            <label for="shelf" class="form-label fw-semibold">Home Location / Shelf</label>
+                            <label for="shelf" class="form-label fw-semibold">{% translate "Home Location / Shelf" %}</label>
                             <select name="shelf" id="shelf" class="form-select" required>
-                                <option value="">Select Shelf</option>
+                                <option value="">{% translate "Select Shelf" %}</option>
                                 {% for shelf in shelves %}
                                 <option value="{{ shelf.id }}" {% if shelf.id == form_data.shelf_id %}selected{% endif %}>
                                     {{ shelf.location.name }} — {{ shelf.shelf_code }}
                                 </option>
                                 {% endfor %}
                             </select>
-                            <div class="form-text">Where this copy is normally kept when not on loan.</div>
+                            <div class="form-text">{% translate "Where this copy is normally kept when not on loan." %}</div>
                         </div>
 
                         <!-- Copy Code -->
                         <div class="mb-3">
-                            <label for="copy_code" class="form-label fw-semibold">Copy Code</label>
+                            <label for="copy_code" class="form-label fw-semibold">{% translate "Copy Code" %}</label>
                             <input type="text" class="form-control" name="copy_code" id="copy_code"
                                 value="{{ form_data.copy_code }}" required>
                             <div class="form-text">
-                                Printed on the physical copy. This cannot be changed after creation.
+                                {% translate "Printed on the physical copy. This cannot be changed after creation." %}
                             </div>
                         </div>
 
                         <!-- Status -->
                         <div class="mb-3">
-                            <label for="status" class="form-label fw-semibold">Status</label>
+                            <label for="status" class="form-label fw-semibold">{% translate "Status" %}</label>
                             <select name="status" id="status" class="form-select">
                                 {% for status_item in statuses %}
                                 <option value="{{ status_item }}" {% if status_item == form_data.status %}selected{% endif %}>
@@ -117,25 +118,25 @@
 
                         <!-- Acquisition Date -->
                         <div class="mb-3">
-                            <label for="acquisition_date" class="form-label fw-semibold">Acquisition Date</label>
+                            <label for="acquisition_date" class="form-label fw-semibold">{% translate "Acquisition Date" %}</label>
                             <input type="date" class="form-control" name="acquisition_date" id="acquisition_date"
                                 value="{% if form_data.acquisition_date %}{{ form_data.acquisition_date }}{% else %}{% now 'Y-m-d' %}{% endif %}">
                         </div>
 
                         <!-- Notes -->
                         <div class="mb-3">
-                            <label for="notes" class="form-label fw-semibold">Notes</label>
+                            <label for="notes" class="form-label fw-semibold">{% translate "Notes" %}</label>
                             <textarea class="form-control" name="notes" id="notes" rows="3">{{ form_data.notes }}</textarea>
                         </div>
 
                         <div class="d-flex gap-2 mt-4">
                             <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-1"></i> Add Book Copy
+                                <i class="bi bi-check-lg me-1"></i> {% translate "Add Book Copy" %}
                             </button>
                             {% if selected_volume %}
-                                <a href="{% url 'book_volume_detail' selected_volume.id %}" class="btn btn-outline-secondary">Cancel</a>
+                                <a href="{% url 'book_volume_detail' selected_volume.id %}" class="btn btn-outline-secondary">{% translate "Cancel" %}</a>
                             {% else %}
-                                <a href="{% url 'book_copy_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                                <a href="{% url 'book_copy_list' %}" class="btn btn-outline-secondary">{% translate "Cancel" %}</a>
                             {% endif %}
                         </div>
 

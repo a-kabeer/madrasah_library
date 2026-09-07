@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 Pagination for the public catalogue.
 
@@ -15,12 +16,14 @@ page_ellipsis.
 
 {% if paginator.num_pages > 1 %}
 
-    <nav class="public-pagination" aria-label="Catalogue pages">
+    <nav class="public-pagination" aria-label="{% translate 'Catalogue pages' %}">
 
         <p class="text-body-secondary small mb-0">
-            Showing <strong>{{ books.start_index }}</strong>–<strong>{{ books.end_index }}</strong>
-            of <strong>{{ paginator.count }}</strong>
-        </p>
+                                                      {% blocktranslate trimmed with start_index=books.start_index end_index=books.end_index count=paginator.count %}
+                                                          Showing <strong>{{ start_index }}</strong>–<strong>{{ end_index }}</strong>
+                                                          of <strong>{{ count }}</strong>
+                                                      {% endblocktranslate %}
+                                                  </p>
 
         <ul class="pagination pagination-sm mb-0">
 
@@ -32,7 +35,7 @@ page_ellipsis.
                         rel="prev"
                     >
                         <i class="bi bi-chevron-left" aria-hidden="true"></i>
-                        <span class="visually-hidden">Previous page</span>
+                        <span class="visually-hidden">{% translate "Previous page" %}</span>
                     </a>
                 {% else %}
                     <span class="page-link" aria-hidden="true">
@@ -72,7 +75,7 @@ page_ellipsis.
                         rel="next"
                     >
                         <i class="bi bi-chevron-right" aria-hidden="true"></i>
-                        <span class="visually-hidden">Next page</span>
+                        <span class="visually-hidden">{% translate "Next page" %}</span>
                     </a>
                 {% else %}
                     <span class="page-link" aria-hidden="true">

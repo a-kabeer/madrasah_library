@@ -1,3 +1,4 @@
+{% load i18n %}
 {% comment %}
 The book's own details: title, author, category, publisher, cover.
 
@@ -20,7 +21,7 @@ Expected context:
 
 <div class="mb-3">
     <label for="{{ id_prefix }}Title" class="form-label fw-semibold">
-        Title <span class="text-danger">*</span>
+        {% translate "Title" %} <span class="text-danger">*</span>
     </label>
     <input
         type="text"
@@ -40,7 +41,7 @@ Expected context:
 
 <div class="mb-3">
     <label for="{{ id_prefix }}CoverImage" class="form-label fw-semibold">
-        Cover Image
+        {% translate "Cover Image" %}
     </label>
 
     {% if book %}
@@ -59,13 +60,13 @@ Expected context:
                         name="remove_cover"
                     >
                     <label class="form-check-label" for="{{ id_prefix }}RemoveCover">
-                        Remove current cover
+                        {% translate "Remove current cover" %}
                     </label>
                 </div>
             </div>
         {% else %}
             <p class="text-body-secondary small mb-2">
-                <i class="bi bi-image me-1"></i>No cover image yet.
+                <i class="bi bi-image me-1"></i>{% translate "No cover image yet." %}
             </p>
         {% endif %}
     {% endif %}
@@ -79,10 +80,10 @@ Expected context:
     >
     <div class="form-text">
         {% if book and book.cover_image %}
-            Choosing a file replaces the current cover.
+            {% translate "Choosing a file replaces the current cover." %}
         {% else %}
-            Optional.
+            {% translate "Optional." %}
         {% endif %}
-        JPG, PNG, WEBP or GIF, up to 2&nbsp;MB.
+        {% translate "JPG, PNG, WEBP or GIF, up to 2&nbsp;MB." %}
     </div>
 </div>
