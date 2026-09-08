@@ -124,6 +124,14 @@ def activity_log_list(request):
 
 @feature_required("dashboard")
 def library_home(request):
+    """Render the operational home page with bounded, reusable queries.
+
+    The dashboard is intentionally task-first: live circulation alerts and
+    quick actions come before collection statistics, while recent records
+    and the audit trail stay below the operational summary. Counts are
+    cached because they are aggregate values; the five-row activity lists
+    remain live and use the joins their templates actually read.
+    """
 
     dashboard_stats = cache.get(DASHBOARD_CACHE_KEY)
 
@@ -132,10 +140,9 @@ def library_home(request):
         today = timezone.now().date()
 
         dashboard_stats = {
-            # "Books" on the dashboard means books currently in the
-            # catalogue, matching the default Books page. Archived books
-            # are intentionally excluded; they are an administrative
-            # history state, not part of the active collection count.
+            # "Books" means books currently in the active catalogue. Archived
+            # books remain administrative history and are not part of the
+            # collection snapshot shown to staff on the home page.
             "total_books": queries.active_books().count(),
             "total_authors": Author.objects.count(),
             "total_categories": Category.objects.count(),
@@ -170,14 +177,9 @@ def library_home(request):
             timeout=300
         )
 
-    # Outside the cached block above: these are lists of records, not
-    # counts, and they are cheap - five rows each, with the joins the rows
-    # actually name.
-    #
-    # `-id` as well as the date, because `issue_date` and `return_date` are
-    # DateFields: without a tiebreaker, everything that happened today came
-    # back in whatever order the database felt like, so "most recent" was
-    # not reliably most recent.
+    # These are bounded record lists rather than aggregate counts. The
+    # select_related joins keep the dashboard query count constant while the
+    # collection grows.
     recent_loans = Loan.objects.select_related(
         "copy__volume__book",
         "borrower",
@@ -187,10 +189,6 @@ def library_home(request):
         "-id",
     )[:5]
 
-    # The other half of recent circulation. Taken from the loans themselves
-    # rather than from the activity log: `return_date` and `returned_to` are
-    # the record of a return, and reading the log instead would mean parsing
-    # a description to find out which book it was.
     recent_returns = Loan.objects.filter(
         return_date__isnull=False
     ).select_related(
@@ -217,15 +215,13 @@ def library_home(request):
     dashboard_stats["recent_returns"] = recent_returns
     dashboard_stats["recent_logs"] = recent_logs
 
-    # Which quick actions to offer. Issuing, returning and adding a borrower
-    # are open to all three roles; adding a book is not, so offering it to
-    # an Assistant would be offering a 403. The decorators on those views
-    # are the enforcement - this only decides what is worth showing.
+    # Quick actions are presentation only. The destination views remain the
+    # enforcement point, so a role is never granted access by seeing a link.
     dashboard_stats["can_edit"] = can_edit_library(request.user)
 
     return render(
         request,
-        "library/dashboard.html",
+        "library/dashboard_v2.html",
         dashboard_stats
     )
 
