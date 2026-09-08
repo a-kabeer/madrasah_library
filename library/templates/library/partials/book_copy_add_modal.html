@@ -42,7 +42,8 @@
                 </div>
                 <div class="col-md-6">
                     <label for="copyAddCode" class="form-label fw-semibold">{% translate "Copy code" %}</label>
-                    <input type="text" class="form-control" id="copyAddCode" name="copy_code" value="{{ form_data.copy_code }}" maxlength="100" autocomplete="off" required aria-required="true">
+                    <input type="text" class="form-control" id="copyAddCode" value="{{ generated_code }}" readonly aria-readonly="true">
+                    <div class="form-text">{% translate "Generated automatically. It cannot be changed after creation." %}</div>
                 </div>
                 <div class="col-md-6">
                     <label for="copyAddStatus" class="form-label fw-semibold">{% translate "Status" %}</label>
