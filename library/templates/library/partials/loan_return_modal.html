@@ -1,0 +1,143 @@
+{% load i18n %}
+{% comment %}
+Take a book back, in a dialog.
+
+The return itself is unchanged - the same view, the same lock, the same
+transaction, the same notification for whoever is next in the queue. Only
+the page around it is gone.
+
+The date defaults to today, which is what a desk almost always wants, and
+`max` is today as well: a book cannot come back tomorrow. The view still
+refuses a date before the issue date, because the field cannot know it.
+
+Whether anyone is waiting is shown and nothing more - no copy is assigned
+and no message is sent. What to do about the queue is the librarian's call,
+which is why it is a sentence and not a workflow.
+
+Expected context: loan, error_message, next_url, waiting_front,
+waiting_count, today.
+{% endcomment %}
+
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    <i class="bi bi-arrow-return-left me-2" aria-hidden="true"></i>
+    {% translate "Return Book" %}
+</h5>
+
+<form
+    method="post"
+    action="{% url 'loan_return' loan.id %}"
+    hx-post="{% url 'loan_return' loan.id %}?modal=1"
+    hx-target="#formModal .modal-body"
+    hx-swap="innerHTML"
+>
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next_url }}">
+
+    {% if error_message %}
+        <div class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
+            {{ error_message }}
+        </div>
+    {% endif %}
+
+    <dl class="row small mb-3">
+
+        <dt class="col-4 fw-normal text-body-secondary">{% translate "Book" %}</dt>
+        <dd class="col-8">{{ loan.copy.volume.book.title }}</dd>
+
+        <dt class="col-4 fw-normal text-body-secondary">{% translate "Copy" %}</dt>
+        <dd class="col-8"><span class="copy-code">{{ loan.copy.copy_code }}</span></dd>
+
+        <dt class="col-4 fw-normal text-body-secondary">{% translate "Borrower" %}</dt>
+        <dd class="col-8">{{ loan.borrower.name }}</dd>
+
+        <dt class="col-4 fw-normal text-body-secondary">{% translate "Due" %}</dt>
+        <dd class="col-8">
+            {{ loan.due_date|date:"j M Y" }}
+            {% if loan.days_overdue %}
+                <span class="badge text-bg-danger ms-1">
+                    {% blocktranslate trimmed count n=loan.days_overdue %}
+                        {{ n }} day late
+                    {% plural %}
+                        {{ n }} days late
+                    {% endblocktranslate %}
+                </span>
+            {% endif %}
+        </dd>
+
+    </dl>
+
+    {% if waiting_front %}
+        {% comment %}
+          Said, not acted on. Nothing here assigns the copy to the person
+          waiting; it only tells the librarian that somebody is.
+        {% endcomment %}
+        <div class="alert alert-info d-flex align-items-start" role="alert">
+            <i class="bi bi-info-circle-fill me-2 mt-1" aria-hidden="true"></i>
+            <div>
+                {% blocktranslate trimmed count n=waiting_count with name=waiting_front.borrower.name %}
+                    <strong>{{ name }}</strong> is waiting for this book.
+                {% plural %}
+                    <strong>{{ name }}</strong> and {{ n }} others are
+                    waiting for this book.
+                {% endblocktranslate %}
+                {% comment %}
+                  Said plainly, because it is the thing a librarian would
+                  otherwise assume: nothing here assigns the copy to them.
+                  It goes back on the shelf like any other, and whoever
+                  reaches it first gets it.
+                {% endcomment %}
+                <span class="d-block mt-1">
+                    {% translate "The copy is not being set aside for them." %}
+                </span>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="mb-3">
+        <label for="return_date" class="form-label fw-semibold">
+            {% translate "Returned on" %} <span class="text-danger">*</span>
+        </label>
+        {% comment %}
+          `max` is today: a return cannot be recorded in the future. The
+          view also refuses anything before the issue date, which this
+          field has no way to express.
+        {% endcomment %}
+        <input
+            type="date"
+            class="form-control"
+            id="return_date"
+            name="return_date"
+            value="{{ today|date:'Y-m-d' }}"
+            max="{{ today|date:'Y-m-d' }}"
+            required
+        >
+        <div class="form-text">
+            {% translate "Today, unless the book came back earlier and is only being recorded now." %}
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="notes" class="form-label fw-semibold">
+            {% translate "Notes" %}
+        </label>
+        <textarea
+            class="form-control"
+            id="notes"
+            name="notes"
+            rows="2"
+            placeholder="{% translate 'Anything worth recording about its condition...' %}"
+        ></textarea>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 pt-2">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            {% translate "Cancel" %}
+        </button>
+        <button type="submit" class="btn btn-success">
+            <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
+            {% translate "Record Return" %}
+        </button>
+    </div>
+
+</form>

@@ -277,6 +277,16 @@ class LoanRenewalTests(TestCase):
                          due_date=date.today(),
                          return_date=date.today())
 
+        # Renew is a dialog now. The refusal is unchanged; a plain POST
+        # redirects with it as a message, and the dialog shows it.
         response = self.client.post(reverse("loan_renew", args=[loan.id]))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "already been returned")
+        self.assertEqual(response.status_code, 302)
+
+        in_dialog = self.client.get(
+            reverse("loan_renew", args=[loan.id]) + "?modal=1",
+            headers={"HX-Request": "true"},
+        )
+        self.assertContains(in_dialog, "already been returned")
+
+        loan.refresh_from_db()
+        self.assertEqual(loan.due_date, date.today())

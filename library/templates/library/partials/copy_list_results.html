@@ -253,18 +253,54 @@ Expected context: everything `book_copy_list` provides.
                             </td>
 
                             <td class="text-end">
-                                <div class="d-inline-flex gap-1" data-row-actions>
-                                    {% if can_edit %}
+                                {% comment %}
+                                  Edit, Move and Delete, each once.
+
+                                  The Open button that used to sit here
+                                  for the read-only roles is gone: the row
+                                  itself opens the details, so a button
+                                  beside it going to the same place was a
+                                  second control for one action - and the
+                                  only one a reader could not use.
+
+                                  Edit and Delete are dialogs. Move keeps
+                                  its own page, which asks a different
+                                  question and is unchanged; it needs
+                                  `hx-target` because the results
+                                  container around it declares one for
+                                  the fragment requests, and a navigation
+                                  has to name the shell's region instead.
+                                {% endcomment %}
+                                {% comment %}
+                                  Every action a librarian takes on a
+                                  copy, each appearing once, and only
+                                  here - the Details dialog carries none
+                                  of them, so there is one place to act
+                                  and one place to read.
+
+                                  Edit, Move and Delete are dialogs.
+                                  Print Label and Withdraw are
+                                  navigations: a sheet of labels is a
+                                  page to print, and withdrawing asks
+                                  its own question.
+
+                                  Print Label and Withdraw need
+                                  `hx-target` named, because the results
+                                  container around them declares one for
+                                  the fragment requests and a navigation
+                                  has to point at the shell's region
+                                  instead.
+                                {% endcomment %}
+                                {% if can_edit %}
+                                    <div class="d-inline-flex gap-1" data-row-actions>
                                         <a
                                             href="{% url 'book_copy_edit' copy.id %}"
                                             class="btn btn-sm btn-outline-warning"
                                             title="{% translate 'Edit' %}"
                                             aria-label="Edit copy {{ copy.copy_code }}"
-                                            {% comment %} Inside the results container, which declares the target and
-                                               swap for the fragment requests around it - inherited by
-                                               anything within, this link included. It is going somewhere
-                                               else, so it names the shell's region instead. {% endcomment %}
-                                            hx-target="#mainContent"
+                                            data-form-modal
+                                            hx-get="{% url 'book_copy_edit' copy.id %}?modal=1"
+                                            hx-target="#formModal .modal-body"
                                             hx-swap="innerHTML"
                                         >
                                             <i class="bi bi-pencil"></i>
@@ -274,32 +310,57 @@ Expected context: everything `book_copy_list` provides.
                                             class="btn btn-sm btn-outline-primary"
                                             title="{% translate 'Move' %}"
                                             aria-label="Move copy {{ copy.copy_code }}"
-                                            {% comment %} Inside the results container, which declares the target and
-                                               swap for the fragment requests around it - inherited by
-                                               anything within, this link included. It is going somewhere
-                                               else, so it names the shell's region instead. {% endcomment %}
-                                            hx-target="#mainContent"
+                                            data-form-modal
+                                            hx-get="{% url 'book_copy_move' copy.id %}?modal=1"
+                                            hx-target="#formModal .modal-body"
                                             hx-swap="innerHTML"
                                         >
                                             <i class="bi bi-arrow-left-right"></i>
                                         </a>
-                                    {% else %}
                                         <a
-                                            href="{% url 'book_copy_detail' copy.id %}"
+                                            href="{% url 'book_copy_labels' %}?copy={{ copy.id }}"
                                             class="btn btn-sm btn-outline-secondary"
-                                            title="{% translate 'Open' %}"
-                                            aria-label="Open copy {{ copy.copy_code }}"
-                                            {% comment %} Inside the results container, which declares the target and
-                                               swap for the fragment requests around it - inherited by
-                                               anything within, this link included. It is going somewhere
-                                               else, so it names the shell's region instead. {% endcomment %}
+                                            title="{% translate 'Print label' %}"
+                                            aria-label="Print a label for copy {{ copy.copy_code }}"
                                             hx-target="#mainContent"
                                             hx-swap="innerHTML"
                                         >
-                                            <i class="bi bi-box-arrow-up-right"></i>
+                                            <i class="bi bi-upc-scan"></i>
                                         </a>
-                                    {% endif %}
-                                </div>
+                                        {% comment %}
+                                          Only while it is still in
+                                          circulation. A withdrawn copy
+                                          has nothing left to withdraw,
+                                          and the page would only say so.
+                                        {% endcomment %}
+                                        {% if copy.status != "Transferred" %}
+                                            <a
+                                                href="{% url 'book_copy_withdraw' copy.id %}"
+                                                class="btn btn-sm btn-outline-secondary"
+                                                title="{% translate 'Withdraw' %}"
+                                                aria-label="Withdraw copy {{ copy.copy_code }}"
+                                                hx-target="#mainContent"
+                                                hx-swap="innerHTML"
+                                            >
+                                                <i class="bi bi-box-arrow-down"></i>
+                                            </a>
+                                        {% endif %}
+                                        <a
+                                            href="{% url 'book_copy_delete' copy.id %}"
+                                            class="btn btn-sm btn-outline-danger"
+                                            title="{% translate 'Delete' %}"
+                                            aria-label="Delete copy {{ copy.copy_code }}"
+                                            data-form-modal
+                                            hx-get="{% url 'book_copy_delete' copy.id %}?modal=1"
+                                            hx-target="#formModal .modal-body"
+                                            hx-swap="innerHTML"
+                                        >
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                {% else %}
+                                    <span class="text-body-secondary small">&mdash;</span>
+                                {% endif %}
                             </td>
 
                         </tr>

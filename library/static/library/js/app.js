@@ -1321,7 +1321,9 @@ document.addEventListener(
                 }
 
                 var url = row.getAttribute("data-book-url")
-                    || row.getAttribute("data-copy-url");
+                    || row.getAttribute("data-copy-url")
+                    || row.getAttribute("data-loan-url")
+                    || row.getAttribute("data-borrower-url");
 
                 if (!url || !modalEl) {
                     return;
@@ -1361,6 +1363,8 @@ document.addEventListener(
                 var row = target.closest(
                     "[data-book-row][data-book-url],"
                     + "[data-copy-row][data-copy-url],"
+                    + "[data-loan-row][data-loan-url],"
+                    + "[data-borrower-row][data-borrower-url],"
                     + "[data-row-url]"
                 );
 

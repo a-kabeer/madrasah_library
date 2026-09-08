@@ -1,9 +1,32 @@
 {% extends layout %}
 {% load i18n %}
 
-{% block title %}{% translate "Return Book" %} | {{ branding.display_name }}{% endblock %}
+{% block title %}{% translate "Return Books" %} | {{ branding.display_name }}{% endblock %}
 
-{% block page_title %}{% translate "Return Book" %}{% endblock %}
+{% block page_title %}{% translate "Return Books" %}{% endblock %}
+
+{% comment %}
+Take a stack of books back, the way a stack can be issued.
+
+The shape is the issue form's, because the desk's problem is the same one:
+somebody arrives with more than one book, and finding the second must not
+lose the first. So the loans picked so far ride in the query string, the
+search adds to that list rather than replacing it, and one submission
+records the lot - all of them or none.
+
+Three parts, left to right:
+
+  * the one search field, which a scanner types into. A whole copy code
+    goes straight to that loan; anything else searches what is out now by
+    book, author or borrower - the borrower being what lists somebody's
+    four books at once.
+  * what was found: either the single loan a code names, or a table of
+    matches. Every row does one thing, which is add itself to the list.
+  * the return list, with the date and the note that apply to all of it.
+
+Expected context: copy_code, loan, matches, more_matches, lookup_limit,
+error_message, chosen, chosen_ids, return_date, notes, today.
+{% endcomment %}
 
 {% block content %}
 <div class="container-fluid px-0">
@@ -12,76 +35,171 @@
         <nav aria-label="{% translate 'breadcrumb' %}">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{% url 'circulation_dashboard' %}">{% translate "Circulation" %}</a></li>
-                <li class="breadcrumb-item active">{% translate "Return Book" %}</li>
+                <li class="breadcrumb-item active">{% translate "Return Books" %}</li>
             </ol>
         </nav>
-        <h2 class="fw-bold mb-1">{% translate "Return Book" %}</h2>
+        <h2 class="fw-bold mb-1">{% translate "Return Books" %}</h2>
         <p class="text-body-secondary mb-0">
-            {% translate "Scan the label, or search for the book if the label will not read." %}
+            {% translate "Scan each label, or search by book, author or borrower. Add them to the list, then take them all back at once." %}
         </p>
     </div>
 
-    <div class="row">
-        <div class="col-12 col-lg-8">
+    {% if error_message %}
+        <div class="alert alert-warning d-flex align-items-start" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2 mt-1" aria-hidden="true"></i>
+            <div>{{ error_message }}</div>
+        </div>
+    {% endif %}
 
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-body">
-                    <form method="get" action="{% url 'circulation_return_lookup' %}">
-                        <div class="mb-3">
-                            <label for="copy_code" class="form-label fw-semibold">
-                                {% translate "Scan copy code or search by book / author" %}
-                            </label>
-                            <div class="input-group input-group-lg">
-                                <span class="input-group-text">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-                                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
-                                    </svg>
-                                </span>
-                                <input
-                                    type="text"
-                                    class="form-control"
-                                    id="copy_code"
-                                    name="copy_code"
-                                    value="{{ copy_code }}"
-                                    placeholder="{% translate 'LIB-000001, or a book or author name' %}"
-                                    {% comment %}
-                                      Where a scanner types, so the cursor
-                                      starts here and app.js puts it back
-                                      after each lookup.
-                                    {% endcomment %}
-                                    autofocus
-                                    autocomplete="off"
-                                >
-                                <button class="btn btn-primary" type="submit">{% translate "Find" %}</button>
-                                {% comment %}
-                                  The same scanner the issue page uses, on
-                                  the same terms: hidden until app.js
-                                  decides the device can scan, so a desktop
-                                  and a browser without the decoder see the
-                                  field exactly as it was.
-                                {% endcomment %}
-                                <button
-                                    class="btn btn-outline-primary"
-                                    type="button"
-                                    data-scan-open
-                                    data-scan-target="copy_code"
-                                    hidden
-                                >
-                                    <i class="bi bi-upc-scan"></i>
-                                    <span class="visually-hidden">{% translate "Scan a barcode" %}</span>
-                                </button>
-                            </div>
-                            <div class="form-text">
-                                {% translate "A whole copy code goes straight to that loan. Anything else searches what is out on loan now by book title or author." %}
-                            </div>
-                        </div>
-                    </form>
+    <div class="row g-4">
+        <div class="col-12 col-lg-7">
+
+            {% comment %}
+              A GET form, and the list rides along as hidden fields: this
+              search adds to what has been picked rather than replacing it,
+              and the whole half-finished return is a URL that survives a
+              reload.
+            {% endcomment %}
+            <form method="get" action="{% url 'circulation_return_lookup' %}" class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-body">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-upc-scan me-2" aria-hidden="true"></i>{% translate "1. Find the book" %}
+                    </h5>
                 </div>
-            </div>
+                <div class="card-body">
 
-            {% if error_message %}
-            <div class="alert alert-warning" role="alert">
-                <strong>{{ error_message }}</strong>
+                    {% for item in chosen %}
+                        <input type="hidden" name="loans" value="{{ item.id }}">
+                    {% endfor %}
+
+                    <label for="copy_code" class="form-label fw-semibold">
+                        {% translate "Scan copy code, or search by book, author or borrower" %}
+                    </label>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text">
+                            <i class="bi bi-search" aria-hidden="true"></i>
+                        </span>
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="copy_code"
+                            name="copy_code"
+                            value="{{ copy_code }}"
+                            placeholder="{% translate 'LIB-000001, a book, an author or a borrower' %}"
+                            {% comment %}
+                              Where a scanner types, so the cursor starts
+                              here and app.js puts it back after each
+                              lookup.
+                            {% endcomment %}
+                            autofocus
+                            autocomplete="off"
+                        >
+                        <button class="btn btn-primary" type="submit">{% translate "Find" %}</button>
+                        {% comment %}
+                          The same scanner the issue page uses, on the same
+                          terms: hidden until app.js decides the device can
+                          scan, so a desktop and a browser without the
+                          decoder see the field exactly as it was.
+                        {% endcomment %}
+                        <button
+                            class="btn btn-outline-primary"
+                            type="button"
+                            data-scan-open
+                            data-scan-target="copy_code"
+                            hidden
+                        >
+                            <i class="bi bi-upc-scan" aria-hidden="true"></i>
+                            <span class="visually-hidden">{% translate "Scan a barcode" %}</span>
+                        </button>
+                    </div>
+                    <div class="form-text">
+                        {% translate "A whole copy code goes straight to that loan. Anything else searches what is out on loan now — a borrower's name lists everything they have." %}
+                    </div>
+
+                </div>
+            </form>
+
+            {% comment %}
+              The one loan a copy code names. Restyled as the same
+              definition list the dialogs use, and the book and the
+              borrower are plain text here: the details dialog below
+              already leads to both pages, and two competing sets of links
+              on one card was the odd part.
+            {% endcomment %}
+            {% if loan %}
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-check2-circle me-2" aria-hidden="true"></i>{% translate "Out on loan" %}
+                    </h5>
+                    <span class="copy-code">{{ loan.copy.copy_code }}</span>
+                </div>
+                <div class="card-body">
+
+                    <dl class="row mb-0 small">
+
+                        <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Book" %}</dt>
+                        <dd class="col-sm-8 mb-2">
+                            {{ loan.copy.volume.book.title }}
+                            {% if loan.copy.volume.title %}
+                                <span class="text-body-secondary">— {{ loan.copy.volume.title }}</span>
+                            {% endif %}
+                            <span class="d-block text-body-secondary">
+                                {{ loan.copy.volume.book.author.name }}
+                            </span>
+                        </dd>
+
+                        <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Borrower" %}</dt>
+                        <dd class="col-sm-8 mb-2">
+                            {{ loan.borrower.name }}
+                            {% if loan.borrower.phone %}
+                                <span class="d-block text-body-secondary">{{ loan.borrower.phone }}</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Issued" %}</dt>
+                        <dd class="col-sm-8 mb-2">{{ loan.issue_date|date:"j M Y" }}</dd>
+
+                        <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Due" %}</dt>
+                        <dd class="col-sm-8 mb-0">
+                            {{ loan.due_date|date:"j M Y" }}
+                            {% if loan.days_overdue %}
+                                <span class="badge text-bg-danger ms-1">
+                                    {% blocktranslate trimmed count n=loan.days_overdue %}
+                                        {{ n }} day late
+                                    {% plural %}
+                                        {{ n }} days late
+                                    {% endblocktranslate %}
+                                </span>
+                            {% endif %}
+                        </dd>
+
+                    </dl>
+
+                </div>
+                <div class="card-footer bg-body d-flex flex-wrap gap-2">
+                    {% if loan.id in chosen_ids %}
+                        <span class="btn btn-success disabled" aria-disabled="true">
+                            <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
+                            {% translate "In the return list" %}
+                        </span>
+                    {% else %}
+                        <a href="{{ loan.add_url }}" class="btn btn-success">
+                            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
+                            {% translate "Add to return list" %}
+                        </a>
+                    {% endif %}
+                    <a
+                        href="{% url 'loan_detail' loan.id %}"
+                        class="btn btn-outline-secondary"
+                        data-form-modal
+                        hx-get="{% url 'loan_detail' loan.id %}?modal=1"
+                        hx-target="#formModal .modal-body"
+                        hx-swap="innerHTML"
+                    >
+                        {% translate "View Loan Details" %}
+                    </a>
+                </div>
             </div>
             {% endif %}
 
@@ -89,16 +207,18 @@
               What the search found, when the text was not a copy code.
               Only loans that are actually out: a returned loan, a copy on
               its shelf and a copy never lent are all absent because the
-              query is over the loans themselves.
+              query is over the loans themselves. What is already in the
+              list is not offered twice.
 
-              Every row leads into `loan_return`, the same workflow the
-              single hit below uses. Nothing about returning a book is
-              decided here.
+              Every row does one thing - it adds itself. Nothing about
+              returning a book is decided here.
             {% endcomment %}
             {% if matches %}
             <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <h5 class="mb-0">{% translate "Out on loan now" %}</h5>
+                <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-search me-2" aria-hidden="true"></i>{% translate "Out on loan now" %}
+                    </h5>
                     <span class="text-body-secondary small">
                         {% if more_matches %}
                             {% blocktranslate with shown=lookup_limit %}first {{ shown }} — narrow the search{% endblocktranslate %}
@@ -115,18 +235,16 @@
                                 <th>{% translate "Book" %}</th>
                                 <th>{% translate "Borrower" %}</th>
                                 <th>{% translate "Due" %}</th>
-                                <th class="text-end">{% translate "Take back" %}</th>
+                                <th class="text-end">{% translate "Add" %}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for match in matches %}
-                                <tr {% if match.days_overdue %}class="table-danger"{% endif %}>
-                                    <td class="fw-semibold">
-                                        {{ match.copy.copy_code }}
-                                    </td>
+                                <tr>
+                                    <td><span class="copy-code">{{ match.copy.copy_code }}</span></td>
                                     <td>
                                         {{ match.copy.volume.book.title }}
-                                        <span class="d-block small">
+                                        <span class="d-block small text-body-secondary">
                                             {{ match.copy.volume.book.author.name }}
                                             {% if match.copy.volume.volume_number != 1 or match.copy.volume.title %}
                                                 — {% blocktranslate with number=match.copy.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% if match.copy.volume.title %} · {{ match.copy.volume.title }}{% endif %}
@@ -135,7 +253,7 @@
                                     </td>
                                     <td>{{ match.borrower.name }}</td>
                                     <td>
-                                        {{ match.due_date }}
+                                        {{ match.due_date|date:"j M Y" }}
                                         {% if match.days_overdue %}
                                             <span class="d-block small text-danger">
                                                 {% blocktranslate trimmed count n=match.days_overdue %}
@@ -147,11 +265,13 @@
                                         {% endif %}
                                     </td>
                                     <td class="text-end">
-                                        <a
-                                            href="{% url 'loan_return' match.id %}?next={% url 'circulation_return_lookup' %}"
-                                            class="btn btn-sm btn-success"
-                                        >
-                                            {% translate "Return" %}
+                                        <a href="{{ match.add_url }}" class="btn btn-sm btn-success">
+                                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                                            <span class="visually-hidden">
+                                                {% blocktranslate trimmed with copy_code=match.copy.copy_code %}
+                                                    Add {{ copy_code }}
+                                                {% endblocktranslate %}
+                                            </span>
                                         </a>
                                     </td>
                                 </tr>
@@ -162,73 +282,155 @@
             </div>
             {% endif %}
 
-            {% if loan %}
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">{% translate "Active Loan Found" %}</h5>
+        </div>
+
+        <div class="col-12 col-lg-5">
+
+            {% comment %}
+              The commit, and the only POST on the page. The loans come in
+              as hidden fields from the list above, so what is submitted is
+              exactly what is shown here - and the date and the note apply
+              to all of them, which is what makes a stack one action
+              rather than five.
+
+              The list may hold loans belonging to different people;
+              nothing needs them to match, and a drop-box shelf is not one
+              person's. Each row names its own borrower.
+            {% endcomment %}
+            <form method="post" action="{% url 'circulation_return_lookup' %}" class="card shadow-sm border-0">
+                {% csrf_token %}
+                {% for item in chosen %}
+                    <input type="hidden" name="loans" value="{{ item.id }}">
+                {% endfor %}
+
+                <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-arrow-return-left me-2" aria-hidden="true"></i>{% translate "2. Take them back" %}
+                    </h5>
+                    {% if chosen %}
+                        <span class="badge text-bg-secondary">
+                            {% blocktranslate trimmed count n=chosen|length %}
+                                {{ n }} book
+                            {% plural %}
+                                {{ n }} books
+                            {% endblocktranslate %}
+                        </span>
+                    {% endif %}
                 </div>
                 <div class="card-body">
 
-                    <div class="row mb-3">
-                        <div class="col-sm-4 text-body-secondary">{% translate "Copy Code" %}</div>
-                        <div class="col-sm-8 fw-semibold">{{ loan.copy.copy_code }}</div>
-                    </div>
+                    {% if chosen %}
+                        <ul class="list-group list-group-flush mb-3">
+                            {% for item in chosen %}
+                                <li class="list-group-item d-flex justify-content-between align-items-start gap-2 px-0">
+                                    <span>
+                                        <span class="copy-code">{{ item.copy.copy_code }}</span>
+                                        <span class="d-block small">
+                                            {{ item.copy.volume.book.title }}
+                                        </span>
+                                        <span class="d-block small text-body-secondary">
+                                            {{ item.borrower.name }}
+                                            {% if item.days_overdue %}
+                                                <span class="badge text-bg-danger ms-1">
+                                                    {% blocktranslate trimmed count n=item.days_overdue %}
+                                                        {{ n }} day late
+                                                    {% plural %}
+                                                        {{ n }} days late
+                                                    {% endblocktranslate %}
+                                                </span>
+                                            {% endif %}
+                                        </span>
+                                    </span>
+                                    <a
+                                        href="{{ item.remove_url }}"
+                                        class="btn btn-sm btn-outline-danger flex-shrink-0"
+                                        title="{% translate 'Remove' %}"
+                                    >
+                                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                                        <span class="visually-hidden">
+                                            {% blocktranslate trimmed with copy_code=item.copy.copy_code %}
+                                                Remove {{ copy_code }}
+                                            {% endblocktranslate %}
+                                        </span>
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-body-secondary mb-3">
+                            {% translate "Nothing added yet — scan a label or search above, then add what came back." %}
+                        </p>
+                    {% endif %}
 
-                    <div class="row mb-3">
-                        <div class="col-sm-4 text-body-secondary">{% translate "Book" %}</div>
-                        <div class="col-sm-8">
-                            <a href="{% url 'book_detail' loan.copy.volume.book.id %}">{{ loan.copy.volume.book.title }}</a>
-                            {% if loan.copy.volume.title %}
-                                <span class="text-body-secondary">— {{ loan.copy.volume.title }}</span>
-                            {% endif %}
+                    <div class="mb-3">
+                        <label for="return_date" class="form-label fw-semibold">
+                            {% translate "Returned on" %} <span class="text-danger">*</span>
+                        </label>
+                        {% comment %}
+                          `max` is today: a return cannot be recorded in
+                          the future. The view refuses a date before the
+                          issue date, which this field has no way to
+                          express - and refuses it per book, naming the
+                          one that could not take it.
+                        {% endcomment %}
+                        <input
+                            type="date"
+                            class="form-control"
+                            id="return_date"
+                            name="return_date"
+                            value="{{ return_date }}"
+                            max="{{ today|date:'Y-m-d' }}"
+                            required
+                        >
+                        <div class="form-text">
+                            {% translate "Applies to every book in the list." %}
                         </div>
                     </div>
 
-                    <div class="row mb-3">
-                        <div class="col-sm-4 text-body-secondary">{% translate "Borrower" %}</div>
-                        <div class="col-sm-8">
-                            <a href="{% url 'borrower_detail' loan.borrower.id %}">{{ loan.borrower.name }}</a>
-                            {% if loan.borrower.phone %}
-                                <span class="text-body-secondary">— {{ loan.borrower.phone }}</span>
-                            {% endif %}
-                        </div>
+                    <div class="mb-0">
+                        <label for="notes" class="form-label fw-semibold">
+                            {% translate "Notes" %}
+                        </label>
+                        <textarea
+                            class="form-control"
+                            id="notes"
+                            name="notes"
+                            rows="2"
+                            placeholder="{% translate 'Anything worth recording about their condition...' %}"
+                        >{{ notes }}</textarea>
                     </div>
 
-                    <div class="row mb-3">
-                        <div class="col-sm-4 text-body-secondary">{% translate "Issue Date" %}</div>
-                        <div class="col-sm-8">{{ loan.issue_date }}</div>
-                    </div>
-
-                    <div class="row mb-3">
-                        <div class="col-sm-4 text-body-secondary">{% translate "Due Date" %}</div>
-                        <div class="col-sm-8">
-                            {{ loan.due_date }}
-                            {% if loan.days_overdue > 0 %}
-                                <span class="badge bg-danger ms-2">
-                                    {% blocktranslate trimmed count n=loan.days_overdue %}
-                                        Overdue by {{ n }} day
-                                    {% plural %}
-                                        Overdue by {{ n }} days
-                                    {% endblocktranslate %}
-                                </span>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <hr>
-
-                    <div class="d-flex gap-2">
-                        <a href="{% url 'loan_return' loan.id %}?next={% url 'circulation_return_lookup' %}" class="btn btn-success">
-                            {% translate "Proceed to Return" %}
-                        </a>
-                        <a href="{% url 'loan_detail' loan.id %}" class="btn btn-outline-secondary">
-                            {% translate "View Loan Details" %}
-                        </a>
+                    {% comment %}
+                      Stated, not chosen. The return is recorded against
+                      whoever is signed in, for the same reason the issue
+                      is.
+                    {% endcomment %}
+                    <div class="mt-3">
+                        <label class="form-label fw-semibold">{% translate "Returned to" %}</label>
+                        <p class="form-control-plaintext mb-0">
+                            {{ request.user.full_name|default:request.user.username }}
+                        </p>
                     </div>
 
                 </div>
-            </div>
-            {% endif %}
+                <div class="card-footer bg-body d-flex flex-wrap gap-2">
+                    <button
+                        type="submit"
+                        class="btn btn-success"
+                        {% if not chosen %}disabled{% endif %}
+                    >
+                        <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
+                        {% blocktranslate trimmed count n=chosen|length %}
+                            Return {{ n }} book
+                        {% plural %}
+                            Return {{ n }} books
+                        {% endblocktranslate %}
+                    </button>
+                    <a href="{% url 'circulation_dashboard' %}" class="btn btn-outline-secondary">
+                        {% translate "Cancel" %}
+                    </a>
+                </div>
+            </form>
 
         </div>
     </div>

@@ -14,7 +14,7 @@
 <div class="container-fluid px-0">
 
     <div class="mb-3">
-        <a href="{% url 'book_copy_detail' copy.id %}" class="small text-decoration-none">
+        <a href="{% url 'book_copy_detail' copy.id %}" data-form-modal hx-get="{% url 'book_copy_detail' copy.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="small text-decoration-none">
             <i class="bi bi-arrow-left me-1"></i> {% translate "Back to the copy" %}
         </a>
     </div>
@@ -41,7 +41,7 @@
                                                                 {% endblocktranslate %}
                                                             </p>
 
-                        <a href="{% url 'book_copy_edit' copy.id %}" class="btn btn-outline-secondary">
+                        <a href="{% url 'book_copy_edit' copy.id %}" data-form-modal hx-get="{% url 'book_copy_edit' copy.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-outline-secondary">
                             {% translate "Change its status" %}
                         </a>
 
@@ -61,10 +61,15 @@
                         <p class="text-body-secondary mb-4">{{ blocker }}</p>
 
                         <div class="d-flex justify-content-center flex-wrap gap-2">
-                            <a href="{% url 'loan_return' active_loan.id %}" class="btn btn-success">
+                            {% comment %}
+                              To the return page with this loan already in
+                              the list. `loan_return` on its own is a
+                              dialog now and has no page to land on.
+                            {% endcomment %}
+                            <a href="{% url 'circulation_return_lookup' %}?loans={{ active_loan.id }}" class="btn btn-success">
                                 <i class="bi bi-arrow-return-left me-1"></i> {% translate "Take it back" %}
                             </a>
-                            <a href="{% url 'book_copy_detail' copy.id %}" class="btn btn-outline-secondary">
+                            <a href="{% url 'book_copy_detail' copy.id %}" data-form-modal hx-get="{% url 'book_copy_detail' copy.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-outline-secondary">
                                 {% translate "Back to the copy" %}
                             </a>
                         </div>
@@ -119,7 +124,7 @@
                         </ul>
 
                         <div class="d-flex justify-content-center gap-2">
-                            <a href="{% url 'book_copy_detail' copy.id %}" class="btn btn-outline-secondary">
+                            <a href="{% url 'book_copy_detail' copy.id %}" data-form-modal hx-get="{% url 'book_copy_detail' copy.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-outline-secondary">
                                 <i class="bi bi-x-lg me-1"></i> {% translate "Cancel" %}
                             </a>
                             <form method="post" class="d-inline">

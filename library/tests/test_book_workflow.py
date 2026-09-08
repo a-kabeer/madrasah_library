@@ -94,33 +94,50 @@ class AddBookDialogTests(BookWorkflowTestCase):
         self.assertTemplateUsed(
             response, "library/partials/book_add_modal.html"
         )
-        self.assertTemplateNotUsed(response, "library/book_add.html")
         self.assertNotContains(response, "<!DOCTYPE html>")
 
-    def test_header_alone_returns_the_full_page(self):
-        response = self.client.get(
-            reverse("book_add"), headers={"HX-Request": "true"}
-        )
+    def test_half_a_request_is_not_a_dialog(self):
+        """The header and the parameter are both required.
 
-        self.assertTemplateUsed(response, "library/book_add.html")
+        Branching on the header alone would make one URL answer with two
+        different bodies and no Vary, which a cache can mix up. Neither
+        half on its own is the dialog - and since the page is gone, what
+        each gets instead is the list.
+        """
 
-    def test_parameter_alone_returns_the_full_page(self):
-        response = self.client.get(reverse("book_add") + "?modal=1")
-
-        self.assertTemplateUsed(response, "library/book_add.html")
-
-    def test_page_and_dialog_share_one_set_of_fields(self):
-        # The two must not drift apart, so both come from the same partial.
-        for response in (
-            self.client.get(reverse("book_add")),
-            self.get_modal("book_add"),
+        for label, response in (
+            (
+                "header only",
+                self.client.get(
+                    reverse("book_add"), headers={"HX-Request": "true"}
+                ),
+            ),
+            (
+                "parameter only",
+                self.client.get(reverse("book_add") + "?modal=1"),
+            ),
         ):
-            self.assertTemplateUsed(
-                response, "library/partials/book_form_fields.html"
-            )
-            self.assertTemplateUsed(
-                response, "library/partials/book_inventory_fields.html"
-            )
+            with self.subTest(request=label):
+                self.assertTemplateNotUsed(
+                    response, "library/partials/book_add_modal.html"
+                )
+                self.assertRedirects(response, reverse("book_list"))
+
+    def test_the_dialog_carries_the_whole_form(self):
+        """Both halves of it: the book's details and its inventory.
+
+        The Add Book page was a shell around these same two partials, so
+        deleting it took nothing with it - and this is what says so.
+        """
+
+        response = self.get_modal("book_add")
+
+        self.assertTemplateUsed(
+            response, "library/partials/book_form_fields.html"
+        )
+        self.assertTemplateUsed(
+            response, "library/partials/book_inventory_fields.html"
+        )
 
     def test_assistant_cannot_open_the_dialog(self):
         self.client.logout()
@@ -743,7 +760,7 @@ class RollbackTests(BookWorkflowTestCase):
             volume_title=["Something"],
         )
 
-        self.assertContains(response, "Title and Author are required")
+        self.assertContains(response, "Enter the book&#x27;s title.")
         self.assertEqual(BookVolume.objects.count(), 0)
 
     def test_the_form_comes_back_with_the_work_still_in_it(self):
@@ -812,7 +829,7 @@ class EditBookDialogTests(BookWorkflowTestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Title and Author are required")
+        self.assertContains(response, "Enter the book&#x27;s title.")
         self.assertNotIn("HX-Trigger", response)
 
         self.book.refresh_from_db()
@@ -956,7 +973,11 @@ class DeleteBookDialogTests(BookWorkflowTestCase):
 
         self.assertNotContains(response, "book_delete")
 
-    def test_the_full_page_blocks_it_too(self):
+    def test_a_scriptless_delete_is_blocked_too(self):
+        """There is no Delete Book page left, so it redirects with the
+        reason as a message. What matters is unchanged: the copies still
+        block it and the book is still there."""
+
         volume = make_volume(book=self.book, volume_number=1)
         make_copy(volume=volume, shelf=self.shelf, copy_code="LIB-900005")
 
@@ -964,8 +985,7 @@ class DeleteBookDialogTests(BookWorkflowTestCase):
             reverse("book_delete", args=[self.book.id])
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "cannot be deleted")
+        self.assertEqual(response.status_code, 302)
         self.assertTrue(Book.objects.filter(id=self.book.id).exists())
 
 
@@ -1042,3 +1062,204 @@ class BookListIntegrationTests(BookWorkflowTestCase):
         for expected in ("search=On", "sort=author", "direction=desc",
                          "page_size=50"):
             self.assertIn(expected, refresh)
+
+
+class BookFieldValidationTests(BookWorkflowTestCase):
+    """What the form refuses, and what it says about it.
+
+    Both views call `validate_book_details`, so these hold for Add and
+    Edit alike - which the last test here checks by asking both.
+    """
+
+    def setUp(self):
+        super().setUp()
+
+        self.book = make_book(
+            title="Something Already Here", author=self.author
+        )
+
+    def edit(self, **overrides):
+        payload = self.base_payload(**overrides)
+
+        return self.client.post(
+            reverse("book_edit", args=[self.book.id]) + "?modal=1",
+            payload,
+            headers={"HX-Request": "true"},
+        )
+
+    # ------------------------------------------- the two that were 500s
+
+    def test_an_author_id_that_is_not_a_number_is_refused_not_a_crash(self):
+        """This reached `create(author_id="abc")` and raised ValueError.
+
+        Not exotic: the author is a hidden field the combobox fills in, so
+        a stale page or a blocked script can post anything at all.
+        """
+
+        before = Book.objects.count()
+
+        response = self.post_add(author="not-a-number")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "was not recognised")
+        self.assertEqual(Book.objects.count(), before)
+
+    def test_a_title_longer_than_the_column_is_refused_not_a_crash(self):
+        """500 characters is the column; 501 raised DataError."""
+
+        before = Book.objects.count()
+
+        response = self.post_add(title="x" * 501)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Shorten it to 500")
+        self.assertEqual(Book.objects.count(), before)
+
+    def test_a_title_of_exactly_the_limit_is_accepted(self):
+        """The boundary belongs to the valid side."""
+
+        response = self.post_add(title="y" * 500)
+
+        # A dialog answers a save with 204 and an event, not a redirect.
+        self.assertEqual(response.status_code, 204)
+        self.assertTrue(Book.objects.filter(title="y" * 500).exists())
+
+    def test_an_author_that_no_longer_exists_is_refused(self):
+        before = Book.objects.count()
+
+        response = self.post_add(author=9999999)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "no longer exists")
+        self.assertEqual(Book.objects.count(), before)
+
+    def test_a_category_that_is_not_a_number_is_refused(self):
+        # Optional, but not a licence to write nonsense into the column.
+        before = Book.objects.count()
+
+        response = self.post_add(category="abc")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "category was not recognised")
+        self.assertEqual(Book.objects.count(), before)
+
+    def test_a_publisher_that_no_longer_exists_is_refused(self):
+        before = Book.objects.count()
+
+        response = self.post_add(publisher=9999999)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "no longer exists")
+        self.assertEqual(Book.objects.count(), before)
+
+    def test_an_empty_category_is_still_allowed(self):
+        """Optional means optional; only a wrong value is refused."""
+
+        response = self.post_add(category="", publisher="")
+
+        self.assertEqual(response.status_code, 204)
+
+        saved = Book.objects.get(title="Sahih al-Bukhari")
+
+        self.assertIsNone(saved.category_id)
+        self.assertIsNone(saved.publisher_id)
+
+    # -------------------------------------------- said next to the field
+
+    def test_each_message_names_only_the_field_it_is_about(self):
+        """"Title and Author are required." named both when one was.
+
+        A missing author should not accuse the title the librarian just
+        typed.
+        """
+
+        response = self.post_add(author="")
+
+        self.assertContains(response, "Choose the author.")
+        self.assertNotContains(response, "Enter the book&#x27;s title.")
+
+    def test_the_errors_come_back_keyed_by_field(self):
+        response = self.post_add(title="", author="")
+
+        self.assertEqual(
+            sorted(response.context["errors"]), ["author", "title"]
+        )
+
+    def test_the_field_is_marked_invalid_for_a_screen_reader_too(self):
+        response = self.post_add(title="")
+
+        self.assertContains(response, "is-invalid")
+        self.assertContains(response, "invalid-feedback")
+
+    def test_a_refused_form_keeps_what_was_typed_into_it(self):
+        response = self.post_add(
+            title="A Title Worth Keeping", author=""
+        )
+
+        self.assertEqual(
+            response.context["form_data"]["title"], "A Title Worth Keeping"
+        )
+        self.assertContains(response, "A Title Worth Keeping")
+
+    def test_the_alert_counts_the_problems_without_repeating_them(self):
+        one = self.post_add(title="")
+        two = self.post_add(title="", author="")
+
+        self.assertContains(one, "problem with one of the fields")
+        self.assertContains(two, "problems with 2 of the fields")
+
+    # ------------------------------------------------ add and edit agree
+
+    def test_add_and_edit_refuse_the_same_input_the_same_way(self):
+        """The point of the change, checked rather than assumed.
+
+        Both views used to state these rules themselves. They happened to
+        agree, and were one edit from not doing.
+        """
+
+        cases = (
+            ("no title", {"title": ""}),
+            ("no author", {"author": ""}),
+            ("bad author", {"author": "not-a-number"}),
+            ("absent author", {"author": 9999999}),
+            ("long title", {"title": "x" * 501}),
+            ("bad category", {"category": "abc"}),
+        )
+
+        for label, payload in cases:
+            with self.subTest(case=label):
+
+                added = self.post_add(**payload)
+                edited = self.edit(**payload)
+
+                self.assertEqual(added.status_code, 200)
+                self.assertEqual(edited.status_code, 200)
+
+                self.assertEqual(
+                    sorted(added.context["errors"].items()),
+                    sorted(edited.context["errors"].items()),
+                )
+
+    def test_an_edit_refused_for_a_field_changes_nothing(self):
+        response = self.edit(title="x" * 501)
+
+        self.assertEqual(response.status_code, 200)
+
+        self.book.refresh_from_db()
+        self.assertEqual(self.book.title, "Something Already Here")
+
+    def test_a_scriptless_post_is_refused_out_loud_not_dropped(self):
+        """There is no page to re-render, so it redirects with a message.
+
+        What matters is that it is still refused and still writes
+        nothing - a form posted without htmx must not quietly succeed.
+        """
+
+        before = Book.objects.count()
+
+        response = self.client.post(
+            reverse("book_add"), self.base_payload(author="")
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Book.objects.count(), before)

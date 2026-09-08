@@ -52,6 +52,29 @@ class CopyTestCase(TestCase):
             shelf_code="B-1",
         )
 
+    def dialog(self, copy=None, **params):
+        """A copy's details, the way the browser asks for them.
+
+        `?modal=1` and the HX-Request header together - `is_modal_request`
+        wants both, so one URL never answers with two different bodies.
+        There is no copy page any more; the dialog is the whole of it.
+        """
+
+        # The query is built into the path, not passed as `data`: the
+        # test client replaces a path's query string when both are given,
+        # which silently dropped `modal=1` and turned the dialog into a
+        # redirect.
+        query = "&".join(
+            ["modal=1"]
+            + ["%s=%s" % (key, value) for key, value in params.items()]
+        )
+
+        return self.client.get(
+            reverse("book_copy_detail", args=[(copy or self.copy).id])
+            + "?" + query,
+            headers={"HX-Request": "true"},
+        )
+
     def as_assistant(self):
         self.client.logout()
         make_user(username="assist", password="pass12345", role="Assistant")
@@ -65,10 +88,7 @@ class CopyStateTests(CopyTestCase):
     """The one word shown for a copy, worked out from the real data."""
 
     def state_of(self, copy):
-        response = self.client.get(
-            reverse("book_copy_detail", args=[copy.id])
-        )
-        return response.context["copy"].state
+        return self.dialog(copy).context["copy"].state
 
     def test_a_shelved_copy_with_no_loan_is_available(self):
         copy = make_copy(
@@ -105,9 +125,7 @@ class CopyStateTests(CopyTestCase):
             due_date=today - timedelta(days=16),
         )
 
-        response = self.client.get(
-            reverse("book_copy_detail", args=[copy.id])
-        )
+        response = self.dialog(copy)
 
         self.assertEqual(response.context["copy"].state, "overdue")
         self.assertEqual(response.context["copy"].days_overdue, 16)
@@ -386,13 +404,23 @@ class CopyDetailTests(CopyTestCase):
         )
         self.assertNotContains(response, "<!DOCTYPE html>")
 
-    def test_the_header_alone_returns_the_full_page(self):
+    def test_the_header_alone_is_not_a_dialog(self):
+        """Both the header and the parameter are required.
+
+        Branching on the header alone would make one URL answer with two
+        different bodies and no Vary, which a cache can mix up. And since
+        the page is gone, what half a request gets is the list.
+        """
+
         response = self.client.get(
             reverse("book_copy_detail", args=[self.copy.id]),
             headers={"HX-Request": "true"},
         )
 
-        self.assertTemplateUsed(response, "library/book_copy_detail.html")
+        self.assertTemplateNotUsed(
+            response, "library/partials/copy_detail_modal.html"
+        )
+        self.assertRedirects(response, reverse("book_copy_list"))
 
     def test_the_dialog_shows_where_the_copy_is(self):
         response = self.modal()
@@ -410,33 +438,43 @@ class CopyDetailTests(CopyTestCase):
 
         self.assertNotContains(response, "Volume 1")
 
-    def test_a_real_volume_is_named_and_linked(self):
+    def test_a_real_volume_is_named_without_being_a_link(self):
+        """It was a link. Inside a dialog a link is a trap: following it
+        throws the dialog away, and with it whatever the reader was in the
+        middle of. So the volume is named in plain text."""
+
         volume = make_volume(book=self.book, volume_number=2, title="Part Two")
         copy = make_copy(
             volume=volume, shelf=self.shelf, copy_code="LIB-700002"
         )
 
-        response = self.client.get(
-            reverse("book_copy_detail", args=[copy.id]) + "?modal=1",
-            headers={"HX-Request": "true"},
-        )
+        response = self.dialog(copy)
 
         self.assertContains(response, "Volume 2")
         self.assertContains(response, "Part Two")
-        self.assertContains(
+        self.assertNotContains(
             response, reverse("book_volume_detail", args=[volume.id])
         )
 
-    def test_the_dialog_shows_the_borrower_and_links_to_the_loan(self):
+    def test_the_dialog_names_the_borrower_without_linking_away(self):
         borrower = make_borrower(name="Ahmad", phone="0300")
         loan = make_loan(copy=self.copy, borrower=borrower)
 
         response = self.modal()
 
         self.assertContains(response, "Ahmad")
-        self.assertContains(response, reverse("loan_detail", args=[loan.id]))
+        self.assertNotContains(
+            response, reverse("loan_detail", args=[loan.id])
+        )
 
-    def test_the_dialog_does_not_repeat_the_loan_history(self):
+    def test_the_dialog_carries_the_loan_history_in_its_own_tab(self):
+        """This and its pair used to describe a split that is gone.
+
+        The dialog was a summary and the page the full record; there is no
+        page, so the dialog holds all four of the things it said - each in
+        a tab, which is what stops them being one long scroll.
+        """
+
         make_loan(
             copy=self.copy,
             issue_date=date(2019, 1, 1),
@@ -446,22 +484,9 @@ class CopyDetailTests(CopyTestCase):
 
         response = self.modal()
 
-        self.assertNotContains(response, "Loan History")
-
-    def test_the_full_page_does_show_the_loan_history(self):
-        make_loan(
-            copy=self.copy,
-            issue_date=date(2019, 1, 1),
-            due_date=date(2019, 1, 15),
-            return_date=date(2019, 1, 10),
-        )
-
-        response = self.client.get(
-            reverse("book_copy_detail", args=[self.copy.id])
-        )
-
-        self.assertContains(response, "Loan History")
         self.assertEqual(len(response.context["loan_history"]), 1)
+        self.assertContains(response, "copyPaneLoans")
+        self.assertContains(response, "copyPaneHistory")
 
     def test_an_assistant_is_not_offered_actions_it_cannot_take(self):
         self.as_assistant()
@@ -493,13 +518,19 @@ class CopyEditTests(CopyTestCase):
         payload.update(overrides)
 
         return self.client.post(
-            reverse("book_copy_edit", args=[self.copy.id]), payload
+            reverse("book_copy_edit", args=[self.copy.id]) + "?modal=1",
+            payload,
+            headers={"HX-Request": "true"},
+        )
+
+    def edit_dialog(self):
+        return self.client.get(
+            reverse("book_copy_edit", args=[self.copy.id]) + "?modal=1",
+            headers={"HX-Request": "true"},
         )
 
     def test_the_form_opens_on_the_copy_s_current_place(self):
-        response = self.client.get(
-            reverse("book_copy_edit", args=[self.copy.id])
-        )
+        response = self.edit_dialog()
 
         self.assertEqual(
             response.context["form_data"]["location_id"],
@@ -508,12 +539,18 @@ class CopyEditTests(CopyTestCase):
         self.assertContains(response, "A-1")
         self.assertNotContains(response, "B-1")
 
-    def test_the_copy_code_is_read_only(self):
-        response = self.client.get(
-            reverse("book_copy_edit", args=[self.copy.id])
-        )
+    def test_the_copy_code_cannot_be_changed(self):
+        """It was a `readonly` input; it is not an input at all now.
 
-        self.assertContains(response, "readonly")
+        The code is printed on the book and quoted in its history, so the
+        dialog states it rather than offering it - and the validator is
+        what actually refuses a posted one, which the next test checks.
+        """
+
+        response = self.edit_dialog()
+
+        self.assertContains(response, "LIB-600001")
+        self.assertNotContains(response, 'name="copy_code"')
 
     def test_a_posted_copy_code_is_ignored(self):
         # The code is printed on the book and quoted in its history, so the
@@ -955,13 +992,23 @@ class CopyDeletionTests(CopyTestCase):
         )
 
         response = self.client.post(
-            reverse("book_copy_delete", args=[copy.id])
+            reverse("book_copy_delete", args=[copy.id]) + "?modal=1",
+            headers={"HX-Request": "true"},
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "cannot be deleted")
         self.assertTrue(BookCopy.objects.filter(id=copy.id).exists())
         self.assertEqual(Loan.objects.filter(copy_id=copy.id).count(), 1)
+
+        # And a plain POST refuses just as firmly, with the reason as a
+        # message rather than a page that no longer exists.
+        plain = self.client.post(
+            reverse("book_copy_delete", args=[copy.id])
+        )
+
+        self.assertEqual(plain.status_code, 302)
+        self.assertTrue(BookCopy.objects.filter(id=copy.id).exists())
 
     def test_a_copy_that_was_never_issued_can_still_be_deleted(self):
         copy = make_copy(
@@ -974,3 +1021,206 @@ class CopyDeletionTests(CopyTestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertFalse(BookCopy.objects.filter(id=copy.id).exists())
+
+
+class CopyMoveDialogTests(CopyTestCase):
+    """Moving one copy, in a dialog - and where the actions live now."""
+
+    def setUp(self):
+        super().setUp()
+
+        self.copy = make_copy(
+            volume=self.volume, shelf=self.shelf, copy_code="MV-0001"
+        )
+
+    def move_dialog(self):
+        return self.client.get(
+            reverse("book_copy_move", args=[self.copy.id]) + "?modal=1",
+            headers={"HX-Request": "true"},
+        )
+
+    def move(self, modal=True, **overrides):
+        payload = {
+            "location": self.location.id,
+            "shelf": self.other_shelf.id,
+        }
+        payload.update(overrides)
+
+        url = reverse("book_copy_move", args=[self.copy.id])
+
+        if not modal:
+            return self.client.post(url, payload)
+
+        return self.client.post(
+            url + "?modal=1", payload, headers={"HX-Request": "true"}
+        )
+
+    # ------------------------------------------------------ the dialog
+
+    def test_the_dialog_opens_on_where_the_copy_is_now(self):
+        response = self.move_dialog()
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(
+            response, "library/partials/copy_move_modal.html"
+        )
+        self.assertContains(response, "MV-0001")
+        self.assertContains(response, "A-1")
+
+    def test_it_offers_only_the_chosen_location_s_shelves(self):
+        """The rule that stops a copy being filed where it cannot be."""
+
+        response = self.move_dialog()
+
+        self.assertContains(response, "A-1")
+        self.assertNotContains(response, "B-1")
+
+    def test_asking_for_it_as_a_page_lands_on_the_list(self):
+        response = self.client.get(
+            reverse("book_copy_move", args=[self.copy.id])
+        )
+
+        self.assertRedirects(response, reverse("book_copy_list"))
+
+    # ------------------------------------------------- what it refuses
+
+    def test_a_shelf_from_another_location_is_refused(self):
+        response = self.move(
+            location=self.location.id, shelf=self.other_shelf.id
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "not in the location you chose")
+
+        self.copy.refresh_from_db()
+        self.assertEqual(self.copy.shelf_id, self.shelf.id)
+
+    def test_no_shelf_at_all_is_refused(self):
+        response = self.move(shelf="")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Choose a location and a shelf")
+
+        self.copy.refresh_from_db()
+        self.assertEqual(self.copy.shelf_id, self.shelf.id)
+
+    def test_a_nonsense_shelf_is_refused_not_a_crash(self):
+        response = self.move(shelf="not-a-number")
+
+        self.assertEqual(response.status_code, 200)
+
+        self.copy.refresh_from_db()
+        self.assertEqual(self.copy.shelf_id, self.shelf.id)
+
+    # -------------------------------------------------- what it changes
+
+    def test_a_valid_move_puts_the_copy_on_the_new_shelf(self):
+        response = self.move(
+            location=self.other_location.id, shelf=self.other_shelf.id
+        )
+
+        self.assertEqual(response.status_code, 204)
+
+        self.copy.refresh_from_db()
+        self.assertEqual(self.copy.shelf_id, self.other_shelf.id)
+
+    def test_a_move_touches_nothing_but_the_shelf(self):
+        was_status = self.copy.status
+        was_code = self.copy.copy_code
+        was_volume = self.copy.volume_id
+
+        self.move(
+            location=self.other_location.id, shelf=self.other_shelf.id
+        )
+
+        self.copy.refresh_from_db()
+
+        self.assertEqual(self.copy.status, was_status)
+        self.assertEqual(self.copy.copy_code, was_code)
+        self.assertEqual(self.copy.volume_id, was_volume)
+
+    def test_an_assistant_cannot_move_a_copy(self):
+        self.as_assistant()
+
+        self.assertEqual(self.move_dialog().status_code, 403)
+
+        self.copy.refresh_from_db()
+        self.assertEqual(self.copy.shelf_id, self.shelf.id)
+
+    # ------------------------------------------- where the actions live
+
+    def test_the_row_offers_all_five_actions(self):
+        body = self.client.get(reverse("book_copy_list")).content.decode()
+
+        for label, url in (
+            ("edit", reverse("book_copy_edit", args=[self.copy.id])),
+            ("move", reverse("book_copy_move", args=[self.copy.id])),
+            ("label", reverse("book_copy_labels")),
+            ("withdraw", reverse("book_copy_withdraw", args=[self.copy.id])),
+            ("delete", reverse("book_copy_delete", args=[self.copy.id])),
+        ):
+            with self.subTest(action=label):
+                self.assertIn(url, body)
+
+    def test_the_details_dialog_offers_none_of_them(self):
+        """The row is where a librarian acts; the dialog is for reading.
+
+        Every action was in the dialog's footer as well, which is the one
+        duplication this list should not have.
+        """
+
+        body = self.dialog(self.copy).content.decode()
+
+        for label, url in (
+            ("edit", reverse("book_copy_edit", args=[self.copy.id])),
+            ("move", reverse("book_copy_move", args=[self.copy.id])),
+            ("withdraw", reverse("book_copy_withdraw", args=[self.copy.id])),
+            ("delete", reverse("book_copy_delete", args=[self.copy.id])),
+        ):
+            with self.subTest(action=label):
+                self.assertNotIn(url, body)
+
+    def test_a_withdrawn_copy_is_not_offered_withdrawing_again(self):
+        self.copy.status = "Transferred"
+        self.copy.save(update_fields=["status"])
+
+        body = self.client.get(reverse("book_copy_list")).content.decode()
+
+        self.assertNotIn(
+            reverse("book_copy_withdraw", args=[self.copy.id]), body
+        )
+
+    def test_the_tab_panes_share_one_box_so_the_dialog_cannot_jump(self):
+        """Four panes of very different lengths, one height.
+
+        A floor was not enough - a short pane sat at the floor and a long
+        one at the ceiling, and the dialog still resized between them.
+        """
+
+        self.assertContains(self.dialog(self.copy), "detail-tabs")
+
+    # ------------------------------------------------ bulk move is apart
+
+    def test_bulk_move_is_untouched(self):
+        """A different question: the copies ticked on the list, not this
+        one - so it keeps its own view, its own URL and its own form."""
+
+        other = make_copy(
+            volume=self.volume, shelf=self.shelf, copy_code="MV-0002"
+        )
+
+        response = self.client.post(
+            reverse("book_copy_bulk_move"),
+            {
+                "copy": [self.copy.id, other.id],
+                "location": self.other_location.id,
+                "shelf": self.other_shelf.id,
+            },
+            headers={"HX-Request": "true"},
+        )
+
+        self.assertIn(response.status_code, (200, 204, 302))
+
+        for copy in (self.copy, other):
+            copy.refresh_from_db()
+            self.assertEqual(copy.shelf_id, self.other_shelf.id)

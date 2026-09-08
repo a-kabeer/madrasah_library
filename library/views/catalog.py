@@ -48,6 +48,7 @@ from .common import (
     COPY_STATE_ORDER,
     COPY_STATE_TONES,
     COPY_STORED_STATES,
+    PolicyRefused,
     DASHBOARD_CACHE_KEY,
     MAX_COPIES_PER_VOLUME,
     MAX_TOTAL_COPIES,
@@ -821,6 +822,153 @@ def normalized_title_expression():
     )
 
 
+def book_field_error_summary(errors):
+    """What the alert above the form says when fields are wrong.
+
+    A count, not a list. Each message is already under the input it is
+    about, and repeating them all at the top would say everything twice
+    while still not pointing anywhere.
+    """
+
+    if len(errors) == 1:
+        return "There is a problem with one of the fields below."
+
+    return (
+        "There are problems with %d of the fields below." % len(errors)
+    )
+
+
+# The longest title the column will take. Stated here because the form has
+# to refuse a longer one itself: `books.title` is varchar(500), and reaching
+# it with more raises DataError, which is a 500 rather than an answer.
+TITLE_MAX_LENGTH = 500
+
+
+def resolve_related(model, raw, label, errors, field):
+    """An id from the form, checked against the table it names.
+
+    The comboboxes post an id in a hidden field, so what arrives is
+    whatever that field held - and a page left open while somebody else
+    deleted the author, or a cleared script, can post a value that names
+    no row or is not a number at all. Unchecked, the first went to the
+    database as a dangling foreign key and the second raised ValueError
+    from `create()`.
+
+    Returns the id when it names a row, and None otherwise, recording why
+    under `field`.
+    """
+
+    value = (raw or "").strip()
+
+    if not value:
+        return None
+
+    # Both sentences take the bare noun - "author", not "an author" - so
+    # one label serves all three fields without an article that fits only
+    # one of them.
+    if not value.isdigit():
+        errors[field] = (
+            "The %s was not recognised. Pick one from the list." % label
+        )
+        return None
+
+    if not model.objects.filter(pk=int(value)).exists():
+        errors[field] = (
+            "That %s no longer exists. Pick another from the list."
+            % label
+        )
+        return None
+
+    return int(value)
+
+
+def validate_book_details(request, book=None):
+    """The rules a book's own details are held to, in one place.
+
+    Add and Edit both call this, so the two cannot come apart. It reads
+    the POST and answers three things:
+
+      * `cleaned` - what to save: title, the three ids, the cover upload
+      * `errors` - field name -> what is wrong with it, empty when nothing
+        is. Each one is rendered under its own input.
+      * `form_data` - what to show back, so a refused form keeps every
+        value that was typed into it
+
+    Duplicates are deliberately not checked here. Whether this book is
+    already on the shelves is not a fault in a field - it needs the list
+    of matches and its own wording - so each view asks
+    `find_duplicate_books` itself, Add over the whole catalogue and Edit
+    excluding the book being edited.
+    """
+
+    errors = {}
+
+    title = request.POST.get("title", "").strip()
+
+    if not title:
+        errors["title"] = "Enter the book's title."
+
+    elif len(title) > TITLE_MAX_LENGTH:
+        errors["title"] = (
+            "That title is %d characters. Shorten it to %d or fewer."
+            % (len(title), TITLE_MAX_LENGTH)
+        )
+
+    author_id = resolve_related(
+        Author, request.POST.get("author"), "author", errors, "author"
+    )
+
+    if author_id is None and "author" not in errors:
+        errors["author"] = "Choose the author."
+
+    category_id = resolve_related(
+        Category,
+        request.POST.get("category"),
+        "category",
+        errors,
+        "category",
+    )
+
+    publisher_id = resolve_related(
+        Publisher,
+        request.POST.get("publisher"),
+        "publisher",
+        errors,
+        "publisher",
+    )
+
+    cover_image = request.FILES.get("cover_image")
+
+    if cover_image:
+        cover_error = validate_cover_image(cover_image)
+
+        if cover_error:
+            errors["cover_image"] = cover_error
+
+    cleaned = {
+        "title": title,
+        "author_id": author_id,
+        "category_id": category_id,
+        "publisher_id": publisher_id,
+        "cover_image": cover_image,
+    }
+
+    # Shown back exactly as posted, including a value that was refused -
+    # the names come from the ids, so a rejected id shows an empty box,
+    # which is the truth about what the form is holding.
+    form_data = {
+        "title": title,
+        "author": author_id or "",
+        "author_name": selected_name(Author, author_id),
+        "category": category_id or "",
+        "category_name": selected_name(Category, category_id),
+        "publisher": publisher_id or "",
+        "publisher_name": selected_name(Publisher, publisher_id),
+    }
+
+    return cleaned, errors, form_data
+
+
 def find_duplicate_books(title, author_id, exclude_id=None):
     """Existing books that are this same book, by title and author.
 
@@ -967,6 +1115,7 @@ def book_add(request):
     modal = is_form_modal_request(request)
 
     error = None
+    errors = {}
     duplicates = []
 
     # The catalogue shortcut from an approved suggestion. One integer in
@@ -1012,28 +1161,16 @@ def book_add(request):
     }
 
     if request.method == "POST":
-        title = request.POST.get("title", "").strip()
-        author_id = request.POST.get("author")
-        category_id = request.POST.get("category")
-        publisher_id = request.POST.get("publisher")
 
-        form_data = {
-            "title": title,
-            "author": author_id or "",
-            "author_name": selected_name(Author, author_id),
-            "category": category_id or "",
-            "category_name": selected_name(Category, category_id),
-            "publisher": publisher_id or "",
-            "publisher_name": selected_name(Publisher, publisher_id),
-        }
+        # The rules, from the one place that states them. Edit calls the
+        # same function, so the two cannot come apart.
+        cleaned, errors, form_data = validate_book_details(request)
 
-        cover_image = request.FILES.get("cover_image")
-
-        cover_error = (
-            validate_cover_image(cover_image)
-            if cover_image
-            else None
-        )
+        title = cleaned["title"]
+        author_id = cleaned["author_id"]
+        category_id = cleaned["category_id"]
+        publisher_id = cleaned["publisher_id"]
+        cover_image = cleaned["cover_image"]
 
         volume_rows, volume_raw, volume_error = read_volume_rows(request)
 
@@ -1060,17 +1197,16 @@ def book_add(request):
             else []
         )
 
-        if not title or not author_id:
+        if errors:
 
-            error = "Title and Author are required."
+            # Each one is rendered under its own input. The alert above the
+            # form is for problems that are not about a single field, so it
+            # only says how many there are.
+            error = book_field_error_summary(errors)
 
         elif duplicates:
 
             error = duplicate_book_error(duplicates)
-
-        elif cover_error:
-
-            error = cover_error
 
         elif volume_error:
 
@@ -1226,6 +1362,7 @@ def book_add(request):
 
     context = {
         "error": error,
+        "errors": errors,
         "form_data": form_data,
         "inventory": inventory,
         "locations": Location.objects.order_by("name"),
@@ -1242,11 +1379,14 @@ def book_add(request):
             context,
         )
 
-    return render(
-        request,
-        "library/book_add.html",
-        context,
-    )
+    # There is no Add Book page any more - the dialog was always the
+    # whole of it, and the page a shell around the same partials. A
+    # request without `?modal=1` still has to answer, because links to
+    # this URL exist, so it goes to the list with the reason attached.
+    if error:
+        messages.error(request, error)
+
+    return redirect("book_list")
 
 
 @feature_required("books", "Admin", "Librarian")
@@ -1271,6 +1411,7 @@ def book_edit(request, book_id):
     )
 
     error = None
+    errors = {}
     duplicates = []
 
     form_data = {
@@ -1284,29 +1425,17 @@ def book_edit(request, book_id):
     }
 
     if request.method == "POST":
-        title = request.POST.get("title", "").strip()
-        author_id = request.POST.get("author")
-        category_id = request.POST.get("category")
-        publisher_id = request.POST.get("publisher")
 
-        form_data = {
-            "title": title,
-            "author": author_id or "",
-            "author_name": selected_name(Author, author_id),
-            "category": category_id or "",
-            "category_name": selected_name(Category, category_id),
-            "publisher": publisher_id or "",
-            "publisher_name": selected_name(Publisher, publisher_id),
-        }
+        # The same rules Add is held to, from the same function.
+        cleaned, errors, form_data = validate_book_details(request, book)
 
-        cover_image = request.FILES.get("cover_image")
+        title = cleaned["title"]
+        author_id = cleaned["author_id"]
+        category_id = cleaned["category_id"]
+        publisher_id = cleaned["publisher_id"]
+        cover_image = cleaned["cover_image"]
+
         remove_cover = request.POST.get("remove_cover") == "on"
-
-        cover_error = (
-            validate_cover_image(cover_image)
-            if cover_image
-            else None
-        )
 
         # `exclude_id` is what stops a book being its own duplicate: save
         # it unchanged and the only match is itself, which is dropped.
@@ -1316,17 +1445,13 @@ def book_edit(request, book_id):
             else []
         )
 
-        if not title or not author_id:
+        if errors:
 
-            error = "Title and Author are required."
+            error = book_field_error_summary(errors)
 
         elif duplicates:
 
             error = duplicate_book_error(duplicates)
-
-        elif cover_error:
-
-            error = cover_error
 
         else:
             book.title = title
@@ -1386,6 +1511,7 @@ def book_edit(request, book_id):
     context = {
         "book": book,
         "error": error,
+        "errors": errors,
         "form_data": form_data,
         "from_page": from_page,
         "duplicates": duplicates,
@@ -1398,11 +1524,15 @@ def book_edit(request, book_id):
             context,
         )
 
-    return render(
-        request,
-        "library/book_edit.html",
-        context,
-    )
+    # No page left. Back to wherever the edit was started from, with
+    # the reason if there was one.
+    if error:
+        messages.error(request, error)
+
+    if from_page == "detail":
+        return redirect("book_detail", book_id=book.id)
+
+    return redirect("book_list")
 
 
 def book_archive_blocker(book):
@@ -1561,7 +1691,9 @@ def book_copy_withdraw(request, copy_id):
             description="%s withdrawn from circulation" % copy.copy_code,
         )
 
-        return redirect("book_copy_detail", copy_id=copy.id)
+        # The copy's own page is a dialog now, and its URL redirects to
+        # the list - so going there took two hops to reach one place.
+        return redirect("book_copy_list")
 
     return render(
         request,
@@ -1659,29 +1791,46 @@ def book_delete(request, book_id):
         deleted_book_title = book.title
 
         # Volumes go with the book (books -> book_volumes cascades in the
-        # database). `blocker` has already established there are no copies
+        # database), and `blocker` has established there are no copies
         # hanging off them.
-        with transaction.atomic():
-            book.delete()
+        #
+        # Asked again inside the transaction, because the answer above was
+        # read outside any transaction: a copy added, or a loan issued,
+        # between the two would otherwise reach `book_copies.volume_id`
+        # and abort the statement - a 500 where there is a sentence to
+        # say. Raising is how a transaction that must not commit gets out.
+        try:
+            with transaction.atomic():
 
-        cache.delete(BOOK_CACHE_KEY)
-        cache.delete(DASHBOARD_CACHE_KEY)
+                blocker = book_delete_blocker(book)
 
-        if volume_count:
-            cache.delete(BOOK_VOLUME_CACHE_KEY)
+                if blocker:
+                    raise PolicyRefused(blocker)
 
-        create_activity_log(
-            user=None,
-            action="DELETE",
-            entity_type="Book",
-            entity_id=deleted_book_id,
-            description=f"{deleted_book_title} deleted",
-        )
+                book.delete()
 
-        if modal:
-            return book_deleted_response(deleted_book_title)
+        except PolicyRefused as refused:
+            blocker = str(refused)
 
-        return redirect("book_list")
+        else:
+            cache.delete(BOOK_CACHE_KEY)
+            cache.delete(DASHBOARD_CACHE_KEY)
+
+            if volume_count:
+                cache.delete(BOOK_VOLUME_CACHE_KEY)
+
+            create_activity_log(
+                user=None,
+                action="DELETE",
+                entity_type="Book",
+                entity_id=deleted_book_id,
+                description=f"{deleted_book_title} deleted",
+            )
+
+            if modal:
+                return book_deleted_response(deleted_book_title)
+
+            return redirect("book_list")
 
     context = {
         "book": book,
@@ -1697,11 +1846,15 @@ def book_delete(request, book_id):
             context,
         )
 
-    return render(
-        request,
-        "library/book_delete.html",
-        context,
-    )
+    # No page left. A blocker means the book is still there, so the
+    # reason goes back with the reader to it; otherwise to the list.
+    if blocker:
+        messages.error(request, blocker)
+
+        if from_page == "detail":
+            return redirect("book_detail", book_id=book.id)
+
+    return redirect("book_list")
 
 @feature_required("books")
 def book_detail(request, book_id):

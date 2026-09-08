@@ -1,141 +1,372 @@
 {% extends layout %}
 {% load i18n %}
+{% comment %}
+  The loan list, on the book list's pattern.
 
-{% block title %}{% translate "Loans" %} | {{ branding.display_name }}{% endblock %}
+  What was here before had the status filter twice over: a row of five
+  differently-coloured buttons (secondary, primary, danger, warning,
+  success) and a Status dropdown in the filter card doing the same job.
+  Worse, each button was a bare `?status=x`, so choosing one threw away the
+  search, the borrower, both date filters and the page you were on.
 
-{% block page_title %}{% translate "Loans" %}{% endblock %}
+  Now there is one status control. Its links come from the view already
+  carrying the rest of the table's state, so narrowing by status keeps
+  everything else - which is the whole reason the book list's links are
+  built the same way.
+
+  Sorting, rows-per-page and pagination are the shared helpers, not new
+  ones: `columns` comes from `sortable_columns`, the select posts to
+  `page_size_url`, and the pagination is `partials/pagination.html`.
+
+  Row interaction follows the book list exactly. The <tr> carries
+  `data-loan-row` and `data-loan-url`, and app.js opens the loan dialog for
+  a click anywhere in it that is not a link or a button - so Book and
+  Borrower are no longer two small targets competing with the row, and the
+  redundant View action is gone. The row is `role="button"` with a tabindex,
+  and the same handler answers Enter and Space.
+{% endcomment %}
+
+{% block title %}
+{% translate "Loans" %} | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    {% translate "Loans" %}
+{% endblock %}
 
 {% block content %}
+
 <div class="container-fluid px-0">
 
-    <div class="mb-4">
-        <nav aria-label="{% translate 'breadcrumb' %}">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{% url 'circulation_dashboard' %}">{% translate "Circulation" %}</a></li>
-                <li class="breadcrumb-item active">{% translate "All Loans" %}</li>
-            </ol>
-        </nav>
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <h2 class="fw-bold mb-1">{% translate "Loans" %}</h2>
-                <p class="text-body-secondary mb-0">{% translate "Search, filter, and manage all loans." %}</p>
-            </div>
-            <a href="{% url 'circulation_issue' %}" class="btn btn-primary">{% translate "Issue Books" %}</a>
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">{% translate "Loans" %}</h2>
+            <p class="text-body-secondary mb-0">
+                {% translate "Every loan on record, newest first." %}
+            </p>
         </div>
+
+        <a href="{% url 'circulation_issue' %}" class="btn btn-primary">
+            <i class="bi bi-box-arrow-right me-1" aria-hidden="true"></i>
+            {% translate "Issue Books" %}
+        </a>
     </div>
 
-    <div class="mb-3">
-        <div class="btn-group" role="group">
-            <a href="{% url 'loan_list' %}" class="btn btn-outline-secondary {% if not status and not search %}active{% endif %}">{% translate "All" %}</a>
-            <a href="{% url 'loan_list' %}?status=active" class="btn btn-outline-primary {% if status == 'active' %}active{% endif %}">{% translate "Active" %}</a>
-            <a href="{% url 'loan_list' %}?status=overdue" class="btn btn-outline-danger {% if status == 'overdue' %}active{% endif %}">{% translate "Overdue" %}</a>
-            <a href="{% url 'loan_list' %}?status=due_today" class="btn btn-outline-warning {% if status == 'due_today' %}active{% endif %}">{% translate "Due Today" %}</a>
-            <a href="{% url 'loan_list' %}?status=returned" class="btn btn-outline-success {% if status == 'returned' %}active{% endif %}">{% translate "Returned" %}</a>
-        </div>
-    </div>
+    {% comment %}
+      One status control, as the book list's mode pills - the same markup,
+      the same active state, an icon each. It was a segmented group of
+      outlined buttons, which is a second control saying what that one
+      already says; two lists side by side should not need two vocabularies
+      to be browsed.
 
-    <div class="card shadow-sm border-0 mb-4">
+      Colour is deliberately not part of it. Five different button colours
+      once competed here for attention and told the reader nothing, because
+      the colour of a filter says nothing about what it filters. One filled
+      pill says which is chosen.
+
+      Real links still, so each is shareable and middle-clickable, and each
+      carries the rest of the query - the search, the borrower, both dates,
+      the sort and the page size. The bare hx-get takes the shell's boost,
+      which swaps the main region.
+    {% endcomment %}
+    <ul class="nav nav-pills mb-3" aria-label="{% translate 'Filter loans by status' %}">
+        {% for option in status_options %}
+            <li class="nav-item">
+                <a
+                    href="{{ option.url }}"
+                    hx-get="{{ option.url }}"
+                    class="nav-link {% if option.active %}active{% endif %}"
+                    {% if option.active %}aria-current="page"{% endif %}
+                >
+                    <i class="bi {{ option.icon }} me-1" aria-hidden="true"></i>
+                    {{ option.label }}
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+
+    {% comment %}
+      Search and the remaining filters. The status dropdown that used to sit
+      here is gone - it duplicated the control above.
+    {% endcomment %}
+    <div class="card mb-3">
         <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-4">
-                    <label for="search" class="form-label">{% translate "Search" %}</label>
-                    <input type="text" class="form-control" id="search" name="search" value="{{ search }}" placeholder="{% translate 'Borrower, copy code, book title...' %}">
+
+            <form method="get" class="row g-2 align-items-end">
+
+                {% comment %}
+                  Status rides along hidden so searching inside a status
+                  stays inside it, and sorting is restated for the same
+                  reason - a GET form sends only its own fields.
+                {% endcomment %}
+                <input type="hidden" name="status" value="{{ status }}">
+                <input type="hidden" name="sort" value="{{ sort }}">
+                <input type="hidden" name="direction" value="{{ direction }}">
+                <input type="hidden" name="page_size" value="{{ page_size }}">
+
+                <div class="col-12 col-lg">
+                    <label for="search" class="form-label small fw-semibold">
+                        {% translate "Search" %}
+                    </label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="search"
+                        name="search"
+                        value="{{ search }}"
+                        placeholder="{% translate 'Borrower, copy code, book title...' %}"
+                    >
                 </div>
-                <div class="col-md-3">
-                    <label for="status" class="form-label">{% translate "Status" %}</label>
-                    <select class="form-select" id="status" name="status">
-                        <option value="">{% translate "All Statuses" %}</option>
-                        <option value="active" {% if status == "active" %}selected{% endif %}>{% translate "Active" %}</option>
-                        <option value="overdue" {% if status == "overdue" %}selected{% endif %}>{% translate "Overdue" %}</option>
-                        <option value="due_today" {% if status == "due_today" %}selected{% endif %}>{% translate "Due Today" %}</option>
-                        <option value="returned" {% if status == "returned" %}selected{% endif %}>{% translate "Returned" %}</option>
-                    </select>
+
+                <div class="col-6 col-lg-auto">
+                    <label for="issue_date" class="form-label small fw-semibold">
+                        {% translate "Issued on" %}
+                    </label>
+                    <input
+                        type="date"
+                        class="form-control"
+                        id="issue_date"
+                        name="issue_date"
+                        value="{{ issue_date }}"
+                    >
                 </div>
-                <div class="col-md-3">
-                    <label for="borrower" class="form-label">{% translate "Borrower" %}</label>
-                    <select class="form-select" id="borrower" name="borrower">
-                        <option value="">{% translate "All Borrowers" %}</option>
-                        {% for b in borrowers %}
-                        <option value="{{ b.id }}" {% if borrower_id == b.id|stringformat:"s" %}selected{% endif %}>{{ b.name }}</option>
-                        {% endfor %}
-                    </select>
+
+                <div class="col-6 col-lg-auto">
+                    <label for="due_date" class="form-label small fw-semibold">
+                        {% translate "Due on" %}
+                    </label>
+                    <input
+                        type="date"
+                        class="form-control"
+                        id="due_date"
+                        name="due_date"
+                        value="{{ due_date }}"
+                    >
                 </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100">{% translate "Filter" %}</button>
+
+                <div class="col-12 col-lg-auto d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1" aria-hidden="true"></i>
+                        {% translate "Search" %}
+                    </button>
+
+                    {% if search or borrower_id or issue_date or due_date %}
+                        {% comment %}
+                          Clears the search and filters but keeps the status
+                          you are looking at - clearing a search should not
+                          also move you off Overdue.
+                        {% endcomment %}
+                        <a
+                            href="?{% if status %}status={{ status }}{% endif %}"
+                            class="btn btn-outline-secondary"
+                        >
+                            <i class="bi bi-x-lg me-1" aria-hidden="true"></i>
+                            {% translate "Clear" %}
+                        </a>
+                    {% endif %}
                 </div>
-                {% if search or status or borrower_id %}
-                <div class="col-12">
-                    <a href="{% url 'loan_list' %}" class="btn btn-sm btn-outline-secondary">{% translate "Clear Filters" %}</a>
-                </div>
-                {% endif %}
+
             </form>
+
         </div>
     </div>
 
-    <p class="text-body-secondary">
-        {% blocktranslate trimmed count n=loans.paginator.count %}
-            Found {{ n }} loan.
-        {% plural %}
-            Found {{ n }} loans.
-        {% endblocktranslate %}
-    </p>
+    {% comment %} Count and rows-per-page, as on the book list. {% endcomment %}
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
 
-    <div class="card shadow-sm border-0">
+        <p class="text-body-secondary mb-0">
+            {% blocktranslate trimmed count n=paginator.count %}
+                Found <strong>{{ n }}</strong> loan.
+            {% plural %}
+                Found <strong>{{ n }}</strong> loans.
+            {% endblocktranslate %}
+        </p>
+
+        <div class="d-flex align-items-center gap-2">
+            <label for="page_size" class="form-label small text-body-secondary mb-0">
+                {% translate "Show" %}
+            </label>
+            <select
+                class="form-select form-select-sm w-auto"
+                id="page_size"
+                name="page_size"
+                hx-get="{{ page_size_url }}"
+                hx-target="#mainContent"
+                hx-swap="innerHTML"
+                hx-trigger="change"
+                onchange="if (!window.htmx) { window.location.search = new URLSearchParams(Object.assign(Object.fromEntries(new URLSearchParams(window.location.search)), { page_size: this.value, page: 1 })).toString(); }"
+            >
+                {% for option in page_size_options %}
+                    <option value="{{ option.value }}" {% if option.active %}selected{% endif %}>
+                        {{ option.value }}
+                    </option>
+                {% endfor %}
+            </select>
+            <span class="small text-body-secondary">{% translate "per page" %}</span>
+        </div>
+
+    </div>
+
+    {% comment %}
+      `overflow-hidden` on the card, not decoration. The table is wider
+      than a phone and scrolls inside `.table-responsive`, but without the
+      card clipping it the overflowing scroller still expands its
+      ancestors and the whole PAGE gains a horizontal scrollbar - measured
+      at 797px against a 375px viewport, and worse in RTL where the
+      overflow runs the other way. Clipping here keeps the scrolling
+      inside the table where it belongs.
+    {% endcomment %}
+    <div class="card overflow-hidden">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+
+                <thead>
                     <tr>
-                        <th>{% translate "ID" %}</th>
-                        <th>{% translate "Copy" %}</th>
-                        <th>{% translate "Book" %}</th>
-                        <th>{% translate "Borrower" %}</th>
-                        <th>{% translate "Issue Date" %}</th>
-                        <th>{% translate "Due Date" %}</th>
-                        <th>{% translate "Status" %}</th>
-                        <th>{% translate "Actions" %}</th>
+                        {% for column in columns %}
+                            <th
+                                scope="col"
+                                {% if column.active %}
+                                    aria-sort="{% if column.direction == 'asc' %}ascending{% else %}descending{% endif %}"
+                                {% endif %}
+                            >
+                                {% if column.url %}
+                                    <a href="{{ column.url }}" hx-get="{{ column.url }}" class="table-sort">
+                                        {{ column.label }}
+                                        {% if column.active %}
+                                            <i class="bi {% if column.direction == 'asc' %}bi-sort-up{% else %}bi-sort-down{% endif %}" aria-hidden="true"></i>
+                                        {% else %}
+                                            <i class="bi bi-arrow-down-up table-sort-idle" aria-hidden="true"></i>
+                                        {% endif %}
+                                    </a>
+                                {% else %}
+                                    {{ column.label }}
+                                {% endif %}
+                            </th>
+                        {% endfor %}
+
+                        <th scope="col" class="text-end">{% translate "Actions" %}</th>
                     </tr>
                 </thead>
+
                 <tbody>
                     {% for loan in loans %}
-                    <tr>
-                        <td>{{ loan.id }}</td>
-                        <td class="fw-semibold">{{ loan.copy.copy_code }}</td>
-                        <td><a href="{% url 'book_detail' loan.copy.volume.book.id %}">{{ loan.copy.volume.book.title }}</a></td>
-                        <td><a href="{% url 'borrower_detail' loan.borrower.id %}">{{ loan.borrower.name }}</a></td>
-                        <td>{{ loan.issue_date }}</td>
-                        <td>{{ loan.due_date }}</td>
-                        <td>
-                            {% if loan.return_date %}
-                                <span class="badge bg-secondary">{% translate "Returned" %}</span>
-                            {% elif loan.days_overdue > 0 %}
-                                <span class="badge bg-danger">
-                                                                  {% blocktranslate trimmed with days_overdue=loan.days_overdue %}
-                                                                      Overdue ({{ days_overdue }}d)
-                                                                  {% endblocktranslate %}
-                                                              </span>
-                            {% else %}
-                                <span class="badge bg-success">{% translate "Active" %}</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="btn-group btn-group-sm">
-                                <a href="{% url 'loan_detail' loan.id %}" class="btn btn-outline-secondary">{% translate "View" %}</a>
-                                {% if not loan.return_date %}
-                                <a href="{% url 'loan_return' loan.id %}" class="btn btn-outline-success">{% translate "Return" %}</a>
-                                <a href="{% url 'loan_renew' loan.id %}" class="btn btn-outline-primary">{% translate "Renew" %}</a>
+                        {% comment %}
+                          The whole row opens this loan's dialog. app.js
+                          reads `data-loan-url` and skips anything inside
+                          [data-row-actions], so the buttons keep their own
+                          behaviour.
+                        {% endcomment %}
+                        <tr
+                            data-loan-row
+                            data-loan-url="{% url 'loan_detail' loan.id %}?modal=1"
+                            role="button"
+                            tabindex="0"
+                            aria-label="{% blocktranslate with code=loan.copy.copy_code %}Open loan of {{ code }}{% endblocktranslate %}"
+                            style="cursor: pointer;"
+                        >
+
+                            <td class="text-nowrap"><span class="copy-code">{{ loan.copy.copy_code }}</span></td>
+
+                            <td class="fw-semibold">{{ loan.copy.volume.book.title }}</td>
+
+                            <td>{{ loan.borrower.name }}</td>
+
+                            <td class="text-nowrap">{{ loan.issue_date|date:"j M Y" }}</td>
+
+                            <td class="text-nowrap">{{ loan.due_date|date:"j M Y" }}</td>
+
+                            <td>
+                                {% if loan.return_date %}
+                                    <span class="badge text-bg-secondary">{% translate "Returned" %}</span>
+                                {% elif loan.days_overdue %}
+                                    <span class="badge text-bg-danger">
+                                        {% blocktranslate trimmed count n=loan.days_overdue %}
+                                            {{ n }} day late
+                                        {% plural %}
+                                            {{ n }} days late
+                                        {% endblocktranslate %}
+                                    </span>
+                                {% else %}
+                                    <span class="badge text-bg-success">{% translate "Active" %}</span>
                                 {% endif %}
-                            </div>
-                        </td>
-                    </tr>
+                            </td>
+
+                            {% comment %}
+                              The action a librarian actually wants is
+                              Return, so it is the one that reads as a
+                              button. Renew is the same size but outlined,
+                              which is what "secondary" should look like -
+                              the old row gave View, Return and Renew equal
+                              weight and a returned loan still showed a
+                              View button that led where the row now goes.
+                            {% endcomment %}
+                            <td class="text-end" data-row-actions>
+                                {% comment %}
+                                  Renew, and only Renew. Taking a book back
+                                  belongs to the Return Books page, which
+                                  can take a whole stack at once - a
+                                  per-row button never could.
+
+                                  Shown to the roles that can use it:
+                                  `loan_renew` is Admin and Librarian only,
+                                  and a button that answers 403 is worse
+                                  than no button. `role_required` on the
+                                  view is what actually enforces it.
+
+                                  It opens a dialog. `closest()` finds the
+                                  button before the row, so a click here
+                                  renews rather than opening the loan
+                                  details behind it.
+                                {% endcomment %}
+                                {% if not loan.return_date and can_renew %}
+                                    {% comment %}
+                                      Icon and a label for a screen
+                                      reader, which is how the book list's
+                                      row actions are built. A word here
+                                      wraps onto two lines in a column this
+                                      narrow.
+                                    {% endcomment %}
+                                    <a
+                                        href="{% url 'loan_renew' loan.id %}"
+                                        class="btn btn-sm btn-outline-secondary"
+                                        title="{% translate 'Renew' %}"
+                                        aria-label="{% blocktranslate with code=loan.copy.copy_code %}Renew {{ code }}{% endblocktranslate %}"
+                                        data-form-modal
+                                        hx-get="{% url 'loan_renew' loan.id %}?modal=1"
+                                        hx-target="#formModal .modal-body"
+                                        hx-swap="innerHTML"
+                                    >
+                                        <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+                                    </a>
+                                {% else %}
+                                    <span class="text-body-secondary small">&mdash;</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+
                     {% empty %}
-                    <tr><td colspan="8" class="text-center text-body-secondary py-4">{% translate "No loans found." %}</td></tr>
+                        <tr>
+                            <td colspan="7" class="text-center text-body-secondary py-4">
+                                {% if search or status or borrower_id or issue_date or due_date %}
+                                    {% translate "No loans match those filters." %}
+                                    <a href="{% url 'loan_list' %}" class="d-block small mt-2">
+                                        {% translate "Clear the search" %}
+                                    </a>
+                                {% else %}
+                                    {% translate "No loans yet." %}
+                                {% endif %}
+                            </td>
+                        </tr>
                     {% endfor %}
                 </tbody>
+
             </table>
         </div>
     </div>
 
-    {% include "library/_pagination.html" with page_obj=loans %}
+    {% translate "Loan list pages" as loan_pagination_label %}
+    {% include "library/partials/pagination.html" with page_obj=loans pagination_label=loan_pagination_label swap=True %}
 
 </div>
+
 {% endblock %}

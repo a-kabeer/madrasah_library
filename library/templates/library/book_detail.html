@@ -52,13 +52,33 @@
                         </button>
                     </form>
                 {% else %}
-                    <a href="{% url 'book_edit' book.id %}?from=detail" class="btn btn-warning">
+                    {% comment %}
+                      Dialogs, the same as on the list. The href keeps
+                      `?from=detail`, which is where the view sends a
+                      scriptless post back to; the hx-get does not need
+                      it, because a dialog does not navigate anywhere.
+                    {% endcomment %}
+                    <a
+                        href="{% url 'book_edit' book.id %}?from=detail"
+                        class="btn btn-warning"
+                        data-form-modal
+                        hx-get="{% url 'book_edit' book.id %}?modal=1"
+                        hx-target="#formModal .modal-body"
+                        hx-swap="innerHTML"
+                    >
                         <i class="bi bi-pencil me-1"></i> {% translate "Edit Book" %}
                     </a>
                     <a href="{% url 'book_archive' book.id %}" class="btn btn-outline-secondary">
                         <i class="bi bi-archive me-1"></i> {% translate "Archive" %}
                     </a>
-                    <a href="{% url 'book_delete' book.id %}?from=detail" class="btn btn-danger">
+                    <a
+                        href="{% url 'book_delete' book.id %}?from=detail"
+                        class="btn btn-danger"
+                        data-form-modal
+                        hx-get="{% url 'book_delete' book.id %}?modal=1"
+                        hx-target="#formModal .modal-body"
+                        hx-swap="innerHTML"
+                    >
                         <i class="bi bi-trash me-1"></i> {% translate "Delete Book" %}
                     </a>
                 {% endif %}
@@ -337,7 +357,7 @@
                                     <i class="bi bi-file-earmark-text me-1"></i> {% translate "Contents" %}
                                 </a>
                                 {% if can_edit and not book.is_archived %}
-                                    <a href="{% url 'book_copy_add' %}?volume={{ single_volume.id }}" class="btn btn-sm btn-primary">
+                                    <a href="{% url 'book_copy_add' %}?volume={{ single_volume.id }}" class="btn btn-sm btn-primary" data-form-modal hx-get="{% url 'book_copy_add' %}?volume={{ single_volume.id }}&modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML">
                                         <i class="bi bi-plus-lg me-1"></i> {% translate "Add Copy" %}
                                     </a>
                                 {% endif %}
@@ -674,13 +694,13 @@
                             {% for loan in loans %}
                                 <tr {% if loan.days_overdue %}class="table-danger"{% endif %}>
                                     <td>
-                                        <a href="{% url 'borrower_detail' loan.borrower.id %}"
+                                        <a href="{% url 'borrower_detail' loan.borrower.id %}" data-form-modal hx-get="{% url 'borrower_detail' loan.borrower.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
                                            class="fw-semibold text-decoration-none">
                                             {{ loan.borrower.name }}
                                         </a>
                                     </td>
                                     <td>
-                                        <a href="{% url 'book_copy_detail' loan.copy.id %}"
+                                        <a href="{% url 'book_copy_detail' loan.copy.id %}" data-form-modal hx-get="{% url 'book_copy_detail' loan.copy.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
                                            class="text-decoration-none">
                                             {{ loan.copy.copy_code }}
                                         </a>
@@ -708,7 +728,7 @@
                                         {% endif %}
                                     </td>
                                     <td class="text-end">
-                                        <a href="{% url 'loan_detail' loan.id %}"
+                                        <a href="{% url 'loan_detail' loan.id %}" data-form-modal hx-get="{% url 'loan_detail' loan.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
                                            class="btn btn-sm btn-outline-secondary" title="{% translate 'Open loan' %}">
                                             <i class="bi bi-box-arrow-up-right"></i>
                                         </a>
@@ -784,7 +804,7 @@
                         <div class="row g-2 align-items-end">
                             <div class="col-12 col-md-6">
                                 {% url 'borrower_list' as borrower_search_url %}
-                                {% include "library/partials/combobox_field.html" with label="Add someone to the queue" field_name="borrower" input_id="reserveBorrower" entity_label="borrower" search_url=borrower_search_url selected_id="" selected_name="" required=False allow_create=False compact=True submit_on_select=False %}
+                                {% include "library/partials/combobox_field.html" with label="Add someone to the queue" field_name="borrower" input_id="reserveBorrower" entity_label="borrower" search_url=borrower_search_url selected_id="" selected_name="" required=False allow_create=False compact=True submit_on_select=False error="" %}
                             </div>
                             <div class="col-12 col-md-auto">
                                 <button type="submit" class="btn btn-primary">
@@ -822,7 +842,7 @@
                                             {{ reservation.position }}
                                         </td>
                                         <td>
-                                            <a href="{% url 'borrower_detail' reservation.borrower_id %}"
+                                            <a href="{% url 'borrower_detail' reservation.borrower_id %}" data-form-modal hx-get="{% url 'borrower_detail' reservation.borrower_id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
                                                class="text-decoration-none">
                                                 {{ reservation.borrower.name }}
                                             </a>
@@ -867,5 +887,36 @@
     </div>
 
 </div>
+
+{% comment %}
+  Two answers to the dialogs above, because this page is not a list and
+  the shell's `listChanged` refresh has nothing to re-request here.
+
+  Editing changes what this page is showing - the title in the heading,
+  the author, the cover - so a save re-requests the page in place. Without
+  this the dialog would close on a toast and leave the old title on
+  screen, which reads as though nothing happened.
+
+  Deleting means the book is gone, so re-requesting this page would be a
+  404. That one goes to the list instead, and pushes the URL, because it
+  is a real navigation: the thing this page was about no longer exists.
+{% endcomment %}
+<div
+    hx-get="{{ request.get_full_path }}"
+    hx-trigger="bookSaved from:body"
+    hx-target="#mainContent"
+    hx-swap="innerHTML show:none"
+    hx-push-url="false"
+    hidden
+></div>
+
+<div
+    hx-get="{% url 'book_list' %}"
+    hx-trigger="bookDeleted from:body"
+    hx-target="#mainContent"
+    hx-swap="innerHTML show:none"
+    hx-push-url="true"
+    hidden
+></div>
 
 {% endblock %}

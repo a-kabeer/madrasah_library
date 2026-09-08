@@ -1,0 +1,130 @@
+{% load i18n %}
+{% comment %}
+Move one copy to a different shelf, in a dialog.
+
+Only the shelf. The volume it is a copy of and the code on its label are
+not this dialog's business — one decides which book a past loan appears to
+have been for, and the other is printed on the book itself.
+
+Location and Shelf are two dropdowns because a shelf belongs to a
+location: choosing the location reloads the shelves for that location
+only, from `shelf_list`, so a copy cannot be filed somewhere it cannot be.
+The same endpoint and the same two partials the Add and Edit dialogs use,
+and the view checks the pair again on submit — the dropdowns only offering
+matching pairs is the browser's word for it, not a rule.
+
+Bulk move is a separate control on the list and is untouched: it moves the
+copies ticked there, which is a different question from this one.
+
+Expected context: copy, volume_name, locations, shelves, location_id,
+errors, error.
+{% endcomment %}
+
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    <i class="bi bi-arrow-left-right me-2" aria-hidden="true"></i>{% translate "Move Copy" %}
+</h5>
+
+<form
+    method="post"
+    action="{% url 'book_copy_move' copy.id %}"
+    hx-post="{% url 'book_copy_move' copy.id %}?modal=1"
+    hx-target="#formModal .modal-body"
+    hx-swap="innerHTML"
+    hx-disabled-elt="find button[type=submit]"
+>
+    {% csrf_token %}
+
+    {% if error %}
+        <div class="alert alert-danger d-flex align-items-start" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2 mt-1" aria-hidden="true"></i>
+            <div>{{ error }}</div>
+        </div>
+    {% endif %}
+
+    <dl class="row small mb-3">
+
+        <dt class="col-4 fw-normal text-body-secondary">{% translate "Copy" %}</dt>
+        <dd class="col-8"><span class="copy-code">{{ copy.copy_code }}</span></dd>
+
+        <dt class="col-4 fw-normal text-body-secondary">{% translate "Book" %}</dt>
+        <dd class="col-8">
+            {{ copy.volume.book.title }}
+            {% if copy.volume.volume_number != 1 or copy.volume.title %}
+                <span class="d-block text-body-secondary">{{ volume_name }}</span>
+            {% endif %}
+        </dd>
+
+        <dt class="col-4 fw-normal text-body-secondary">{% translate "On shelf now" %}</dt>
+        <dd class="col-8 mb-0">
+            {% if copy.shelf %}
+                {{ copy.shelf.location.name }} &mdash; {{ copy.shelf.shelf_code }}
+            {% else %}
+                <span class="text-body-secondary">{% translate "Unshelved" %}</span>
+            {% endif %}
+        </dd>
+
+    </dl>
+
+    <div class="row g-3">
+
+        <div class="col-12 col-sm-6">
+            <label for="moveLocation" class="form-label fw-semibold">
+                {% translate "Location" %} <span class="text-danger">*</span>
+            </label>
+            <select
+                class="form-select"
+                id="moveLocation"
+                name="location"
+                data-location-select
+                hx-get="{% url 'shelf_list' %}"
+                hx-vals='{"options": "1"}'
+                hx-trigger="change"
+                hx-target="#moveShelf"
+                hx-include="this"
+                required
+            >
+                {% include "library/partials/location_options.html" with locations=locations selected_id=location_id|stringformat:"s" %}
+            </select>
+        </div>
+
+        <div class="col-12 col-sm-6">
+            <label for="moveShelf" class="form-label fw-semibold">
+                {% translate "Shelf" %} <span class="text-danger">*</span>
+            </label>
+            {% comment %}
+              `stringformat` on the id deliberately: shelf_options.html
+              compares against a string and the view holds this as an
+              integer, so without it the dropdown never opens on the
+              shelf the copy is actually on.
+            {% endcomment %}
+            <select
+                class="form-select{% if errors.shelf %} is-invalid{% endif %}"
+                id="moveShelf"
+                name="shelf"
+                required
+                {% if errors.shelf %}aria-invalid="true"{% endif %}
+            >
+                {% include "library/partials/shelf_options.html" with shelves=shelves selected_id=copy.shelf_id|stringformat:"s" has_location=location_id %}
+            </select>
+            {% if errors.shelf %}
+                <div class="invalid-feedback">{{ errors.shelf }}</div>
+            {% else %}
+                <div class="form-text">
+                    {% translate "Only the shelves in the chosen location." %}
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-end gap-2 mt-4 pt-3 border-top">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            {% translate "Cancel" %}
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
+            {% translate "Move Copy" %}
+        </button>
+    </div>
+
+</form>

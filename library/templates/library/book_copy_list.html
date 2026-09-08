@@ -22,7 +22,7 @@
             </p>
         </div>
         {% if can_edit %}
-            <a href="{% url 'book_copy_add' %}" class="btn btn-primary">
+            <a href="{% url 'book_copy_add' %}" class="btn btn-primary" data-form-modal hx-get="{% url 'book_copy_add' %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML">
                 <i class="bi bi-plus-lg me-1"></i> {% translate "Add Copy" %}
             </a>
         {% endif %}
@@ -271,7 +271,13 @@
         id="copyListRefresh"
         hx-get="{{ request.get_full_path }}"
         hx-vals='{"partial": "results", "refresh": "1"}'
-        hx-trigger="copyListChanged from:body"
+        {% comment %}
+          Two events, because two things change this list. The bulk move
+          fires its own `copyListChanged`; the Add, Edit and Delete
+          dialogs fire the shell's `listChanged`, the same one every
+          other list listens for.
+        {% endcomment %}
+        hx-trigger="copyListChanged from:body, listChanged from:body"
         hx-target="#copyResults"
         hx-swap="innerHTML show:none"
         hx-push-url="false"

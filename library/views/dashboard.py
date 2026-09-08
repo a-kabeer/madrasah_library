@@ -33,6 +33,8 @@ from .common import (
     DASHBOARD_CACHE_KEY,
     PAGE_SIZE,
     activity_log_target,
+    label_activity_log,
+    query_with,
 )
 
 
@@ -93,32 +95,33 @@ def activity_log_list(request):
     paginator = Paginator(logs, PAGE_SIZE)
     logs = paginator.get_page(request.GET.get("page"))
 
+    # Readable action name, colour, and a link to the record.
+    for log in logs:
+        label_activity_log(log)
+
     users = User.objects.all().order_by(
         "full_name"
     )
 
-    actions = [
-        "CREATE",
-        "UPDATE",
-        "DELETE",
-        "ISSUE",
-        "RETURN",
-        "RENEW",
-    ]
+    # Both filter lists come from what is actually recorded, not from a
+    # list written by hand. The hand-written ones had drifted: they offered
+    # six actions while the log held ten, so a librarian could not filter
+    # for a reservation, a cancellation, a fulfilment or an import at all -
+    # the option simply was not there. Reading them back cannot drift.
+    actions = list(
+        ActivityLog.objects.order_by()
+        .values_list("action", flat=True)
+        .distinct()
+        .order_by("action")
+    )
 
     entity_types = [
-        "Book",
-        "Author",
-        "Category",
-        "Publisher",
-        "BookVolume",
-        "BookContent",
-        "BookCopy",
-        "Borrower",
-        "Loan",
-        "Location",
-        "Shelf",
-        "User",
+        kind
+        for kind in ActivityLog.objects.order_by()
+        .values_list("entity_type", flat=True)
+        .distinct()
+        .order_by("entity_type")
+        if kind
     ]
 
     return render(
@@ -134,6 +137,18 @@ def activity_log_list(request):
             "users": users,
             "actions": actions,
             "entity_types": entity_types,
+            "paginator": paginator,
+            # Everything except `page`, so the search and all four filters
+            # survive being paged through.
+            "pagination_query": query_with(request, page=None),
+            "elided_page_range": list(
+                paginator.get_elided_page_range(
+                    logs.number,
+                    on_each_side=1,
+                    on_ends=1,
+                )
+            ),
+            "page_ellipsis": Paginator.ELLIPSIS,
         }
     )
 

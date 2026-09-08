@@ -405,11 +405,34 @@ class ReturnCodeLookupTests(ScanTestCase):
         self.assertEqual(list(response.context["matches"]), [])
 
     def test_it_leads_into_the_existing_return_workflow(self):
+        # By way of the return list, which is where the return happens
+        # now - one book or five, it is the same one submission.
         response = self.look("LIB-940001")
 
-        self.assertContains(
-            response, reverse("loan_return", args=[self.loan.id])
+        self.assertContains(response, "loans=%d" % self.loan.id)
+
+    def test_adding_the_hit_and_submitting_returns_it(self):
+        self.client.get(
+            reverse("circulation_return_lookup"),
+            {"copy_code": "LIB-940001", "loans": str(self.loan.id)},
         )
+
+        response = self.client.post(
+            reverse("circulation_return_lookup"),
+            {
+                "loans": str(self.loan.id),
+                "return_date": self.today.isoformat(),
+                "notes": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        self.loan.refresh_from_db()
+        self.copy.refresh_from_db()
+
+        self.assertEqual(self.loan.return_date, self.today)
+        self.assertEqual(self.copy.status, "Available")
 
     def test_a_returned_loan_is_no_longer_found(self):
         self.loan.return_date = self.today
@@ -565,7 +588,9 @@ class ReturnSearchTests(ScanTestCase):
             "Kitab al-Kharaj",         # book
             "Abu Yusuf",               # author
             "Hafsa Rahmani",           # borrower
-            date_format(self.loan.due_date),   # due date, as rendered
+            # As the circulation UI prints dates - the loan list has
+            # always used `j M Y`, and this page now agrees with it.
+            date_format(self.loan.due_date, "j M Y"),
             "5 days late",             # overdue, in days
         ):
             with self.subTest(shows=expected):
@@ -592,13 +617,52 @@ class ReturnSearchTests(ScanTestCase):
         self.assertContains(response, "Land Tax")
 
     def test_every_row_leads_into_the_existing_return_workflow(self):
+        # By way of the return list, which is what lets a stack of books
+        # be taken back in one action. The row adds itself; the list does
+        # the returning.
         response = self.look("Kharaj")
 
         for match in response.context["matches"]:
             with self.subTest(loan=match.id):
-                self.assertContains(
-                    response, reverse("loan_return", args=[match.id])
-                )
+                self.assertContains(response, "loans=%d" % match.id)
+
+    def test_adding_a_row_puts_that_loan_in_the_return_list(self):
+        response = self.look("Kharaj")
+        match = response.context["matches"][0]
+
+        added = self.client.get(
+            reverse("circulation_return_lookup"),
+            {"copy_code": "Kharaj", "loans": str(match.id)},
+        )
+
+        self.assertEqual(
+            [item.id for item in added.context["chosen"]], [match.id]
+        )
+
+        # And it is not offered a second time.
+        self.assertNotIn(
+            match.id, [item.id for item in added.context["matches"]]
+        )
+
+    def test_the_list_is_what_actually_returns_the_book(self):
+        match = self.look("Kharaj").context["matches"][0]
+
+        response = self.client.post(
+            reverse("circulation_return_lookup"),
+            {
+                "loans": str(match.id),
+                "return_date": self.today.isoformat(),
+                "notes": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        match.refresh_from_db()
+        match.copy.refresh_from_db()
+
+        self.assertEqual(match.return_date, self.today)
+        self.assertEqual(match.copy.status, "Available")
 
     def test_nothing_matching_says_so_without_blaming_the_label(self):
         response = self.look("Ibn Kathir")
@@ -655,7 +719,13 @@ class ReturnSearchTests(ScanTestCase):
         with CaptureQueriesContext(connection) as many_rows:
             body = self.look("Kharaj").content.decode()
 
-        self.assertEqual(body.count("LIB-99"), 6)
+        # Every one of the six is on the page. Counted by presence
+        # rather than by occurrences: a row prints its code in the cell
+        # and again as the add button's accessible name, the same as the
+        # issue form's matches do.
+        for number in range(6):
+            self.assertIn("LIB-99%04d" % number, body)
+
         self.assertEqual(len(one_row), len(many_rows))
 
         # Two reads of `loans` either way: the code lookup that misses, then
@@ -796,3 +866,294 @@ class CopyCodeIdentityTests(ScanTestCase):
         )
 
         self.assertEqual(response.context["loan"].copy_id, copy.id)
+
+
+class MultiBookReturnTests(ScanTestCase):
+    """A stack of books, one submission - the issue basket's shape.
+
+    Issue has held more than one copy since it grew a basket; this is the
+    same idea on the way back, and the reason it is worth having is the
+    common case at the desk: somebody arrives with everything they
+    borrowed.
+    """
+
+    def setUp(self):
+        super().setUp()
+
+        # Three books out to one person, and one out to somebody else.
+        self.first = self.a_copy("LIB-910001", status="Issued")
+        self.second = self.a_copy("LIB-910002", status="Issued")
+        self.third = self.a_copy("LIB-910003", status="Issued")
+
+        self.loans = [
+            make_loan(
+                copy=copy,
+                borrower=self.borrower,
+                issue_date=self.today - timedelta(days=10),
+                due_date=self.today + timedelta(days=4),
+            )
+            for copy in (self.first, self.second, self.third)
+        ]
+
+        self.someone_else = make_borrower(
+            name="Bilal Qureshi", phone="03450000009"
+        )
+        self.theirs_copy = self.a_copy("LIB-910004", status="Issued")
+        self.theirs = make_loan(
+            copy=self.theirs_copy,
+            borrower=self.someone_else,
+            issue_date=self.today - timedelta(days=2),
+            due_date=self.today + timedelta(days=12),
+        )
+
+    def look(self, term, loans=()):
+        params = {"copy_code": term}
+
+        if loans:
+            params["loans"] = [str(value) for value in loans]
+
+        return self.client.get(
+            reverse("circulation_return_lookup"), params
+        )
+
+    def take_back(self, loans, when=None, notes=""):
+        return self.client.post(
+            reverse("circulation_return_lookup"),
+            {
+                "loans": [str(value) for value in loans],
+                "return_date": (when or self.today).isoformat(),
+                "notes": notes,
+            },
+        )
+
+    # ------------------------------------------------ finding the stack
+
+    def test_a_borrower_name_lists_everything_they_have_out(self):
+        # The search the multi-return exists for: one name, three books.
+        found = self.look("Hafsa").context["matches"]
+
+        self.assertEqual(
+            sorted(item.id for item in found),
+            sorted(loan.id for loan in self.loans),
+        )
+
+    def test_somebody_elses_book_is_not_in_that_list(self):
+        found = self.look("Hafsa").context["matches"]
+
+        self.assertNotIn(self.theirs.id, [item.id for item in found])
+
+    def test_searching_again_keeps_what_was_already_added(self):
+        # The whole point of the basket: finding the second book must not
+        # lose the first.
+        response = self.look("Al-Muwatta", loans=[self.loans[0].id])
+
+        self.assertEqual(
+            [item.id for item in response.context["chosen"]],
+            [self.loans[0].id],
+        )
+
+    def test_a_loan_returned_at_another_desk_drops_out_of_the_list(self):
+        # Held in the query string, so it is re-read rather than trusted.
+        self.loans[0].return_date = self.today
+        self.loans[0].save(update_fields=["return_date"])
+
+        response = self.look("", loans=[loan.id for loan in self.loans])
+
+        self.assertEqual(
+            [item.id for item in response.context["chosen"]],
+            [self.loans[1].id, self.loans[2].id],
+        )
+
+    def test_the_list_may_hold_more_than_one_borrower(self):
+        # A drop-box shelf is not one person's, and nothing needs the
+        # borrowers to match.
+        response = self.look(
+            "", loans=[self.loans[0].id, self.theirs.id]
+        )
+
+        self.assertEqual(
+            sorted(item.id for item in response.context["chosen"]),
+            sorted([self.loans[0].id, self.theirs.id]),
+        )
+
+    # ------------------------------------------------ taking them back
+
+    def test_three_books_come_back_in_one_submission(self):
+        response = self.take_back([loan.id for loan in self.loans])
+
+        self.assertEqual(response.status_code, 302)
+
+        for loan, copy in zip(self.loans, (self.first, self.second, self.third)):
+            with self.subTest(copy=copy.copy_code):
+                loan.refresh_from_db()
+                copy.refresh_from_db()
+
+                self.assertEqual(loan.return_date, self.today)
+                self.assertEqual(loan.returned_to_id, self.librarian.id)
+                self.assertEqual(copy.status, "Available")
+
+    def test_one_book_still_comes_back_on_its_own(self):
+        self.take_back([self.loans[0].id])
+
+        self.loans[0].refresh_from_db()
+        self.first.refresh_from_db()
+
+        self.assertEqual(self.loans[0].return_date, self.today)
+        self.assertEqual(self.first.status, "Available")
+
+        # And the others are untouched.
+        for loan in self.loans[1:]:
+            loan.refresh_from_db()
+            self.assertIsNone(loan.return_date)
+
+    def test_the_note_and_the_date_apply_to_every_book(self):
+        when = self.today - timedelta(days=1)
+
+        self.take_back(
+            [loan.id for loan in self.loans[:2]],
+            when=when,
+            notes="Water damage to both",
+        )
+
+        for loan in self.loans[:2]:
+            loan.refresh_from_db()
+
+            self.assertEqual(loan.return_date, when)
+            self.assertEqual(loan.notes, "Water damage to both")
+
+    def test_the_returns_are_logged_one_entry_each(self):
+        from library.models import ActivityLog
+
+        before = ActivityLog.objects.filter(action="RETURN").count()
+
+        self.take_back([loan.id for loan in self.loans])
+
+        self.assertEqual(
+            ActivityLog.objects.filter(action="RETURN").count(),
+            before + 3,
+        )
+
+    # ------------------------------------------- all of it, or none of it
+
+    def test_a_book_already_returned_rolls_the_whole_stack_back(self):
+        # Somebody else took one back between the search and the submit.
+        # A partial answer would leave the librarian holding two books and
+        # knowing only that something went wrong.
+        self.loans[1].return_date = self.today
+        self.loans[1].save(update_fields=["return_date"])
+
+        response = self.take_back([loan.id for loan in self.loans])
+
+        self.assertEqual(response.status_code, 200)
+
+        # Said by name, so the librarian knows which row to take out.
+        self.assertContains(response, "LIB-910002")
+        self.assertContains(response, "already been returned")
+
+        for loan, copy in ((self.loans[0], self.first), (self.loans[2], self.third)):
+            with self.subTest(copy=copy.copy_code):
+                loan.refresh_from_db()
+                copy.refresh_from_db()
+
+                self.assertIsNone(loan.return_date)
+                self.assertEqual(copy.status, "Issued")
+
+    def test_a_date_before_one_book_went_out_refuses_the_whole_stack(self):
+        # The rule `loan_return` already applied, held to per book and
+        # naming the one that could not take the date.
+        late_copy = self.a_copy("LIB-910005", status="Issued")
+        late = make_loan(
+            copy=late_copy,
+            borrower=self.borrower,
+            issue_date=self.today,
+            due_date=self.today + timedelta(days=14),
+        )
+
+        response = self.take_back(
+            [self.loans[0].id, late.id],
+            when=self.today - timedelta(days=5),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "LIB-910005")
+        self.assertContains(response, "earlier than issue date")
+
+        for loan in (self.loans[0], late):
+            loan.refresh_from_db()
+            self.assertIsNone(loan.return_date)
+
+    def test_an_unparseable_date_records_nothing(self):
+        response = self.client.post(
+            reverse("circulation_return_lookup"),
+            {
+                "loans": [str(self.loans[0].id)],
+                "return_date": "not-a-date",
+                "notes": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+        self.loans[0].refresh_from_db()
+        self.assertIsNone(self.loans[0].return_date)
+
+    def test_an_empty_list_is_refused_rather_than_silently_accepted(self):
+        response = self.client.post(
+            reverse("circulation_return_lookup"),
+            {"return_date": self.today.isoformat(), "notes": ""},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Nothing is in the return list")
+
+    def test_the_same_book_twice_in_the_list_is_returned_once(self):
+        response = self.take_back(
+            [self.loans[0].id, self.loans[0].id]
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        self.loans[0].refresh_from_db()
+        self.assertEqual(self.loans[0].return_date, self.today)
+
+    # ------------------------------------------------------ permissions
+
+    def test_every_role_that_could_return_one_can_return_several(self):
+        # No new privilege: the page and the workflow are the ones all
+        # three roles already had.
+        for role in ("Admin", "Librarian", "Assistant"):
+            with self.subTest(role=role):
+
+                copy = self.a_copy(
+                    "LIB-92%04d" % ("Admin", "Librarian", "Assistant").index(role),
+                    status="Issued",
+                )
+                loan = make_loan(
+                    copy=copy,
+                    borrower=self.borrower,
+                    issue_date=self.today - timedelta(days=3),
+                    due_date=self.today + timedelta(days=11),
+                )
+
+                user = make_user(
+                    username="multi_%s" % role.lower(),
+                    password="pass12345",
+                    role=role,
+                )
+                self.client.force_login(user)
+
+                self.take_back([loan.id])
+
+                loan.refresh_from_db()
+                self.assertEqual(loan.return_date, self.today)
+
+    def test_a_signed_out_visitor_cannot_return_anything(self):
+        self.client.logout()
+
+        response = self.take_back([self.loans[0].id])
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(reverse("login"), response["Location"])
+
+        self.loans[0].refresh_from_db()
+        self.assertIsNone(self.loans[0].return_date)

@@ -167,13 +167,17 @@
                 <a
                     href="{% url 'book_add' %}"
                     class="btn btn-outline-secondary"
+                    data-form-modal
+                    hx-get="{% url 'book_add' %}?modal=1"
+                    hx-target="#formModal .modal-body"
+                    hx-swap="innerHTML"
                 >
                     <i class="bi bi-plus-lg me-1"></i> {% translate "Add Book" %}
                 </a>
             {% endif %}
 
             <a
-                href="{% url 'borrower_add' %}"
+                href="{% url 'borrower_add' %}" data-form-modal hx-get="{% url 'borrower_add' %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
                 class="btn btn-outline-secondary"
             >
                 <i class="bi bi-person-plus me-1"></i> {% translate "Add Borrower" %}
@@ -527,7 +531,7 @@
                             {% for loan in recent_loans %}
 
                                 <a
-                                    href="{% url 'loan_detail' loan.id %}"
+                                    href="{% url 'loan_detail' loan.id %}" data-form-modal hx-get="{% url 'loan_detail' loan.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
                                     class="list-group-item list-group-item-action px-0"
                                 >
 
@@ -631,7 +635,7 @@
                             {% for loan in recent_returns %}
 
                                 <a
-                                    href="{% url 'loan_detail' loan.id %}"
+                                    href="{% url 'loan_detail' loan.id %}" data-form-modal hx-get="{% url 'loan_detail' loan.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
                                     class="list-group-item list-group-item-action px-0"
                                 >
 

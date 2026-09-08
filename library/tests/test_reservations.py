@@ -615,7 +615,8 @@ class ReturnIntegrationTests(ReservationTestCase):
 
     def test_the_return_page_says_someone_is_waiting(self):
         response = self.client.get(
-            reverse("loan_return", args=[self.loan.id])
+            reverse("loan_return", args=[self.loan.id]) + "?modal=1",
+            headers={"HX-Request": "true"},
         )
 
         self.assertContains(response, "waiting for this book")
@@ -623,7 +624,8 @@ class ReturnIntegrationTests(ReservationTestCase):
 
     def test_it_says_the_copy_is_not_being_set_aside(self):
         response = self.client.get(
-            reverse("loan_return", args=[self.loan.id])
+            reverse("loan_return", args=[self.loan.id]) + "?modal=1",
+            headers={"HX-Request": "true"},
         )
 
         self.assertContains(response, "not being set aside")
@@ -665,7 +667,8 @@ class ReturnIntegrationTests(ReservationTestCase):
         queue.close(self.waiting, Reservation.STATUS_CANCELLED)
 
         response = self.client.get(
-            reverse("loan_return", args=[self.loan.id])
+            reverse("loan_return", args=[self.loan.id]) + "?modal=1",
+            headers={"HX-Request": "true"},
         )
 
         self.assertNotContains(response, "waiting for this book")
@@ -712,7 +715,8 @@ class DisplayTests(ReservationTestCase):
         queue.reserve(self.book, self.hafsa)
 
         response = self.client.get(
-            reverse("borrower_detail", args=[self.hafsa.id])
+            reverse("borrower_detail", args=[self.hafsa.id]) + "?modal=1",
+            headers={"HX-Request": "true"},
         )
 
         self.assertContains(response, "Reservations")
@@ -727,7 +731,8 @@ class DisplayTests(ReservationTestCase):
         queue.reserve(self.book, self.bilal)
 
         response = self.client.get(
-            reverse("borrower_detail", args=[self.bilal.id])
+            reverse("borrower_detail", args=[self.bilal.id]) + "?modal=1",
+            headers={"HX-Request": "true"},
         )
 
         theirs = response.context["reservations"][0]
@@ -736,7 +741,8 @@ class DisplayTests(ReservationTestCase):
 
     def test_a_borrower_waiting_for_nothing_says_so(self):
         response = self.client.get(
-            reverse("borrower_detail", args=[self.omar.id])
+            reverse("borrower_detail", args=[self.omar.id]) + "?modal=1",
+            headers={"HX-Request": "true"},
         )
 
         self.assertContains(response, "not waiting for anything")
@@ -745,7 +751,8 @@ class DisplayTests(ReservationTestCase):
         reservation, _ = queue.reserve(self.book, self.hafsa)
 
         response = self.client.get(
-            reverse("borrower_detail", args=[self.hafsa.id])
+            reverse("borrower_detail", args=[self.hafsa.id]) + "?modal=1",
+            headers={"HX-Request": "true"},
         )
 
         self.assertContains(
@@ -1004,7 +1011,11 @@ class QueryTests(ReservationTestCase):
         queue.reserve(self.book, self.hafsa)
 
         with CaptureQueriesContext(connection) as few:
-            self.client.get(reverse("borrower_detail", args=[self.hafsa.id]))
+            self.client.get(
+                reverse("borrower_detail", args=[self.hafsa.id])
+                + "?modal=1",
+                headers={"HX-Request": "true"},
+            )
 
         for number in range(10):
             book = make_book(
@@ -1015,6 +1026,8 @@ class QueryTests(ReservationTestCase):
         with CaptureQueriesContext(connection) as many:
             response = self.client.get(
                 reverse("borrower_detail", args=[self.hafsa.id])
+                + "?modal=1",
+                headers={"HX-Request": "true"},
             )
 
         self.assertEqual(len(response.context["reservations"]), 11)

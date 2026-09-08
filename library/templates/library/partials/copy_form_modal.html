@@ -1,0 +1,281 @@
+{% load i18n %}
+{% comment %}
+Add / Edit Copy, in a dialog.
+
+One template for both, so the fields and their error slots cannot differ
+between adding a copy and editing one. `action` is where it posts;
+`copy` being set is what turns two of the fields from inputs into stated
+facts:
+
+  * the copy code is printed on the book itself and quoted in past
+    activity-log entries, so retyping it would leave the label, the record
+    and the shelf disagreeing. Set once, read-only after.
+  * the volume decides which book a past loan appears to have been for. A
+    wrongly-filed copy is a delete-and-re-add, not an edit.
+
+Both are enforced in `validate_copy_details`, not by leaving the input out
+— the missing input is the courtesy, the validator is the rule.
+
+Location and Shelf are two dropdowns because a shelf belongs to a
+location: choosing the location narrows the shelves to the ones that
+actually exist there, so a copy cannot be filed somewhere it cannot be.
+The view re-checks the pair.
+
+Expected context: action, form_data, errors, error, copy, volume_name,
+selected_volume, volumes, locations, shelves, statuses, is_issued.
+{% endcomment %}
+
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    {% if copy %}
+        <i class="bi bi-pencil me-2" aria-hidden="true"></i>{% translate "Edit Copy" %}
+    {% else %}
+        <i class="bi bi-plus-lg me-2" aria-hidden="true"></i>{% translate "Add Copy" %}
+    {% endif %}
+</h5>
+
+<form
+    method="post"
+    action="{{ action }}"
+    hx-post="{{ action }}{% if '?' in action %}&{% else %}?{% endif %}modal=1"
+    hx-target="#formModal .modal-body"
+    hx-swap="innerHTML"
+    hx-disabled-elt="find button[type=submit]"
+>
+    {% csrf_token %}
+
+    {% if error %}
+        <div class="alert alert-danger d-flex align-items-start" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2 mt-1" aria-hidden="true"></i>
+            <div>{{ error }}</div>
+        </div>
+    {% endif %}
+
+    <div class="row g-3">
+
+        {% comment %} ------------------------------- what it is a copy of {% endcomment %}
+        {% if copy %}
+            <div class="col-12">
+                <label class="form-label fw-semibold">{% translate "Copy of" %}</label>
+                <p class="form-control-plaintext mb-0">
+                    {{ copy.volume.book.title }}
+                    <span class="d-block small text-body-secondary">
+                        {{ volume_name }} &middot;
+                        <span class="copy-code">{{ copy.copy_code }}</span>
+                    </span>
+                </p>
+                <div class="form-text">
+                    {% translate "The volume and the code cannot change — the code is on the label and in the copy's history." %}
+                </div>
+            </div>
+
+        {% elif selected_volume %}
+            {% comment %}
+              Arrived from the volume's own page, so the volume is settled
+              and stated rather than asked for again. It rides in the
+              form's action as well, which is what sends a saved copy back
+              to that volume.
+            {% endcomment %}
+            <div class="col-12">
+                <label class="form-label fw-semibold">{% translate "Copy of" %}</label>
+                <p class="form-control-plaintext mb-0">
+                    {{ selected_volume.book.title }}
+                </p>
+                <input type="hidden" name="volume" value="{{ selected_volume.id }}">
+            </div>
+
+        {% else %}
+            <div class="col-12">
+                <label for="copyVolume" class="form-label fw-semibold">
+                    {% translate "Volume" %} <span class="text-danger">*</span>
+                </label>
+                <select
+                    class="form-select{% if errors.volume %} is-invalid{% endif %}"
+                    id="copyVolume"
+                    name="volume"
+                    required
+                    {% if errors.volume %}aria-invalid="true"{% endif %}
+                >
+                    <option value="">{% translate "Choose…" %}</option>
+                    {% for volume in volumes %}
+                        <option
+                            value="{{ volume.id }}"
+                            {% if form_data.volume_id == volume.id %}selected{% endif %}
+                        >{{ volume.book.title }}{% if volume.volume_number != 1 or volume.title %} — {% blocktranslate with number=volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% if volume.title %}: {{ volume.title }}{% endif %}{% endif %}</option>
+                    {% endfor %}
+                </select>
+                {% if errors.volume %}
+                    <div class="invalid-feedback">{{ errors.volume }}</div>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {% comment %} ----------------------------------------- the label {% endcomment %}
+        {% if not copy %}
+            <div class="col-12 col-md-6">
+                <label for="copyCode" class="form-label fw-semibold">
+                    {% translate "Copy Code" %} <span class="text-danger">*</span>
+                </label>
+                <input
+                    type="text"
+                    class="form-control{% if errors.copy_code %} is-invalid{% endif %}"
+                    id="copyCode"
+                    name="copy_code"
+                    value="{{ form_data.copy_code }}"
+                    maxlength="50"
+                    required
+                    autocomplete="off"
+                    {% if errors.copy_code %}aria-invalid="true"{% endif %}
+                >
+                {% if errors.copy_code %}
+                    <div class="invalid-feedback">{{ errors.copy_code }}</div>
+                {% else %}
+                    <div class="form-text">
+                        {% translate "What the label says. Unique across the library." %}
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        {% comment %} ------------------------------------ where it lives {% endcomment %}
+        <div class="col-12 col-md-6">
+            <label for="copyLocation" class="form-label fw-semibold">
+                {% translate "Location" %}
+            </label>
+            {% comment %}
+              Choosing a location reloads the Shelf options for that
+              location only, from `shelf_list` — the same endpoint and the
+              same two partials the page this replaced used, so there is
+              one place that decides what a Shelf dropdown may offer. The
+              pair is checked again on the server when this is submitted.
+            {% endcomment %}
+            <select
+                class="form-select"
+                id="copyLocation"
+                name="location"
+                data-location-select
+                hx-get="{% url 'shelf_list' %}"
+                hx-vals='{"options": "1"}'
+                hx-trigger="change"
+                hx-target="#copyShelf"
+                hx-include="this"
+            >
+                {% include "library/partials/location_options.html" with locations=locations selected_id=form_data.location_id|stringformat:"s" %}
+            </select>
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label for="copyShelf" class="form-label fw-semibold">
+                {% translate "Shelf" %}
+                {% if not copy %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            {% comment %}
+              `stringformat` on the id deliberately: shelf_options.html
+              compares against a string, and the view holds this as an
+              integer — so without it the dropdown never opened on the
+              shelf the copy is actually on.
+            {% endcomment %}
+            <select
+                class="form-select{% if errors.shelf %} is-invalid{% endif %}"
+                id="copyShelf"
+                name="shelf"
+                {% if errors.shelf %}aria-invalid="true"{% endif %}
+            >
+                {% include "library/partials/shelf_options.html" with shelves=shelves selected_id=form_data.shelf_id|stringformat:"s" has_location=form_data.location_id %}
+            </select>
+            {% if errors.shelf %}
+                <div class="invalid-feedback">{{ errors.shelf }}</div>
+            {% elif copy %}
+                <div class="form-text">
+                    {% translate "Leave it unshelved if the copy has arrived but has not been placed." %}
+                </div>
+            {% endif %}
+        </div>
+
+        {% comment %} ------------------------------------ its condition {% endcomment %}
+        <div class="col-12 col-md-6">
+            <label for="copyStatus" class="form-label fw-semibold">
+                {% translate "Condition" %}
+                {% if not is_issued %}<span class="text-danger">*</span>{% endif %}
+            </label>
+            {% if is_issued %}
+                {% comment %}
+                  A copy that is out stays Issued: the loan is what says
+                  so and the return is what changes it. Stated, not
+                  offered — and the view refuses a posted status too.
+                {% endcomment %}
+                <p class="form-control-plaintext mb-0">
+                    <span class="badge text-bg-info">{% translate "Issued" %}</span>
+                </p>
+                <div class="form-text">
+                    {% translate "It is out on loan. Taking it back is what makes it available again." %}
+                </div>
+            {% else %}
+                <select
+                    class="form-select{% if errors.status %} is-invalid{% endif %}"
+                    id="copyStatus"
+                    name="status"
+                    required
+                    {% if errors.status %}aria-invalid="true"{% endif %}
+                >
+                    {% for status in statuses %}
+                        <option
+                            value="{{ status }}"
+                            {% if form_data.status == status %}selected{% endif %}
+                        >{{ status }}</option>
+                    {% endfor %}
+                </select>
+                {% if errors.status %}
+                    <div class="invalid-feedback">{{ errors.status }}</div>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label for="copyAcquired" class="form-label fw-semibold">
+                {% translate "Acquired on" %}
+            </label>
+            <input
+                type="date"
+                class="form-control{% if errors.acquisition_date %} is-invalid{% endif %}"
+                id="copyAcquired"
+                name="acquisition_date"
+                value="{{ form_data.acquisition_date }}"
+                {% if errors.acquisition_date %}aria-invalid="true"{% endif %}
+            >
+            {% if errors.acquisition_date %}
+                <div class="invalid-feedback">{{ errors.acquisition_date }}</div>
+            {% else %}
+                <div class="form-text">{% translate "Optional." %}</div>
+            {% endif %}
+        </div>
+
+        <div class="col-12">
+            <label for="copyNotes" class="form-label fw-semibold">
+                {% translate "Notes" %}
+            </label>
+            <textarea
+                class="form-control"
+                id="copyNotes"
+                name="notes"
+                rows="2"
+                placeholder="{% translate 'Anything worth recording about this particular copy...' %}"
+            >{{ form_data.notes }}</textarea>
+        </div>
+
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-end gap-2 mt-4 pt-3 border-top">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            {% translate "Cancel" %}
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
+            {% if copy %}
+                {% translate "Save changes" %}
+            {% else %}
+                {% translate "Add Copy" %}
+            {% endif %}
+        </button>
+    </div>
+
+</form>

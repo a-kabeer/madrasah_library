@@ -1,0 +1,198 @@
+{% load i18n %}
+{% comment %}
+One loan, in the dialog the row opens.
+
+This dialog IS the loan detail now - there is no page behind it. The
+`loan_detail` view serves this fragment, and a request without `?modal=1`
+redirects to the list, because several pages link to that URL and a stale
+link should still land somewhere.
+
+Four sections, because a loan is four different questions and a librarian
+usually has only one of them: what the loan is, which book it is, who has
+it, and who handled it. Flat rows of label/value are quicker to scan for
+that than prose.
+
+The footer is the way out to the two places worth going: the book and
+the borrower. Those used to be competing links inside the row, where any
+click had to be aimed; here the whole row opens the dialog and the dialog
+offers them plainly.
+
+Return and Renew are not repeated here. They stay in the row's Actions,
+which is where a librarian working through a shelf of returns expects
+them, and putting them in the dialog too would mean two paths to the same
+irreversible thing.
+
+Expected context: loan (with days_overdue set by the view).
+{% endcomment %}
+
+{% comment %}
+  The title twice, once per dialog container: a loan row opens
+  #globalModal and the links on the book, borrower, copy and dashboard
+  pages open #formModal. htmx skips an out-of-band swap whose target is
+  not on the page, so whichever dialog is showing gets its heading and the
+  other line does nothing.
+{% endcomment %}
+<h5 class="modal-title" id="globalModalLabel" hx-swap-oob="true">
+    <i class="bi bi-arrow-left-right me-2" aria-hidden="true"></i>
+    {% blocktranslate with code=loan.copy.copy_code %}Loan of {{ code }}{% endblocktranslate %}
+</h5>
+
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    <i class="bi bi-arrow-left-right me-2" aria-hidden="true"></i>
+    {% blocktranslate with code=loan.copy.copy_code %}Loan of {{ code }}{% endblocktranslate %}
+</h5>
+
+<div class="row g-4">
+
+    {% comment %} ---- The loan itself ---- {% endcomment %}
+    <div class="col-12 col-md-6">
+        <h6 class="text-body-secondary text-uppercase small fw-semibold mb-2">
+            {% translate "Loan" %}
+        </h6>
+        <dl class="row small mb-0">
+
+            <dt class="col-5 fw-normal text-body-secondary">{% translate "Issued" %}</dt>
+            <dd class="col-7">{{ loan.issue_date|date:"j M Y" }}</dd>
+
+            <dt class="col-5 fw-normal text-body-secondary">{% translate "Due" %}</dt>
+            <dd class="col-7">{{ loan.due_date|date:"j M Y" }}</dd>
+
+            <dt class="col-5 fw-normal text-body-secondary">{% translate "Status" %}</dt>
+            <dd class="col-7">
+                {% if loan.return_date %}
+                    <span class="badge text-bg-secondary">{% translate "Returned" %}</span>
+                {% elif loan.days_overdue %}
+                    <span class="badge text-bg-danger">
+                        {% blocktranslate trimmed count n=loan.days_overdue %}
+                            Overdue by {{ n }} day
+                        {% plural %}
+                            Overdue by {{ n }} days
+                        {% endblocktranslate %}
+                    </span>
+                {% else %}
+                    <span class="badge text-bg-success">{% translate "Active" %}</span>
+                {% endif %}
+            </dd>
+
+            {% if loan.notes %}
+                <dt class="col-5 fw-normal text-body-secondary">{% translate "Notes" %}</dt>
+                <dd class="col-7">{{ loan.notes }}</dd>
+            {% endif %}
+
+        </dl>
+    </div>
+
+    {% comment %} ---- Which book ---- {% endcomment %}
+    <div class="col-12 col-md-6">
+        <h6 class="text-body-secondary text-uppercase small fw-semibold mb-2">
+            {% translate "Book" %}
+        </h6>
+        <dl class="row small mb-0">
+
+            <dt class="col-5 fw-normal text-body-secondary">{% translate "Title" %}</dt>
+            <dd class="col-7">{{ loan.copy.volume.book.title }}</dd>
+
+            {% if loan.copy.volume.volume_number %}
+                <dt class="col-5 fw-normal text-body-secondary">{% translate "Volume" %}</dt>
+                <dd class="col-7">
+                    {% blocktranslate with number=loan.copy.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% if loan.copy.volume.title %} &mdash; {{ loan.copy.volume.title }}{% endif %}
+                </dd>
+            {% endif %}
+
+            {% comment %}
+              The copy code is read off a spine and typed into a scanner,
+              so it stays Latin and monospaced whatever the page language.
+            {% endcomment %}
+            <dt class="col-5 fw-normal text-body-secondary">{% translate "Copy" %}</dt>
+            <dd class="col-7"><span class="copy-code">{{ loan.copy.copy_code }}</span></dd>
+
+        </dl>
+    </div>
+
+    {% comment %} ---- Who has it ---- {% endcomment %}
+    <div class="col-12 col-md-6">
+        <h6 class="text-body-secondary text-uppercase small fw-semibold mb-2">
+            {% translate "Borrower" %}
+        </h6>
+        <dl class="row small mb-0">
+
+            <dt class="col-5 fw-normal text-body-secondary">{% translate "Name" %}</dt>
+            <dd class="col-7">{{ loan.borrower.name }}</dd>
+
+            {% if loan.borrower.phone %}
+                <dt class="col-5 fw-normal text-body-secondary">{% translate "Phone" %}</dt>
+                <dd class="col-7"><span class="copy-code">{{ loan.borrower.phone }}</span></dd>
+            {% endif %}
+
+            {% if loan.borrower.borrower_type %}
+                <dt class="col-5 fw-normal text-body-secondary">{% translate "Type" %}</dt>
+                <dd class="col-7">{{ loan.borrower.borrower_type }}</dd>
+            {% endif %}
+
+            {% if loan.borrower.registration_no %}
+                <dt class="col-5 fw-normal text-body-secondary">{% translate "Registration" %}</dt>
+                <dd class="col-7"><span class="copy-code">{{ loan.borrower.registration_no }}</span></dd>
+            {% endif %}
+
+        </dl>
+    </div>
+
+    {% comment %} ---- Who handled it ---- {% endcomment %}
+    <div class="col-12 col-md-6">
+        <h6 class="text-body-secondary text-uppercase small fw-semibold mb-2">
+            {% translate "Staff" %}
+        </h6>
+        <dl class="row small mb-0">
+
+            <dt class="col-5 fw-normal text-body-secondary">{% translate "Issued by" %}</dt>
+            <dd class="col-7">
+                {% if loan.issued_by %}
+                    {{ loan.issued_by.full_name|default:loan.issued_by.username }}
+                {% else %}
+                    <span class="text-body-secondary">&mdash;</span>
+                {% endif %}
+            </dd>
+
+            {% comment %}
+              Only shown once it has come back: an empty "Returned to" on
+              an active loan reads as missing data rather than as a loan
+              that is still out.
+            {% endcomment %}
+            {% if loan.return_date %}
+                <dt class="col-5 fw-normal text-body-secondary">{% translate "Returned" %}</dt>
+                <dd class="col-7">{{ loan.return_date|date:"j M Y" }}</dd>
+
+                <dt class="col-5 fw-normal text-body-secondary">{% translate "Received by" %}</dt>
+                <dd class="col-7">
+                    {% if loan.returned_to %}
+                        {{ loan.returned_to.full_name|default:loan.returned_to.username }}
+                    {% else %}
+                        <span class="text-body-secondary">&mdash;</span>
+                    {% endif %}
+                </dd>
+            {% endif %}
+
+        </dl>
+    </div>
+
+</div>
+
+<div class="d-flex flex-wrap justify-content-end gap-2 pt-4">
+
+    <a
+        href="{% url 'borrower_detail' loan.borrower.id %}" data-form-modal hx-get="{% url 'borrower_detail' loan.borrower.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
+        class="btn btn-sm btn-outline-secondary"
+    >
+        <i class="bi bi-person me-1" aria-hidden="true"></i>
+        {% translate "Open Borrower" %}
+    </a>
+
+    <a
+        href="{% url 'book_detail' loan.copy.volume.book.id %}"
+        class="btn btn-sm btn-outline-secondary"
+    >
+        <i class="bi bi-book me-1" aria-hidden="true"></i>
+        {% translate "Open Book" %}
+    </a>
+
+</div>

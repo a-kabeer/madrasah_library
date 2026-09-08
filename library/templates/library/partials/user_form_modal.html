@@ -1,0 +1,153 @@
+{% load i18n %}
+{% comment %}
+Add / Edit User, as a dialog.
+
+One template for both, the way one template serves all six lookup dialogs.
+`editing` decides the title, the submit label and whether the password is
+required.
+
+The password field is required when creating and optional when editing,
+because on an edit "blank" means leave the existing one alone - there is no
+way to read it back to prefill, and clearing it would lock the account out.
+
+Only the roles the view offers appear here. SuperAdmin is not among them:
+that account is made by somebody with database access, deliberately, so it
+cannot be granted from a form however the request is shaped.
+
+The title is swapped out-of-band, so one dialog serves Add, Edit and Delete
+without the shell knowing which is inside it.
+
+Expected context: action, editing, error, username, full_name, role, roles,
+target_user.
+{% endcomment %}
+
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    {% if editing %}
+        <i class="bi bi-pencil me-2" aria-hidden="true"></i>{% translate "Edit User" %}
+    {% else %}
+        <i class="bi bi-person-plus me-2" aria-hidden="true"></i>{% translate "Add User" %}
+    {% endif %}
+</h5>
+
+<form
+    method="post"
+    action="{{ action }}"
+    hx-post="{{ action }}?modal=1"
+    hx-target="#formModal .modal-body"
+    hx-swap="innerHTML"
+>
+    {% csrf_token %}
+
+    {% if error %}
+        <div class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
+            {{ error }}
+        </div>
+    {% endif %}
+
+    <div class="mb-3">
+        <label for="userUsername" class="form-label fw-semibold">
+            {% translate "Username" %} <span class="text-danger">*</span>
+        </label>
+        <input
+            type="text"
+            class="form-control"
+            id="userUsername"
+            name="username"
+            value="{{ username }}"
+            maxlength="150"
+            required
+            autofocus
+        >
+        <div class="form-text">
+            {% translate "What they type to sign in. It has to be unique." %}
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="userFullName" class="form-label fw-semibold">
+            {% translate "Full Name" %} <span class="text-danger">*</span>
+        </label>
+        <input
+            type="text"
+            class="form-control"
+            id="userFullName"
+            name="full_name"
+            value="{{ full_name }}"
+            maxlength="150"
+            required
+        >
+    </div>
+
+    <div class="mb-3">
+        <label for="userRole" class="form-label fw-semibold">
+            {% translate "Role" %} <span class="text-danger">*</span>
+        </label>
+        <select class="form-select" id="userRole" name="role" required>
+            <option value="">{% translate "Choose a role" %}</option>
+            {% for value in roles %}
+                <option value="{{ value }}" {% if role == value %}selected{% endif %}>
+                    {{ value }}
+                </option>
+            {% endfor %}
+        </select>
+        <div class="form-text">
+            {% translate "What this account can reach. Menu Permissions decides the rest." %}
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label for="userPassword" class="form-label fw-semibold">
+            {% if editing %}
+                {% translate "New Password" %}
+            {% else %}
+                {% translate "Password" %} <span class="text-danger">*</span>
+            {% endif %}
+        </label>
+        <input
+            type="password"
+            class="form-control"
+            id="userPassword"
+            name="{% if editing %}new_password{% else %}password{% endif %}"
+            minlength="8"
+            autocomplete="new-password"
+            {% if not editing %}required{% endif %}
+        >
+        <div class="form-text">
+            {% if editing %}
+                {% translate "Leave blank to keep the current password. At least 8 characters if you change it." %}
+            {% else %}
+                {% translate "At least 8 characters." %}
+            {% endif %}
+        </div>
+    </div>
+
+    {% if editing %}
+        {% comment %}
+          The edit view reads `is_active` from the form, so it has to be
+          sent - otherwise saving any other field would deactivate the
+          account. The switch on the list is the control people use; this
+          is here to carry the current value through.
+        {% endcomment %}
+        <input
+            type="hidden"
+            name="is_active"
+            value="{% if target_user.is_active %}on{% endif %}"
+        >
+    {% endif %}
+
+    <div class="d-flex justify-content-end gap-2 pt-2">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            {% translate "Cancel" %}
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
+            {% if editing %}
+                {% translate "Save Changes" %}
+            {% else %}
+                {% translate "Add User" %}
+            {% endif %}
+        </button>
+    </div>
+
+</form>

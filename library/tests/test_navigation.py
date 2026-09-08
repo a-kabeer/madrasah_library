@@ -68,9 +68,10 @@ class ConvertedPageTests(TestCase):
         return {
             "dashboard": reverse("dashboard"),
             "borrower list": reverse("borrower_list"),
-            "borrower detail": reverse(
-                "borrower_detail", args=[self.borrower.id]
-            ),
+            # No borrower profile: it is a dialog, not a page, so it has
+            # no shell to answer a navigation with. test_borrowers.py
+            # asserts it is a fragment and that asking for it as a page
+            # lands on the list.
             "location list": reverse("location_list"),
             "location detail": reverse(
                 "location_detail", args=[self.location.id]
@@ -120,12 +121,16 @@ class ConvertedPageTests(TestCase):
                 self.assertLess(fragment, full)
 
     def test_the_breadcrumb_trail_survives_a_navigation(self):
+        # The borrower profile was the example here and is a dialog now,
+        # so this uses a page that still has a trail. The property is the
+        # same: a navigation brings its own breadcrumbs, rather than
+        # leaving the ones from the page before.
         body = self.client.get(
-            reverse("borrower_detail", args=[self.borrower.id]), **NAV
+            reverse("location_detail", args=[self.location.id]), **NAV
         ).content.decode()
 
-        self.assertIn(reverse("borrower_list"), body)
-        self.assertIn(self.borrower.name, body)
+        self.assertIn(reverse("location_list"), body)
+        self.assertIn(self.location.name, body)
 
 
 class NavigationMarkerTests(TestCase):
@@ -481,21 +486,55 @@ class NotNavigationTests(TestCase):
                     self.assertIn('hx-boost="false"', link)
 
     def test_the_forms_that_post_a_file_are_left_alone(self):
-        for label, url in (
-            ("book add", reverse("book_add")),
-            ("book import", reverse("book_import")),
-            ("branding", reverse("branding_settings")),
+        """A file upload must not be swept up by the shell's hx-boost.
+
+        Two mechanisms answer that, and which one applies depends on
+        whether the form is on a page or in a dialog:
+
+          * a page's form opts out with `hx-boost="false"` and lets the
+            browser post it, `enctype` and all.
+          * a dialog's form is not boosted in the first place. It makes
+            its own request with `hx-post`, sends the file with htmx's
+            `hx-encoding="multipart/form-data"`, and `hx-disinherit="*"`
+            is what stops the shell's boost reaching it at all.
+
+        Either is correct; neither being present is the bug. Add Book is
+        a dialog now, which is why this asks for the property rather than
+        for one spelling of it.
+        """
+
+        for label, url, dialog in (
+            ("book add", reverse("book_add"), True),
+            ("book import", reverse("book_import"), False),
+            ("branding", reverse("branding_settings"), False),
         ):
             with self.subTest(page=label):
 
-                body = self.client.get(url).content.decode()
+                if dialog:
+                    body = self.client.get(
+                        url + "?modal=1",
+                        headers={"HX-Request": "true"},
+                    ).content.decode()
+                else:
+                    body = self.client.get(url).content.decode()
 
                 form = re.search(
                     r"<form[^>]*multipart/form-data[^>]*>", body, re.S
                 )
 
                 self.assertIsNotNone(form)
-                self.assertIn('hx-boost="false"', form.group(0))
+
+                opted_out = 'hx-boost="false"' in form.group(0)
+                unboosted = (
+                    'hx-disinherit="*"' in form.group(0)
+                    and "hx-post=" in form.group(0)
+                )
+
+                self.assertTrue(
+                    opted_out or unboosted,
+                    "%s posts a file with neither hx-boost=\"false\" nor "
+                    "a request of its own: %s" % (label, form.group(0)),
+                )
 
 
 class NavigatedPageSweepTests(TestCase):
@@ -535,19 +574,21 @@ class NavigatedPageSweepTests(TestCase):
             "return lookup": reverse("circulation_return_lookup"),
             "active loans": reverse("circulation_active_loans"),
             "loan list": reverse("loan_list"),
-            "loan detail": reverse("loan_detail", args=[self.loan.id]),
+            # A loan's details, its return and its renewal are dialogs
+            # served into the shell's modal, not pages - so like the three
+            # lookups and user add, they are not navigations and have
+            # nothing to answer one with. See test_loans.py.
             "loan edit": reverse("loan_edit", args=[self.loan.id]),
-            "loan return": reverse("loan_return", args=[self.loan.id]),
-            "loan renew": reverse("loan_renew", args=[self.loan.id]),
             "loan delete": reverse("loan_delete", args=[self.loan.id]),
 
             "book list": reverse("book_list"),
-            "book add": reverse("book_add"),
             "book import": reverse("book_import"),
             "book detail": reverse("book_detail", args=[self.book.id]),
-            "book edit": reverse("book_edit", args=[self.book.id]),
             "book archive": reverse("book_archive", args=[self.book.id]),
-            "book delete": reverse("book_delete", args=[self.book.id]),
+            # Adding, editing and deleting a book are dialogs served into
+            # the shell's modal, not pages - so they are not navigations
+            # and have nothing to answer one with. Their own tests are in
+            # test_book_workflow.py.
 
             "volume list": reverse("book_volume_list"),
             "volume add": reverse("book_volume_add"),
@@ -572,24 +613,16 @@ class NavigatedPageSweepTests(TestCase):
             ),
 
             "copy list": reverse("book_copy_list"),
-            "copy add": reverse("book_copy_add"),
-            "copy detail": reverse("book_copy_detail", args=[self.copy.id]),
-            "copy edit": reverse("book_copy_edit", args=[self.copy.id]),
-            "copy move": reverse("book_copy_move", args=[self.copy.id]),
+            # A copy's details, and adding, editing, moving or deleting
+            # one, are dialogs. Withdraw is still a page - it asks its own
+            # question - so it stays in the sweep.
             "copy withdraw": reverse(
                 "book_copy_withdraw", args=[self.copy.id]
             ),
-            "copy delete": reverse("book_copy_delete", args=[self.copy.id]),
 
             "borrower list": reverse("borrower_list"),
-            "borrower add": reverse("borrower_add"),
-            "borrower detail": reverse(
-                "borrower_detail", args=[self.borrower.id]
-            ),
-            "borrower edit": reverse("borrower_edit", args=[self.borrower.id]),
-            "borrower delete": reverse(
-                "borrower_delete", args=[self.borrower.id]
-            ),
+            # A borrower's profile, and adding, editing or deleting one,
+            # are dialogs. Their own tests are in test_borrowers.py.
 
             "location list": reverse("location_list"),
             "location add": reverse("location_add"),
@@ -616,8 +649,11 @@ class NavigatedPageSweepTests(TestCase):
             "category list": reverse("category_list"),
             "publisher list": reverse("publisher_list"),
 
+            # Users is one page too. Add, Edit and Delete are dialogs
+            # served into the shell's existing modal, so like the three
+            # lookups above they are not navigations - see
+            # test_user_management.py.
             "user list": reverse("user_list"),
-            "user add": reverse("user_add"),
         }
 
     def test_each_one_answers_a_navigation_with_the_region_alone(self):

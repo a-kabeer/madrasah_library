@@ -203,7 +203,7 @@ from .circulation import (  # noqa: F401
     active_loan_for_code,
     active_loans_matching,
     circulation_dashboard,
-    copy_selection_url,
+    selection_url,
     issuable_copies,
     loan_add,
     loan_delete,

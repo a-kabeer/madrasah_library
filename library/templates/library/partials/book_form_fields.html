@@ -13,6 +13,12 @@ Expected context:
               cover" checkbox, which only make sense for an edit.
   id_prefix   prefix for element ids, so a dialog and the page behind it
               can both be in the DOM without colliding.
+  errors      field name -> what is wrong with it, from
+              `validate_book_details`. Empty on a GET. Each message is
+              rendered under its own input, which is the point: one
+              sentence above the form could not say which box to go back
+              to, and "Title and Author are required." named both when
+              only one was missing.
 {% endcomment %}
 
 {% url 'author_list' as author_search_url %}
@@ -25,19 +31,30 @@ Expected context:
     </label>
     <input
         type="text"
-        class="form-control"
+        class="form-control{% if errors.title %} is-invalid{% endif %}"
         id="{{ id_prefix }}Title"
         name="title"
         value="{{ form_data.title }}"
+        {% comment %}
+          `maxlength` matches the column, so the box will not take a title
+          the database cannot hold. The view checks the length as well -
+          an attribute on an input is a courtesy to whoever is typing, not
+          a rule, and reaching varchar(500) with more raised DataError.
+        {% endcomment %}
+        maxlength="500"
         required
+        {% if errors.title %}aria-invalid="true"{% endif %}
     >
+    {% if errors.title %}
+        <div class="invalid-feedback">{{ errors.title }}</div>
+    {% endif %}
 </div>
 
-{% include "library/partials/combobox_field.html" with label="Author" field_name="author" input_id=id_prefix|add:"Author" entity_label="author" search_url=author_search_url selected_id=form_data.author selected_name=form_data.author_name required=True allow_create=True compact=False submit_on_select=False %}
+{% include "library/partials/combobox_field.html" with label="Author" field_name="author" input_id=id_prefix|add:"Author" entity_label="author" search_url=author_search_url selected_id=form_data.author selected_name=form_data.author_name required=True allow_create=True compact=False submit_on_select=False error=errors.author %}
 
-{% include "library/partials/combobox_field.html" with label="Category" field_name="category" input_id=id_prefix|add:"Category" entity_label="category" search_url=category_search_url selected_id=form_data.category selected_name=form_data.category_name required=False allow_create=True compact=False submit_on_select=False %}
+{% include "library/partials/combobox_field.html" with label="Category" field_name="category" input_id=id_prefix|add:"Category" entity_label="category" search_url=category_search_url selected_id=form_data.category selected_name=form_data.category_name required=False allow_create=True compact=False submit_on_select=False error=errors.category %}
 
-{% include "library/partials/combobox_field.html" with label="Publisher" field_name="publisher" input_id=id_prefix|add:"Publisher" entity_label="publisher" search_url=publisher_search_url selected_id=form_data.publisher selected_name=form_data.publisher_name required=False allow_create=True compact=False submit_on_select=False %}
+{% include "library/partials/combobox_field.html" with label="Publisher" field_name="publisher" input_id=id_prefix|add:"Publisher" entity_label="publisher" search_url=publisher_search_url selected_id=form_data.publisher selected_name=form_data.publisher_name required=False allow_create=True compact=False submit_on_select=False error=errors.publisher %}
 
 <div class="mb-3">
     <label for="{{ id_prefix }}CoverImage" class="form-label fw-semibold">
@@ -73,11 +90,15 @@ Expected context:
 
     <input
         type="file"
-        class="form-control"
+        class="form-control{% if errors.cover_image %} is-invalid{% endif %}"
         id="{{ id_prefix }}CoverImage"
         name="cover_image"
         accept="image/jpeg,image/png,image/webp,image/gif"
+        {% if errors.cover_image %}aria-invalid="true"{% endif %}
     >
+    {% if errors.cover_image %}
+        <div class="invalid-feedback">{{ errors.cover_image }}</div>
+    {% endif %}
     <div class="form-text">
         {% if book and book.cover_image %}
             {% translate "Choosing a file replaces the current cover." %}

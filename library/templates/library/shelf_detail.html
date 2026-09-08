@@ -126,7 +126,7 @@
                     <i class="bi bi-list-ul me-1"></i> {% translate "Manage copies" %}
                 </a>
                 {% if can_edit %}
-                    <a href="{% url 'book_copy_add' %}" class="btn btn-sm btn-primary">
+                    <a href="{% url 'book_copy_add' %}" class="btn btn-sm btn-primary" data-form-modal hx-get="{% url 'book_copy_add' %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML">
                         <i class="bi bi-plus-lg me-1"></i> {% translate "Add Copy" %}
                     </a>
                 {% endif %}
@@ -177,7 +177,7 @@
                                 <div class="d-inline-flex gap-1" data-row-actions>
                                     {% if can_edit %}
                                         <a
-                                            href="{% url 'book_copy_edit' copy.id %}?from=shelf"
+                                            href="{% url 'book_copy_edit' copy.id %}?from=shelf" data-form-modal hx-get="{% url 'book_copy_edit' copy.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
                                             class="btn btn-sm btn-outline-warning"
                                             title="{% translate 'Edit' %}"
                                             aria-label="Edit copy {{ copy.copy_code }}"
@@ -189,18 +189,22 @@
                                             class="btn btn-sm btn-outline-primary"
                                             title="{% translate 'Move' %}"
                                             aria-label="Move copy {{ copy.copy_code }}"
+                                            data-form-modal
+                                            hx-get="{% url 'book_copy_move' copy.id %}?modal=1"
+                                            hx-target="#formModal .modal-body"
+                                            hx-swap="innerHTML"
                                         >
                                             <i class="bi bi-arrow-left-right"></i>
                                         </a>
                                     {% else %}
-                                        <a
-                                            href="{% url 'book_copy_detail' copy.id %}?from=shelf"
-                                            class="btn btn-sm btn-outline-secondary"
-                                            title="{% translate 'Open' %}"
-                                            aria-label="Open copy {{ copy.copy_code }}"
-                                        >
-                                            <i class="bi bi-box-arrow-up-right"></i>
-                                        </a>
+                                        {% comment %}
+                                          Nothing here: the row itself
+                                          opens the copy's dialog, and a
+                                          button beside it going to the
+                                          same place was a second control
+                                          for one action.
+                                        {% endcomment %}
+                                        <span class="text-body-secondary small">&mdash;</span>
                                     {% endif %}
                                 </div>
                             </td>

@@ -317,8 +317,33 @@ class SuperAdminGuardTests(PermissionTestCase):
 
         root.refresh_from_db()
 
+        # The write is what matters, and it did not happen.
         self.assertEqual(root.username, "root_p")
         self.assertEqual(root.role, "SuperAdmin")
+
+        # Edit is a dialog now: a plain POST redirects with the reason as a
+        # message. The wording itself is asserted through the dialog below,
+        # which is where an Admin would actually read it.
+        self.assertEqual(response.status_code, 302)
+
+    def test_and_the_dialog_gives_the_reason(self):
+        root = self.make_super_admin()
+        client = self.sign_in("admin_p")
+
+        response = client.post(
+            reverse("user_edit", args=[root.id]) + "?modal=1",
+            {
+                "username": "hijacked",
+                "full_name": "Nope",
+                "role": "Assistant",
+                "is_active": "on",
+            },
+            headers={"HX-Request": "true"},
+        )
+
+        root.refresh_from_db()
+
+        self.assertEqual(root.username, "root_p")
         self.assertContains(response, "managed by the developer")
 
     def test_nor_deactivate_them(self):

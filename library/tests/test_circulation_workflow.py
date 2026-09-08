@@ -510,10 +510,23 @@ class CirculationPermissionTests(TestCase):
                 ("issue", reverse("loan_add")),
                 ("return lookup", reverse("circulation_return_lookup")),
                 ("loan list", reverse("loan_list")),
-                ("return", reverse("loan_return", args=[self.loan.id])),
+                # Return is a dialog, so it is reached with `?modal=1`
+                # rather than as a page of its own.
+                (
+                    "return",
+                    reverse("loan_return", args=[self.loan.id]) + "?modal=1",
+                ),
             ):
                 with self.subTest(role=role, page=name):
-                    self.assertEqual(client.get(url).status_code, 200)
+                    # The HX-Request header goes on all of them: the
+                    # dialog needs it alongside `?modal=1`, and the plain
+                    # pages are unaffected - the shell only answers with
+                    # the region alone when HX-Target is mainContent too.
+                    response = client.get(
+                        url, headers={"HX-Request": "true"}
+                    )
+
+                    self.assertEqual(response.status_code, 200)
 
     def test_deleting_a_loan_stays_restricted(self):
         client = self.as_role("Assistant")

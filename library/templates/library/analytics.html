@@ -428,7 +428,7 @@
                             <tr>
                                 <td class="analytics-rank">{{ forloop.counter }}</td>
                                 <td>
-                                    <a href="{% url 'borrower_detail' borrower.id %}"
+                                    <a href="{% url 'borrower_detail' borrower.id %}" data-form-modal hx-get="{% url 'borrower_detail' borrower.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
                                        class="fw-semibold text-decoration-none">
                                         {{ borrower.name }}</a>
                                     {% if not borrower.is_active %}

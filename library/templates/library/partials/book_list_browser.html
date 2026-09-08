@@ -118,29 +118,14 @@ library/partials/book_list_results.html needs.
                             <i class="bi bi-search me-1"></i> {% translate "Search" %}
                         </button>
                         {% comment %}
-                          Always shown, and deliberately a navigation
-                          rather than a fragment swap.
-                          Whether a filter is active is decided in the
-                          results fragment, which swaps on its own; testing
-                          it here would leave the button stale. And clearing
-                          has to replace this control too, which a swap
-                          aimed at the results cannot reach.
-
-                          So it is a navigation of the whole main-content
-                          region, stated here rather than inherited: the
-                          form around it disinherits everything, which
-                          otherwise takes the shell's `hx-boost` with it and
-                          leaves this link reloading the page.
+                          There was a Clear button here in each of the
+                          three modes. It is gone: the results fragment
+                          already renders a chip per active filter, each
+                          removable on its own, with a "Clear all" beside
+                          them - so this was a fourth way to do what those
+                          do, and the only one that showed even when there
+                          was nothing to clear.
                         {% endcomment %}
-                        <a
-                            href="{% url 'book_list' %}"
-                            class="btn btn-outline-secondary"
-                            hx-boost="true"
-                            hx-target="#mainContent"
-                            hx-swap="innerHTML"
-                        >
-                            <i class="bi bi-x-lg me-1"></i> {% translate "Clear" %}
-                        </a>
                     </div>
 
                     <div class="form-text">
@@ -173,7 +158,7 @@ library/partials/book_list_results.html needs.
                     <input type="hidden" name="mode" value="author">
 
                     <div style="max-width: 26rem;">
-                        {% include "library/partials/combobox_field.html" with label="Author" field_name="author" input_id="filterAuthor" entity_label="author" search_url=author_search_url selected_id=author_id selected_name=author_name required=False allow_create=False compact=True submit_on_select=True %}
+                        {% include "library/partials/combobox_field.html" with label="Author" field_name="author" input_id="filterAuthor" entity_label="author" search_url=author_search_url selected_id=author_id selected_name=author_name required=False allow_create=False compact=True submit_on_select=True error="" %}
                     </div>
 
                     <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
@@ -188,30 +173,6 @@ library/partials/book_list_results.html needs.
                             <i class="bi bi-funnel me-1"></i> {% translate "Apply" %}
                         </button>
 
-                        {% comment %}
-                          Always shown, and deliberately a navigation
-                          rather than a fragment swap.
-                          Whether a filter is active is decided in the
-                          results fragment, which swaps on its own; testing
-                          it here would leave the button stale. And clearing
-                          has to replace this control too, which a swap
-                          aimed at the results cannot reach.
-
-                          So it is a navigation of the whole main-content
-                          region, stated here rather than inherited: the
-                          form around it disinherits everything, which
-                          otherwise takes the shell's `hx-boost` with it and
-                          leaves this link reloading the page.
-                        {% endcomment %}
-                        <a
-                            href="?mode=author"
-                            class="btn btn-outline-secondary btn-sm"
-                            hx-boost="true"
-                            hx-target="#mainContent"
-                            hx-swap="innerHTML"
-                        >
-                            <i class="bi bi-x-lg me-1"></i> {% translate "Clear" %}
-                        </a>
                     </div>
 
                     <div class="form-text mt-2">
@@ -235,7 +196,7 @@ library/partials/book_list_results.html needs.
                     <input type="hidden" name="mode" value="category">
 
                     <div style="max-width: 26rem;">
-                        {% include "library/partials/combobox_field.html" with label="Category" field_name="category" input_id="filterCategory" entity_label="category" search_url=category_search_url selected_id=category_id selected_name=category_name required=False allow_create=False compact=True submit_on_select=True %}
+                        {% include "library/partials/combobox_field.html" with label="Category" field_name="category" input_id="filterCategory" entity_label="category" search_url=category_search_url selected_id=category_id selected_name=category_name required=False allow_create=False compact=True submit_on_select=True error="" %}
                     </div>
 
                     <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
@@ -250,30 +211,6 @@ library/partials/book_list_results.html needs.
                             <i class="bi bi-funnel me-1"></i> {% translate "Apply" %}
                         </button>
 
-                        {% comment %}
-                          Always shown, and deliberately a navigation
-                          rather than a fragment swap.
-                          Whether a filter is active is decided in the
-                          results fragment, which swaps on its own; testing
-                          it here would leave the button stale. And clearing
-                          has to replace this control too, which a swap
-                          aimed at the results cannot reach.
-
-                          So it is a navigation of the whole main-content
-                          region, stated here rather than inherited: the
-                          form around it disinherits everything, which
-                          otherwise takes the shell's `hx-boost` with it and
-                          leaves this link reloading the page.
-                        {% endcomment %}
-                        <a
-                            href="?mode=category"
-                            class="btn btn-outline-secondary btn-sm"
-                            hx-boost="true"
-                            hx-target="#mainContent"
-                            hx-swap="innerHTML"
-                        >
-                            <i class="bi bi-x-lg me-1"></i> {% translate "Clear" %}
-                        </a>
                     </div>
 
                     <div class="form-text mt-2">

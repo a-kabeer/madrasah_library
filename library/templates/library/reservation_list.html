@@ -56,7 +56,7 @@
                         {% for reservation in reservations %}
                             <tr>
                                 <td>
-                                    <a href="{% url 'borrower_detail' reservation.borrower_id %}"
+                                    <a href="{% url 'borrower_detail' reservation.borrower_id %}" data-form-modal hx-get="{% url 'borrower_detail' reservation.borrower_id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
                                        class="fw-semibold text-decoration-none">
                                         {{ reservation.borrower.name }}
                                     </a>
