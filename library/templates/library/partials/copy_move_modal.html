@@ -1,0 +1,29 @@
+{% load i18n %}
+<h5 class="modal-title" id="formModalLabel">{% translate "Move Copy" %}</h5>
+<form method="post" action="{% url 'book_copy_move' copy.id %}?modal=1" hx-post="{% url 'book_copy_move' copy.id %}?modal=1" hx-swap="none">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.GET.next|default:'/library/book-copies/' }}">
+    {% if error_message %}<div class="alert alert-danger" role="alert">{{ error_message }}</div>{% endif %}
+    <div class="alert alert-light border mb-3">
+        <div class="fw-semibold">{{ copy.copy_code }}</div>
+        <div class="small text-body-secondary">{{ copy.volume.book.title }}</div>
+    </div>
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label for="copyMoveModalLocation" class="form-label fw-semibold">{% translate "Location" %}</label>
+            <select class="form-select" id="copyMoveModalLocation" name="location" data-location-select hx-get="{% url 'shelf_list' %}" hx-vals='{"options":"1"}' hx-trigger="change" hx-target="#copyMoveModalShelf" hx-include="this" required>
+                {% include "library/partials/location_options.html" with locations=locations selected_id=location_id %}
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label for="copyMoveModalShelf" class="form-label fw-semibold">{% translate "Shelf" %}</label>
+            <select class="form-select" id="copyMoveModalShelf" name="shelf" required>
+                {% include "library/partials/shelf_options.html" with shelves=shelves selected_id=copy.shelf_id has_location=location_id %}
+            </select>
+        </div>
+    </div>
+    <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i>{% translate "Move copy" %}</button>
+    </div>
+</form>
