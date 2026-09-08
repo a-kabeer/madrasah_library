@@ -5,7 +5,7 @@ from django.db import IntegrityError, transaction
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 
-from ..models import Book, BookContent, BookVolume
+from ..models import Book, BookContent, BookCopy, BookVolume
 from ..permissions import feature_required
 from .common import (
     BOOK_CONTENT_CACHE_KEY,
@@ -25,7 +25,11 @@ def _redirect_response(request, fallback="book_volume_list"):
 
 
 def _form_request(request):
-    return request.GET.get("modal") == "1" or request.POST.get("modal") == "1" or request.headers.get("HX-Request") == "true"
+    return (
+        request.GET.get("modal") == "1"
+        or request.POST.get("modal") == "1"
+        or request.headers.get("HX-Request") == "true"
+    )
 
 
 @feature_required("books", "Admin", "Librarian")
@@ -126,6 +130,40 @@ def book_volume_delete_modal(request, volume_id):
 
 
 @feature_required("books", "Admin", "Librarian")
+def book_volume_detail_modal(request, volume_id):
+    if not _form_request(request):
+        from .catalog import book_volume_detail
+        return book_volume_detail(request, volume_id)
+
+    volume = get_object_or_404(
+        BookVolume.objects.select_related(
+            "book", "book__author", "book__category", "book__publisher"
+        ),
+        id=volume_id,
+    )
+    copies = list(
+        BookCopy.objects.filter(volume_id=volume.id)
+        .select_related("shelf__location")
+        .order_by("copy_code", "id")
+    )
+    contents = list(
+        BookContent.objects.filter(volume_id=volume.id)
+        .select_related("parent")
+        .order_by("sort_order", "id")
+    )
+    return render(
+        request,
+        "library/partials/book_volume_detail_modal.html",
+        {
+            "volume": volume,
+            "copies": copies,
+            "contents": contents,
+            "can_edit": True,
+        },
+    )
+
+
+@feature_required("books", "Admin", "Librarian")
 def book_content_add_modal(request):
     volume_id = (request.GET.get("volume") or request.POST.get("volume") or "").strip()
     volume = BookVolume.objects.select_related("book").filter(id=volume_id).first() if volume_id.isdigit() else None
@@ -197,6 +235,27 @@ def _content_form(request, content, selected_volume, volumes):
 
     parents = BookContent.objects.filter(volume_id=volume_id).exclude(id=content.id if content else None).order_by("sort_order", "id") if str(volume_id).isdigit() else BookContent.objects.none()
     return render(request, "library/partials/book_content_form_modal.html", {"content": content, "volumes": volumes, "selected_volume": selected_volume, "parents": parents, "volume_id": volume_id, "parent_id": parent_id, "title": title, "content_type": content_type, "page_number": page_number, "sort_order": sort_order, "error": error, "editing": content is not None})
+
+
+@feature_required("books", "Admin", "Librarian")
+def book_content_detail_modal(request, content_id):
+    if not _form_request(request):
+        from .catalog import book_content_detail
+        return book_content_detail(request, content_id)
+
+    content = get_object_or_404(
+        BookContent.objects.select_related("volume__book", "parent"),
+        id=content_id,
+    )
+    children = list(
+        BookContent.objects.filter(parent_id=content.id)
+        .order_by("sort_order", "id")
+    )
+    return render(
+        request,
+        "library/partials/book_content_detail_modal.html",
+        {"content": content, "children": children, "can_edit": True},
+    )
 
 
 @feature_required("books", "Admin", "Librarian")
