@@ -11,6 +11,7 @@ from .views.borrower_modals import (
 )
 from .views.book_archive_modals import book_archive_modal
 from .views.book_restore_modals import book_restore_modal
+from .views.copy_modal_views import book_copy_edit_modal
 
 urlpatterns = [
     path("login/", views.login_view, name="login"),
@@ -68,7 +69,7 @@ urlpatterns = [
     path("book-copies/", views.book_copy_list, name="book_copy_list"),
     path("book-copies/<int:copy_id>/", views.book_copy_detail, name="book_copy_detail"),
     path("book-copies/add/", views.book_copy_add, name="book_copy_add"),
-    path("book-copies/<int:copy_id>/edit/", views.book_copy_edit, name="book_copy_edit"),
+    path("book-copies/<int:copy_id>/edit/", book_copy_edit_modal, name="book_copy_edit"),
     path("book-copies/<int:copy_id>/move/", views.book_copy_move, name="book_copy_move"),
     path("book-copies/move/", views.book_copy_bulk_move, name="book_copy_bulk_move"),
     path("book-copies/labels/", views.book_copy_labels, name="book_copy_labels"),
