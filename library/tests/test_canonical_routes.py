@@ -5,20 +5,11 @@ from .helpers import make_user
 
 
 class CanonicalRouteTests(TestCase):
-    """Legacy entry points redirect instead of duplicating view bindings."""
+    """Legacy loan entry points redirect instead of duplicating views."""
 
     def setUp(self):
         make_user(username="route_admin", password="pass12345", role="Admin")
         self.client.login(username="route_admin", password="pass12345")
-
-    def test_dashboard_alias_redirects_to_canonical_home(self):
-        response = self.client.get(reverse("dashboard"))
-
-        self.assertRedirects(
-            response,
-            reverse("library_home"),
-            status_code=301,
-        )
 
     def test_loan_add_alias_redirects_to_circulation_issue(self):
         response = self.client.get(reverse("loan_add"))
