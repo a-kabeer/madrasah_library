@@ -3,23 +3,6 @@
 Everything each module defines is re-exported here, so `views.author_list`
 and `from library.views import PAGE_SIZE` mean what they always did and
 urls.py did not have to change.
-
-Where to look:
-
-  common         shared helpers: paging, sorting, request shapes, the activity log
-  catalog        books, volumes, contents, and the names books are filed under
-  copies         physical copies, locations and shelves
-  circulation    issuing, returning, renewing, scanning
-  borrowers      the people who borrow books
-  inventory      stock checks
-  reservations   the queue waiting for a book
-  acquisitions   suggestions for books to buy
-  imports        spreadsheet import and export
-  reports        the six reports and their CSVs
-  dashboard      home page, activity log, analytics
-  notifications  the bell and its panel
-  accounts       signing in, your profile, and user administration
-  organization   branding, institution, borrowing policy, menu permissions
 """
 
 from .common import (  # noqa: F401
@@ -38,14 +21,14 @@ from .common import (  # noqa: F401
     PUBLISHER_CACHE_KEY, PolicyRefused, SHELF_CACHE_KEY, USER_CACHE_KEY, USER_ROLES,
     activity_log_target, allocate_copy_code, book_list_fragment, book_saved_response,
     combobox_created_response, combobox_options_response, copy_for_code, copy_state,
-    copy_state_options, create_activity_log, create_book_copies, describe_copies,
-    describe_loans, describe_size_limit, filter_copies_by_state, is_combobox_request,
-    is_form_modal_request, is_modal_request, is_options_request, lookup_book_counts,
-    lookup_books_url, lookup_delete_blocker, lookup_delete_modal, lookup_deleted_response,
-    lookup_form_modal, lookup_options, lookup_saved_response, lookup_table, numeric_param,
-    page_size_options, query_with, read_copy_plan, read_volume_rows, resolve_page_size,
-    resolve_sort, safe_redirect_target, selected_name, shelf_options_for, sort_ordering,
-    sortable_columns, validate_cover_image, validate_image_upload, volume_label,
+    create_activity_log, create_book_copies, describe_copies, describe_loans,
+    describe_size_limit, filter_copies_by_state, is_combobox_request, is_form_modal_request,
+    is_modal_request, is_options_request, lookup_book_counts, lookup_books_url,
+    lookup_delete_blocker, lookup_delete_modal, lookup_deleted_response, lookup_form_modal,
+    lookup_options, lookup_saved_response, lookup_table, numeric_param, page_size_options,
+    query_with, read_copy_plan, read_volume_rows, resolve_page_size, resolve_sort,
+    safe_redirect_target, selected_name, shelf_options_for, sort_ordering, sortable_columns,
+    validate_cover_image, validate_image_upload, volume_label,
 )
 
 from .catalog import (  # noqa: F401
@@ -65,9 +48,13 @@ from .copies import (  # noqa: F401
     book_copy_bulk_move, book_copy_delete, book_copy_detail, book_copy_edit,
     book_copy_labels, book_copy_list, book_copy_move, book_list, copies_moved_response,
     copy_list_fragment, filtered_copies, labelled, location_add, location_delete,
-    location_detail, location_edit, location_list, location_options_response,
-    render_options, shelf_add, shelf_delete, shelf_detail, shelf_edit, shelf_list,
-    shelf_options_response,
+    location_detail, location_edit, location_list, location_options_response, render_options,
+    shelf_add, shelf_delete, shelf_detail, shelf_edit, shelf_list, shelf_options_response,
+)
+
+from .location_shelf_modals import (  # noqa: F401
+    location_add_modal, location_delete_modal, location_edit_modal,
+    shelf_add_modal, shelf_delete_modal, shelf_edit_modal,
 )
 
 from .circulation import (  # noqa: F401
@@ -81,50 +68,35 @@ from .borrowers import (  # noqa: F401
     BORROWER_ACTIVITY_FILTERS, borrower_add, borrower_delete, borrower_detail,
     borrower_edit, borrower_list, borrower_toggle_active,
 )
-
 from .inventory import (  # noqa: F401
     inventory_session_complete, inventory_session_detail, inventory_session_list,
     inventory_session_scan, inventory_session_start,
 )
-
 from .reservations import reservation_add, reservation_cancel, reservation_list  # noqa: F401
-
 from .acquisitions import (  # noqa: F401
-    can_review_suggestions, suggestion_add, suggestion_detail, suggestion_list,
-    suggestion_review,
+    can_review_suggestions, suggestion_add, suggestion_detail, suggestion_list, suggestion_review,
 )
-
 from .imports import (  # noqa: F401
     IMPORT_FAILURE_KEY, IMPORT_KEEP_SECONDS, IMPORT_SESSION_KEY, _volume_numbers_by_book,
     book_export, book_import, book_import_errors, book_import_template, clear_import,
-    get_or_create_named, import_failure_payload, import_limits, import_lookups,
-    import_state, import_storage, mapping_rows, read_stored_upload, run_book_import,
-    sweep_stale_imports, workbook_response,
+    get_or_create_named, import_failure_payload, import_limits, import_lookups, import_state,
+    import_storage, mapping_rows, read_stored_upload, run_book_import, sweep_stale_imports,
+    workbook_response,
 )
-
 from .reports import (  # noqa: F401
     csv_response, inventory_report, report_borrowers, report_circulation, report_condition,
-    report_context, report_inventory, report_overdue, report_popular, reports_home,
-    wants_csv,
+    report_context, report_inventory, report_overdue, report_popular, reports_home, wants_csv,
 )
-
 from .dashboard import activity_log_list, analytics, library_home  # noqa: F401
-
 from .notifications import (  # noqa: F401
     notification_list, notification_panel, notification_panel_response,
     notification_read, notification_read_all,
 )
-
 from .accounts import (  # noqa: F401
     language_set, login_view, logout_view, profile_view, theme_set,
     user_delete, user_edit, user_list, user_toggle_active,
 )
-
-# Security-sensitive creation deliberately overrides the legacy implementation
-# exported above. Existing account-management routes keep their names while
-# new accounts always pass their plaintext password through Django's hasher.
 from .secure_accounts import user_add  # noqa: F401,E402
-
 from .organization import (  # noqa: F401
     permissions_matrix, INSTITUTION_TYPE_SUGGESTIONS, branding_settings,
     normalize_website, read_policy_form, validate_institution_fields,
