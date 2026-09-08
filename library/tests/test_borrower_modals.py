@@ -1,7 +1,7 @@
 from django.test import SimpleTestCase, TestCase
 from django.urls import resolve, reverse
 
-from library.tests.helpers import make_borrower, make_user
+from library.tests.helpers import make_borrower, make_loan, make_user
 
 
 class BorrowerModalRoutingTests(SimpleTestCase):
@@ -53,7 +53,7 @@ class BorrowerModalCrudTests(TestCase):
 
         self.assertEqual(response.status_code, 204)
         self.assertEqual(response["HX-Redirect"], reverse("borrower_list"))
-        self.assertTrue(make_borrower if False else True)
+        self.assertTrue(response)
 
     def test_edit_rejects_duplicate_registration_number(self):
         first = make_borrower(name="First", phone="03001111111")
@@ -74,9 +74,10 @@ class BorrowerModalCrudTests(TestCase):
 
     def test_delete_with_loan_history_is_blocked(self):
         borrower = make_borrower(name="Borrower With History", phone="03003333333")
-        # A loan row is intentionally not constructed here: this test only
-        # verifies the safe GET/delete confirmation contract. The POST block
-        # is covered by the view's loan-count guard in integration tests.
-        response = self.client.get(reverse("borrower_delete", kwargs={"borrower_id": borrower.id}))
+        make_loan(borrower=borrower)
+
+        response = self.client.post(reverse("borrower_delete", kwargs={"borrower_id": borrower.id}), HTTP_HX_REQUEST="true")
+
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, borrower.name)
+        self.assertContains(response, "loan history")
+        self.assertTrue(type(borrower).objects.filter(id=borrower.id).exists())
