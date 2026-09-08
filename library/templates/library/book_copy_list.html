@@ -22,7 +22,14 @@
             </p>
         </div>
         {% if can_edit %}
-            <a href="{% url 'book_copy_add' %}" class="btn btn-primary">
+            <a
+                href="{% url 'book_copy_add' %}"
+                class="btn btn-primary"
+                data-form-modal
+                hx-get="{% url 'book_copy_add' %}?modal=1"
+                hx-target="#formModal .modal-body"
+                hx-swap="innerHTML"
+            >
                 <i class="bi bi-plus-lg me-1"></i> {% translate "Add Copy" %}
             </a>
         {% endif %}
