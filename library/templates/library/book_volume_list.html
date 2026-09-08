@@ -1,185 +1,30 @@
 {% extends layout %}
 {% load i18n %}
 
-{% block title %}
-{% translate "Book Volumes" %} | {{ branding.display_name }}
-{% endblock %}
+{% block title %}{% translate "Book Volumes" %} | {{ branding.display_name }}{% endblock %}
+{% block page_title %}{% translate "Book Volumes" %}{% endblock %}
 
-{% block page_title %}
-    {% translate "Book Volumes" %}
-{% endblock %}
-
-{% block breadcrumbs %}
-    <nav aria-label="{% translate 'Breadcrumb' %}">
-        <ol class="breadcrumb mb-0 small">
-            <li class="breadcrumb-item">
-                <a href="{% url 'book_list' %}">{% translate "Books" %}</a>
-            </li>
-            <li class="breadcrumb-item active" aria-current="page">
-                {% translate "Volumes" %}
-            </li>
-        </ol>
-    </nav>
-{% endblock %}
+{% block breadcrumbs %}<nav aria-label="{% translate 'Breadcrumb' %}"><ol class="breadcrumb mb-0 small"><li class="breadcrumb-item"><a href="{% url 'book_list' %}">{% translate "Books" %}</a></li><li class="breadcrumb-item active" aria-current="page">{% translate "Volumes" %}</li></ol></nav>{% endblock %}
 
 {% block content %}
-
 <div class="container-fluid px-0">
-
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <div>
-            <h2 class="fw-bold mb-1">{% translate "Book Volumes" %}</h2>
-            <p class="text-body-secondary mb-0">
-                {% translate "Every volume in the catalogue, across all books." %}
-            </p>
-        </div>
-        {% comment %}
-          Offered to everyone, as before. `book_volume_add` carries
-          @role_required("Admin", "Librarian") and is what enforces it.
-        {% endcomment %}
-        <a href="{% url 'book_volume_add' %}" class="btn btn-primary">
-            <i class="bi bi-plus-lg me-1"></i> {% translate "Add Volume" %}
-        </a>
+        <div><h2 class="fw-bold mb-1">{% translate "Book Volumes" %}</h2><p class="text-body-secondary mb-0">{% translate "Every volume in the catalogue, across all books." %}</p></div>
+        <a href="{% url 'book_volume_add' %}?modal=1" data-form-modal hx-get="{% url 'book_volume_add' %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>{% translate "Add Volume" %}</a>
     </div>
-
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body">
-            <form method="get" class="row g-3 align-items-end">
-
-                <div class="col-12 col-lg-5">
-                    <label for="volumeSearch" class="form-label fw-semibold">
-                        {% translate "Search" %}
-                    </label>
-                    <input
-                        type="text"
-                        class="form-control"
-                        id="volumeSearch"
-                        name="search"
-                        value="{{ search }}"
-                        placeholder="{% translate 'Search book volumes...' %}"
-                    >
-                </div>
-
-                <div class="col-12 col-lg-5">
-                    <label for="book" class="form-label fw-semibold">
-                        {% translate "Book" %}
-                    </label>
-                    <select class="form-select" name="book" id="book">
-                        <option value="">{% translate "All Books" %}</option>
-                        {% for book in books %}
-                            <option
-                                value="{{ book.id }}"
-                                {% if book_id == book.id|stringformat:"s" %}selected{% endif %}
-                            >
-                                {{ book.title }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="col-12 col-lg-2 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-search me-1"></i> {% translate "Search" %}
-                    </button>
-                    {% if search or book_id %}
-                        <a href="{% url 'book_volume_list' %}" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-lg"></i>
-                            <span class="visually-hidden">{% translate "Clear" %}</span>
-                        </a>
-                    {% endif %}
-                </div>
-
-            </form>
-        </div>
-    </div>
-
-    {% comment %}
-      Shown only while filtered, as before: the unfiltered list is the whole
-      catalogue and the count adds nothing there.
-    {% endcomment %}
-    {% if search or book_id %}
-        <p class="text-body-secondary mb-3">
-            {% blocktranslate trimmed count n=volumes.paginator.count %}
-                Found <strong>{{ n }}</strong> volume.
-            {% plural %}
-                Found <strong>{{ n }}</strong> volumes.
-            {% endblocktranslate %}
-        </p>
-    {% endif %}
-
-    <div class="card shadow-sm border-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-secondary">
-                    <tr>
-                        <th>{% translate "ID" %}</th>
-                        <th>{% translate "Book" %}</th>
-                        <th>{% translate "Volume" %}</th>
-                        <th>{% translate "Title" %}</th>
-                        <th class="text-end">{% translate "Actions" %}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for volume in volumes %}
-                        <tr>
-                            <td class="text-body-secondary">{{ volume.id }}</td>
-                            <td>
-                                <a href="{% url 'book_detail' volume.book.id %}"
-                                   class="fw-semibold text-decoration-none">
-                                    {{ volume.book.title }}
-                                </a>
-                            </td>
-                            <td>
-                                    {% blocktranslate trimmed with volume_number=volume.volume_number %}
-                                        Volume {{ volume_number }}
-                                    {% endblocktranslate %}
-                                </td>
-                            <td>{{ volume.title }}</td>
-                            <td class="text-end">
-                                <div class="d-inline-flex gap-1">
-                                    <a
-                                        href="{% url 'book_volume_detail' volume.id %}"
-                                        class="btn btn-sm btn-outline-secondary"
-                                        title="{% translate 'View Details' %}"
-                                    >
-                                        <i class="bi bi-box-arrow-up-right"></i>
-                                    </a>
-                                    <a
-                                        href="{% url 'book_volume_edit' volume.id %}"
-                                        class="btn btn-sm btn-outline-warning"
-                                        title="{% translate 'Edit' %}"
-                                    >
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <a
-                                        href="{% url 'book_volume_delete' volume.id %}"
-                                        class="btn btn-sm btn-outline-danger"
-                                        title="{% translate 'Delete' %}"
-                                    >
-                                        <i class="bi bi-trash"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="5" class="text-center text-body-secondary py-4">
-                                {% translate "No volumes found." %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    {% comment %}
-      Still `_pagination.html`: the Bootstrap partial expects
-      `pagination_query`, `elided_page_range` and `page_ellipsis`, which this
-      view does not supply — and views are out of scope here.
-    {% endcomment %}
+    <div class="card shadow-sm border-0 mb-4"><div class="card-body"><form method="get" class="row g-3 align-items-end">
+        <div class="col-12 col-lg-5"><label for="volumeSearch" class="form-label fw-semibold">{% translate "Search" %}</label><input type="text" class="form-control" id="volumeSearch" name="search" value="{{ search }}" placeholder="{% translate 'Search book volumes...' %}"></div>
+        <div class="col-12 col-lg-5"><label for="book" class="form-label fw-semibold">{% translate "Book" %}</label><select class="form-select" name="book" id="book"><option value="">{% translate "All Books" %}</option>{% for book in books %}<option value="{{ book.id }}" {% if book_id == book.id|stringformat:"s" %}selected{% endif %}>{{ book.title }}</option>{% endfor %}</select></div>
+        <div class="col-12 col-lg-2 d-flex gap-2"><button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>{% translate "Search" %}</button>{% if search or book_id %}<a href="{% url 'book_volume_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i><span class="visually-hidden">{% translate "Clear" %}</span></a>{% endif %}</div>
+    </form></div></div>
+    {% if search or book_id %}<p class="text-body-secondary mb-3">{% blocktranslate trimmed count n=volumes.paginator.count %}Found <strong>{{ n }}</strong> volume.{% plural %}Found <strong>{{ n }}</strong> volumes.{% endblocktranslate %}</p>{% endif %}
+    <div class="card shadow-sm border-0"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-secondary"><tr><th>{% translate "ID" %}</th><th>{% translate "Book" %}</th><th>{% translate "Volume" %}</th><th>{% translate "Title" %}</th><th class="text-end">{% translate "Actions" %}</th></tr></thead><tbody>
+        {% for volume in volumes %}<tr><td class="text-body-secondary">{{ volume.id }}</td><td><a href="{% url 'book_detail' volume.book.id %}" class="fw-semibold text-decoration-none">{{ volume.book.title }}</a></td><td>{% blocktranslate trimmed with volume_number=volume.volume_number %}Volume {{ volume_number }}{% endblocktranslate %}</td><td>{{ volume.title }}</td><td class="text-end"><div class="d-inline-flex gap-1">
+            <a href="{% url 'book_volume_detail' volume.id %}" class="btn btn-sm btn-outline-secondary" title="{% translate 'View Details' %}"><i class="bi bi-box-arrow-up-right"></i></a>
+            <a href="{% url 'book_volume_edit' volume.id %}?modal=1" data-form-modal hx-get="{% url 'book_volume_edit' volume.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-sm btn-outline-warning" title="{% translate 'Edit' %}"><i class="bi bi-pencil"></i></a>
+            <a href="{% url 'book_volume_delete' volume.id %}?modal=1" data-form-modal hx-get="{% url 'book_volume_delete' volume.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-sm btn-outline-danger" title="{% translate 'Delete' %}"><i class="bi bi-trash"></i></a>
+        </div></td></tr>{% empty %}<tr><td colspan="5" class="text-center text-body-secondary py-4">{% translate "No volumes found." %}</td></tr>{% endfor %}
+    </tbody></table></div></div>
     {% include "library/_pagination.html" with page_obj=volumes %}
-
 </div>
-
 {% endblock %}
