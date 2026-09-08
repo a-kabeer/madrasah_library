@@ -9,6 +9,7 @@ from .views.borrower_modals import (
     borrower_edit_modal,
     borrower_list_modal,
 )
+from .views.book_archive_modals import book_archive_modal
 
 urlpatterns = [
     path("login/", views.login_view, name="login"),
@@ -50,7 +51,7 @@ urlpatterns = [
     path("books/export/", views.book_export, name="book_export"),
     path("books/<int:book_id>/", views.book_detail, name="book_detail"),
     path("books/<int:book_id>/edit/", views.book_edit, name="book_edit"),
-    path("books/<int:book_id>/archive/", views.book_archive, name="book_archive"),
+    path("books/<int:book_id>/archive/", book_archive_modal, name="book_archive"),
     path("books/<int:book_id>/restore/", views.book_restore, name="book_restore"),
     path("books/<int:book_id>/delete/", views.book_delete, name="book_delete"),
     path("book-volumes/", views.book_volume_list, name="book_volume_list"),
@@ -107,9 +108,6 @@ urlpatterns = [
     path("circulation/issue/", views.loan_add, name="circulation_issue"),
     path("circulation/return/", views.loan_return_lookup, name="circulation_return_lookup"),
     path("circulation/active-loans/", RedirectView.as_view(url="/library/loans/?status=active", permanent=True), name="circulation_active_loans"),
-
-    # Borrowers are modal-first: the list is the working surface and all
-    # record interactions use the shared dialogs.
     path("borrowers/", borrower_list_modal, name="borrower_list"),
     path("borrowers/add/", borrower_add_modal, name="borrower_add"),
     path("borrowers/<int:borrower_id>/", borrower_detail_modal, name="borrower_detail"),
