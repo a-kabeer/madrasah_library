@@ -13,8 +13,18 @@
         <a href="{% url 'book_volume_add' %}?modal=1" data-form-modal hx-get="{% url 'book_volume_add' %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>{% translate "Add Volume" %}</a>
     </div>
     <div class="card shadow-sm border-0 mb-4"><div class="card-body"><form method="get" class="row g-3 align-items-end">
-        <div class="col-12 col-lg-5"><label for="volumeSearch" class="form-label fw-semibold">{% translate "Search" %}</label><input type="text" class="form-control" id="volumeSearch" name="search" value="{{ search }}" placeholder="{% translate 'Search book volumes...' %"></div>
-        <div class="col-12 col-lg-5"><label for="book" class="form-label fw-semibold">{% translate "Book" %}</label><select class="form-select" name="book" id="book"><option value="">{% translate "All Books" %}</option>{% for book in books %}<option value="{{ book.id }}" {% if book_id == book.id|stringformat:"s" %}selected{% endif %}>{{ book.title }}</option>{% endfor %}</select></div>
+        <div class="col-12 col-lg-5"><label for="volumeSearch" class="form-label fw-semibold">{% translate "Search" %}</label><input type="text" class="form-control" id="volumeSearch" name="search" value="{{ search }}" placeholder="{% translate 'Search book volumes...' %}"></div>
+        <div class="col-12 col-lg-5">
+            {% if book_id %}
+                {% for book in books %}
+                    {% if book_id == book.id|stringformat:"s" %}
+                        {% include "library/partials/combobox_field.html" with label="Book" field_name="book" input_id="volumeBookFilter" entity_label="book" search_url=book_filter_url selected_id=book_id selected_name=book.title required=False allow_create=False compact=True submit_on_select=True %}
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                {% include "library/partials/combobox_field.html" with label="Book" field_name="book" input_id="volumeBookFilter" entity_label="book" search_url=book_filter_url selected_id="" selected_name="" required=False allow_create=False compact=True submit_on_select=True %}
+            {% endif %}
+        </div>
         <div class="col-12 col-lg-2 d-flex gap-2"><button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>{% translate "Search" %}</button>{% if search or book_id %}<a href="{% url 'book_volume_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i><span class="visually-hidden">{% translate "Clear" %}</span></a>{% endif %}</div>
     </form></div></div>
     {% if search or book_id %}<p class="text-body-secondary mb-3">{% blocktranslate trimmed count n=volumes.paginator.count %}Found <strong>{{ n }}</strong> volume.{% plural %}Found <strong>{{ n }}</strong> volumes.{% endblocktranslate %}</p>{% endif %}
