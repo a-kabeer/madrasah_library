@@ -13,33 +13,70 @@ jobs:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout branch history
+      - name: Checkout branch
         uses: actions/checkout@v4
         with:
           ref: audit/task-3-modal-conversion
-          fetch-depth: 0
+          fetch-depth: 1
 
-      - name: Restore clean template versions
+      - name: Resolve committed conflict blocks
         run: |
-          set -e
-          git fetch origin main --no-tags
-          git show 255e80b:library/templates/library/book_copy_list.html > library/templates/library/book_copy_list.html
-          git show 255e80b:library/templates/library/book_detail.html > library/templates/library/book_detail.html
-          git show 255e80b:library/templates/library/book_volume_detail.html > library/templates/library/book_volume_detail.html
-          git show 255e80b:library/templates/library/partials/book_form_fields.html > library/templates/library/partials/book_form_fields.html
-          git show 255e80b:library/templates/library/partials/borrower_delete_modal.html > library/templates/library/partials/borrower_delete_modal.html
-          git show 255e80b:library/templates/library/partials/borrower_detail_modal.html > library/templates/library/partials/borrower_detail_modal.html
-          git show 255e80b:library/templates/library/partials/borrower_form_modal.html > library/templates/library/partials/borrower_form_modal.html
-          git show 255e80b:library/templates/library/partials/copy_detail_modal.html > library/templates/library/partials/copy_detail_modal.html
-          git show 255e80b:library/templates/library/partials/copy_list_results.html > library/templates/library/partials/copy_list_results.html
+          python - <<'PY'
+          from pathlib import Path
+
+          files = [
+              'library/templates/library/book_copy_list.html',
+              'library/templates/library/book_detail.html',
+              'library/templates/library/book_volume_detail.html',
+              'library/templates/library/partials/book_form_fields.html',
+              'library/templates/library/partials/borrower_delete_modal.html',
+              'library/templates/library/partials/borrower_detail_modal.html',
+              'library/templates/library/partials/borrower_form_modal.html',
+              'library/templates/library/partials/copy_detail_modal.html',
+              'library/templates/library/partials/copy_list_results.html',
+          ]
+
+          for name in files:
+              path = Path(name)
+              lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
+              out = []
+              state = 'normal'
+              depth = 0
+
+              for line in lines:
+                  if line.startswith('<<<<<<< '):
+                      if state != 'normal':
+                          raise SystemExit(f'Nested conflict in {name}')
+                      state = 'head'
+                      continue
+                  if state == 'head' and line.startswith('======='):
+                      state = 'theirs'
+                      continue
+                  if state == 'theirs' and line.startswith('>>>>>>> '):
+                      state = 'normal'
+                      continue
+                  if state == 'normal':
+                      out.append(line)
+                  elif state == 'head':
+                      out.append(line)
+                  # Incoming side is intentionally discarded: preserve the
+                  # existing branch-side implementation and remove only the
+                  # committed merge-conflict garbage.
+
+              if state != 'normal':
+                  raise SystemExit(f'Unclosed conflict in {name}')
+              path.write_text(''.join(out), encoding='utf-8')
+          PY
+
           if git grep -n -E '^(<<<<<<<|>>>>>>> )' -- ':!library/static/library/css/style.css'; then
             echo 'Conflict markers remain.'
             exit 1
           fi
 
-      - name: Commit repaired templates and remove this workflow
+      - name: Validate and commit
         run: |
           set -e
+          git diff --check
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git rm .github/workflows/repair-conflict-markers.yml
