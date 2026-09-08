@@ -1,7 +1,14 @@
 {% extends layout %}
 {% load i18n %}
-{% block title %}{{ volume_name }} | {{ branding.display_name }}{% endblock %}
-{% block page_title %}{% translate "Volume" %}{% endblock %}
+
+{% block title %}
+    {{ volume_name }} | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    {% translate "Volume" %}
+{% endblock %}
+
 {% block content %}
 
 <div class="container-fluid px-0">
@@ -20,10 +27,10 @@
 
                 {% if can_edit %}
                     <div class="d-flex flex-wrap gap-2">
-                        <a href="{% url 'book_volume_edit' volume.id %}?from=detail" class="btn btn-warning">
+                        <a href="{% url 'book_volume_edit' volume.id %}?from=detail" class="btn btn-warning" data-form-modal hx-get="{% url 'book_volume_edit' volume.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML">
                             <i class="bi bi-pencil me-1"></i> {% translate "Edit" %}
                         </a>
-                        <a href="{% url 'book_volume_delete' volume.id %}?from=detail" class="btn btn-outline-danger">
+                        <a href="{% url 'book_volume_delete' volume.id %}?from=detail" class="btn btn-outline-danger" data-form-modal hx-get="{% url 'book_volume_delete' volume.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML">
                             <i class="bi bi-trash me-1"></i> {% translate "Delete" %}
                         </a>
                     </div>
@@ -142,7 +149,7 @@
                         <i class="bi bi-list-nested me-2"></i>{% translate "Contents" %}
                     </h5>
                     {% if can_edit %}
-                        <a href="{% url 'book_content_add' %}?volume={{ volume.id }}" class="btn btn-sm btn-primary">
+                        <a href="{% url 'book_content_add' %}?volume={{ volume.id }}" class="btn btn-sm btn-primary" data-form-modal hx-get="{% url 'book_content_add' %}?volume={{ volume.id }}&modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML">
                             <i class="bi bi-plus-lg me-1"></i> {% translate "Add Entry" %}
                         </a>
                     {% endif %}
@@ -160,10 +167,10 @@
                                     </div>
                                     {% if can_edit %}
                                         <div class="d-inline-flex gap-1">
-                                            <a href="{% url 'book_content_edit' content.id %}?from=volume" class="btn btn-sm btn-outline-warning" title="{% translate 'Edit' %}">
+                                            <a href="{% url 'book_content_edit' content.id %}?from=volume" class="btn btn-sm btn-outline-warning" title="{% translate 'Edit' %}" data-form-modal hx-get="{% url 'book_content_edit' content.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
-                                            <a href="{% url 'book_content_delete' content.id %}?from=volume" class="btn btn-sm btn-outline-danger" title="{% translate 'Delete' %}">
+                                            <a href="{% url 'book_content_delete' content.id %}?from=volume" class="btn btn-sm btn-outline-danger" title="{% translate 'Delete' %}" data-form-modal hx-get="{% url 'book_content_delete' content.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML">
                                                 <i class="bi bi-trash"></i>
                                             </a>
                                         </div>

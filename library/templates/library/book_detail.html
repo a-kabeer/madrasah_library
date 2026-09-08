@@ -1,20 +1,29 @@
 {% extends layout %}
 {% load i18n %}
 
-{% block title %}{{ book.title }} | {{ branding.display_name }}{% endblock %}
+{% block title %}
+    {{ book.title }} | {{ branding.display_name }}
+{% endblock %}
 
-{% block page_title %}{% translate "Book Details" %}{% endblock %}
+{% block page_title %}
+    {% translate "Book" %}
+{% endblock %}
 
 {% block breadcrumbs %}
-<nav aria-label="{% translate 'Breadcrumb' %}">
-    <ol class="breadcrumb mb-0 small">
-        <li class="breadcrumb-item"><a href="{% url 'book_list' %}">{% translate "Books" %}</a></li>
-        <li class="breadcrumb-item active" aria-current="page">{{ book.title }}</li>
-    </ol>
-</nav>
+    <nav aria-label="{% translate 'Breadcrumb' %}">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item">
+                <a href="{% url 'book_list' %}">{% translate "Books" %}</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                {{ book.title }}
+            </li>
+        </ol>
+    </nav>
 {% endblock %}
 
 {% block content %}
+
 <div class="container-fluid px-0">
 
     <!-- Navigation & Actions -->
@@ -59,7 +68,13 @@
                     >
                         <i class="bi bi-pencil me-1"></i> {% translate "Edit Book" %}
                     </a>
-                    <a href="{% url 'book_archive' book.id %}" class="btn btn-outline-secondary">
+                    <a
+                        href="{% url 'book_archive' book.id %}?modal=1"
+                        class="btn btn-outline-secondary"
+                        data-form-modal
+                        hx-get="{% url 'book_archive' book.id %}?modal=1"
+                        hx-target="#formModal .modal-body" hx-swap="innerHTML"
+                    >
                         <i class="bi bi-archive me-1"></i> {% translate "Archive" %}
                     </a>
                     <a
@@ -74,21 +89,9 @@
                     </a>
                 {% endif %}
             </div>
-        </div>
-        {% if can_edit %}
-        <div class="d-flex flex-wrap gap-2">
-            {% if book.is_archived %}
-                <form method="post" action="{% url 'book_restore' book.id %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn btn-primary"><i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>{% translate "Restore" %}</button></form>
-            {% else %}
-                <a href="{% url 'book_edit' book.id %}?modal=1" class="btn btn-warning" data-form-modal hx-get="{% url 'book_edit' book.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"><i class="bi bi-pencil me-1" aria-hidden="true"></i>{% translate "Edit" %}</a>
-                <a href="{% url 'book_archive' book.id %}?modal=1" class="btn btn-outline-secondary" data-form-modal hx-get="{% url 'book_archive' book.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"><i class="bi bi-archive me-1" aria-hidden="true"></i>{% translate "Archive" %}</a>
-                <a href="{% url 'book_delete' book.id %}?modal=1" class="btn btn-outline-danger" data-form-modal hx-get="{% url 'book_delete' book.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"><i class="bi bi-trash me-1" aria-hidden="true"></i>{% translate "Delete" %}</a>
-            {% endif %}
-        </div>
         {% endif %}
     </div>
 
-    {% if book.is_archived %}<div class="alert alert-secondary d-flex align-items-start gap-2 mb-4" role="alert"><i class="bi bi-archive-fill mt-1" aria-hidden="true"></i><div>{% blocktranslate trimmed with archived_at=book.archived_at|date:"j M Y" %}<strong>Archived on {{ archived_at }}.</strong> This book is outside the active catalogue. Its volumes, copies and loan history remain preserved.{% endblocktranslate %}</div></div>{% endif %}
 
     {% if book.is_archived %}
         <div class="alert alert-secondary d-flex align-items-start gap-2" role="alert">
@@ -327,7 +330,13 @@
                         <i class="bi bi-collection me-2"></i>{% translate "Volumes" %}
                     </h5>
                     {% if can_edit and not book.is_archived %}
-                        <a href="{% url 'book_volume_add' %}?book={{ book.id }}" class="btn btn-sm btn-primary">
+                        <a
+                            href="{% url 'book_volume_add' %}?book={{ book.id }}&modal=1"
+                            class="btn btn-sm btn-primary"
+                            data-form-modal
+                            hx-get="{% url 'book_volume_add' %}?book={{ book.id }}&modal=1"
+                            hx-target="#formModal .modal-body" hx-swap="innerHTML"
+                        >
                             <i class="bi bi-plus-lg me-1"></i> {% translate "Add Volume" %}
                         </a>
                     {% endif %}
@@ -414,8 +423,11 @@
                             {% for volume in volumes %}
                                 <div class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2">
                                     <a
-                                        href="{% url 'book_volume_detail' volume.id %}"
+                                        href="{% url 'book_volume_detail' volume.id %}?modal=1"
                                         class="text-decoration-none flex-grow-1"
+                                        data-form-modal
+                                        hx-get="{% url 'book_volume_detail' volume.id %}?modal=1"
+                                        hx-target="#formModal .modal-body" hx-swap="innerHTML"
                                     >
                                         <span class="fw-semibold">
                                                                       {% blocktranslate trimmed with volume_number=volume.volume_number %}
@@ -889,14 +901,7 @@
 
     </div>
 
-    <ul class="nav nav-tabs nav-fill flex-nowrap overflow-auto mb-4" role="tablist">
-        <li class="nav-item" role="presentation"><a class="nav-link {% if tab == 'overview' %}active{% endif %}" href="?tab=overview" data-bs-toggle="tab" data-bs-target="#paneOverview" role="tab" aria-controls="paneOverview"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>{% translate "Overview" %}</a></li>
-        <li class="nav-item" role="presentation"><a class="nav-link {% if tab == 'volumes' %}active{% endif %}" href="?tab=volumes" data-bs-toggle="tab" data-bs-target="#paneVolumes" role="tab" aria-controls="paneVolumes"><i class="bi bi-collection me-1" aria-hidden="true"></i>{% translate "Volumes" %} <span class="badge text-bg-secondary ms-1">{{ volumes|length }}</span></a></li>
-        <li class="nav-item" role="presentation"><a class="nav-link {% if tab == 'copies' %}active{% endif %}" href="?tab=copies" data-bs-toggle="tab" data-bs-target="#paneCopies" role="tab" aria-controls="paneCopies"><i class="bi bi-stack me-1" aria-hidden="true"></i>{% translate "Copies" %} <span class="badge text-bg-secondary ms-1">{{ total_copies }}</span></a></li>
-        <li class="nav-item" role="presentation"><a class="nav-link {% if tab == 'contents' %}active{% endif %}" href="?tab=contents" data-bs-toggle="tab" data-bs-target="#paneContents" role="tab" aria-controls="paneContents"><i class="bi bi-file-earmark-text me-1" aria-hidden="true"></i>{% translate "Contents" %} <span class="badge text-bg-secondary ms-1">{{ content_total }}</span></a></li>
-        <li class="nav-item" role="presentation"><a class="nav-link {% if tab == 'loans' %}active{% endif %}" href="?tab=loans" data-bs-toggle="tab" data-bs-target="#paneLoans" role="tab" aria-controls="paneLoans"><i class="bi bi-clock-history me-1" aria-hidden="true"></i>{% translate "Loan History" %} <span class="badge text-bg-secondary ms-1">{{ paginator.count }}</span></a></li>
-        <li class="nav-item" role="presentation"><a class="nav-link {% if tab == 'reservations' %}active{% endif %}" href="?tab=reservations" data-bs-toggle="tab" data-bs-target="#paneReservations" role="tab" aria-controls="paneReservations"><i class="bi bi-bookmark-star me-1" aria-hidden="true"></i>{% translate "Reservations" %} <span class="badge text-bg-secondary ms-1">{{ reservation_count }}</span></a></li>
-    </ul>
+</div>
 
 {% comment %}
   Two answers to the dialogs above, because this page is not a list and
