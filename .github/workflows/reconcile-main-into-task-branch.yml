@@ -1,0 +1,46 @@
+name: Reconcile task branch with main
+
+on:
+  push:
+    branches:
+      - audit/task-3-modal-conversion
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout task branch
+        uses: actions/checkout@v4
+        with:
+          ref: audit/task-3-modal-conversion
+          fetch-depth: 0
+
+      - name: Merge main and preserve repaired task-side files on conflicts
+        run: |
+          set -e
+          git fetch origin main --no-tags
+          if ! git merge --no-edit origin/main; then
+            conflicts=$(git diff --name-only --diff-filter=U)
+            if [ -n "$conflicts" ]; then
+              while IFS= read -r file; do
+                git checkout --ours -- "$file"
+                git add -- "$file"
+              done <<< "$conflicts"
+            fi
+            git commit --no-edit
+          fi
+
+          if git grep -n -E '^(<<<<<<<|>>>>>>> )'; then
+            echo 'Conflict markers remain after reconciliation.'
+            exit 1
+          fi
+
+          git diff --check
+          git rm .github/workflows/reconcile-main-into-task-branch.yml
+          git add -A
+          git commit --amend --no-edit
+          git push origin HEAD:audit/task-3-modal-conversion
