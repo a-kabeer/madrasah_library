@@ -1,0 +1,23 @@
+{% load i18n %}
+<div class="modal-content">
+    <div class="modal-header"><div><h5 class="modal-title fw-bold mb-1">{{ suggestion.title }}</h5><div>{% include "library/partials/suggestion_status.html" %}</div></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% translate 'Close' %}"></button></div>
+    <div class="modal-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-4 text-body-secondary fw-normal">{% translate "Author" %}</dt><dd class="col-sm-8">{{ suggestion.author_name|default:"—" }}</dd>
+            <dt class="col-sm-4 text-body-secondary fw-normal">{% translate "Publisher" %}</dt><dd class="col-sm-8">{{ suggestion.publisher_name|default:"—" }}</dd>
+            <dt class="col-sm-4 text-body-secondary fw-normal">{% translate "ISBN" %}</dt><dd class="col-sm-8">{{ suggestion.isbn|default:"—" }}</dd>
+            <dt class="col-sm-4 text-body-secondary fw-normal">{% translate "Why this book" %}</dt><dd class="col-sm-8">{% if suggestion.notes %}{{ suggestion.notes|linebreaksbr }}{% else %}—{% endif %}</dd>
+            <dt class="col-sm-4 text-body-secondary fw-normal">{% translate "Suggested by" %}</dt><dd class="col-sm-8">{% if suggestion.suggested_by %}{{ suggestion.suggested_by.full_name }}{% else %}{% translate "account removed" %}{% endif %}</dd>
+            <dt class="col-sm-4 text-body-secondary fw-normal">{% translate "Asked" %}</dt><dd class="col-sm-8">{{ suggestion.created_at|date:"j M Y, H:i" }}</dd>
+            {% if suggestion.was_reviewed %}<dt class="col-sm-4 text-body-secondary fw-normal">{% translate "Decided by" %}</dt><dd class="col-sm-8">{% if suggestion.reviewed_by %}{{ suggestion.reviewed_by.full_name }}{% else %}{% translate "account removed" %}{% endif %}</dd><dt class="col-sm-4 text-body-secondary fw-normal">{% translate "Decided" %}</dt><dd class="col-sm-8">{{ suggestion.reviewed_at|date:"j M Y, H:i" }}</dd>{% endif %}
+        </dl>
+        {% if suggestion.is_pending and can_review %}
+            <hr><div class="d-flex flex-wrap gap-2"><form method="post" action="{% url 'suggestion_review' suggestion.id %}" hx-post="{% url 'suggestion_review' suggestion.id %}?modal=1" hx-swap="none">{% csrf_token %}<input type="hidden" name="status" value="Approved"><input type="hidden" name="modal" value="1"><button class="btn btn-success" type="submit"><i class="bi bi-check-lg me-1"></i>{% translate "Approve" %}</button></form><form method="post" action="{% url 'suggestion_review' suggestion.id %}" hx-post="{% url 'suggestion_review' suggestion.id %}?modal=1" hx-swap="none">{% csrf_token %}<input type="hidden" name="status" value="Rejected"><input type="hidden" name="modal" value="1"><button class="btn btn-outline-danger" type="submit"><i class="bi bi-x-lg me-1"></i>{% translate "Reject" %}</button></form></div>
+        {% elif suggestion.is_approved %}
+            <hr><div class="alert alert-info mb-0">{% translate "This suggestion is approved and ready for catalogue entry." %}</div>
+            {% if can_catalogue %}<a href="{% url 'book_add' %}?suggestion={{ suggestion.id }}" class="btn btn-primary mt-3"><i class="bi bi-plus-lg me-1"></i>{% translate "Add to catalogue" %}</a>{% endif %}
+            {% if can_review %}<form class="mt-2" method="post" action="{% url 'suggestion_review' suggestion.id %}" hx-post="{% url 'suggestion_review' suggestion.id %}?modal=1" hx-swap="none">{% csrf_token %}<input type="hidden" name="status" value="Acquired"><input type="hidden" name="modal" value="1"><button class="btn btn-outline-secondary" type="submit">{% translate "Already acquired" %}</button></form>{% endif %}
+        {% else %}<hr><p class="text-body-secondary small mb-0">{% translate "This suggestion is finished and cannot be changed." %}</p>{% endif %}
+    </div>
+    <div class="modal-footer"><a href="{% url 'suggestion_detail' suggestion.id %}" class="btn btn-sm btn-outline-secondary">{% translate "Open full details" %}</a><button type="button" class="btn btn-primary" data-bs-dismiss="modal">{% translate "Close" %}</button></div>
+</div>
