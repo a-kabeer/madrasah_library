@@ -12,6 +12,7 @@ from .common import (
     LOCATION_CACHE_KEY,
     SHELF_CACHE_KEY,
     create_activity_log,
+    safe_redirect_target,
     shelf_options_for,
     volume_label,
 )
@@ -20,7 +21,7 @@ COPY_STATUSES = ["Available", "Lost", "Damaged", "Missing", "Transferred"]
 
 
 def _next_url(request):
-    return request.POST.get("next") or request.GET.get("next") or "/library/book-copies/"
+    return safe_redirect_target(request, "book_copy_list")
 
 
 def _redirect_response(url):
