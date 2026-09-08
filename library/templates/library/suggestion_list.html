@@ -1,177 +1,56 @@
 {% extends layout %}
 {% load i18n %}
 
-{% block title %}
-{% translate "Suggestions" %} | {{ branding.display_name }}
-{% endblock %}
-
-{% block page_title %}
-    {% translate "Suggestions" %}
-{% endblock %}
+{% block title %}{% translate "Suggestions" %} | {{ branding.display_name }}{% endblock %}
+{% block page_title %}{% translate "Suggestions" %}{% endblock %}
 
 {% block content %}
-
 <div class="container-fluid px-0">
-
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
         <div>
             <h2 class="fw-bold mb-1">{% translate "Suggested Purchases" %}</h2>
-            <p class="text-body-secondary mb-0">
-                {% url 'book_list' as book_list_url %}
-                {% blocktranslate trimmed with url=book_list_url %}
-                    Books worth looking for. A suggestion is a note, not a
-                    catalogue record — nothing here is on a shelf, and
-                    adding one to the catalogue is still the
-                    <a href="{{ url }}">Add Book</a> form with its own
-                    checks.
-                {% endblocktranslate %}
-            </p>
+            <p class="text-body-secondary mb-0">{% translate "Books worth looking for. A suggestion is a note, not a catalogue record." %}</p>
         </div>
-
-        {% comment %}
-          Open to every role: the person who notices a gap on the shelf is
-          usually the one standing at it.
-        {% endcomment %}
-        <a href="{% url 'suggestion_add' %}" class="btn btn-primary">
-            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
-            {% translate "Suggest a book" %}
+        <a href="{% url 'suggestion_add' %}?modal=1" data-form-modal hx-get="{% url 'suggestion_add' %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>{% translate "Suggest a book" %}
         </a>
     </div>
 
-    {% comment %}
-      Filters. The status links keep the search, and the search form keeps
-      the status, so neither control undoes the other — and `page` is
-      dropped from both, since page 4 of one filter is not page 4 of
-      another.
-    {% endcomment %}
     <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-
-        <a
-            href="?{% if search %}search={{ search|urlencode }}{% endif %}"
-            class="btn btn-sm {% if not status %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-        >{% translate "All" %}</a>
-
+        <a href="?{% if search %}search={{ search|urlencode }}{% endif %}" class="btn btn-sm {% if not status %}btn-primary{% else %}btn-outline-secondary{% endif %}">{% translate "All" %}</a>
         {% for value, label in statuses %}
-            <a
-                href="?status={{ value|urlencode }}{% if search %}&search={{ search|urlencode }}{% endif %}"
-                class="btn btn-sm {% if status == value %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-            >{{ label }}</a>
+            <a href="?status={{ value|urlencode }}{% if search %}&search={{ search|urlencode }}{% endif %}" class="btn btn-sm {% if status == value %}btn-primary{% else %}btn-outline-secondary{% endif %}">{{ label }}</a>
         {% endfor %}
-
         <form method="get" class="d-flex gap-2 ms-auto">
-            {% if status %}
-                <input type="hidden" name="status" value="{{ status }}">
-            {% endif %}
-
-            <label for="suggestionSearch" class="visually-hidden">
-                {% translate "Search suggestions by title" %}
-            </label>
-            <input
-                type="search"
-                class="form-control form-control-sm"
-                id="suggestionSearch"
-                name="search"
-                value="{{ search }}"
-                placeholder="{% translate 'Search titles' %}"
-            >
-
-            <button type="submit" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-search" aria-hidden="true"></i>
-                <span class="visually-hidden">{% translate "Search" %}</span>
-            </button>
+            {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+            <label for="suggestionSearch" class="visually-hidden">{% translate "Search suggestions by title" %}</label>
+            <input type="search" class="form-control form-control-sm" id="suggestionSearch" name="search" value="{{ search }}" placeholder="{% translate 'Search titles' %}">
+            <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-search" aria-hidden="true"></i><span class="visually-hidden">{% translate "Search" %}</span></button>
         </form>
-
     </div>
 
     {% if suggestions %}
-
-        <div class="card shadow-sm border-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-secondary">
-                        <tr>
-                            <th>{% translate "Title" %}</th>
-                            <th>{% translate "Author" %}</th>
-                            <th>{% translate "Suggested by" %}</th>
-                            <th>{% translate "Asked" %}</th>
-                            <th>{% translate "Status" %}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for suggestion in suggestions %}
-                            <tr>
-                                <td>
-                                    <a
-                                        href="{% url 'suggestion_detail' suggestion.id %}"
-                                        class="fw-semibold text-decoration-none"
-                                    >{{ suggestion.title }}</a>
-
-                                    {% if suggestion.isbn %}
-                                        <span class="d-block small text-body-secondary">
-                                                                                            {% blocktranslate trimmed with isbn=suggestion.isbn %}
-                                                                                                ISBN {{ isbn }}
-                                                                                            {% endblocktranslate %}
-                                                                                        </span>
-                                    {% endif %}
-                                </td>
-
-                                <td class="text-body-secondary">
-                                    {{ suggestion.author_name|default:"—" }}
-                                </td>
-
-                                {% comment %}
-                                  Both people came with the row via
-                                  select_related, so naming them here costs
-                                  nothing per row.
-                                {% endcomment %}
-                                <td class="text-body-secondary">
-                                    {% if suggestion.suggested_by %}
-                                        {{ suggestion.suggested_by.full_name }}
-                                    {% else %}
-                                        —
-                                    {% endif %}
-                                </td>
-
-                                <td class="text-body-secondary">
-                                    {{ suggestion.created_at|date:"j M Y" }}
-                                </td>
-
-                                <td>
-                                    {% include "library/partials/suggestion_status.html" %}
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-secondary"><tr><th>{% translate "Title" %}</th><th>{% translate "Author" %}</th><th>{% translate "Suggested by" %}</th><th>{% translate "Asked" %}</th><th>{% translate "Status" %}</th></tr></thead>
+                <tbody>
+                {% for suggestion in suggestions %}
+                    <tr tabindex="0" role="button" class="book-row" data-book-row data-book-url="{% url 'suggestion_detail' suggestion.id %}?modal=1" aria-label="{% translate 'Open details for' %} {{ suggestion.title }}">
+                        <td><a href="{% url 'suggestion_detail' suggestion.id %}?modal=1" data-form-modal hx-get="{% url 'suggestion_detail' suggestion.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="fw-semibold text-decoration-none">{{ suggestion.title }}</a>{% if suggestion.isbn %}<span class="d-block small text-body-secondary">ISBN {{ suggestion.isbn }}</span>{% endif %}</td>
+                        <td class="text-body-secondary">{{ suggestion.author_name|default:"—" }}</td>
+                        <td class="text-body-secondary">{% if suggestion.suggested_by %}{{ suggestion.suggested_by.full_name }}{% else %}—{% endif %}</td>
+                        <td class="text-body-secondary">{{ suggestion.created_at|date:"j M Y" }}</td>
+                        <td>{% include "library/partials/suggestion_status.html" %}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
         </div>
-
-        {% include "library/partials/pagination.html" with page_obj=suggestions %}
-
+    </div>
+    {% include "library/_pagination.html" with page_obj=suggestions %}
     {% else %}
-
-        <div class="card shadow-sm border-0">
-            <div class="card-body text-center text-body-secondary py-5">
-                <i class="bi bi-lightbulb fs-1 d-block mb-2" aria-hidden="true"></i>
-                <p class="mb-1 fw-semibold">
-                    {% if status or search %}
-                        {% translate "Nothing matches that." %}
-                    {% else %}
-                        {% translate "Nothing has been suggested yet." %}
-                    {% endif %}
-                </p>
-                <p class="mb-0 small">
-                    {% if status or search %}
-                        {% translate "Try another status, or clear the search." %}
-                    {% else %}
-                        {% translate "A title is all it takes — everything else is optional." %}
-                    {% endif %}
-                </p>
-            </div>
-        </div>
-
+    <div class="card shadow-sm border-0"><div class="card-body text-center text-body-secondary py-5"><i class="bi bi-lightbulb fs-1 d-block mb-2" aria-hidden="true"></i><p class="mb-1 fw-semibold">{% if status or search %}{% translate "Nothing matches that." %}{% else %}{% translate "Nothing has been suggested yet." %}{% endif %}</p><p class="mb-0 small">{% translate "A title is all it takes — everything else is optional." %}</p></div></div>
     {% endif %}
-
 </div>
-
 {% endblock %}
