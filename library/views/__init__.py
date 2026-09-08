@@ -51,19 +51,20 @@ from .copies import (  # noqa: F401
     location_detail, location_edit, location_list, location_options_response, render_options,
     shelf_add, shelf_delete, shelf_detail, shelf_edit, shelf_list, shelf_options_response,
 )
-
 from .location_shelf_modals import (  # noqa: F401
     location_add_modal, location_delete_modal, location_edit_modal,
     shelf_add_modal, shelf_delete_modal, shelf_edit_modal,
 )
-
+from .volume_content_modals import (  # noqa: F401
+    book_content_add_modal, book_content_delete_modal, book_content_edit_modal,
+    book_volume_add_modal, book_volume_delete_modal, book_volume_edit_modal,
+)
 from .circulation import (  # noqa: F401
     RETURN_LOOKUP_LIMIT, ScanOutcome, active_loan_for_code, active_loans_matching,
     circulation_dashboard, copy_selection_url, issuable_copies, loan_add, loan_delete,
     loan_detail, loan_edit, loan_list, loan_renew, loan_return, loan_return_lookup,
     scan_issue_outcome,
 )
-
 from .borrowers import (  # noqa: F401
     BORROWER_ACTIVITY_FILTERS, borrower_add, borrower_delete, borrower_detail,
     borrower_edit, borrower_list, borrower_toggle_active,
