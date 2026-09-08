@@ -1,6 +1,6 @@
 {% load i18n %}
 <h5 class="modal-title" id="formModalLabel" hx-swap-oob="true"><i class="bi {% if editing %}bi-pencil{% else %}bi-plus-lg{% endif %} me-2" aria-hidden="true"></i>{% if editing %}{% translate "Edit Location" %}{% else %}{% translate "Add Location" %}{% endif %}</h5>
-<form id="locationModalForm" method="post" action="{% url action location.id %}{% if editing %} {% endif %}" hx-post="{% url action location.id %}?modal=1" hx-target="#locationModalForm" hx-swap="outerHTML" hx-disabled-elt="find button[type=submit]" hx-disinherit="*">
+<form id="locationModalForm" method="post" {% if editing %}action="{% url 'location_edit' location.id %}" hx-post="{% url 'location_edit' location.id %}?modal=1"{% else %}action="{% url 'location_add' %}" hx-post="{% url 'location_add' %}?modal=1"{% endif %} hx-target="#locationModalForm" hx-swap="outerHTML" hx-disabled-elt="find button[type=submit]" hx-disinherit="*">
     {% csrf_token %}
     {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
     <div class="mb-3"><label for="locationName" class="form-label fw-semibold">{% translate "Name" %}</label><input id="locationName" name="name" class="form-control" value="{{ name }}" maxlength="255" required autofocus></div>
