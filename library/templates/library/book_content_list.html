@@ -11,7 +11,7 @@
     {% if volume_id %}
         {% for volume in volumes %}
             {% if volume_id == volume.id|stringformat:"s" %}
-                {% include "library/partials/combobox_field.html" with label="Volume" field_name="volume" input_id="contentVolumeFilter" entity_label="volume" search_url=volume_filter_url selected_id=volume_id selected_name=volume.book.title|add:" — Volume "|add:volume.volume_number|stringformat:"s" required=False allow_create=False compact=True submit_on_select=True %}
+                {% include "library/partials/combobox_field.html" with label="Volume" field_name="volume" input_id="contentVolumeFilter" entity_label="volume" search_url=volume_filter_url selected_id=volume_id selected_name=volume.title required=False allow_create=False compact=True submit_on_select=True %}
             {% endif %}
         {% endfor %}
     {% else %}
