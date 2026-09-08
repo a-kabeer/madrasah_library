@@ -1,109 +1,122 @@
 {% extends layout %}
 {% load i18n %}
 
-{% block title %}
-{% translate "Users" %} | {{ branding.display_name }}
-{% endblock %}
-
-{% block page_title %}
-    {% translate "Users" %}
-{% endblock %}
+{% block title %}{% translate "Users" %} | {{ branding.display_name }}{% endblock %}
+{% block page_title %}{% translate "Users" %}{% endblock %}
 
 {% block content %}
-
-{% comment %}
-  Inside the shared shell so this page can be reached without a full
-  reload, but otherwise as it was: the markup below is the same one this
-  template always had. Restyling it to match the rest of the app is a
-  separate job.
-{% endcomment %}
-<div class="container-fluid px-0 legacy-page">
-<h1>{% translate "Users" %}</h1>
-<form method="get">
-
-    <input
-        type="text"
-        name="search"
-        value="{{ search }}"
-        placeholder="{% translate 'Search users...' %}"
-    >
-
-    <label for="role">{% translate "Role:" %}</label>
-
-    <select name="role" id="role">
-        <option value="">{% translate "All Roles" %}</option>
-
-        {% for value, label in roles %}
-            <option value="{{ value }}" {% if role == value %}selected{% endif %}>
-                {{ label }}
-            </option>
-        {% endfor %}
-    </select>
-
-    <label for="status">{% translate "Status:" %}</label>
-
-    <select name="status" id="status">
-        <option value="">{% translate "All" %}</option>
-        <option value="active" {% if active_status == "active" %}selected{% endif %}>{% translate "Active" %}</option>
-        <option value="inactive" {% if active_status == "inactive" %}selected{% endif %}>{% translate "Inactive" %}</option>
-    </select>
-
-    <button type="submit">{% translate "Search" %}</button>
-
-    {% if search or role or active_status %}
-        <a href="{% url 'user_list' %}">
-            {% translate "Clear" %}
+<div class="container-fluid px-0">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">{% translate "Users" %}</h2>
+            <p class="text-body-secondary mb-0">{% translate "Manage staff accounts and access." %}</p>
+        </div>
+        <a href="{% url 'user_add' %}" class="btn btn-primary">
+            <i class="bi bi-person-plus me-1" aria-hidden="true"></i>{% translate "Add User" %}
         </a>
-    {% endif %}
+    </div>
 
-</form>
-
-{% if search or role or active_status %}
-    <p>
-           {% blocktranslate trimmed with count=users.paginator.count %}
-               Found {{ count }} user(s).
-           {% endblocktranslate %}
-       </p>
-{% endif %}
-<a href="{% url 'user_add' %}">
-    {% translate "Add User" %}
-</a>
-
-<ul>
-    {% for user in users %}
-        <li>
-            {% translate "ID:" %} {{ user.id }}
-            - {% translate "Username:" %} {{ user.username }}
-            - {% translate "Name:" %} {{ user.full_name|default:"N/A" }}
-            - {% translate "Role:" %} {{ user.role|default:"N/A" }}
-
-            {% if user.is_active %}
-                - {% translate "Active" %}
-            {% else %}
-                - {% translate "Inactive" %}
-            {% endif %}
-
-            <a href="{% url 'user_edit' user.id %}">
-                {% translate "Edit" %}
-            </a>
-
-            <a href="{% url 'user_delete' user.id %}">
-                {% translate "Delete" %}
-            </a>
-
-            <form method="post" action="{% url 'user_toggle_active' user.id %}" style="display:inline;">
-                {% csrf_token %}
-                <button type="submit">
-                    {% if user.is_active %}{% translate "Deactivate" %}{% else %}{% translate "Activate" %}{% endif %}
-                </button>
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-12 col-lg-5">
+                    <label for="userSearch" class="form-label fw-semibold">{% translate "Search" %}</label>
+                    <input type="search" class="form-control" id="userSearch" name="search" value="{{ search }}" placeholder="{% translate 'Username, name or role...' %}">
+                </div>
+                <div class="col-6 col-lg-2">
+                    <label for="userRole" class="form-label fw-semibold">{% translate "Role" %}</label>
+                    <select class="form-select" id="userRole" name="role">
+                        <option value="">{% translate "All roles" %}</option>
+                        {% for value, label in roles %}
+                            <option value="{{ value }}" {% if role == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-lg-2">
+                    <label for="userStatus" class="form-label fw-semibold">{% translate "Status" %}</label>
+                    <select class="form-select" id="userStatus" name="status">
+                        <option value="">{% translate "All" %}</option>
+                        <option value="active" {% if active_status == "active" %}selected{% endif %}>{% translate "Active" %}</option>
+                        <option value="inactive" {% if active_status == "inactive" %}selected{% endif %}>{% translate "Inactive" %}</option>
+                    </select>
+                </div>
+                <div class="col-12 col-lg-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1" aria-hidden="true"></i>{% translate "Search" %}
+                    </button>
+                    {% if search or role or active_status %}
+                        <a href="{% url 'user_list' %}" class="btn btn-outline-secondary">{% translate "Clear" %}</a>
+                    {% endif %}
+                </div>
             </form>
-        </li>
-    {% empty %}
-        <li>{% translate "No users found." %}</li>
-    {% endfor %}
-</ul>
+        </div>
+    </div>
 
-{% include "library/_pagination.html" with page_obj=users %}
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <p class="text-body-secondary mb-0">
+            {% blocktranslate trimmed count n=users.paginator.count %}<strong>{{ n }}</strong> user{% plural %}<strong>{{ n }}</strong> users{% endblocktranslate %}
+        </p>
+        {% if users.paginator.count %}
+            <span class="small text-body-secondary">{% translate "Page" %} {{ users.number }} / {{ users.paginator.num_pages }}</span>
+        {% endif %}
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>{% translate "User" %}</th>
+                        <th>{% translate "Role" %}</th>
+                        <th>{% translate "Status" %}</th>
+                        <th class="text-end">{% translate "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                        <tr>
+                            <td>
+                                <div class="fw-semibold">{{ user.full_name|default:user.username }}</div>
+                                <div class="small text-body-secondary">@{{ user.username }}</div>
+                            </td>
+                            <td>{{ user.role|default:"—" }}</td>
+                            <td>
+                                {% if user.is_active %}
+                                    <span class="badge text-bg-success">{% translate "Active" %}</span>
+                                {% else %}
+                                    <span class="badge text-bg-secondary">{% translate "Inactive" %}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex flex-wrap justify-content-end gap-1">
+                                    <a href="{% url 'user_edit' user.id %}" class="btn btn-sm btn-outline-warning" title="{% translate 'Edit' %}" aria-label="{% translate 'Edit' %} {{ user.username }}">
+                                        <i class="bi bi-pencil" aria-hidden="true"></i>
+                                    </a>
+                                    <form method="post" action="{% url 'user_toggle_active' user.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                            {% if user.is_active %}{% translate "Deactivate" %}{% else %}{% translate "Activate" %}{% endif %}
+                                        </button>
+                                    </form>
+                                    <a href="{% url 'user_delete' user.id %}" class="btn btn-sm btn-outline-danger" title="{% translate 'Delete' %}" aria-label="{% translate 'Delete' %} {{ user.username }}">
+                                        <i class="bi bi-trash" aria-hidden="true"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center text-body-secondary py-5">
+                                <i class="bi bi-people fs-2 d-block mb-2" aria-hidden="true"></i>
+                                {% translate "No users found." %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% include "library/partials/pagination.html" with page_obj=users %}
 </div>
-
 {% endblock %}
