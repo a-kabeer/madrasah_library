@@ -21,6 +21,7 @@ from django.core.paginator import Paginator
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.urls import reverse
+from django.utils.translation import gettext_lazy as _
 from django.core.cache import cache
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -162,6 +163,51 @@ BOOK_SORT_FIELDS = {
 }
 
 BOOK_SORT_DEFAULT = "title"
+
+# Sortable loan-list columns, whitelisted for the same reason as the books
+# above: the raw parameter never reaches order_by().
+#
+# Status is deliberately absent. It is not a column - it is derived from
+# `return_date` being null and `due_date` against today - so ordering by it
+# would mean sorting the table by an expression the reader cannot see. The
+# status filter is how to narrow by it, which is the same answer the book
+# list gives for Copies.
+# Which columns the borrower list may be sorted by, and what each one means
+# in the database. Same shape and the same reason as the book and loan
+# lists': a whitelist, so a query string can only ever name a column that
+# is actually on screen.
+#
+# `active_loans` is one of the annotations the list already computes, so
+# sorting by what somebody is holding costs nothing extra - and cannot
+# disagree with the number printed in the row, because it is that number.
+BORROWER_SORT_FIELDS = {
+    "name": "name",
+    "registration_no": "registration_no",
+    "borrower_type": "borrower_type",
+    "active_loans": "active_loans",
+    "status": "is_active",
+}
+
+# Alphabetical, which is what the list showed before it could be sorted at
+# all and what somebody looking for a person wants.
+BORROWER_SORT_DEFAULT = "name"
+BORROWER_SORT_DEFAULT_DIRECTION = "asc"
+
+
+LOAN_SORT_FIELDS = {
+    # No "id": the list does not show the loan number, so nothing can ask
+    # to be sorted by it.
+    "copy": "copy__copy_code",
+    "book": "copy__volume__book__title",
+    "borrower": "borrower__name",
+    "issue_date": "issue_date",
+    "due_date": "due_date",
+}
+
+# Newest first, which is what the list showed before it could be sorted at
+# all and what a circulation desk wants by default.
+LOAN_SORT_DEFAULT = "issue_date"
+LOAN_SORT_DEFAULT_DIRECTION = "desc"
 
 # What the book list's Availability filter offers, read off the copy counts
 # the list already annotates. Derived from the same rules the copy list
@@ -316,6 +362,57 @@ ACTIVITY_LOG_LOOKUP_KINDS = {
 }
 
 
+# What each action is called on screen, and how it is coloured.
+#
+# The stored value is a verb in the imperative - CREATE, ISSUE - which is
+# right for a column in a table and wrong for a sentence a librarian reads.
+# "Added" and "Issued" say the same thing about something that has already
+# happened.
+#
+# Anything not listed falls back to the stored value, so a new action shows
+# up as itself rather than disappearing.
+ACTIVITY_LOG_ACTION_LABELS = {
+    "CREATE": _("Added"),
+    "UPDATE": _("Updated"),
+    "DELETE": _("Deleted"),
+    "ISSUE": _("Issued"),
+    "RETURN": _("Returned"),
+    "RENEW": _("Renewed"),
+    "RESERVE": _("Reserved"),
+    "CANCEL": _("Cancelled"),
+    "FULFIL": _("Fulfilled"),
+    "IMPORT": _("Imported"),
+    "SEED": _("Seeded"),
+}
+
+# Only the ones that carry a warning are coloured. Everything else is
+# neutral: a log where every row is coloured tells the reader nothing about
+# which rows to look at.
+ACTIVITY_LOG_ACTION_TONES = {
+    "DELETE": "danger",
+    "CANCEL": "warning",
+    "ISSUE": "primary",
+    "RETURN": "success",
+    "CREATE": "secondary",
+}
+
+
+def label_activity_log(log):
+    """Attach what the template needs to render one entry readably.
+
+    Three things, set on the object rather than computed in the template:
+    the action's readable name, its colour, and the URL of the record it
+    refers to. `target_url` is the same helper the dashboard's recent
+    activity already uses.
+    """
+
+    log.action_label = ACTIVITY_LOG_ACTION_LABELS.get(log.action, log.action)
+    log.action_tone = ACTIVITY_LOG_ACTION_TONES.get(log.action, "light")
+    log.target_url = activity_log_target(log)
+
+    return log
+
+
 def activity_log_target(log):
     """URL of the record a log entry refers to, or "" if there isn't one.
 
@@ -383,8 +480,16 @@ def resolve_page_size(request, default=PAGE_SIZE):
     return requested if requested in PAGE_SIZE_CHOICES else default
 
 
-def resolve_sort(request, allowed, default):
-    """Validated (sort key, direction) for a list table."""
+def resolve_sort(request, allowed, default, default_direction="asc"):
+    """Validated (sort key, direction) for a list table.
+
+    `default_direction` exists because not every table reads best
+    ascending. A catalogue does - A before B - but a loan list does not:
+    the circulation desk wants the newest issue at the top, which is what
+    the loan list showed before it could be sorted at all. Defaulting it
+    per table is what keeps that true without the view second-guessing the
+    parameter.
+    """
 
     sort = request.GET.get("sort", "")
 
@@ -394,7 +499,7 @@ def resolve_sort(request, allowed, default):
     direction = request.GET.get("direction", "")
 
     if direction not in ("asc", "desc"):
-        direction = "asc"
+        direction = default_direction
 
     return sort, direction
 

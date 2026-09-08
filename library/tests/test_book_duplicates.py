@@ -138,7 +138,14 @@ class BookAddDuplicateTests(TestCase):
             "volume_mode": "single",
         }
         data.update(overrides)
-        return self.client.post(reverse("book_add"), data)
+
+        # The dialog: there is no Add Book page, and a plain POST
+        # redirects rather than re-rendering the refusal these tests read.
+        return self.client.post(
+            reverse("book_add") + "?modal=1",
+            data,
+            headers={"HX-Request": "true"},
+        )
 
     def test_a_duplicate_is_refused_and_nothing_is_created(self):
         before = Book.objects.count()
@@ -194,11 +201,14 @@ class BookAddDuplicateTests(TestCase):
     def test_the_missing_fields_message_still_comes_first(self):
         response = self.post(title="")
 
-        self.assertContains(response, "Title and Author are required")
+        self.assertContains(response, "Enter the book&#x27;s title.")
         self.assertFalse(response.context["duplicates"])
 
     def test_the_empty_form_carries_no_duplicates(self):
-        response = self.client.get(reverse("book_add"))
+        response = self.client.get(
+            reverse("book_add") + "?modal=1",
+            headers={"HX-Request": "true"},
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(list(response.context["duplicates"]), [])
@@ -223,7 +233,12 @@ class BookEditDuplicateTests(TestCase):
             "publisher": "",
         }
         data.update(overrides)
-        return self.client.post(reverse("book_edit", args=[book.id]), data)
+
+        return self.client.post(
+            reverse("book_edit", args=[book.id]) + "?modal=1",
+            data,
+            headers={"HX-Request": "true"},
+        )
 
     def test_saving_a_book_unchanged_is_not_a_self_collision(self):
         response = self.post()

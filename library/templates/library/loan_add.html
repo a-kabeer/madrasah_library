@@ -71,7 +71,7 @@
                       one and the Issue button below stays disabled.
                     {% endcomment %}
                     {% url 'borrower_list' as borrower_search_url %}
-                    {% include "library/partials/combobox_field.html" with label="Issue to" field_name="borrower" input_id="borrower" entity_label="borrower" search_url=borrower_search_url selected_id=borrower_id selected_name=borrower_name required=False allow_create=False compact=True submit_on_select=True %}
+                    {% include "library/partials/combobox_field.html" with label="Issue to" field_name="borrower" input_id="borrower" entity_label="borrower" search_url=borrower_search_url selected_id=borrower_id selected_name=borrower_name required=False allow_create=False compact=True submit_on_select=True error="" %}
                     <div class="form-text">
                         {% translate "Search by name, phone or registration number. Only borrowers who are still active appear. Needed before you can issue." %}
                     </div>

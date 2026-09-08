@@ -1,4 +1,385 @@
 {% load i18n %}
+<<<<<<< HEAD
+{% comment %}
+One physical copy, in tabs.
+
+Opened by clicking its row, so the librarian keeps their search, filters
+and page. This is the whole of the copy now — the page it replaced said the
+same four things stacked down a long scroll, and they are four separate
+questions: where it is, what it is doing, who has had it, and how it got
+here. A librarian has one of them at a time.
+
+There are no links and no buttons here at all. Inside a dialog a link is
+a trap: following it throws the dialog away, and with it whatever the
+reader was in the middle of. And every action a librarian takes on a copy
+is in the list's own Actions column, so repeating them here would be the
+one duplication this list should not have. This dialog is for reading;
+the row is for acting.
+
+The timeline shows its first page. Paging it inside a dialog would mean a
+second copy of the pagination partial that knows how to swap a modal body;
+`history_total` says how many there are so nothing looks complete when it
+is not.
+
+Expected context: copy, active_loan, loan_history, history, history_total,
+last_check, last_check_found, can_edit.
+{% endcomment %}
+
+<h5 class="modal-title" id="globalModalLabel" hx-swap-oob="true">
+    <span class="copy-code">{{ copy.copy_code }}</span>
+</h5>
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    <span class="copy-code">{{ copy.copy_code }}</span>
+</h5>
+
+{% comment %}
+  What is true of it right now, above the tabs, because it is what changes
+  how everything below should be read.
+{% endcomment %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+
+    <span class="badge text-bg-{{ copy.state_tone }}">{{ copy.state_label }}</span>
+
+    {% if copy.days_overdue %}
+        <span class="badge text-bg-danger">
+            {% blocktranslate trimmed count n=copy.days_overdue %}
+                {{ n }} day overdue
+            {% plural %}
+                {{ n }} days overdue
+            {% endblocktranslate %}
+        </span>
+    {% endif %}
+
+    <span class="text-body-secondary small ms-auto">
+        {{ copy.volume.book.title }}
+    </span>
+
+</div>
+
+<ul class="nav nav-tabs mb-3" role="tablist">
+
+    <li class="nav-item" role="presentation">
+        <button
+            class="nav-link active"
+            id="copyTabWhere"
+            data-bs-toggle="tab"
+            data-bs-target="#copyPaneWhere"
+            type="button"
+            role="tab"
+            aria-controls="copyPaneWhere"
+            aria-selected="true"
+        >
+            <i class="bi bi-geo-alt me-1" aria-hidden="true"></i>
+            {% translate "Copy" %}
+        </button>
+    </li>
+
+    <li class="nav-item" role="presentation">
+        <button
+            class="nav-link"
+            id="copyTabNow"
+            data-bs-toggle="tab"
+            data-bs-target="#copyPaneNow"
+            type="button"
+            role="tab"
+            aria-controls="copyPaneNow"
+            aria-selected="false"
+        >
+            <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i>
+            {% translate "Circulation" %}
+        </button>
+    </li>
+
+    <li class="nav-item" role="presentation">
+        <button
+            class="nav-link"
+            id="copyTabLoans"
+            data-bs-toggle="tab"
+            data-bs-target="#copyPaneLoans"
+            type="button"
+            role="tab"
+            aria-controls="copyPaneLoans"
+            aria-selected="false"
+        >
+            <i class="bi bi-journals me-1" aria-hidden="true"></i>
+            {% translate "Loans" %}
+            {% if loan_history %}
+                <span class="badge text-bg-secondary ms-1">{{ loan_history|length }}</span>
+            {% endif %}
+        </button>
+    </li>
+
+    <li class="nav-item" role="presentation">
+        <button
+            class="nav-link"
+            id="copyTabHistory"
+            data-bs-toggle="tab"
+            data-bs-target="#copyPaneHistory"
+            type="button"
+            role="tab"
+            aria-controls="copyPaneHistory"
+            aria-selected="false"
+        >
+            <i class="bi bi-clock-history me-1" aria-hidden="true"></i>
+            {% translate "History" %}
+        </button>
+    </li>
+
+</ul>
+
+{% comment %}
+  `detail-tabs` gives the panes one height, so switching between four of
+  very different lengths does not resize the dialog - which would move the
+  tabs out from under the cursor that just clicked one. See style.css.
+{% endcomment %}
+<div class="tab-content detail-tabs">
+
+    {% comment %} ------------------------------------------- where it is {% endcomment %}
+    <div
+        class="tab-pane fade show active"
+        id="copyPaneWhere"
+        role="tabpanel"
+        aria-labelledby="copyTabWhere"
+        tabindex="0"
+    >
+        <dl class="row small mb-0">
+
+            <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Copy code" %}</dt>
+            <dd class="col-sm-8 mb-2">
+                <span class="copy-code">{{ copy.copy_code }}</span>
+            </dd>
+
+            <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Book" %}</dt>
+            <dd class="col-sm-8 mb-2">
+                {{ copy.volume.book.title }}
+                {% if copy.volume.book.author %}
+                    <span class="d-block text-body-secondary">
+                        {{ copy.volume.book.author.name }}
+                    </span>
+                {% endif %}
+            </dd>
+
+            {% comment %}
+              Only worth a line when the book actually has volumes. A
+              single-volume book has its BookVolume because a copy must
+              hang off one, and saying "Volume 1" would put that plumbing
+              back in front of the librarian.
+            {% endcomment %}
+            {% if copy.volume.volume_number != 1 or copy.volume.title %}
+                <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Volume" %}</dt>
+                <dd class="col-sm-8 mb-2">
+                    {% blocktranslate with number=copy.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% if copy.volume.title %} — {{ copy.volume.title }}{% endif %}
+                </dd>
+            {% endif %}
+
+            <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Location" %}</dt>
+            <dd class="col-sm-8 mb-2">
+                {% if copy.shelf %}
+                    {{ copy.shelf.location.name }}
+                {% else %}
+                    <span class="text-body-secondary">{% translate "Not placed yet" %}</span>
+                {% endif %}
+            </dd>
+
+            <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Shelf" %}</dt>
+            <dd class="col-sm-8 mb-2">
+                {% if copy.shelf %}
+                    {{ copy.shelf.shelf_code }}
+                {% else %}
+                    <span class="text-body-secondary">{% translate "Unshelved" %}</span>
+                {% endif %}
+            </dd>
+
+            <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Acquired" %}</dt>
+            <dd class="col-sm-8 mb-2">
+                {% if copy.acquisition_date %}
+                    {{ copy.acquisition_date|date:"j M Y" }}
+                {% else %}
+                    <span class="text-body-secondary">&mdash;</span>
+                {% endif %}
+            </dd>
+
+            {% comment %}
+              When the copy was last accounted for, and whether it turned
+              up. The page said this; a copy that has not been seen in a
+              stock check is worth knowing about before trusting the shelf
+              it claims to be on.
+            {% endcomment %}
+            <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Last checked" %}</dt>
+            <dd class="col-sm-8 mb-2">
+                {% if last_check %}
+                    {{ last_check|date:"j M Y" }}
+                    {% if last_check_found %}
+                        <span class="badge text-bg-success ms-1">{% translate "Found" %}</span>
+                    {% else %}
+                        <span class="badge text-bg-warning ms-1">{% translate "Not found" %}</span>
+                    {% endif %}
+                {% else %}
+                    <span class="text-body-secondary">{% translate "Never counted" %}</span>
+                {% endif %}
+            </dd>
+
+            <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Notes" %}</dt>
+            <dd class="col-sm-8 mb-0">
+                {% if copy.notes %}
+                    {{ copy.notes|linebreaksbr }}
+                {% else %}
+                    <span class="text-body-secondary">&mdash;</span>
+                {% endif %}
+            </dd>
+
+        </dl>
+    </div>
+
+    {% comment %} ---------------------------------- what it is doing now {% endcomment %}
+    <div
+        class="tab-pane fade"
+        id="copyPaneNow"
+        role="tabpanel"
+        aria-labelledby="copyTabNow"
+        tabindex="0"
+    >
+        {% if active_loan %}
+            <dl class="row small mb-0">
+
+                <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Borrower" %}</dt>
+                <dd class="col-sm-8 mb-2">
+                    {{ active_loan.borrower.name }}
+                    <span class="d-block text-body-secondary">
+                        {{ active_loan.borrower.phone }}
+                    </span>
+                </dd>
+
+                <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Issued" %}</dt>
+                <dd class="col-sm-8 mb-2">{{ active_loan.issue_date|date:"j M Y" }}</dd>
+
+                <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Due" %}</dt>
+                <dd class="col-sm-8 mb-0">
+                    {{ active_loan.due_date|date:"j M Y" }}
+                    {% if copy.days_overdue %}
+                        <span class="badge text-bg-danger ms-1">{% translate "Overdue" %}</span>
+                    {% endif %}
+                </dd>
+
+            </dl>
+        {% else %}
+            <p class="text-body-secondary mb-0">
+                {% translate "Not out on loan." %}
+                {% if copy.state == "available" %}
+                    {% translate "It is on the shelf and can be issued." %}
+                {% elif copy.state == "unshelved" %}
+                    {% translate "It has no shelf yet, so it needs placing before it can be found." %}
+                {% else %}
+                    {% blocktranslate trimmed with state=copy.state_label|lower %}
+                        It is recorded as {{ state }}.
+                    {% endblocktranslate %}
+                {% endif %}
+            </p>
+        {% endif %}
+    </div>
+
+    {% comment %} ----------------------------------- who has had it {% endcomment %}
+    <div
+        class="tab-pane fade"
+        id="copyPaneLoans"
+        role="tabpanel"
+        aria-labelledby="copyTabLoans"
+        tabindex="0"
+    >
+        {% if loan_history %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0 small">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>{% translate "Borrower" %}</th>
+                            <th>{% translate "Issued" %}</th>
+                            <th>{% translate "Due" %}</th>
+                            <th>{% translate "Returned" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for loan in loan_history %}
+                            <tr>
+                                <td>{{ loan.borrower.name }}</td>
+                                <td class="text-nowrap">{{ loan.issue_date|date:"j M Y" }}</td>
+                                <td class="text-nowrap">{{ loan.due_date|date:"j M Y" }}</td>
+                                <td class="text-nowrap">
+                                    {% if loan.return_date %}
+                                        {{ loan.return_date|date:"j M Y" }}
+                                    {% else %}
+                                        <span class="badge text-bg-info">
+                                            {% translate "Still out" %}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-body-secondary mb-0">
+                {% translate "This copy has never been lent." %}
+            </p>
+        {% endif %}
+    </div>
+
+    {% comment %} -------------------------------------- how it got here {% endcomment %}
+    <div
+        class="tab-pane fade"
+        id="copyPaneHistory"
+        role="tabpanel"
+        aria-labelledby="copyTabHistory"
+        tabindex="0"
+    >
+        {% if history %}
+            <ul class="list-group list-group-flush">
+                {% for event in history %}
+                    <li class="list-group-item px-0 py-2">
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                            <div>
+                                <span class="badge text-bg-{{ event.tone }}">
+                                    {{ event.label }}
+                                </span>
+                                {% if event.borrower %}
+                                    <span class="ms-1 small">{{ event.borrower.name }}</span>
+                                {% endif %}
+                                {% if event.detail %}
+                                    <span class="d-block small text-body-secondary mt-1">
+                                        {{ event.detail }}
+                                    </span>
+                                {% endif %}
+                                {% if event.user %}
+                                    <span class="d-block small text-body-secondary">
+                                        {% blocktranslate trimmed with full_name=event.user.full_name|default:event.user.username %}
+                                            by {{ full_name }}
+                                        {% endblocktranslate %}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <span class="text-body-secondary small text-nowrap">
+                                {{ event.when|date:"j M Y" }}
+                            </span>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+
+            {% if history_total > history|length %}
+                <p class="text-body-secondary small mt-2 mb-0">
+                    {% blocktranslate trimmed with shown=history|length total=history_total %}
+                        The {{ shown }} most recent of {{ total }}.
+                    {% endblocktranslate %}
+                </p>
+            {% endif %}
+        {% else %}
+            <p class="text-body-secondary mb-0">
+                {% translate "Nothing has happened to this copy yet." %}
+            </p>
+        {% endif %}
+    </div>
+
+=======
 <h5 class="modal-title" id="globalModalLabel" hx-swap-oob="true">{{ copy.copy_code }}</h5>
 <div class="mb-3"><span class="badge text-bg-{{ copy.state_tone }}">{{ copy.state_label }}</span>{% if copy.days_overdue %}<span class="text-danger small ms-1">{{ copy.days_overdue }} {% translate "days overdue" %}</span>{% endif %}</div>
 <dl class="row mb-4">
@@ -15,4 +396,5 @@
         <a href="{% url 'book_copy_edit' copy.id %}?modal=1&amp;next={{ request.get_full_path|urlencode }}" data-form-modal hx-get="{% url 'book_copy_edit' copy.id %}?modal=1&amp;next={{ request.get_full_path|urlencode }}" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil me-1" aria-hidden="true"></i>{% translate "Edit copy" %}</a>
         <a href="{% url 'book_copy_move' copy.id %}?modal=1&amp;next={{ request.get_full_path|urlencode }}" data-form-modal hx-get="{% url 'book_copy_move' copy.id %}?modal=1&amp;next={{ request.get_full_path|urlencode }}" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i>{% translate "Move" %}</a>
     {% endif %}
+>>>>>>> 255e80b83f662a73d00b1fffa5ac2cbf1418ada2
 </div>

@@ -25,20 +25,37 @@ from .. import notifications
 from .. import policy
 from .. import reservations
 
-from ..permissions import feature_required, role_required
+from ..permissions import (
+    feature_required,
+    passes_ceiling,
+    role_required,
+)
+
+from django.utils.translation import gettext
 
 from .common import (
     BOOK_COPY_CACHE_KEY,
     DASHBOARD_CACHE_KEY,
     INTERNAL_PARAMS,
     LOAN_CACHE_KEY,
+    LOAN_SORT_DEFAULT,
+    LOAN_SORT_DEFAULT_DIRECTION,
+    LOAN_SORT_FIELDS,
     PAGE_SIZE,
     PolicyRefused,
     copy_for_code,
     create_activity_log,
     describe_loans,
+    is_form_modal_request,
+    lookup_saved_response,
+    page_size_options,
+    resolve_page_size,
+    query_with,
+    resolve_sort,
     safe_redirect_target,
     selected_name,
+    sort_ordering,
+    sortable_columns,
 )
 from .copies import COPY_LOOKUP_LIMIT
 
@@ -59,13 +76,17 @@ def issuable_copies():
     )
 
 
-def copy_selection_url(request, copy_ids, clear_search=False):
-    """This page with `copies` set to `copy_ids`, keeping the rest.
+def selection_url(request, param, chosen_ids, clear_search=False):
+    """This page with `param` set to `chosen_ids`, keeping the rest.
 
-    The chosen copies live in the query string rather than in checkboxes,
-    so searching again for the next one cannot lose the ones already
-    picked - and the whole half-built issue is a URL, which survives a
-    reload and can be handed to a colleague.
+    What has been picked so far lives in the query string rather than in
+    checkboxes, so searching again for the next one cannot lose the ones
+    already picked - and the whole half-built form is a URL, which survives
+    a reload and can be handed to a colleague.
+
+    Both baskets work this way and this is the whole of it; only the
+    parameter differs - `copies` for the copies being issued, `loans` for
+    the loans being returned.
 
     `clear_search` drops the search term as well, which is what a scan
     wants: the code has been dealt with, and leaving it in the box would
@@ -78,9 +99,10 @@ def copy_selection_url(request, copy_ids, clear_search=False):
         params.pop(key, None)
 
     if clear_search:
-        params.pop("q", None)
+        for key in ("q", "copy_code"):
+            params.pop(key, None)
 
-    params.setlist("copies", [str(value) for value in copy_ids])
+    params.setlist(param, [str(value) for value in chosen_ids])
 
     return "?" + params.urlencode()
 
@@ -238,13 +260,24 @@ def loan_list(request):
             due_date=due_date
         )
 
-    # Order loans
-    loans = loans_query.order_by(
-        "-issue_date",
-        "-id"
+    # Ordering, from the whitelist. `-id` stays as the tie-break: two
+    # loans issued on the same day would otherwise come back in whatever
+    # order the database felt like, which makes a paginated table drop and
+    # repeat rows between pages.
+    sort, direction = resolve_sort(
+        request,
+        LOAN_SORT_FIELDS,
+        LOAN_SORT_DEFAULT,
+        default_direction=LOAN_SORT_DEFAULT_DIRECTION,
     )
 
-    paginator = Paginator(loans, PAGE_SIZE)
+    loans = loans_query.order_by(
+        *sort_ordering(LOAN_SORT_FIELDS, sort, direction)
+    )
+
+    page_size = resolve_page_size(request)
+
+    paginator = Paginator(loans, page_size)
     loans = paginator.get_page(request.GET.get("page"))
 
     # Calculate overdue days
@@ -263,11 +296,6 @@ def loan_list(request):
                 today - loan.due_date
             ).days
 
-    # Borrowers for dropdown
-    borrowers = Borrower.objects.all().order_by(
-        "name"
-    )
-
     return render(
         request,
         "library/loan_list.html",
@@ -278,7 +306,84 @@ def loan_list(request):
             "borrower_id": borrower_id,
             "issue_date": issue_date,
             "due_date": due_date,
-            "borrowers": borrowers,
+
+            "columns": sortable_columns(
+                request,
+                [
+                    ("copy", gettext("Copy")),
+                    ("book", gettext("Book")),
+                    ("borrower", gettext("Borrower")),
+                    ("issue_date", gettext("Issued")),
+                    ("due_date", gettext("Due")),
+                    (None, gettext("Status")),
+                ],
+                LOAN_SORT_FIELDS,
+                sort,
+                direction,
+            ),
+
+            "sort": sort,
+            "direction": direction,
+
+            "paginator": paginator,
+            "page_size": page_size,
+            "page_size_options": page_size_options(page_size),
+            # Everything except `page`, so the search, the status and both
+            # date filters survive being paged through or re-sorted.
+            "pagination_query": query_with(request, page=None),
+            # For the rows-per-page control, which sets its own value.
+            "page_size_url": "?" + query_with(
+                request, page=None, page_size=None
+            ),
+            "elided_page_range": list(
+                paginator.get_elided_page_range(
+                    loans.number,
+                    on_each_side=1,
+                    on_ends=1,
+                )
+            ),
+            "page_ellipsis": Paginator.ELLIPSIS,
+
+            # The status filter's own links, each carrying the rest of the
+            # table's state. Built here rather than in the template because
+            # `query_with` needs the request.
+            "status_options": [
+                {
+                    "value": value,
+                    "label": label,
+                    "icon": icon,
+                    "active": status == value,
+                    "url": "?" + query_with(
+                        request, status=value or None, page=None
+                    ),
+                }
+                for value, label, icon in (
+                    ("", gettext("All"), "bi-list-ul"),
+                    ("active", gettext("Active"), "bi-arrow-up-right-circle"),
+                    (
+                        "overdue",
+                        gettext("Overdue"),
+                        "bi-exclamation-triangle",
+                    ),
+                    (
+                        "due_today",
+                        gettext("Due today"),
+                        "bi-calendar-event",
+                    ),
+                    ("returned", gettext("Returned"), "bi-check2-circle"),
+                )
+            ],
+
+            # Whether to offer Renew at all. `loan_renew` admits Admin
+            # and Librarian - and SuperAdmin, whom `feature_required`
+            # exempts - so an Assistant would otherwise be looking at the
+            # one button their row has and getting a 403 from it. The same
+            # ceiling, asked of the same helper, so the button and the
+            # decorator cannot drift apart. The decorator is still the
+            # rule; this only decides what is offered.
+            "can_renew": passes_ceiling(
+                request.user, "Admin", "Librarian"
+            ),
         }
     )
 
@@ -308,9 +413,16 @@ def loan_detail(request, loan_id):
             today - loan.due_date
         ).days
 
+    # There is no loan page any more - the dialog is the whole of it. A
+    # request without `?modal=1` still has to answer, because six other
+    # pages link to this URL, so it goes to the list rather than 404ing on
+    # a link somebody has bookmarked.
+    if not is_form_modal_request(request):
+        return redirect("loan_list")
+
     return render(
         request,
-        "library/loan_detail.html",
+        "library/partials/loan_detail_modal.html",
         {
             "loan": loan,
         }
@@ -382,8 +494,9 @@ def loan_add(request):
             if scan.add:
                 return redirect(
                     request.path
-                    + copy_selection_url(
+                    + selection_url(
                         request,
+                        "copies",
                         chosen_ids + [scan.copy.id],
                         clear_search=True,
                     )
@@ -403,11 +516,14 @@ def loan_add(request):
     matches = matches[:COPY_LOOKUP_LIMIT]
 
     for copy in matches:
-        copy.add_url = copy_selection_url(request, chosen_ids + [copy.id])
+        copy.add_url = selection_url(
+            request, "copies", chosen_ids + [copy.id]
+        )
 
     for copy in chosen:
-        copy.remove_url = copy_selection_url(
+        copy.remove_url = selection_url(
             request,
+            "copies",
             [value for value in chosen_ids if value != copy.id],
         )
 
@@ -961,93 +1077,21 @@ def loan_return(request, loan_id):
 
     if request.method == "POST" and loan.return_date is None:
 
-        return_date = request.POST.get(
-            "return_date"
-        )
-
         notes = request.POST.get(
             "notes",
             ""
         ).strip()
 
-        parsed_return_date = None
-
-        if not return_date:
-
-            error_message = "Return date is required."
-
-        else:
-
-            try:
-                parsed_return_date = date.fromisoformat(return_date)
-            except ValueError:
-                parsed_return_date = None
-
-            if parsed_return_date is None:
-
-                error_message = "Please enter a valid return date."
-
-            elif parsed_return_date < loan.issue_date:
-
-                error_message = (
-                    "Return date cannot be earlier than issue date."
-                )
+        error_message, parsed_return_date = refuse_return(
+            loan, request.POST.get("return_date")
+        )
 
         if not error_message:
 
-            # The return, the copy going back on the shelf, the log entry
-            # and the notification for whoever is now at the front of the
-            # queue are one transition: all of it happened, or none of it
-            # did.
-            #
-            # Locked and re-read first, the same shape as
-            # `reservations.close` and `inventory_session_complete`. The
-            # `return_date is None` above is read outside any transaction,
-            # so a double-clicked button or a retried request could both
-            # pass it; this is where that is actually decided, and the
-            # second one finds the loan already returned and writes
-            # nothing rather than moving the return date.
-            with transaction.atomic():
-
-                locked = Loan.objects.select_for_update().filter(
-                    id=loan.id,
-                    return_date__isnull=True,
-                ).first()
-
-                if locked is not None:
-
-                    locked.return_date = parsed_return_date
-
-                    # The member of staff taking the book back is the one
-                    # signed in, for the same reason `issued_by` is set
-                    # that way on the issue side.
-                    locked.returned_to = request.user
-
-                    if notes:
-                        locked.notes = notes
-
-                    locked.save()
-
-                    loan.copy.status = "Available"
-
-                    loan.copy.save()
-
-                    create_activity_log(
-                        user=locked.returned_to,
-                        action="RETURN",
-                        entity_type="BookCopy",
-                        entity_id=locked.copy_id,
-                        description=(
-                            f"{loan.copy.copy_code} "
-                            f"{loan.borrower.name} سے واپس وصول کی گئی"
-                        ),
-                    )
-
-                    # A copy is on the shelf again, so whoever is at the
-                    # front of this book's queue can be served now. The
-                    # queue itself is untouched: nothing is assigned and
-                    # no copy is set aside - this only tells the desk.
-                    notifications.announce_ready(loan.copy.volume.book)
+            # One book back, by the one helper that does it. The batch on
+            # the return page calls the same thing, so there is a single
+            # place a loan is closed and a copy goes back on its shelf.
+            record_return(loan, parsed_return_date, notes, request.user)
 
             cache.delete(
                 LOAN_CACHE_KEY
@@ -1060,6 +1104,9 @@ def loan_return(request, loan_id):
             cache.delete(
                 DASHBOARD_CACHE_KEY
             )
+
+            if is_form_modal_request(request):
+                return lookup_saved_response(loan.copy.copy_code)
 
             return redirect(
                 safe_redirect_target(request, "loan_list")
@@ -1075,17 +1122,31 @@ def loan_return(request, loan_id):
         if waiting_front else 0
     )
 
-    return render(
-        request,
-        "library/loan_return.html",
-        {
-            "loan": loan,
-            "error_message": error_message,
-            "next_url": next_url,
-            "waiting_front": waiting_front,
-            "waiting_count": waiting_count,
-        }
-    )
+    context = {
+        "loan": loan,
+        "error_message": error_message,
+        "next_url": next_url,
+        "waiting_front": waiting_front,
+        "waiting_count": waiting_count,
+        # The date the desk almost always wants, and the latest one the
+        # field will accept: a book cannot come back tomorrow.
+        "today": timezone.now().date(),
+    }
+
+    if is_form_modal_request(request):
+
+        return render(
+            request,
+            "library/partials/loan_return_modal.html",
+            context,
+        )
+
+    # The standalone page is gone; without the dialog this is a redirect
+    # with the reason attached.
+    if error_message:
+        messages.error(request, error_message)
+
+    return redirect(safe_redirect_target(request, "loan_list"))
 @feature_required("loans.active", "Admin", "Librarian")
 def loan_delete(request, loan_id):
 
@@ -1208,7 +1269,7 @@ def active_loan_for_code(copy_code):
 
 
 def active_loans_matching(term):
-    """Active loans whose book title or author matches `term`.
+    """Active loans whose book, author or borrower matches `term`.
 
     For the half of the field that is not a scan: someone at the desk with
     a book in their hand and no readable label.
@@ -1230,6 +1291,12 @@ def active_loans_matching(term):
         ).filter(
             models.Q(copy__volume__book__title__icontains=term)
             | models.Q(copy__volume__book__author__name__icontains=term)
+            # The borrower as well, which is what makes returning a stack
+            # possible: somebody arrives with four books and their name
+            # lists all four at once. Nothing new is exposed - these are
+            # the loans the page already lists, found by the third thing
+            # printed on the row.
+            | models.Q(borrower__name__icontains=term)
         ).select_related(
             "copy__volume__book__author",
             "borrower",
@@ -1239,9 +1306,100 @@ def active_loans_matching(term):
     )
 
 
+def refuse_return(loan, return_date):
+    """Why this loan cannot be returned on this date, and the date.
+
+    The validation `loan_return` already did, lifted out unchanged so the
+    single return and the batch hold a book to the same three rules:
+    a date is required, it has to parse, and it cannot precede the day the
+    book went out.
+
+    Returns `("", date)` when there is nothing wrong, and
+    `(reason, None)` when there is.
+    """
+
+    if not return_date:
+        return "Return date is required.", None
+
+    try:
+        parsed = date.fromisoformat(return_date)
+    except (TypeError, ValueError):
+        return "Please enter a valid return date.", None
+
+    if parsed < loan.issue_date:
+        return "Return date cannot be earlier than issue date.", None
+
+    return "", parsed
+
+
+def record_return(loan, return_date, notes, user):
+    """Take one book back: the loan, the copy, the log and the queue.
+
+    The body of `loan_return`, moved here so the batch on the return page
+    does not have a second copy of it. Nothing about it changed.
+
+    The return, the copy going back on the shelf, the log entry and the
+    notification for whoever is now at the front of the queue are one
+    transition: all of it happened, or none of it did.
+
+    Locked and re-read first, the same shape as `reservations.close` and
+    `inventory_session_complete`. Whether the loan is unreturned is read
+    outside any transaction by both callers, so a double-clicked button or
+    a retried request could both pass that check; this is where it is
+    actually decided. `False` means the loan was already returned and this
+    call wrote nothing rather than moving the return date - which is what
+    lets the batch roll itself back and say so.
+    """
+
+    with transaction.atomic():
+
+        locked = Loan.objects.select_for_update().filter(
+            id=loan.id,
+            return_date__isnull=True,
+        ).first()
+
+        if locked is None:
+            return False
+
+        locked.return_date = return_date
+
+        # The member of staff taking the book back is the one signed in,
+        # for the same reason `issued_by` is set that way on the issue
+        # side.
+        locked.returned_to = user
+
+        if notes:
+            locked.notes = notes
+
+        locked.save()
+
+        loan.copy.status = "Available"
+
+        loan.copy.save()
+
+        create_activity_log(
+            user=locked.returned_to,
+            action="RETURN",
+            entity_type="BookCopy",
+            entity_id=locked.copy_id,
+            description=(
+                f"{loan.copy.copy_code} "
+                f"{loan.borrower.name} سے واپس وصول کی گئی"
+            ),
+        )
+
+        # A copy is on the shelf again, so whoever is at the front of this
+        # book's queue can be served now. The queue itself is untouched:
+        # nothing is assigned and no copy is set aside - this only tells
+        # the desk.
+        notifications.announce_ready(loan.copy.volume.book)
+
+    return True
+
+
 @feature_required("circulation.return")
 def loan_return_lookup(request):
-    """Find what to bring back: by its code, or by book or author.
+    """Find what to bring back, and bring back as many as were found.
 
     One field, two behaviours, in that order. A code is resolved on its own
     first - that is what a barcode or QR scanner sends, it can only ever
@@ -1249,9 +1407,53 @@ def loan_return_lookup(request):
     known code is searched for, so the scan path never runs a search at
     all.
 
-    Nothing here returns anything. Both answers lead into `loan_return`,
-    which owns that workflow and is unchanged.
+    What is found goes into a list, exactly as the issue form's basket
+    works and by the same function: the chosen loans ride in the query
+    string, so searching for the next book cannot lose the ones already
+    picked. Somebody arriving with four books is four searches and one
+    submission, not four separate returns.
+
+    The list may hold loans belonging to different borrowers. Nothing needs
+    them to match - each loan already names its own borrower, and a stack
+    coming off a drop-box shelf is not one person's.
     """
+
+    today = timezone.now().date()
+
+    # The list survives the search on a GET and comes back as hidden
+    # fields on the POST, so the same two lines read both.
+    source = request.POST if request.method == "POST" else request.GET
+
+    chosen_ids = [
+        int(value)
+        for value in source.getlist("loans")
+        if value.isdigit()
+    ]
+
+    # Re-read rather than trusted, and only what is still out: a loan
+    # picked a minute ago may have been returned at another desk since, and
+    # it drops out here if so.
+    chosen = describe_loans(
+        Loan.objects.filter(
+            id__in=chosen_ids,
+            return_date__isnull=True,
+        ).select_related(
+            "copy__volume__book__author",
+            "borrower",
+        ).order_by("copy__copy_code"),
+        today,
+    ) if chosen_ids else []
+
+    # What is left after that read, and what was asked for. On a GET the
+    # difference does not matter - a stale row simply is not shown. On a
+    # POST it does: returning four of five books and saying "4 returned"
+    # is worse than refusing, so the difference is reported below.
+    returnable_ids = [item.id for item in chosen]
+    missing_ids = [
+        value for value in chosen_ids if value not in returnable_ids
+    ]
+
+    chosen_ids = returnable_ids
 
     term = request.GET.get("copy_code", "").strip()
 
@@ -1259,9 +1461,39 @@ def loan_return_lookup(request):
     matches = []
     more_matches = False
     error_message = ""
-    today = timezone.now().date()
+    return_date = request.POST.get("return_date", "") or today.isoformat()
+    notes = request.POST.get("notes", "")
 
-    if term:
+    if request.method == "POST":
+
+        if missing_ids:
+            # Already back, at this desk or another one. Named, so the
+            # librarian knows which row to take out rather than being told
+            # a count that does not match the pile in front of them.
+            already = list(
+                Loan.objects.filter(
+                    id__in=missing_ids
+                ).select_related("copy").order_by("copy__copy_code")
+            )
+
+            error_message = gettext(
+                "%(codes)s had already been returned, so nothing was "
+                "recorded. Take them out of the list and submit again."
+            ) % {
+                "codes": ", ".join(
+                    item.copy.copy_code for item in already
+                )
+            }
+
+        else:
+            error_message = return_chosen_loans(
+                request, chosen, return_date, notes.strip()
+            )
+
+            if not error_message:
+                return redirect("circulation_return_lookup")
+
+    elif term:
 
         loan = active_loan_for_code(term)
 
@@ -1269,10 +1501,24 @@ def loan_return_lookup(request):
             # The overdue rule, from the one place that states it.
             describe_loans([loan], today)
 
+            loan.add_url = selection_url(
+                request, "loans", chosen_ids + [loan.id], clear_search=True
+            )
+
         else:
             matches = active_loans_matching(term)
             more_matches = len(matches) > RETURN_LOOKUP_LIMIT
             matches = describe_loans(matches[:RETURN_LOOKUP_LIMIT], today)
+
+            # What is already in the list is not offered again.
+            matches = [
+                match for match in matches if match.id not in chosen_ids
+            ]
+
+            for match in matches:
+                match.add_url = selection_url(
+                    request, "loans", chosen_ids + [match.id]
+                )
 
             if not matches:
 
@@ -1288,8 +1534,15 @@ def loan_return_lookup(request):
                     error_message = (
                         "No copy found with that code, and nothing on loan "
                         "matches \u201c%s\u201d. Check the label, or try "
-                        "the book or the author." % term
+                        "the book, the author or the borrower." % term
                     )
+
+    for item in chosen:
+        item.remove_url = selection_url(
+            request,
+            "loans",
+            [value for value in chosen_ids if value != item.id],
+        )
 
     return render(
         request,
@@ -1301,8 +1554,79 @@ def loan_return_lookup(request):
             "more_matches": more_matches,
             "lookup_limit": RETURN_LOOKUP_LIMIT,
             "error_message": error_message,
+            "chosen": chosen,
+            "chosen_ids": chosen_ids,
+            "return_date": return_date,
+            "notes": notes,
+            "today": today,
         }
     )
+
+
+def return_chosen_loans(request, chosen, return_date, notes):
+    """Take the whole list back at once, or none of it.
+
+    All-or-nothing, like the issue basket, and for the same reason: a
+    partial answer leaves the librarian holding five books and knowing
+    only that something went wrong. Every loan is checked against
+    `refuse_return` first, then every loan is written inside one
+    transaction, so a copy returned at another desk in the meantime rolls
+    the submission back with the reason instead of half-recording it.
+
+    Rows are taken in ascending id order, so two submissions that share a
+    loan take its row in the same order and cannot deadlock.
+
+    Returns "" when the books are back, and the reason when they are not.
+    """
+
+    if not chosen:
+        return (
+            "Nothing is in the return list. Scan a label or search for "
+            "the book, then add it."
+        )
+
+    parsed = None
+
+    for item in chosen:
+
+        refusal, parsed_for_item = refuse_return(item, return_date)
+
+        if refusal:
+            return "%s: %s" % (item.copy.copy_code, refusal)
+
+        parsed = parsed_for_item
+
+    try:
+        with transaction.atomic():
+
+            for item in sorted(chosen, key=lambda item: item.id):
+
+                if not record_return(item, parsed, notes, request.user):
+                    raise PolicyRefused(
+                        "%s had already been returned, so nothing was "
+                        "recorded. Remove it from the list and submit "
+                        "again." % item.copy.copy_code
+                    )
+
+    except PolicyRefused as refused:
+        return str(refused)
+
+    cache.delete(LOAN_CACHE_KEY)
+    cache.delete(BOOK_COPY_CACHE_KEY)
+    cache.delete(DASHBOARD_CACHE_KEY)
+
+    if len(chosen) == 1:
+        messages.success(
+            request,
+            "%s returned." % chosen[0].copy.copy_code,
+        )
+    else:
+        messages.success(
+            request,
+            "%d books returned." % len(chosen),
+        )
+
+    return ""
 
 
 # Renew an active loan. Extends the due date by the default loan period from
@@ -1341,6 +1665,43 @@ def loan_renew(request, loan_id):
         else active_policy.due_date_for(loan.due_date)
     )
 
+    today = timezone.now().date()
+
+    if not error_message and request.method == "POST":
+
+        # The date the librarian picked, or the policy's if the form did
+        # not send one. This used to be computed and never asked for, so
+        # a loan could only ever be extended by exactly the policy period.
+        chosen = request.POST.get("new_due_date", "").strip()
+
+        if chosen:
+
+            try:
+                chosen_date = date.fromisoformat(chosen)
+            except ValueError:
+                chosen_date = None
+
+            if chosen_date is None:
+
+                error_message = "Please enter a valid due date."
+
+            elif chosen_date < today:
+
+                # A renewal moves the date forward. Backdating one would
+                # mark a book overdue that is not, which is why the field
+                # will not offer a past day either.
+                error_message = "The new due date cannot be in the past."
+
+            elif chosen_date < loan.due_date:
+
+                error_message = (
+                    "The new due date must be on or after the current "
+                    "due date."
+                )
+
+            else:
+                new_due_date = chosen_date
+
     if not error_message and request.method == "POST":
 
         try:
@@ -1358,7 +1719,13 @@ def loan_renew(request, loan_id):
                 if refusal:
                     raise PolicyRefused(refusal)
 
-                new_due_date = active_policy.due_date_for(locked.due_date)
+                # The chosen date if there is one, the policy's otherwise.
+                # Recomputed from the locked row so a concurrent renewal
+                # cannot leave this extending a due date that has moved.
+                if not chosen:
+                    new_due_date = active_policy.due_date_for(
+                        locked.due_date
+                    )
 
                 locked.due_date = new_due_date
                 locked.save(update_fields=["due_date"])
@@ -1384,21 +1751,37 @@ def loan_renew(request, loan_id):
             cache.delete(LOAN_CACHE_KEY)
             cache.delete(DASHBOARD_CACHE_KEY)
 
-            return redirect("loan_detail", loan_id=loan.id)
+            if is_form_modal_request(request):
+                return lookup_saved_response(loan.copy.copy_code)
 
-    return render(
-        request,
-        "library/loan_renew.html",
-        {
-            "loan": loan,
-            "new_due_date": new_due_date,
-            "error_message": error_message,
-            "renewals_used": renewals_used,
-            "renewal_limit": (
-                active_policy.max_renewals
-                if active_policy.limits_renewals
-                else 0
-            ),
-            "loan_period_days": active_policy.loan_period_days,
-        }
-    )
+            # The loan page it used to return to no longer exists.
+            return redirect("loan_list")
+
+    context = {
+        "loan": loan,
+        "new_due_date": new_due_date,
+        "error_message": error_message,
+        "renewals_used": renewals_used,
+        "renewal_limit": (
+            active_policy.max_renewals
+            if active_policy.limits_renewals
+            else 0
+        ),
+        "loan_period_days": active_policy.loan_period_days,
+        # The earliest day the picker will offer. Today, or the current due
+        # date when that is later - either way, never a day in the past.
+        "earliest_due_date": max(today, loan.due_date),
+    }
+
+    if is_form_modal_request(request):
+
+        return render(
+            request,
+            "library/partials/loan_renew_modal.html",
+            context,
+        )
+
+    if error_message:
+        messages.error(request, error_message)
+
+    return redirect("loan_list")

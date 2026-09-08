@@ -54,6 +54,28 @@ class BorrowerTestCase(TestCase):
         make_user(username="assist", password="pass12345", role="Assistant")
         self.client.login(username="assist", password="pass12345")
 
+    def dialog(self, url_name, *args, **params):
+        """Fetch a borrower dialog the way the browser asks for one.
+
+        `?modal=1` and the HX-Request header together - `is_form_modal_request`
+        wants both, so that one URL never returns two different bodies.
+        """
+
+        return self.client.get(
+            reverse(url_name, args=args) + "?modal=1",
+            params,
+            headers={"HX-Request": "true"},
+        )
+
+    def post_dialog(self, url_name, *args, **data):
+        # `url_name` rather than `name`: these are called with a payload
+        # splatted in, and a borrower's payload has a `name` field.
+        return self.client.post(
+            reverse(url_name, args=args) + "?modal=1",
+            data,
+            headers={"HX-Request": "true"},
+        )
+
 
 class BorrowerListTests(BorrowerTestCase):
 
@@ -176,10 +198,28 @@ class BorrowerListTests(BorrowerTestCase):
         self.assertEqual(response.context["overdue_borrowers"], 1)
         self.assertContains(response, "?activity=overdue")
 
+    def test_the_rows_per_page_select_shows_what_is_in_force(self):
+        """It showed the first option whatever the size actually was.
+
+        `page_size_options` marks the active one by comparing against the
+        value it is handed, and it was handed the request.
+        """
+
+        response = self.get(page_size=10)
+
+        self.assertEqual(response.context["page_size"], 10)
+        self.assertEqual(
+            [o["value"] for o in response.context["page_size_options"] if o["active"]],
+            [10],
+        )
+
     def test_each_row_opens_the_profile(self):
+        # `data-borrower-url`, not `data-row-url`: the row opens the
+        # profile dialog now rather than navigating to a page, and app.js
+        # reads a different attribute for each of those two behaviours.
         self.assertContains(
             self.get(),
-            'data-row-url="%s"' % reverse(
+            'data-borrower-url="%s?modal=1"' % reverse(
                 "borrower_detail", args=[self.holder.id]
             ),
         )
@@ -273,9 +313,8 @@ class BorrowerProfileTests(BorrowerTestCase):
         )
 
     def get(self, **params):
-        return self.client.get(
-            reverse("borrower_detail", args=[self.borrower.id]), params
-        )
+        # The profile is a dialog now; there is no page to fetch.
+        return self.dialog("borrower_detail", self.borrower.id, **params)
 
     def test_it_shows_the_basic_information(self):
         response = self.get()
@@ -322,13 +361,20 @@ class BorrowerProfileTests(BorrowerTestCase):
     def test_the_history_holds_everything_newest_first(self):
         response = self.get()
 
-        self.assertEqual(response.context["paginator"].count, 3)
+        self.assertEqual(response.context["history_count"], 3)
 
-        issued = [loan.issue_date for loan in response.context["loans"]]
+        issued = [loan.issue_date for loan in response.context["history"]]
 
         self.assertEqual(issued, sorted(issued, reverse=True))
 
-    def test_the_history_is_paginated(self):
+    def test_the_history_is_the_recent_ten_and_says_how_many_there_are(self):
+        """It was paginated; a dialog cannot page without a second copy of
+        the pagination partial that knows how to swap a modal body.
+
+        So it shows the ten most recent and says the total, and the whole
+        history is one button away on the loan list - which pages already.
+        """
+
         for index in range(30):
             make_loan(
                 copy=self.a_copy("PRX-%d" % index),
@@ -340,8 +386,9 @@ class BorrowerProfileTests(BorrowerTestCase):
 
         response = self.get()
 
-        self.assertEqual(response.context["paginator"].count, 33)
-        self.assertEqual(len(response.context["loans"]), 25)
+        self.assertEqual(response.context["history_count"], 33)
+        self.assertEqual(len(response.context["history"]), 10)
+        self.assertContains(response, "most recent of")
 
     def test_the_page_costs_the_same_however_long_the_history(self):
         with CaptureQueriesContext(connection) as few:
@@ -361,42 +408,58 @@ class BorrowerProfileTests(BorrowerTestCase):
 
         self.assertEqual(len(few), len(many))
 
-    def test_it_links_to_the_book_copy_and_loan_pages(self):
+    def test_the_book_and_the_copy_are_named_without_being_links(self):
+        """Inside a dialog a link is a trap: following it throws the
+        dialog away, and with it whatever the reader was in the middle of.
+
+        So the tables name the book and the copy in plain text, and the
+        one way onward is the footer's loan list.
+        """
+
+        response = self.get()
+
+        self.assertContains(response, "Riyad as-Salihin")
+        self.assertContains(response, "PR-1")
+
+        self.assertNotContains(
+            response, reverse("book_copy_detail", args=[self.out.copy_id])
+        )
+        self.assertNotContains(
+            response, reverse("loan_detail", args=[self.out.id])
+        )
+
+    def test_the_whole_history_is_one_button_away(self):
         response = self.get()
 
         self.assertContains(
-            response, reverse("book_detail", args=[self.book.id])
-        )
-        self.assertContains(
-            response, reverse("book_copy_detail", args=[self.out.copy_id])
-        )
-        self.assertContains(
-            response, reverse("loan_detail", args=[self.out.id])
-        )
-        self.assertContains(
-            response, reverse("loan_return", args=[self.out.id])
+            response,
+            "%s?borrower=%d" % (reverse("loan_list"), self.borrower.id),
         )
 
-    def test_it_leads_back_to_the_list(self):
-        self.assertContains(self.get(), reverse("borrower_list"))
+    def test_a_plain_request_lands_on_the_list(self):
+        """Several pages link to a borrower; a stale link should land."""
+
+        response = self.client.get(
+            reverse("borrower_detail", args=[self.borrower.id])
+        )
+
+        self.assertRedirects(response, reverse("borrower_list"))
 
     def test_status_and_activity_are_shown_apart(self):
         response = self.get()
 
-        # The badge is the borrower's standing; the tiles are the loans.
+        # The badge is the borrower's standing; the tabs are the loans.
         self.assertContains(response, "Active")
-        self.assertContains(response, "Out on loan")
-        self.assertContains(response, "Overdue")
+        self.assertContains(response, "On loan")
+        self.assertContains(response, "overdue")
 
     def test_a_borrower_with_no_loans_says_so(self):
         empty = make_borrower(name="Nobody", phone="0300-0")
 
-        response = self.client.get(
-            reverse("borrower_detail", args=[empty.id])
-        )
+        response = self.dialog("borrower_detail", empty.id)
 
         self.assertEqual(response.context["active_count"], 0)
-        self.assertContains(response, "never taken a book out")
+        self.assertContains(response, "never borrowed anything")
 
     def test_an_assistant_is_not_offered_deletion(self):
         self.as_assistant()
@@ -429,7 +492,7 @@ class BorrowerProfileTests(BorrowerTestCase):
 
         response = self.get()
 
-        listed = {loan.id for loan in response.context["loans"]}
+        listed = {loan.id for loan in response.context["history"]}
 
         self.assertEqual(
             listed, {self.out.id, self.late.id, self.returned.id}
@@ -451,8 +514,8 @@ class ProfileQuickActionTests(BorrowerTestCase):
         self.copy = self.a_copy("QA-1")
 
     def get(self, borrower=None):
-        return self.client.get(
-            reverse("borrower_detail", args=[(borrower or self.borrower).id])
+        return self.dialog(
+            "borrower_detail", (borrower or self.borrower).id
         )
 
     def test_the_profile_offers_editing(self):
@@ -478,19 +541,24 @@ class ProfileQuickActionTests(BorrowerTestCase):
         )
         self.assertEqual(response.context["borrower_name"], "Bilal")
 
-    def test_the_active_loans_link_is_offered_once_there_are_some(self):
-        without = self.get()
+    def test_their_loans_are_one_button_away_whether_or_not_they_have_any(self):
+        """It used to appear only once there was something to see, which
+        meant the footer changed shape between two borrowers.
 
-        self.assertNotContains(
-            without, "borrower=%d&amp;status=active" % self.borrower.id
-        )
+        The button is always there now and goes to the loan list filtered
+        to them - which says "no loans found" perfectly well on its own.
+        """
 
-        make_loan(copy=self.copy, borrower=self.borrower)
+        for stage in ("before", "after"):
+            with self.subTest(stage=stage):
+                self.assertContains(
+                    self.get(),
+                    "%s?borrower=%d"
+                    % (reverse("loan_list"), self.borrower.id),
+                )
 
-        self.assertContains(
-            self.get(),
-            "borrower=%d&amp;status=active" % self.borrower.id,
-        )
+            if stage == "before":
+                make_loan(copy=self.copy, borrower=self.borrower)
 
     def test_the_active_loans_link_shows_only_this_borrower(self):
         mine = make_loan(copy=self.copy, borrower=self.borrower)
@@ -518,14 +586,29 @@ class ProfileQuickActionTests(BorrowerTestCase):
 
         response = self.get()
 
-        for name, url in (
-            ("edit", reverse("borrower_edit", args=[self.borrower.id])),
-            ("issue", reverse("circulation_issue")),
-            ("loans", reverse("loan_list")),
+        # Edit is a dialog, so "reachable" means reachable as one; the
+        # other two are still pages. Either way the point is unchanged:
+        # every action the footer offers actually answers an Assistant.
+        for label, url, opened in (
+            (
+                "edit",
+                reverse("borrower_edit", args=[self.borrower.id]),
+                self.dialog("borrower_edit", self.borrower.id),
+            ),
+            (
+                "issue",
+                reverse("circulation_issue"),
+                self.client.get(reverse("circulation_issue")),
+            ),
+            (
+                "loans",
+                reverse("loan_list"),
+                self.client.get(reverse("loan_list")),
+            ),
         ):
-            with self.subTest(action=name):
+            with self.subTest(action=label):
                 self.assertContains(response, url)
-                self.assertEqual(self.client.get(url).status_code, 200)
+                self.assertEqual(opened.status_code, 200)
 
 
 class InactiveBorrowerIssueTests(BorrowerTestCase):
@@ -540,9 +623,7 @@ class InactiveBorrowerIssueTests(BorrowerTestCase):
         self.copy = self.a_copy("IN-1")
 
     def test_the_profile_says_so_and_offers_no_issue_link(self):
-        response = self.client.get(
-            reverse("borrower_detail", args=[self.borrower.id])
-        )
+        response = self.dialog("borrower_detail", self.borrower.id)
 
         self.assertContains(response, "Inactive")
         self.assertContains(response, "cannot receive new loans")
@@ -631,33 +712,51 @@ class AddAndEditTests(BorrowerTestCase):
         self.assertTrue(borrower.is_active)
 
     def test_the_required_fields_are_enforced(self):
+        # Each message sits under its own field now, rather than one
+        # sentence above the form naming both when one was missing.
         for field, message in (
-            ("name", "name is required"),
-            ("phone", "Phone number is required"),
+            ("name", "Enter the borrower&#x27;s name."),
+            ("phone", "Enter a phone number."),
         ):
             with self.subTest(field=field):
-                response = self.client.post(
-                    reverse("borrower_add"), self.payload(**{field: ""})
+                response = self.post_dialog(
+                    "borrower_add", **self.payload(**{field: ""})
                 )
 
                 self.assertContains(response, message)
+                self.assertIn(field, response.context["errors"])
+                self.assertFalse(
+                    Borrower.objects.filter(name="New Reader").exists()
+                )
 
     def test_an_invalid_type_is_refused(self):
-        response = self.client.post(
-            reverse("borrower_add"), self.payload(borrower_type="Wizard")
+        response = self.post_dialog(
+            "borrower_add", **self.payload(borrower_type="Wizard")
         )
 
-        self.assertContains(response, "valid borrower type")
+        self.assertContains(response, "what kind of borrower")
+        self.assertFalse(Borrower.objects.filter(name="New Reader").exists())
+
+    def test_a_field_longer_than_its_column_is_refused_not_a_crash(self):
+        """`phone` is varchar(30); reaching it with more raised DataError,
+        which is a 500 rather than an answer."""
+
+        response = self.post_dialog(
+            "borrower_add", **self.payload(phone="9" * 40)
+        )
+
+        self.assertContains(response, "Shorten it to 30")
         self.assertFalse(Borrower.objects.filter(name="New Reader").exists())
 
     def test_a_repeated_phone_is_refused_and_not_merged(self):
         make_borrower(name="Already Here", phone="0311-1")
 
-        response = self.client.post(
-            reverse("borrower_add"), self.payload()
-        )
+        response = self.post_dialog("borrower_add", **self.payload())
 
-        self.assertContains(response, "phone number")
+        # It names the record it matched, and does not merge them: two
+        # people can share a phone, so the choice is the librarian's.
+        self.assertContains(response, "Already Here")
+        self.assertContains(response, "already has this phone number")
         self.assertEqual(Borrower.objects.filter(phone="0311-1").count(), 1)
 
     def test_a_repeated_registration_number_is_refused(self):
@@ -667,13 +766,12 @@ class AddAndEditTests(BorrowerTestCase):
         existing.registration_no = "REG-DUP"
         existing.save()
 
-        response = self.client.post(
-            reverse("borrower_add"),
-            self.payload(registration_no="reg-dup"),
+        response = self.post_dialog(
+            "borrower_add", **self.payload(registration_no="reg-dup")
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "already belongs to another borrower")
+        self.assertContains(response, "already has this registration number")
         self.assertFalse(Borrower.objects.filter(name="New Reader").exists())
 
     def test_a_blank_registration_number_is_never_a_duplicate(self):
@@ -687,9 +785,9 @@ class AddAndEditTests(BorrowerTestCase):
         self.assertEqual(response.status_code, 302)
 
     def test_what_was_typed_survives_a_rejected_form(self):
-        response = self.client.post(
-            reverse("borrower_add"),
-            self.payload(name="", department="Tafsir", notes="Keep me"),
+        response = self.post_dialog(
+            "borrower_add",
+            **self.payload(name="", department="Tafsir", notes="Keep me")
         )
 
         self.assertEqual(response.context["form_data"]["department"], "Tafsir")
@@ -754,17 +852,12 @@ class AddAndEditTests(BorrowerTestCase):
         # The existing permission model, unchanged by this task.
         self.as_assistant()
 
-        self.assertEqual(
-            self.client.get(reverse("borrower_add")).status_code, 200
-        )
+        self.assertEqual(self.dialog("borrower_add").status_code, 200)
 
         borrower = make_borrower(name="Someone", phone="0366-1")
 
         self.assertEqual(
-            self.client.get(
-                reverse("borrower_edit", args=[borrower.id])
-            ).status_code,
-            200,
+            self.dialog("borrower_edit", borrower.id).status_code, 200
         )
 
 
@@ -784,9 +877,7 @@ class DeactivateAndDeleteTests(BorrowerTestCase):
         borrower = make_borrower(name="Holding", phone="0377-2")
         loan = make_loan(copy=self.a_copy("DL-1"), borrower=borrower)
 
-        response = self.client.post(
-            reverse("borrower_delete", args=[borrower.id])
-        )
+        response = self.post_dialog("borrower_delete", borrower.id)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "cannot be deleted")
@@ -794,6 +885,15 @@ class DeactivateAndDeleteTests(BorrowerTestCase):
 
         loan.refresh_from_db()
         self.assertEqual(loan.borrower_id, borrower.id)
+
+        # And a plain POST refuses just as firmly, with the reason as a
+        # message rather than a page that no longer exists.
+        plain = self.client.post(
+            reverse("borrower_delete", args=[borrower.id])
+        )
+
+        self.assertEqual(plain.status_code, 302)
+        self.assertTrue(Borrower.objects.filter(id=borrower.id).exists())
 
     def test_a_borrower_with_only_returned_loans_is_still_refused(self):
         # The history is the point: it says who had which book and when.
@@ -806,9 +906,7 @@ class DeactivateAndDeleteTests(BorrowerTestCase):
             return_date=date(2020, 1, 10),
         )
 
-        response = self.client.post(
-            reverse("borrower_delete", args=[borrower.id])
-        )
+        response = self.post_dialog("borrower_delete", borrower.id)
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "cannot be deleted")
@@ -825,15 +923,17 @@ class DeactivateAndDeleteTests(BorrowerTestCase):
             return_date=date(2020, 1, 10),
         )
 
-        response = self.client.get(
-            reverse("borrower_delete", args=[borrower.id])
-        )
+        response = self.dialog("borrower_delete", borrower.id)
 
-        self.assertEqual(response.context["loan_count"], 2)
-        self.assertEqual(response.context["active_loan_count"], 1)
+        # The counts are in the sentence rather than in the context: one
+        # of two loans is still out, and that is what the refusal says.
+        self.assertContains(response, "1 of their 2 loans")
         self.assertContains(response, "Deactivate instead")
+
+        # Deactivating is the Edit dialog's switch, so there is one
+        # control for that field rather than two.
         self.assertContains(
-            response, reverse("borrower_toggle_active", args=[borrower.id])
+            response, reverse("borrower_edit", args=[borrower.id])
         )
 
     def test_a_refused_delete_never_removes_a_loan(self):
@@ -927,25 +1027,51 @@ class DeactivateAndDeleteTests(BorrowerTestCase):
 
 
 class BorrowerFormPageTests(BorrowerTestCase):
+    """One page and four fragments, and each is only ever itself.
 
-    def test_every_borrower_page_uses_the_shared_layout(self):
+    The list is the page. The profile, Add, Edit and Delete are dialogs -
+    a fragment with no shell around it, which is what lets it be swapped
+    into a modal body. A fragment that arrived wrapped in base.html would
+    put a whole second application inside the dialog.
+    """
+
+    def test_the_list_is_the_page(self):
+        response = self.client.get(reverse("borrower_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "library/base.html")
+
+    def test_the_four_dialogs_are_fragments(self):
         borrower = make_borrower(name="Someone", phone="0399-1")
 
-        for url in (
-            reverse("borrower_list"),
-            reverse("borrower_detail", args=[borrower.id]),
-            reverse("borrower_add"),
-            reverse("borrower_edit", args=[borrower.id]),
-            reverse("borrower_delete", args=[borrower.id]),
+        for name, args in (
+            ("borrower_detail", [borrower.id]),
+            ("borrower_add", []),
+            ("borrower_edit", [borrower.id]),
+            ("borrower_delete", [borrower.id]),
         ):
-            with self.subTest(page=url):
-                response = self.client.get(url)
+            with self.subTest(dialog=name):
+                response = self.dialog(name, *args)
 
                 self.assertEqual(response.status_code, 200)
-                self.assertTemplateUsed(response, "library/base.html")
+                self.assertTemplateNotUsed(response, "library/base.html")
+
+    def test_asking_for_one_as_a_page_lands_on_the_list(self):
+        borrower = make_borrower(name="Someone", phone="0399-3")
+
+        for name, args in (
+            ("borrower_detail", [borrower.id]),
+            ("borrower_add", []),
+            ("borrower_edit", [borrower.id]),
+            ("borrower_delete", [borrower.id]),
+        ):
+            with self.subTest(page=name):
+                response = self.client.get(reverse(name, args=args))
+
+                self.assertRedirects(response, reverse("borrower_list"))
 
     def test_the_forms_mark_their_required_fields(self):
-        response = self.client.get(reverse("borrower_add"))
+        response = self.dialog("borrower_add")
 
         self.assertContains(response, "text-danger")
         self.assertContains(response, "required")
@@ -955,9 +1081,7 @@ class BorrowerFormPageTests(BorrowerTestCase):
         borrower.department = "Usul"
         borrower.save()
 
-        response = self.client.get(
-            reverse("borrower_edit", args=[borrower.id])
-        )
+        response = self.dialog("borrower_edit", borrower.id)
 
         self.assertContains(response, "Filled In")
         self.assertContains(response, "0399-2")

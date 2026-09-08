@@ -113,7 +113,7 @@
                     {% for copy in copies %}
                         <tr>
                             <td>
-                                <a href="{% url 'book_copy_detail' copy.id %}"
+                                <a href="{% url 'book_copy_detail' copy.id %}" data-form-modal hx-get="{% url 'book_copy_detail' copy.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
                                    class="text-decoration-none">{{ copy.copy_code }}</a>
                             </td>
                             <td>

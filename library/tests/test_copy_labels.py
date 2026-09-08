@@ -176,9 +176,12 @@ class SingleLabelTests(LabelTestCase):
             [c.id for c in response.context["copies"]], [self.copy.id]
         )
 
-    def test_the_copy_page_offers_it(self):
+    def test_the_copy_dialog_offers_it(self):
+        # The copy's details are a dialog now; the label button is in its
+        # footer, alongside Move, Withdraw, Edit and Delete.
         response = self.client.get(
-            reverse("book_copy_detail", args=[self.copy.id])
+            reverse("book_copy_detail", args=[self.copy.id]) + "?modal=1",
+            headers={"HX-Request": "true"},
         )
 
         self.assertContains(
@@ -401,11 +404,12 @@ class LabelPermissionTests(LabelTestCase):
 
         self.assertEqual(self.sheet(copy=self.copy.id).status_code, 403)
 
-    def test_an_assistant_is_not_offered_it_on_the_copy_page(self):
+    def test_an_assistant_is_not_offered_it_in_the_copy_dialog(self):
         self.as_role("Assistant")
 
         response = self.client.get(
-            reverse("book_copy_detail", args=[self.copy.id])
+            reverse("book_copy_detail", args=[self.copy.id]) + "?modal=1",
+            headers={"HX-Request": "true"},
         )
 
         self.assertEqual(response.status_code, 200)

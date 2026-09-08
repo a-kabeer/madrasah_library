@@ -619,8 +619,10 @@ class CopyDetailIntegrationTests(StockCheckTestCase):
         self.copy = self.a_copy("INV-5001", shelf=self.shelf_a)
 
     def page(self):
+        # A copy's details are a dialog now; there is no page to fetch.
         return self.client.get(
-            reverse("book_copy_detail", args=[self.copy.id])
+            reverse("book_copy_detail", args=[self.copy.id]) + "?modal=1",
+            headers={"HX-Request": "true"},
         )
 
     def test_a_copy_never_counted_says_so(self):

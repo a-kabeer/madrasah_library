@@ -5,6 +5,8 @@ the record of who changed what; and the analytics page, which is what the
 records add up to over a period.
 """
 
+from datetime import date
+
 from django.core.paginator import Paginator
 from django.shortcuts import render
 from django.core.cache import cache
@@ -14,6 +16,7 @@ from django.db import models
 from ..models import (
     ActivityLog,
     Author,
+    Book,
     BookCopy,
     Borrower,
     Category,
@@ -23,14 +26,15 @@ from ..models import (
 )
 
 from .. import analytics as analytics_module
-from .. import queries
 
-from ..permissions import can_edit_library, feature_required
+from ..permissions import can_edit_library, feature_required, role_required
 
 from .common import (
     DASHBOARD_CACHE_KEY,
     PAGE_SIZE,
     activity_log_target,
+    label_activity_log,
+    query_with,
 )
 
 
@@ -58,51 +62,66 @@ def activity_log_list(request):
         )
 
         if search.isdigit():
-            query |= models.Q(entity_id=int(search))
+            query |= models.Q(
+                entity_id=int(search)
+            )
 
         logs_query = logs_query.filter(query)
 
     if user_id:
-        logs_query = logs_query.filter(user_id=user_id)
+        logs_query = logs_query.filter(
+            user_id=user_id
+        )
 
     if action:
-        logs_query = logs_query.filter(action=action)
+        logs_query = logs_query.filter(
+            action=action
+        )
 
     if entity_type:
-        logs_query = logs_query.filter(entity_type=entity_type)
+        logs_query = logs_query.filter(
+            entity_type=entity_type
+        )
 
     if date:
-        logs_query = logs_query.filter(created_at__date=date)
+        logs_query = logs_query.filter(
+            created_at__date=date
+        )
 
-    logs = logs_query.order_by("-created_at")
+    logs = logs_query.order_by(
+        "-created_at"
+    )
 
     paginator = Paginator(logs, PAGE_SIZE)
     logs = paginator.get_page(request.GET.get("page"))
 
-    users = User.objects.all().order_by("full_name")
+    # Readable action name, colour, and a link to the record.
+    for log in logs:
+        label_activity_log(log)
 
-    actions = [
-        "CREATE",
-        "UPDATE",
-        "DELETE",
-        "ISSUE",
-        "RETURN",
-        "RENEW",
-    ]
+    users = User.objects.all().order_by(
+        "full_name"
+    )
+
+    # Both filter lists come from what is actually recorded, not from a
+    # list written by hand. The hand-written ones had drifted: they offered
+    # six actions while the log held ten, so a librarian could not filter
+    # for a reservation, a cancellation, a fulfilment or an import at all -
+    # the option simply was not there. Reading them back cannot drift.
+    actions = list(
+        ActivityLog.objects.order_by()
+        .values_list("action", flat=True)
+        .distinct()
+        .order_by("action")
+    )
 
     entity_types = [
-        "Book",
-        "Author",
-        "Category",
-        "Publisher",
-        "BookVolume",
-        "BookContent",
-        "BookCopy",
-        "Borrower",
-        "Loan",
-        "Location",
-        "Shelf",
-        "User",
+        kind
+        for kind in ActivityLog.objects.order_by()
+        .values_list("entity_type", flat=True)
+        .distinct()
+        .order_by("entity_type")
+        if kind
     ]
 
     return render(
@@ -118,53 +137,65 @@ def activity_log_list(request):
             "users": users,
             "actions": actions,
             "entity_types": entity_types,
+            "paginator": paginator,
+            # Everything except `page`, so the search and all four filters
+            # survive being paged through.
+            "pagination_query": query_with(request, page=None),
+            "elided_page_range": list(
+                paginator.get_elided_page_range(
+                    logs.number,
+                    on_each_side=1,
+                    on_ends=1,
+                )
+            ),
+            "page_ellipsis": Paginator.ELLIPSIS,
         }
     )
 
 
+
 @feature_required("dashboard")
 def library_home(request):
-    """Render the operational home page with bounded, reusable queries.
 
-    The dashboard is intentionally task-first: live circulation alerts and
-    quick actions come before collection statistics, while recent records
-    and the audit trail stay below the operational summary. Counts are
-    cached because they are aggregate values; the five-row activity lists
-    remain live and use the joins their templates actually read.
-    """
-
-    dashboard_stats = cache.get(DASHBOARD_CACHE_KEY)
+    dashboard_stats = cache.get(
+        DASHBOARD_CACHE_KEY
+    )
 
     if dashboard_stats is None:
 
         today = timezone.now().date()
 
         dashboard_stats = {
-            # "Books" means books currently in the active catalogue. Archived
-            # books remain administrative history and are not part of the
-            # collection snapshot shown to staff on the home page.
-            "total_books": queries.active_books().count(),
+            "total_books": Book.objects.count(),
             "total_authors": Author.objects.count(),
             "total_categories": Category.objects.count(),
             "total_publishers": Publisher.objects.count(),
+
             "total_book_copies": BookCopy.objects.count(),
+
             "available_copies": BookCopy.objects.filter(
                 status="Available"
             ).count(),
+
             "issued_copies": BookCopy.objects.filter(
                 status="Issued"
             ).count(),
+
             "total_borrowers": Borrower.objects.count(),
+
             "active_borrowers": Borrower.objects.filter(
                 is_active=True
             ).count(),
+
             "active_loans": Loan.objects.filter(
                 return_date__isnull=True
             ).count(),
+
             "overdue_loans": Loan.objects.filter(
                 return_date__isnull=True,
                 due_date__lt=today
             ).count(),
+
             "due_today_loans": Loan.objects.filter(
                 return_date__isnull=True,
                 due_date=today
@@ -177,9 +208,14 @@ def library_home(request):
             timeout=300
         )
 
-    # These are bounded record lists rather than aggregate counts. The
-    # select_related joins keep the dashboard query count constant while the
-    # collection grows.
+    # Outside the cached block above: these are lists of records, not
+    # counts, and they are cheap - five rows each, with the joins the rows
+    # actually name.
+    #
+    # `-id` as well as the date, because `issue_date` and `return_date` are
+    # DateFields: without a tiebreaker, everything that happened today came
+    # back in whatever order the database felt like, so "most recent" was
+    # not reliably most recent.
     recent_loans = Loan.objects.select_related(
         "copy__volume__book",
         "borrower",
@@ -189,6 +225,10 @@ def library_home(request):
         "-id",
     )[:5]
 
+    # The other half of recent circulation. Taken from the loans themselves
+    # rather than from the activity log: `return_date` and `returned_to` are
+    # the record of a return, and reading the log instead would mean parsing
+    # a description to find out which book it was.
     recent_returns = Loan.objects.filter(
         return_date__isnull=False
     ).select_related(
@@ -215,13 +255,15 @@ def library_home(request):
     dashboard_stats["recent_returns"] = recent_returns
     dashboard_stats["recent_logs"] = recent_logs
 
-    # Quick actions are presentation only. The destination views remain the
-    # enforcement point, so a role is never granted access by seeing a link.
+    # Which quick actions to offer. Issuing, returning and adding a borrower
+    # are open to all three roles; adding a book is not, so offering it to
+    # an Assistant would be offering a 403. The decorators on those views
+    # are the enforcement - this only decides what is worth showing.
     dashboard_stats["can_edit"] = can_edit_library(request.user)
 
     return render(
         request,
-        "library/dashboard_v2.html",
+        "library/dashboard.html",
         dashboard_stats
     )
 
@@ -278,19 +320,28 @@ def analytics(request):
                 for key in analytics_module.PERIODS
             ],
             "categories": Category.objects.order_by("name"),
+
             "loans": analytics_module.loan_summary(period),
             "collection": analytics_module.collection_summary(period),
+
             "trend": trend,
             "trend_format": analytics_module.TREND_FORMATS[period.grain],
+            # The busiest bucket, so each row's bar is a share of the peak
+            # rather than of whichever bucket happened to come first.
             "trend_max": max([row["loans"] for row in trend] or [0]),
+
             "most_borrowed": analytics_module.most_borrowed(period),
             "underused": analytics_module.underused(period),
             "never_borrowed": analytics_module.never_borrowed_list(period),
+
             "top_borrowers": analytics_module.most_active_borrowers(period),
             "category_usage": analytics_module.category_usage(period),
+
             "duration": analytics_module.loan_duration(period),
+
             "attention": analytics_module.collection_attention(period),
             "stock_checks": analytics_module.recent_stock_check_findings(),
+
             "top_n": analytics_module.TOP_N,
             "recent_sessions": analytics_module.RECENT_SESSIONS,
         },

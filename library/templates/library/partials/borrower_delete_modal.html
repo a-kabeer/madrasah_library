@@ -1,4 +1,116 @@
 {% load i18n %}
+<<<<<<< HEAD
+{% comment %}
+Delete Borrower confirmation, served into #formModal by `borrower_delete`.
+
+`blocker` is set when they cannot go: any loan at all, current or long
+returned, pins the record — `loans.borrower_id` is a NO ACTION foreign key,
+and the history is the point of keeping it. In that case the dialog says so
+and offers no Delete button, rather than letting the click fail against the
+database. See `borrower_delete_blocker`.
+
+The way out of a blocker is deactivating them, which keeps the whole record
+and stops new loans. That is offered here as the thing to do instead — the
+Edit dialog is where the switch lives, so this points at it rather than
+growing a second control for the same field.
+
+Expected context: borrower, blocker.
+{% endcomment %}
+
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{% translate "Delete Borrower?" %}
+</h5>
+
+<div id="borrowerDeleteBody">
+
+    {% if blocker %}
+
+        <div class="alert alert-warning d-flex align-items-start" role="alert">
+            <i class="bi bi-shield-exclamation me-2 mt-1" aria-hidden="true"></i>
+            <div>{{ blocker }}</div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
+            {% comment %}
+              Into #formModal, which is the dialog this one is already in,
+              so it replaces itself rather than stacking a second modal
+              over the first and trapping the reader.
+            {% endcomment %}
+            <a
+                href="{% url 'borrower_edit' borrower.id %}"
+                class="btn btn-warning"
+                data-form-modal
+                hx-get="{% url 'borrower_edit' borrower.id %}?modal=1"
+                hx-target="#formModal .modal-body"
+                hx-swap="innerHTML"
+            >
+                <i class="bi bi-toggle-off me-1" aria-hidden="true"></i>
+                {% translate "Deactivate instead" %}
+            </a>
+            <button
+                type="button"
+                class="btn btn-outline-secondary ms-auto"
+                data-bs-dismiss="modal"
+            >
+                {% translate "Close" %}
+            </button>
+        </div>
+
+    {% else %}
+
+        <p class="mb-2">{% translate "You are about to delete:" %}</p>
+
+        <p class="fs-5 fw-semibold mb-1">{{ borrower.name }}</p>
+
+        <p class="text-body-secondary small">
+            {{ borrower.phone }}{% if borrower.registration_no %} · {{ borrower.registration_no }}{% endif %}{% if borrower.borrower_type %} · {{ borrower.borrower_type }}{% endif %}
+        </p>
+
+        <p class="text-body-secondary">
+            {% translate "They have never borrowed anything, so no loan record is lost." %}
+        </p>
+
+        <p class="text-danger small mb-0">
+            <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+            {% translate "This cannot be undone." %}
+        </p>
+
+        <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
+
+            {% comment %}
+              Targets this dialog's own body, so a refusal that arrives
+              between opening the dialog and pressing the button — a loan
+              issued to them in the meantime — is re-rendered here as the
+              blocker above, rather than closing on a 500.
+            {% endcomment %}
+            <form
+                hx-post="{% url 'borrower_delete' borrower.id %}?modal=1"
+                hx-target="#borrowerDeleteBody"
+                hx-swap="outerHTML"
+                hx-disabled-elt="find button[type=submit]"
+                class="d-inline"
+            >
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash me-1" aria-hidden="true"></i>
+                    {% translate "Delete" %}
+                </button>
+            </form>
+
+            <button
+                type="button"
+                class="btn btn-outline-secondary ms-auto"
+                data-bs-dismiss="modal"
+            >
+                {% translate "Cancel" %}
+            </button>
+
+        </div>
+
+    {% endif %}
+
+</div>
+=======
 <h5 class="modal-title" id="formModalLabel" hx-swap-oob="true"><i class="bi bi-trash me-2" aria-hidden="true"></i>{% translate "Delete Borrower" %}</h5>
 
 {% if loan_history_exists %}
@@ -22,3 +134,4 @@
         </div>
     </form>
 {% endif %}
+>>>>>>> 255e80b83f662a73d00b1fffa5ac2cbf1418ada2

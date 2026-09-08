@@ -1,10 +1,301 @@
 {% extends layout %}
 {% load i18n %}
+{% comment %}
+  The Users page, on the same card-and-table pattern as the rest of the
+  application. It was the last of the legacy pages still rendering as a
+  bare <h1> and an unstyled <ul>, which is why it looked like a different
+  product against the themed shell.
+
+  Nothing about what it does has changed: same view, same context, same
+  three filters, same four actions per row. Only the markup.
+
+  Roles are shown as badges rather than plain text, with SuperAdmin
+  distinguished from Admin - the two look alike in a word and are not
+  alike in what they can do, so the colour carries that difference.
+{% endcomment %}
 
 {% block title %}{% translate "Users" %} | {{ branding.display_name }}{% endblock %}
 {% block page_title %}{% translate "Users" %}{% endblock %}
 
 {% block content %}
+<<<<<<< HEAD
+
+<div class="container-fluid px-0">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">{% translate "Users" %}</h2>
+            <p class="text-body-secondary mb-0">
+                {% translate "Who can sign in, and what each of them is allowed to reach." %}
+            </p>
+        </div>
+
+        {% comment %}
+          A real link to a real endpoint, intercepted by the same hook the
+          book list's Add uses so the dialog opens instead of a page.
+          `?modal=1` is what asks the view for the fragment.
+        {% endcomment %}
+        <a
+            href="{% url 'user_add' %}"
+            class="btn btn-primary"
+            data-form-modal
+            hx-get="{% url 'user_add' %}?modal=1"
+            hx-target="#formModal .modal-body"
+            hx-swap="innerHTML"
+        >
+            <i class="bi bi-person-plus me-1" aria-hidden="true"></i>
+            {% translate "Add User" %}
+        </a>
+    </div>
+
+    {% comment %} Search and the two filters, as one ordinary GET form. {% endcomment %}
+    <div class="card mb-3">
+        <div class="card-body">
+
+            <form method="get" class="row g-2 align-items-end">
+
+                <div class="col-12 col-md">
+                    <label for="search" class="form-label small fw-semibold">
+                        {% translate "Search" %}
+                    </label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="search"
+                        name="search"
+                        value="{{ search }}"
+                        placeholder="{% translate 'Name or username...' %}"
+                    >
+                </div>
+
+                <div class="col-6 col-md-auto">
+                    <label for="role" class="form-label small fw-semibold">
+                        {% translate "Role" %}
+                    </label>
+                    <select name="role" id="role" class="form-select">
+                        <option value="">{% translate "All Roles" %}</option>
+                        {% for value, label in roles %}
+                            <option value="{{ value }}" {% if role == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-6 col-md-auto">
+                    <label for="status" class="form-label small fw-semibold">
+                        {% translate "Status" %}
+                    </label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="">{% translate "All" %}</option>
+                        <option value="active" {% if active_status == "active" %}selected{% endif %}>
+                            {% translate "Active" %}
+                        </option>
+                        <option value="inactive" {% if active_status == "inactive" %}selected{% endif %}>
+                            {% translate "Inactive" %}
+                        </option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-md-auto d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1" aria-hidden="true"></i>
+                        {% translate "Search" %}
+                    </button>
+
+                    {% if search or role or active_status %}
+                        <a href="{% url 'user_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg me-1" aria-hidden="true"></i>
+                            {% translate "Clear" %}
+                        </a>
+                    {% endif %}
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+    {% if search or role or active_status %}
+        <p class="text-body-secondary mb-3">
+            {% blocktranslate trimmed count n=paginator.count %}
+                Found <strong>{{ n }}</strong> user.
+            {% plural %}
+                Found <strong>{{ n }}</strong> users.
+            {% endblocktranslate %}
+        </p>
+    {% endif %}
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+
+                <thead>
+                    <tr>
+                        <th scope="col">{% translate "Username" %}</th>
+                        <th scope="col">{% translate "Full Name" %}</th>
+                        <th scope="col">{% translate "Role" %}</th>
+                        <th scope="col">{% translate "Status" %}</th>
+                        <th scope="col">{% translate "Active" %}</th>
+                        <th scope="col" class="text-end">{% translate "Actions" %}</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for row in users %}
+                        <tr>
+                            <td class="fw-semibold">{{ row.username }}</td>
+
+                            <td>
+                                {% if row.full_name %}
+                                    {{ row.full_name }}
+                                {% else %}
+                                    <span class="text-body-secondary">&mdash;</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% comment %}
+                                  SuperAdmin is the developer's account and
+                                  the only role that can change what an
+                                  Admin sees, so it does not share Admin's
+                                  colour.
+                                {% endcomment %}
+                                {% if row.role == "SuperAdmin" %}
+                                    <span class="badge text-bg-primary">{{ row.get_role_display }}</span>
+                                {% elif row.role == "Admin" %}
+                                    <span class="badge text-bg-secondary">{{ row.get_role_display }}</span>
+                                {% else %}
+                                    <span class="badge text-bg-light border">{{ row.get_role_display }}</span>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if row.is_active %}
+                                    <span class="badge text-bg-success">{% translate "Active" %}</span>
+                                {% else %}
+                                    <span class="badge text-bg-light border text-body-secondary">
+                                        {% translate "Inactive" %}
+                                    </span>
+                                {% endif %}
+                            </td>
+
+                            {% comment %}
+                              The switch, in a column of its own rather than
+                              among the actions. It posts and swaps nothing;
+                              the hidden refresher below picks up the event
+                              and re-requests the list, which is what keeps
+                              this and the badge beside it in step.
+                            {% endcomment %}
+                            <td>
+                                <form
+                                    method="post"
+                                    action="{% url 'user_toggle_active' row.id %}"
+                                    hx-post="{% url 'user_toggle_active' row.id %}"
+                                    hx-swap="none"
+                                    class="mb-0"
+                                >
+                                    {% csrf_token %}
+                                    <label class="form-check form-switch mb-0">
+                                        <input
+                                            class="form-check-input"
+                                            type="checkbox"
+                                            role="switch"
+                                            {% if row.is_active %}checked{% endif %}
+                                            onchange="this.form.requestSubmit
+                                                ? this.form.requestSubmit()
+                                                : this.form.submit()"
+                                        >
+                                        <span class="visually-hidden">
+                                            {% blocktranslate trimmed with name=row.username %}
+                                                Active - {{ name }}
+                                            {% endblocktranslate %}
+                                        </span>
+                                    </label>
+                                    <noscript>
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                            {% if row.is_active %}
+                                                {% translate "Deactivate" %}
+                                            {% else %}
+                                                {% translate "Activate" %}
+                                            {% endif %}
+                                        </button>
+                                    </noscript>
+                                </form>
+                            </td>
+
+                            <td class="text-end">
+                                <div class="d-inline-flex align-items-center gap-1">
+
+                                    <a
+                                        href="{% url 'user_edit' row.id %}"
+                                        class="btn btn-sm btn-outline-secondary"
+                                        title="{% translate 'Edit' %}"
+                                        data-form-modal
+                                        hx-get="{% url 'user_edit' row.id %}?modal=1"
+                                        hx-target="#formModal .modal-body"
+                                        hx-swap="innerHTML"
+                                    >
+                                        <i class="bi bi-pencil" aria-hidden="true"></i>
+                                        <span class="visually-hidden">{% translate "Edit" %}</span>
+                                    </a>
+
+                                    <a
+                                        href="{% url 'user_delete' row.id %}"
+                                        class="btn btn-sm btn-outline-danger"
+                                        title="{% translate 'Delete' %}"
+                                        data-form-modal
+                                        hx-get="{% url 'user_delete' row.id %}?modal=1"
+                                        hx-target="#formModal .modal-body"
+                                        hx-swap="innerHTML"
+                                    >
+                                        <i class="bi bi-trash" aria-hidden="true"></i>
+                                        <span class="visually-hidden">{% translate "Delete" %}</span>
+                                    </a>
+
+                                </div>
+                            </td>
+                        </tr>
+
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-body-secondary py-4">
+                                {% if search or role or active_status %}
+                                    {% translate "No users match those filters." %}
+                                    <a href="{% url 'user_list' %}" class="d-block small mt-2">
+                                        {% translate "Clear the search" %}
+                                    </a>
+                                {% else %}
+                                    {% translate "No users yet." %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+
+            </table>
+        </div>
+    </div>
+
+    {% translate "User list pages" as user_pagination_label %}
+    {% include "library/partials/pagination.html" with page_obj=users pagination_label=user_pagination_label %}
+
+    {% comment %}
+      Saving or deleting in a dialog, or flipping a switch, fires
+      `listChanged` on the body. This picks it up and re-requests the list
+      in place - no history entry, because nothing navigated.
+    {% endcomment %}
+    <div
+        id="userListRefresh"
+        hx-get="{{ request.get_full_path }}"
+        hx-trigger="listChanged from:body"
+        hx-target="#mainContent"
+        hx-swap="innerHTML show:none"
+        hx-push-url="false"
+        hidden
+    ></div>
+
+=======
 <div class="container-fluid px-0">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
         <div>
@@ -118,5 +409,6 @@
     </div>
 
     {% include "library/partials/pagination.html" with page_obj=users %}
+>>>>>>> 255e80b83f662a73d00b1fffa5ac2cbf1418ada2
 </div>
 {% endblock %}

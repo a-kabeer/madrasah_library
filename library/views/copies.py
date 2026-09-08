@@ -7,12 +7,14 @@ these copies there.
 """
 
 from collections import namedtuple
+from datetime import date
 import json
 
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.template.loader import render_to_string
 from django.core.cache import cache
 from django.utils import timezone
@@ -38,7 +40,11 @@ from .. import barcode
 from .. import history
 from .. import inventory
 from ..context_processors import is_main_nav_request
-from ..permissions import can_edit_library, feature_required, role_required
+from ..permissions import (
+    feature_required,
+    passes_ceiling,
+    role_required,
+)
 
 from .common import (
     BOOK_AVAILABILITY_FILTERS,
@@ -62,8 +68,11 @@ from .common import (
     create_activity_log,
     describe_copies,
     filter_copies_by_state,
+    is_form_modal_request,
     is_modal_request,
     is_options_request,
+    lookup_deleted_response,
+    lookup_saved_response,
     numeric_param,
     page_size_options,
     query_with,
@@ -134,7 +143,9 @@ def location_list(request):
                 )
             ),
             "page_ellipsis": Paginator.ELLIPSIS,
-            "can_edit": can_edit_library(request.user),
+            "can_edit": passes_ceiling(
+                request.user, "Admin", "Librarian"
+            ),
         }
     )
 
@@ -167,7 +178,9 @@ def location_detail(request, location_id):
             # Summed from the counts already fetched rather than asked for
             # again.
             "copy_count": sum(shelf.copy_count for shelf in shelves),
-            "can_edit": can_edit_library(request.user),
+            "can_edit": passes_ceiling(
+                request.user, "Admin", "Librarian"
+            ),
         }
     )
 
@@ -407,7 +420,9 @@ def shelf_list(request):
                 )
             ),
             "page_ellipsis": Paginator.ELLIPSIS,
-            "can_edit": can_edit_library(request.user),
+            "can_edit": passes_ceiling(
+                request.user, "Admin", "Librarian"
+            ),
         }
     )
 
@@ -485,7 +500,9 @@ def shelf_detail(request, shelf_id):
                 )
             ),
             "page_ellipsis": Paginator.ELLIPSIS,
-            "can_edit": can_edit_library(request.user),
+            "can_edit": passes_ceiling(
+                request.user, "Admin", "Librarian"
+            ),
         }
     )
 
@@ -935,6 +952,197 @@ def book_list(request):
     return render(request, "library/book_list.html", context)
 
 
+class CopyInUse(Exception):
+    """Raised inside the delete transaction to roll it back.
+
+    An exception rather than a return, because the check has to happen
+    inside `atomic()` and the way out of a transaction that must not
+    commit is to raise.
+    """
+
+
+# What each column will take, so the form can refuse a longer value itself
+# rather than letting it reach the database and raise DataError.
+COPY_FIELD_LIMITS = {
+    "copy_code": 50,
+}
+
+# The six the `check_copy_status` constraint allows. "Issued" is not
+# offered by either form: a copy is out because a loan says so, and the
+# return is what changes it back - which is why `book_copy_edit` has
+# always left an issued copy's status alone.
+COPY_SETTABLE_STATUSES = [
+    BookCopy.STATUS_AVAILABLE,
+    BookCopy.STATUS_LOST,
+    BookCopy.STATUS_DAMAGED,
+    BookCopy.STATUS_MISSING,
+    BookCopy.STATUS_TRANSFERRED,
+]
+
+
+def validate_copy_details(request, copy=None):
+    """The rules a copy is held to, in one place.
+
+    Add and Edit both call this. What they ask for differs, and that is
+    the argument: `copy` is None when adding, and then the volume and the
+    copy code are required and read from the form. When editing they are
+    not read at all - the code is printed on the book itself and quoted in
+    past log entries, and the volume decides which book a past loan
+    appears to have been for, so neither is editable. That was already
+    true; this keeps it true in one place.
+
+    Returns `(form_data, errors)`.
+    """
+
+    adding = copy is None
+
+    errors = {}
+
+    form_data = {
+        "status": request.POST.get("status", "").strip(),
+        "acquisition_date": request.POST.get(
+            "acquisition_date", ""
+        ).strip(),
+        "notes": request.POST.get("notes", "").strip(),
+        "location_id": request.POST.get("location", "").strip(),
+    }
+
+    # ------------------------------------------------------ the volume
+    if adding:
+        volume_id = request.POST.get("volume", "").strip()
+
+        form_data["volume_id"] = (
+            int(volume_id) if volume_id.isdigit() else None
+        )
+
+        if not volume_id:
+            errors["volume"] = "Choose which volume this is a copy of."
+
+        elif not volume_id.isdigit():
+            errors["volume"] = (
+                "The volume was not recognised. Pick one from the list."
+            )
+
+        elif not BookVolume.objects.filter(id=int(volume_id)).exists():
+            errors["volume"] = (
+                "That volume no longer exists. Pick another from the list."
+            )
+
+    else:
+        form_data["volume_id"] = copy.volume_id
+
+    # ------------------------------------------------------- the shelf
+    #
+    # Required when adding and optional when editing, which is what each
+    # form already did. `book_copies.shelf_id` is nullable, and a copy
+    # that has arrived but has not been placed yet is a real state the
+    # list can find and name - so an edit may clear it. A new copy has to
+    # be put somewhere, because nothing else is going to.
+    shelf_id = request.POST.get("shelf", "").strip()
+
+    form_data["shelf_id"] = int(shelf_id) if shelf_id.isdigit() else None
+
+    if not shelf_id:
+
+        if adding:
+            errors["shelf"] = "Choose the shelf this copy sits on."
+
+    elif not shelf_id.isdigit():
+        errors["shelf"] = (
+            "The shelf was not recognised. Pick one from the list."
+        )
+
+    else:
+        shelf = Shelf.objects.filter(id=int(shelf_id))
+
+        # The shelf has to be on the location chosen alongside it. The
+        # dropdowns only offer matching pairs, but that is the browser's
+        # word for it, not a rule. Only asked when a location came with
+        # the form - the Add dialog lists shelves by location and has no
+        # separate location field.
+        if form_data["location_id"]:
+            shelf = shelf.filter(
+                location_id=(
+                    form_data["location_id"]
+                    if form_data["location_id"].isdigit()
+                    else None
+                )
+            )
+
+            if not shelf.exists():
+                errors["shelf"] = (
+                    "That shelf is not in the location you chose."
+                )
+
+        elif not shelf.exists():
+            errors["shelf"] = (
+                "That shelf no longer exists. Pick another from the list."
+            )
+
+    # --------------------------------------------------- the copy code
+    if adding:
+        copy_code = request.POST.get("copy_code", "").strip()
+        form_data["copy_code"] = copy_code
+
+        if not copy_code:
+            errors["copy_code"] = "Enter the copy code from the label."
+
+        elif len(copy_code) > COPY_FIELD_LIMITS["copy_code"]:
+            errors["copy_code"] = (
+                "That is %d characters. Shorten it to %d or fewer."
+                % (len(copy_code), COPY_FIELD_LIMITS["copy_code"])
+            )
+
+        elif BookCopy.objects.filter(
+            copy_code__iexact=copy_code
+        ).exists():
+            # `book_copies.copy_code` is UNIQUE, so a repeat would reach
+            # the database as an IntegrityError. It is also what a label,
+            # a scanner and every past log entry name the copy by, so two
+            # cannot share one.
+            errors["copy_code"] = (
+                "%s is already the code of another copy." % copy_code
+            )
+
+    else:
+        form_data["copy_code"] = copy.copy_code
+
+    # ------------------------------------------------------- the status
+    # An issued copy keeps its status: the loan is what says it is out,
+    # and the return is what changes it. The form does not offer it, and
+    # this is where a posted one is refused.
+    if not adding and copy.status == BookCopy.STATUS_ISSUED:
+        form_data["status"] = BookCopy.STATUS_ISSUED
+
+    elif form_data["status"] not in COPY_SETTABLE_STATUSES:
+        errors["status"] = "Choose the copy's condition."
+
+    # --------------------------------------------- the acquisition date
+    if form_data["acquisition_date"]:
+
+        try:
+            date.fromisoformat(form_data["acquisition_date"])
+        except ValueError:
+            errors["acquisition_date"] = (
+                "Enter a valid date, or leave it blank."
+            )
+
+    return form_data, errors
+
+
+def copy_field_error_summary(errors):
+    """What the alert above the form says when fields are wrong.
+
+    A count, not a list: each message is already under the input it is
+    about. The same wording the book and borrower forms use.
+    """
+
+    if len(errors) == 1:
+        return "There is a problem with one of the fields below."
+
+    return "There are problems with %d of the fields below." % len(errors)
+
+
 def location_options_response(selected, error=""):
     """The Location dropdown's options, with `selected` chosen.
 
@@ -1233,7 +1441,7 @@ def book_copy_list(request):
         "page_ellipsis": Paginator.ELLIPSIS,
         # UI gating only: the move and edit controls are enforced by
         # `role_required` on the views themselves.
-        "can_edit": can_edit_library(request.user),
+        "can_edit": passes_ceiling(request.user, "Admin", "Librarian"),
     }
 
     fragment = copy_list_fragment(request)
@@ -1547,7 +1755,7 @@ def book_copy_detail(request, copy_id):
         "active_loan": active_loan,
         "loan_history": loan_history,
         "from_page": from_page,
-        "can_edit": can_edit_library(request.user),
+        "can_edit": passes_ceiling(request.user, "Admin", "Librarian"),
         "last_check": last_check,
         "last_check_found": last_check_found,
         "history": history_page,
@@ -1555,22 +1763,48 @@ def book_copy_detail(request, copy_id):
     }
 
     if is_modal_request(request):
-        # Deliberately not the whole loan history: the dialog answers
-        # "where is it and who has it", and links to the loan for the rest.
+
         return render(
             request,
             "library/partials/copy_detail_modal.html",
             context,
         )
 
+    # There is no copy page any more - the dialog is the whole of it, and
+    # says everything the page said, in tabs. A request without `?modal=1`
+    # still has to answer, because a dozen pages link here, so it goes to
+    # the list rather than 404ing on a link somebody has bookmarked.
+    return redirect("book_copy_list")
+
+def copy_move_modal(request, copy, location_id, shelves, errors):
     return render(
         request,
-        "library/book_copy_detail.html",
-        context,
+        "library/partials/copy_move_modal.html",
+        {
+            "copy": copy,
+            "volume_name": volume_label(copy.volume),
+            "locations": Location.objects.order_by("name"),
+            "shelves": shelves,
+            "location_id": location_id,
+            "errors": errors,
+            "error": (
+                copy_field_error_summary(errors) if errors else ""
+            ),
+        },
     )
+
 
 @feature_required("copies", "Admin", "Librarian")
 def book_copy_move(request, copy_id):
+    """Put one copy on a different shelf, in a dialog.
+
+    Only the shelf: the volume it is a copy of and the code on its label
+    are not this view's business, and a copy that is out on loan is still
+    on the shelf it was taken from as far as the record is concerned.
+
+    Bulk move is a separate view and is untouched - it moves the copies
+    ticked on the list, which is a different question from this one.
+    """
 
     copy = get_object_or_404(
         BookCopy.objects.select_related(
@@ -1580,15 +1814,10 @@ def book_copy_move(request, copy_id):
         id=copy_id
     )
 
-    from_page = request.GET.get(
-        "from",
-        request.POST.get("from", "")
-    )
-
     # Where it is now, so the Location dropdown opens on it.
     location_id = str(copy.shelf.location_id) if copy.shelf_id else ""
 
-    error_message = ""
+    errors = {}
 
     if request.method == "POST":
 
@@ -1599,7 +1828,7 @@ def book_copy_move(request, copy_id):
 
         if not new_shelf_id.isdigit() or not location_id.isdigit():
 
-            error_message = "Choose a location and a shelf."
+            errors["shelf"] = "Choose a location and a shelf."
 
         else:
             # The shelf has to be on the location chosen alongside it. The
@@ -1611,11 +1840,11 @@ def book_copy_move(request, copy_id):
             ).select_related("location").first()
 
             if new_shelf is None:
-                error_message = (
+                errors["shelf"] = (
                     "That shelf is not in the location you chose."
                 )
 
-        if not error_message:
+        if not errors:
 
             old_shelf = copy.shelf
 
@@ -1639,221 +1868,176 @@ def book_copy_move(request, copy_id):
                 ),
             )
 
-            if from_page == "shelf" and old_shelf:
-                return redirect("shelf_detail", shelf_id=old_shelf.id)
+            if is_form_modal_request(request):
+                return lookup_saved_response(copy.copy_code)
 
-            if from_page == "volume":
-                return redirect("book_volume_detail", volume_id=copy.volume_id)
+            return redirect("book_copy_list")
 
-            return redirect("book_copy_detail", copy_id=copy.id)
+    if is_form_modal_request(request):
+        return copy_move_modal(
+            request,
+            copy,
+            location_id,
+            shelf_options_for(location_id),
+            errors,
+        )
+
+    if errors:
+        messages.error(request, copy_field_error_summary(errors))
+
+    return redirect("book_copy_list")
+
+
+def copy_form_modal(request, action, form_data, errors, copy=None,
+                    selected_volume=None, volumes=None):
+    """The Add / Edit Copy dialog, from one template.
+
+    One template for both, so the fields and their error slots cannot
+    differ between adding a copy and editing one. `copy` being set is what
+    turns the volume and the copy code from inputs into stated facts -
+    neither is editable once a label exists.
+    """
 
     return render(
         request,
-        "library/book_copy_move.html",
+        "library/partials/copy_form_modal.html",
         {
+            "action": action,
+            "form_data": form_data,
+            "errors": errors,
+            "error": (
+                copy_field_error_summary(errors) if errors else ""
+            ),
             "copy": copy,
-            "volume_name": volume_label(copy.volume),
+            "volume_name": volume_label(copy.volume) if copy else "",
+            "selected_volume": selected_volume,
+            "volumes": volumes,
             "locations": Location.objects.order_by("name"),
-            "shelves": shelf_options_for(location_id),
-            "location_id": location_id,
-            "error_message": error_message,
-            "from_page": from_page,
-        }
+            "shelves": shelf_options_for(form_data.get("location_id")),
+            "statuses": COPY_SETTABLE_STATUSES,
+            "is_issued": (
+                copy is not None
+                and copy.status == BookCopy.STATUS_ISSUED
+            ),
+        },
     )
+
 
 @feature_required("copies", "Admin", "Librarian")
 def book_copy_add(request):
+    """Add one physical copy, in a dialog.
 
-    selected_volume_id = request.GET.get(
-        "volume",
-        ""
+    `?volume=` pre-selects the volume, which is how the volume page's own
+    Add Copy button arrives - and a copy added that way goes back to that
+    volume rather than to the whole copy list.
+    """
+
+    selected_volume_id = request.GET.get("volume", "")
+
+    selected_volume = (
+        BookVolume.objects.select_related("book")
+        .filter(id=selected_volume_id)
+        .first()
+        if selected_volume_id.isdigit()
+        else None
     )
 
-    selected_volume = None
-
-    if selected_volume_id.isdigit():
-
-        selected_volume = BookVolume.objects.select_related(
-            "book"
-        ).filter(
-            id=selected_volume_id
-        ).first()
-
-    volumes = BookVolume.objects.select_related(
-        "book"
-    ).order_by(
-        "book__title",
-        "volume_number"
+    # Every volume, because the dialog offers them in a select. Ordered by
+    # book so the list reads the way a shelf does.
+    volumes = BookVolume.objects.select_related("book").order_by(
+        "book__title", "volume_number"
     )
-
-    shelves = Shelf.objects.select_related(
-        "location"
-    ).order_by(
-        "location__name",
-        "shelf_code"
-    )
-
-    statuses = [
-        "Available",
-        "Lost",
-        "Damaged",
-        "Missing",
-        "Transferred",
-    ]
-
-    error_message = ""
 
     form_data = {
-        "volume_id": (
-            selected_volume.id
-            if selected_volume
-            else None
-        ),
+        "volume_id": selected_volume.id if selected_volume else None,
         "shelf_id": None,
+        "location_id": "",
         "copy_code": "",
-        "status": "Available",
+        "status": BookCopy.STATUS_AVAILABLE,
         "acquisition_date": "",
         "notes": "",
     }
 
+    errors = {}
+
     if request.method == "POST":
 
-        volume_id = request.POST.get(
-            "volume"
-        )
+        form_data, errors = validate_copy_details(request)
 
-        shelf_id = request.POST.get(
-            "shelf"
-        )
-
-        copy_code = request.POST.get(
-            "copy_code",
-            ""
-        ).strip()
-
-        status = request.POST.get(
-            "status",
-            "Available"
-        )
-
-        acquisition_date = request.POST.get(
-            "acquisition_date"
-        )
-
-        notes = request.POST.get(
-            "notes",
-            ""
-        ).strip()
-
-        form_data = {
-            "volume_id": (
-                int(volume_id)
-                if volume_id and volume_id.isdigit()
-                else None
-            ),
-            "shelf_id": (
-                int(shelf_id)
-                if shelf_id and shelf_id.isdigit()
-                else None
-            ),
-            "copy_code": copy_code,
-            "status": status,
-            "acquisition_date": acquisition_date or "",
-            "notes": notes,
-        }
-
-        if not volume_id or not shelf_id or not copy_code:
-
-            error_message = (
-                "Please fill in all required fields."
-            )
-
-        elif BookCopy.objects.filter(
-            copy_code__iexact=copy_code
-        ).exists():
-
-            error_message = (
-                "A book copy with this Copy Code "
-                "already exists."
-            )
-
-        else:
+        if not errors:
 
             copy = BookCopy.objects.create(
-                volume_id=volume_id,
-                shelf_id=shelf_id,
-                copy_code=copy_code,
-                status=status,
-                acquisition_date=acquisition_date or None,
-                notes=notes or None,
+                volume_id=form_data["volume_id"],
+                shelf_id=form_data["shelf_id"],
+                copy_code=form_data["copy_code"],
+                status=form_data["status"],
+                acquisition_date=form_data["acquisition_date"] or None,
+                notes=form_data["notes"] or None,
             )
 
-            cache.delete(
-                BOOK_COPY_CACHE_KEY
-            )
-            cache.delete(
-                SHELF_CACHE_KEY
-            )
-            cache.delete(
-                LOCATION_CACHE_KEY
-            )
-
-            cache.delete(
-                DASHBOARD_CACHE_KEY
-            )
+            cache.delete(BOOK_COPY_CACHE_KEY)
+            cache.delete(SHELF_CACHE_KEY)
+            cache.delete(LOCATION_CACHE_KEY)
+            cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
                 user=None,
                 action="CREATE",
                 entity_type="BookCopy",
                 entity_id=copy.id,
-                description=(
-                    f"{copy.copy_code} شامل کی گئی"
-                ),
+                description=f"{copy.copy_code} شامل کی گئی",
             )
 
-            if selected_volume:
+            if is_form_modal_request(request):
+                return lookup_saved_response(copy.copy_code)
 
+            # Back to the volume it was added from, which is the flow the
+            # volume page's Add Copy button has always used.
+            if selected_volume is not None:
                 return redirect(
-                    "book_volume_detail",
-                    volume_id=volume_id
+                    "book_volume_detail", volume_id=selected_volume.id
                 )
 
-            return redirect(
-                "book_copy_list"
-            )
+            return redirect("book_copy_list")
 
-    return render(
-        request,
-        "library/book_copy_add.html",
-        {
-            "volumes": volumes,
-            "selected_volume": selected_volume,
-            "shelves": shelves,
-            "statuses": statuses,
-            "error_message": error_message,
-            "form_data": form_data,
-        }
-    )
+    if is_form_modal_request(request):
+        return copy_form_modal(
+            request,
+            reverse("book_copy_add") + (
+                "?volume=%d" % selected_volume.id
+                if selected_volume is not None
+                else ""
+            ),
+            form_data,
+            errors,
+            selected_volume=selected_volume,
+            volumes=volumes,
+        )
+
+    if errors:
+        messages.error(request, copy_field_error_summary(errors))
+
+    return redirect("book_copy_list")
+
 
 
 @feature_required("copies", "Admin", "Librarian")
 def book_copy_edit(request, copy_id):
-    """Manage one physical copy: where it sits, and its condition.
+    """Where one copy sits, and what condition it is in - in a dialog.
 
     Copy-level only. Nothing here reads or writes the Book or the
     BookVolume, so the title, author, category and every other copy are
-    untouched by anything done on this page.
+    untouched by anything done here.
 
-    Two things it deliberately does not offer:
+    Two things it deliberately does not offer, both enforced in the shared
+    validator rather than by leaving the input out:
 
       * the copy code, which is printed on the book itself and quoted in
-        past activity-log entries — retyping it would leave the label, the
-        record and the shelf disagreeing. It is set when the copy is
-        created and read-only after that.
+        past activity-log entries - retyping it would leave the label, the
+        record and the shelf disagreeing.
       * moving the copy to another volume, which would silently change
-        which book a past loan appears to have been for. Wrongly-filed
-        copies are a delete-and-re-add, not an edit.
+        which book a past loan appears to have been for. A wrongly-filed
+        copy is a delete-and-re-add, not an edit.
     """
 
     copy = get_object_or_404(
@@ -1861,34 +2045,19 @@ def book_copy_edit(request, copy_id):
             "volume__book",
             "shelf__location",
         ),
-        id=copy_id
+        id=copy_id,
     )
 
-    from_page = request.GET.get(
-        "from",
-        request.POST.get("from", "")
-    )
-
-    statuses = [
-        "Available",
-        "Lost",
-        "Damaged",
-        "Missing",
-        "Transferred",
-    ]
-
-    # A copy that is out stays "Issued": the loan is what says so, and the
-    # return is what changes it. Same rule this view has always applied.
-    is_issued = copy.status == "Issued"
-
-    error_message = ""
-
-    # Where it is now, so Location opens on it and Shelf can be narrowed
-    # to that location's shelves.
-    location_id = str(copy.shelf.location_id) if copy.shelf_id else ""
+    from_page = request.GET.get("from", request.POST.get("from", ""))
 
     form_data = {
-        "location_id": location_id,
+        "volume_id": copy.volume_id,
+        "copy_code": copy.copy_code,
+        # Where it is now, so Location opens on it and Shelf can be
+        # narrowed to that location's shelves.
+        "location_id": (
+            str(copy.shelf.location_id) if copy.shelf_id else ""
+        ),
         "shelf_id": copy.shelf_id,
         "status": copy.status,
         "acquisition_date": (
@@ -1899,64 +2068,22 @@ def book_copy_edit(request, copy_id):
         "notes": copy.notes or "",
     }
 
+    errors = {}
+
     if request.method == "POST":
 
-        location_id = request.POST.get("location", "").strip()
-        shelf_id = request.POST.get("shelf", "").strip()
+        was_shelf = copy.shelf
+        was_status = copy.status
+        was_details = (copy.acquisition_date, copy.notes)
 
-        acquisition_date = request.POST.get("acquisition_date")
-        notes = request.POST.get("notes", "").strip()
+        form_data, errors = validate_copy_details(request, copy)
 
-        status = "Issued" if is_issued else request.POST.get(
-            "status",
-            "Available",
-        )
+        if not errors:
 
-        if status not in statuses and not is_issued:
-            status = "Available"
-
-        form_data = {
-            "location_id": location_id,
-            "shelf_id": int(shelf_id) if shelf_id.isdigit() else None,
-            "status": status,
-            "acquisition_date": acquisition_date or "",
-            "notes": notes,
-        }
-
-        shelf = None
-
-        if shelf_id.isdigit():
-            # The shelf has to be on the location chosen alongside it. The
-            # dropdowns only offer matching pairs, but that is the
-            # browser's word for it.
-            shelf = Shelf.objects.filter(
-                id=shelf_id,
-                location_id=location_id if location_id.isdigit() else None,
-            ).select_related("location").first()
-
-            if shelf is None:
-                error_message = (
-                    "That shelf is not in the location you chose."
-                )
-
-        if not error_message:
-
-            # What it was, read before it is overwritten. The move views
-            # have always recorded a shelf change as "from A to B"; this
-            # one recorded only the result, which said where the copy
-            # ended up and nothing about where it had been. Captured here
-            # so the copy's history can say both.
-            was_shelf = copy.shelf
-            was_status = copy.status
-            was_details = (copy.acquisition_date, copy.notes)
-
-            # `book_copies.shelf_id` is nullable, and a copy that has
-            # arrived but not been placed yet is a real state the list can
-            # find, so clearing the shelf is allowed.
-            copy.shelf = shelf
-            copy.status = status
-            copy.acquisition_date = acquisition_date or None
-            copy.notes = notes or None
+            copy.shelf_id = form_data["shelf_id"]
+            copy.status = form_data["status"]
+            copy.acquisition_date = form_data["acquisition_date"] or None
+            copy.notes = form_data["notes"] or None
 
             copy.save(update_fields=[
                 "shelf",
@@ -1966,17 +2093,17 @@ def book_copy_edit(request, copy_id):
             ])
 
             cache.delete(BOOK_COPY_CACHE_KEY)
+            cache.delete(SHELF_CACHE_KEY)
+            cache.delete(LOCATION_CACHE_KEY)
             cache.delete(DASHBOARD_CACHE_KEY)
 
-            # One entry per thing that actually moved, and none at all for
-            # a value that was resubmitted unchanged - an edit that only
-            # touched the notes should not read as a shelf change in the
-            # history, and saving the form without altering anything
-            # should not read as anything.
-            #
-            # Only from here on. Nothing reconstructs the changes made
-            # before this recorded them; a copy's timeline says what is
-            # known rather than guessing what is not.
+            # A move and a change of condition are different events and
+            # are logged as such, which is what the copy's own history
+            # reads back. Unchanged from what this view already did.
+            # Worded exactly as the move views word it - "from A to B" -
+            # so a copy's timeline reads the same whichever route moved
+            # it. `action` stays UPDATE, which is what the history reader
+            # already looks for.
             if copy.shelf_id != (was_shelf.id if was_shelf else None):
                 create_activity_log(
                     user=request.user,
@@ -1986,7 +2113,7 @@ def book_copy_edit(request, copy_id):
                     description=(
                         f"{copy.copy_code} moved from "
                         f"{was_shelf if was_shelf else 'no shelf'} "
-                        f"to {shelf if shelf else 'no shelf'}"
+                        f"to {copy.shelf if copy.shelf else 'no shelf'}"
                     ),
                 )
 
@@ -2016,118 +2143,158 @@ def book_copy_edit(request, copy_id):
                     description="%s details updated" % copy.copy_code,
                 )
 
+            if is_form_modal_request(request):
+                return lookup_saved_response(copy.copy_code)
+
             if from_page == "shelf" and copy.shelf_id:
                 return redirect("shelf_detail", shelf_id=copy.shelf_id)
 
             if from_page == "volume":
                 return redirect(
-                    "book_volume_detail",
-                    volume_id=copy.volume_id,
+                    "book_volume_detail", volume_id=copy.volume_id
                 )
 
-            return redirect("book_copy_detail", copy_id=copy.id)
+            return redirect("book_copy_list")
 
+    if is_form_modal_request(request):
+        return copy_form_modal(
+            request,
+            reverse("book_copy_edit", args=[copy.id]),
+            form_data,
+            errors,
+            copy=copy,
+        )
+
+    if errors:
+        messages.error(request, copy_field_error_summary(errors))
+
+    return redirect("book_copy_list")
+
+
+
+def copy_delete_blocker(copy):
+    """Why `copy` cannot be deleted, or "" when it can be.
+
+    The real foreign key (loans.copy_id -> book_copies.id) is NO ACTION,
+    so ANY loan referencing this copy - active or long returned - blocks
+    the delete at the database level, not just active ones. The history is
+    the point: it says who had this copy and when.
+
+    Said as a sentence rather than left to raise an IntegrityError, and it
+    names the way out, which differs: a copy that is out has to come back
+    first, and one with only past loans should be withdrawn instead.
+    """
+
+    total = Loan.objects.filter(copy_id=copy.id).count()
+
+    if not total:
+        return ""
+
+    if Loan.objects.filter(
+        copy_id=copy.id, return_date__isnull=True
+    ).exists():
+        return (
+            "%s cannot be deleted while it is out on loan. Take it back "
+            "first - and if it is not coming back, mark it Lost rather "
+            "than deleting it, so the record of who had it survives."
+            % copy.copy_code
+        )
+
+    return (
+        "%s cannot be deleted: it has %d loan%s on record, and the record "
+        "of who had it and when would go with it. Withdraw it instead - "
+        "that takes it out of circulation and keeps the history."
+        % (copy.copy_code, total, "" if total == 1 else "s")
+    )
+
+
+def copy_delete_modal(request, copy, blocker):
     return render(
         request,
-        "library/book_copy_edit.html",
+        "library/partials/copy_delete_modal.html",
         {
             "copy": copy,
-            "volume_name": volume_label(copy.volume),
-            "locations": Location.objects.order_by("name"),
-            "shelves": shelf_options_for(form_data["location_id"]),
-            "statuses": statuses,
-            "is_issued": is_issued,
-            "error_message": error_message,
-            "form_data": form_data,
-            "from_page": from_page,
-        }
+            "blocker": blocker,
+        },
     )
 
 
 @feature_required("copies", "Admin", "Librarian")
 def book_copy_delete(request, copy_id):
+    """Delete one copy, once it is established that nothing is lost."""
 
     copy = get_object_or_404(
-    BookCopy.objects.select_related(
-        "volume__book",
-        "shelf__location",
-    ),
-    id=copy_id
-)
-    from_page = request.GET.get(
-    "from",
-    request.POST.get("from", "")
-)
-
-    # The real FK (loans.copy_id -> book_copies.id) is NO ACTION, so ANY
-    # loan record referencing this copy — active or already returned —
-    # blocks the delete at the database level, not just active ones.
-    loan_history_exists = Loan.objects.filter(
-        copy_id=copy.id
-    ).exists()
-
-    if request.method == "POST":
-
-        if loan_history_exists:
-
-            return render(
-                request,
-                "library/book_copy_delete.html",
-                {
-                    "copy": copy,
-                    "loan_history_exists": True,
-                    "from_page": from_page,
-                }
-            )
-
-        deleted_copy_id = copy.id
-        deleted_copy_code = copy.copy_code
-
-        copy.delete()
-
-        cache.delete(BOOK_COPY_CACHE_KEY)
-        cache.delete(LOAN_CACHE_KEY)
-        cache.delete(SHELF_CACHE_KEY)
-        cache.delete(LOCATION_CACHE_KEY)
-        cache.delete(DASHBOARD_CACHE_KEY)
-
-        create_activity_log(
-            user=None,
-            action="DELETE",
-            entity_type="BookCopy",
-            entity_id=deleted_copy_id,
-            description=(
-                f"{deleted_copy_code} deleted"
-            ),
-        )
-
-        if from_page == "shelf":
-
-            return redirect(
-        "shelf_detail",
-        shelf_id=copy.shelf_id
+        BookCopy.objects.select_related(
+            "volume__book",
+            "shelf__location",
+        ),
+        id=copy_id,
     )
 
-        if from_page == "volume":
+    from_page = request.GET.get("from", request.POST.get("from", ""))
 
-            return redirect(
-                "book_volume_detail",
-                volume_id=copy.volume_id
+    blocker = copy_delete_blocker(copy)
+
+    if request.method == "POST" and not blocker:
+
+        deleted_id = copy.id
+        deleted_code = copy.copy_code
+        volume_id = copy.volume_id
+        shelf_id = copy.shelf_id
+
+        try:
+            with transaction.atomic():
+
+                # Asked again inside the transaction. The check above is
+                # read outside any transaction, so a loan issued in
+                # between would otherwise reach the foreign key and abort
+                # the statement - a 500 where there is a sentence to say.
+                blocker = copy_delete_blocker(copy)
+
+                if blocker:
+                    raise CopyInUse(blocker)
+
+                copy.delete()
+
+        except CopyInUse as refused:
+            blocker = str(refused)
+
+        else:
+            cache.delete(BOOK_COPY_CACHE_KEY)
+            cache.delete(LOAN_CACHE_KEY)
+            cache.delete(SHELF_CACHE_KEY)
+            cache.delete(LOCATION_CACHE_KEY)
+            cache.delete(DASHBOARD_CACHE_KEY)
+
+            create_activity_log(
+                user=None,
+                action="DELETE",
+                entity_type="BookCopy",
+                entity_id=deleted_id,
+                description=f"{deleted_code} deleted",
             )
 
-        return redirect(
-    "book_copy_list"
-)
+            if is_form_modal_request(request):
+                return lookup_deleted_response(deleted_code)
 
-    return render(
-        request,
-        "library/book_copy_delete.html",
-        {
-            "copy": copy,
-            "loan_history_exists": loan_history_exists,
-            "from_page": from_page,
-        }
-    )
+            if from_page == "shelf" and shelf_id:
+                return redirect("shelf_detail", shelf_id=shelf_id)
+
+            if from_page == "volume":
+                return redirect(
+                    "book_volume_detail", volume_id=volume_id
+                )
+
+            return redirect("book_copy_list")
+
+    if is_form_modal_request(request):
+        return copy_delete_modal(request, copy, blocker)
+
+    if blocker:
+        messages.error(request, blocker)
+
+    return redirect("book_copy_list")
+
 
 
 # How many matching copies the issue form offers at once. A librarian

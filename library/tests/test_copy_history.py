@@ -63,11 +63,32 @@ class HistoryTestCase(TestCase):
 
         self.today = timezone.now().date()
 
-    def page(self, copy=None, **params):
-        return self.client.get(
-            reverse("book_copy_detail", args=[(copy or self.copy).id]),
-            params,
+    def dialog(self, copy=None, **params):
+        """A copy's details, the way the browser asks for them.
+
+        `?modal=1` and the HX-Request header together - `is_modal_request`
+        wants both, so one URL never answers with two different bodies.
+        There is no copy page any more; the dialog is the whole of it.
+        """
+
+        # The query is built into the path, not passed as `data`: the
+        # test client replaces a path's query string when both are given,
+        # which silently dropped `modal=1` and turned the dialog into a
+        # redirect.
+        query = "&".join(
+            ["modal=1"]
+            + ["%s=%s" % (key, value) for key, value in params.items()]
         )
+
+        return self.client.get(
+            reverse("book_copy_detail", args=[(copy or self.copy).id])
+            + "?" + query,
+            headers={"HX-Request": "true"},
+        )
+
+    def page(self, copy=None, **params):
+        # The copy's details are a dialog now; there is no page to fetch.
+        return self.dialog(copy, **params)
 
     def timeline(self, copy=None):
         return history.copy_timeline(copy or self.copy)
@@ -92,7 +113,9 @@ class HistoryTestCase(TestCase):
         data.update(overrides)
 
         return self.client.post(
-            reverse("book_copy_edit", args=[self.copy.id]), data
+            reverse("book_copy_edit", args=[self.copy.id]) + "?modal=1",
+            data,
+            headers={"HX-Request": "true"},
         )
 
 
@@ -412,14 +435,33 @@ class FutureLoggingTests(HistoryTestCase):
 
         self.assertEqual(history.copy_timeline(old), [])
 
-    def test_a_move_through_the_move_page_is_one_event_not_two(self):
-        self.client.post(
+    def test_a_move_through_the_move_dialog_is_one_event_not_two(self):
+        response = self.client.post(
+            reverse("book_copy_move", args=[self.copy.id]) + "?modal=1",
+            {"location": self.hall.id, "shelf": self.shelf_b.id},
+            headers={"HX-Request": "true"},
+        )
+
+        # A dialog answers a save with 204 and an event, not a redirect.
+        self.assertEqual(response.status_code, 204)
+
+        self.assertEqual(len(self.descriptions()), 1)
+        self.assertEqual(self.kinds().count("updated"), 1)
+
+    def test_the_same_move_without_the_dialog_is_still_one_event(self):
+        """There is no Move page left, so a scriptless post redirects -
+        but it moves the copy and logs it exactly once, as before."""
+
+        response = self.client.post(
             reverse("book_copy_move", args=[self.copy.id]),
             {"location": self.hall.id, "shelf": self.shelf_b.id},
         )
 
+        self.assertEqual(response.status_code, 302)
+
+        self.copy.refresh_from_db()
+        self.assertEqual(self.copy.shelf_id, self.shelf_b.id)
         self.assertEqual(len(self.descriptions()), 1)
-        self.assertEqual(self.kinds().count("updated"), 1)
 
     def test_a_withdrawal_is_not_also_logged_as_a_status_change(self):
         # The dedicated workflow writes its own event; the edit view is

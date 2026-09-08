@@ -1,0 +1,100 @@
+{% load i18n %}
+{% comment %}
+Delete User confirmation, as a dialog.
+
+`blocker` is the reason this account cannot be deleted, or empty. It comes
+from the view, which checks both the rules and the records, so the dialog
+either offers the button or explains why there isn't one - rather than
+letting somebody press Delete and discover the refusal afterwards.
+
+Two kinds of blocker reach here:
+
+  * a rule - only a Super Admin may delete an Admin, and the last active
+    Super Admin cannot go at all
+  * the records - the account has issued or returned loans, or appears in
+    the activity log, and those are NO ACTION foreign keys
+
+Both end the same way: deactivate instead, which is on the list as a
+switch, and reversible.
+
+Expected context: target_user, blocker.
+{% endcomment %}
+
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{% translate "Delete User" %}
+</h5>
+
+<div id="userDeleteBody">
+
+    <p class="mb-3">
+        {% blocktranslate trimmed with name=target_user.username %}
+            Are you sure you want to delete <strong>{{ name }}</strong>?
+        {% endblocktranslate %}
+    </p>
+
+    <dl class="row small mb-3">
+        <dt class="col-4 fw-normal text-body-secondary">{% translate "Full Name" %}</dt>
+        <dd class="col-8">
+            {% if target_user.full_name %}
+                {{ target_user.full_name }}
+            {% else %}
+                <span class="text-body-secondary">&mdash;</span>
+            {% endif %}
+        </dd>
+
+        <dt class="col-4 fw-normal text-body-secondary">{% translate "Role" %}</dt>
+        <dd class="col-8">{{ target_user.get_role_display }}</dd>
+
+        <dt class="col-4 fw-normal text-body-secondary">{% translate "Status" %}</dt>
+        <dd class="col-8">
+            {% if target_user.is_active %}
+                {% translate "Active" %}
+            {% else %}
+                {% translate "Inactive" %}
+            {% endif %}
+        </dd>
+    </dl>
+
+    {% if blocker %}
+
+        <div class="alert alert-warning mb-0" role="alert">
+            <i class="bi bi-info-circle me-2" aria-hidden="true"></i>
+            {{ blocker }}
+        </div>
+
+        <div class="d-flex justify-content-end pt-3">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                {% translate "Close" %}
+            </button>
+        </div>
+
+    {% else %}
+
+        <div class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
+            {% translate "This cannot be undone. The account will stop existing and its owner will no longer be able to sign in." %}
+        </div>
+
+        <form
+            method="post"
+            action="{% url 'user_delete' target_user.id %}"
+            hx-post="{% url 'user_delete' target_user.id %}?modal=1"
+            hx-target="#userDeleteBody"
+            hx-swap="outerHTML"
+        >
+            {% csrf_token %}
+
+            <div class="d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    {% translate "Cancel" %}
+                </button>
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash me-1" aria-hidden="true"></i>
+                    {% translate "Delete User" %}
+                </button>
+            </div>
+        </form>
+
+    {% endif %}
+
+</div>

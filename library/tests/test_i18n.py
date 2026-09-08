@@ -247,13 +247,23 @@ class IdentifiersStayLatinTests(LanguageTestCase):
             self.assertNotIn(digit, rendered)
 
 
-class NothingIsTranslatedYetTests(LanguageTestCase):
-    """The .po files are scaffolding: every msgstr is still empty.
+class PartiallyTranslatedTests(LanguageTestCase):
+    """Translation is under way, so both halves have to hold at once.
 
-    Which is deliberate, and is what makes this whole change safe to land
-    before a translator has been near it: an empty msgstr means `gettext`
-    hands back the msgid, so every page is still in English and every other
-    test in this suite still passes.
+    This class used to assert that nothing was translated, which was true
+    while the catalogues were scaffolding and is not any more - the
+    application shell is done and the rest is not. Asserting the old thing
+    would now mean asserting that finished work had not happened.
+
+    What matters while a catalogue is part-way is the pair:
+
+      * a string that HAS been translated appears in Urdu
+      * a string that has NOT falls back to its English msgid rather than
+        rendering blank
+
+    The fallback is why a half-translated catalogue is safe to ship at all,
+    and it is the half that would fail silently - a missing msgstr shows as
+    nothing on the page, not as an error.
     """
 
     def test_the_po_files_exist_for_both_languages(self):
@@ -289,17 +299,36 @@ class NothingIsTranslatedYetTests(LanguageTestCase):
             with self.subTest(msgid=msgid):
                 self.assertIn(msgid, content)
 
-    def test_urdu_still_shows_english_until_somebody_translates(self):
+    def test_a_translated_string_renders_in_urdu(self):
         client = self.sign_in()
         client.post(reverse("language_set"), {"language": "ur"})
 
         body = client.get(reverse("location_list")).content.decode()
 
-        # The page is right-to-left and marked up as Urdu, and its words
-        # are still English - which is exactly the state an untranslated
-        # catalogue should produce.
         self.assertIn('lang="ur"', body)
-        self.assertIn("Locations", body)
+
+        # "Locations" is in the shell batch, so the sidebar and the heading
+        # are Urdu.
+        self.assertIn("مقامات", body)
+
+    def test_an_untranslated_string_falls_back_to_english(self):
+        """The property that makes a part-done catalogue safe to ship.
+
+        An empty msgstr makes gettext return the msgid. If it returned ""
+        instead, every untranslated label would render as blank space and
+        the page would look broken rather than unfinished.
+        """
+
+        client = self.sign_in()
+        client.post(reverse("language_set"), {"language": "ur"})
+
+        body = client.get(reverse("activity_log_list")).content.decode()
+
+        self.assertIn('lang="ur"', body)
+
+        # Not in the shell batch yet, so still English - and present,
+        # rather than an empty cell.
+        self.assertIn("What happened", body)
 
 
 class MarkupTests(LanguageTestCase):

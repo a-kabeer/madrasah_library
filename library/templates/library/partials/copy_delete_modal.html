@@ -1,0 +1,115 @@
+{% load i18n %}
+{% comment %}
+Delete Copy confirmation, served into #formModal by `book_copy_delete`.
+
+`blocker` is set when the copy cannot go: any loan referencing it, active
+or long returned, pins it — `loans.copy_id` is a NO ACTION foreign key, and
+the history is the point of keeping it. In that case the dialog explains
+why and offers no Delete button, rather than letting the click fail against
+the database. See `copy_delete_blocker`.
+
+The way out differs by case, and the blocker's own sentence says which:
+a copy that is out has to come back first, and one with only past loans
+should be withdrawn — which keeps the record and takes it out of
+circulation. Withdraw is offered here as the thing to do instead.
+
+Expected context: copy, blocker.
+{% endcomment %}
+
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{% translate "Delete Copy?" %}
+</h5>
+
+<div id="copyDeleteBody">
+
+    {% if blocker %}
+
+        <div class="alert alert-warning d-flex align-items-start" role="alert">
+            <i class="bi bi-shield-exclamation me-2 mt-1" aria-hidden="true"></i>
+            <div>{{ blocker }}</div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
+            {% comment %}
+              A real navigation rather than a second dialog: withdrawing
+              asks its own question, and stacking a modal over this one
+              would trap the reader. Only offered while the copy is
+              still in circulation — a withdrawn copy has nothing left
+              to withdraw.
+            {% endcomment %}
+            {% if copy.status != "Transferred" %}
+                <a href="{% url 'book_copy_withdraw' copy.id %}" class="btn btn-warning">
+                    <i class="bi bi-box-arrow-down me-1" aria-hidden="true"></i>
+                    {% translate "Withdraw instead" %}
+                </a>
+            {% endif %}
+            <button
+                type="button"
+                class="btn btn-outline-secondary ms-auto"
+                data-bs-dismiss="modal"
+            >
+                {% translate "Close" %}
+            </button>
+        </div>
+
+    {% else %}
+
+        <p class="mb-2">{% translate "You are about to delete:" %}</p>
+
+        <p class="fs-5 fw-semibold mb-1">
+            <span class="copy-code">{{ copy.copy_code }}</span>
+        </p>
+
+        <p class="text-body-secondary small">
+            {{ copy.volume.book.title }}
+            {% if copy.shelf %}
+                &middot; {{ copy.shelf.location.name }} — {{ copy.shelf.shelf_code }}
+            {% else %}
+                &middot; {% translate "unshelved" %}
+            {% endif %}
+        </p>
+
+        <p class="text-body-secondary">
+            {% translate "It has never been lent, so no loan record is lost. The book and its other copies are untouched." %}
+        </p>
+
+        <p class="text-danger small mb-0">
+            <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+            {% translate "This cannot be undone." %}
+        </p>
+
+        <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
+
+            {% comment %}
+              Targets this dialog's own body, so a refusal that arrives
+              between opening it and pressing the button — the copy issued
+              to somebody in the meantime — is re-rendered here as the
+              blocker above rather than closing on a 500.
+            {% endcomment %}
+            <form
+                hx-post="{% url 'book_copy_delete' copy.id %}?modal=1"
+                hx-target="#copyDeleteBody"
+                hx-swap="outerHTML"
+                hx-disabled-elt="find button[type=submit]"
+                class="d-inline"
+            >
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash me-1" aria-hidden="true"></i>
+                    {% translate "Delete" %}
+                </button>
+            </form>
+
+            <button
+                type="button"
+                class="btn btn-outline-secondary ms-auto"
+                data-bs-dismiss="modal"
+            >
+                {% translate "Cancel" %}
+            </button>
+
+        </div>
+
+    {% endif %}
+
+</div>

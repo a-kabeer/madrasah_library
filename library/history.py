@@ -31,6 +31,23 @@ from django.utils import timezone
 from .models import ActivityLog, InventoryScan, Loan
 
 
+def _aware(moment):
+    """`moment` in whichever kind the rest of the timeline is using.
+
+    Aware under USE_TZ, naive without it. Rows read from a
+    `timestamp without time zone` column arrive naive whatever USE_TZ
+    says, which is what makes this necessary rather than paranoid.
+    """
+
+    if moment is None or not settings.USE_TZ:
+        return moment
+
+    if timezone.is_naive(moment):
+        return timezone.make_aware(moment)
+
+    return moment
+
+
 class Event:
     """One thing that happened to a copy.
 
@@ -40,7 +57,17 @@ class Event:
 
     def __init__(self, when, kind, label, *, user=None, borrower=None,
                  detail="", url="", tone="secondary", order=0, key=0):
-        self.when = when
+        # Normalised here rather than at each call site, because the three
+        # sources do not agree and sorting them together is the whole
+        # point of this class.
+        #
+        # `loans.issue_date` is a date and `_at` makes it aware, but
+        # `activity_log.created_at` and `inventory_scans.scanned_at` are
+        # `timestamp without time zone` in the hand-maintained schema and
+        # come back naive - so a copy with both a loan and a log entry
+        # raised "can't compare offset-naive and offset-aware datetimes"
+        # and its page answered 500. Reproduced on copies 1, 2, 3 and 6.
+        self.when = _aware(when)
         self.kind = kind
         self.label = label
         self.user = user

@@ -37,6 +37,24 @@ def can_edit_library(user):
     return getattr(user, "role", None) in LIBRARY_EDITOR_ROLES
 
 
+def passes_ceiling(user, *ceiling):
+    """True if `user`'s role is inside a `feature_required` ceiling.
+
+    Exactly the test `feature_required` makes below, SuperAdmin exemption
+    included, asked from outside a request so a template can avoid offering
+    a control the view would refuse. Stated once here rather than restated
+    at each call site, because a copy of this rule that drifts from the
+    decorator is a button that lies.
+
+    UI gating only, like `can_edit_library` and `can_manage_branding` - and
+    unlike them, it knows about SuperAdmin, who those two predate.
+    """
+
+    role = getattr(user, "role", None)
+
+    return role in ceiling or role == features.SUPER_ADMIN
+
+
 def role_required(*allowed_roles):
     """Restrict a view to users whose `role` is one of `allowed_roles`.
 

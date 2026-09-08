@@ -79,7 +79,7 @@
                     {% for loan in loans %}
                         <tr>
                             <td>
-                                <a href="{% url 'borrower_detail' loan.borrower.id %}"
+                                <a href="{% url 'borrower_detail' loan.borrower.id %}" data-form-modal hx-get="{% url 'borrower_detail' loan.borrower.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
                                    class="text-decoration-none">{{ loan.borrower.name }}</a>
                             </td>
                             <td class="text-body-secondary">
@@ -95,7 +95,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <a href="{% url 'book_copy_detail' loan.copy.id %}"
+                                <a href="{% url 'book_copy_detail' loan.copy.id %}" data-form-modal hx-get="{% url 'book_copy_detail' loan.copy.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
                                    class="text-decoration-none">{{ loan.copy.copy_code }}</a>
                             </td>
                             <td>{{ loan.issue_date }}</td>

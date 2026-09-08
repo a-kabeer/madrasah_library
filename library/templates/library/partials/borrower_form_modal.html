@@ -1,4 +1,45 @@
 {% load i18n %}
+<<<<<<< HEAD
+{% comment %}
+Add / Edit Borrower, in a dialog.
+
+One template for both, so the fields, their names and their error slots
+cannot differ between adding somebody and editing them. `action` is where
+it posts, which is the only real difference; `borrower` is set only when
+editing, and is what turns on the Active switch — a borrower being added
+is active by definition.
+
+Every message sits under the input it is about, marked with Bootstrap's
+`is-invalid`. The alert at the top only counts them: repeating each one up
+there would say everything twice while still not pointing anywhere.
+
+Expected context: action, form_data, errors, error, borrower,
+borrower_types.
+{% endcomment %}
+
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    {% if borrower %}
+        <i class="bi bi-pencil me-2" aria-hidden="true"></i>{% translate "Edit Borrower" %}
+    {% else %}
+        <i class="bi bi-person-plus me-2" aria-hidden="true"></i>{% translate "Add Borrower" %}
+    {% endif %}
+</h5>
+
+<form
+    method="post"
+    action="{{ action }}"
+    hx-post="{{ action }}?modal=1"
+    hx-target="#formModal .modal-body"
+    hx-swap="innerHTML"
+    hx-disabled-elt="find button[type=submit]"
+>
+    {% csrf_token %}
+
+    {% if error %}
+        <div class="alert alert-danger d-flex align-items-start" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2 mt-1" aria-hidden="true"></i>
+            <div>{{ error }}</div>
+=======
 <h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
     <i class="bi bi-person-plus me-2" aria-hidden="true"></i>
     {% if mode == "edit" %}{% translate "Edit Borrower" %}{% else %}{% translate "Add Borrower" %}{% endif %}
@@ -15,10 +56,195 @@
     {% if error %}
         <div class="alert alert-danger" role="alert">
             <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{{ error }}
+>>>>>>> 255e80b83f662a73d00b1fffa5ac2cbf1418ada2
         </div>
     {% endif %}
 
     <div class="row g-3">
+<<<<<<< HEAD
+
+        <div class="col-12">
+            <label for="borrowerName" class="form-label fw-semibold">
+                {% translate "Name" %} <span class="text-danger">*</span>
+            </label>
+            <input
+                type="text"
+                class="form-control{% if errors.name %} is-invalid{% endif %}"
+                id="borrowerName"
+                name="name"
+                value="{{ form_data.name }}"
+                {% comment %}
+                  `maxlength` matches the column. The view checks the
+                  length too: an attribute on an input is a courtesy to
+                  whoever is typing, not a rule, and reaching
+                  varchar(255) with more raises DataError.
+                {% endcomment %}
+                maxlength="255"
+                required
+                {% if errors.name %}aria-invalid="true"{% endif %}
+            >
+            {% if errors.name %}
+                <div class="invalid-feedback">{{ errors.name }}</div>
+            {% endif %}
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label for="borrowerPhone" class="form-label fw-semibold">
+                {% translate "Phone" %} <span class="text-danger">*</span>
+            </label>
+            <input
+                type="text"
+                class="form-control{% if errors.phone %} is-invalid{% endif %}"
+                id="borrowerPhone"
+                name="phone"
+                value="{{ form_data.phone }}"
+                maxlength="30"
+                required
+                {% if errors.phone %}aria-invalid="true"{% endif %}
+            >
+            {% if errors.phone %}
+                <div class="invalid-feedback">{{ errors.phone }}</div>
+            {% else %}
+                <div class="form-text">
+                    {% translate "How the library reaches them about an overdue book." %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label for="borrowerFormType" class="form-label fw-semibold">
+                {% translate "Type" %} <span class="text-danger">*</span>
+            </label>
+            {% comment %}
+              The four the database's `check_borrower_type` constraint
+              allows, offered as a list rather than typed — so the form
+              cannot post a fifth and be refused by the constraint.
+            {% endcomment %}
+            <select
+                class="form-select{% if errors.borrower_type %} is-invalid{% endif %}"
+                id="borrowerFormType"
+                name="borrower_type"
+                required
+                {% if errors.borrower_type %}aria-invalid="true"{% endif %}
+            >
+                <option value="">{% translate "Choose…" %}</option>
+                {% for type in borrower_types %}
+                    <option
+                        value="{{ type }}"
+                        {% if form_data.borrower_type == type %}selected{% endif %}
+                    >{{ type }}</option>
+                {% endfor %}
+            </select>
+            {% if errors.borrower_type %}
+                <div class="invalid-feedback">{{ errors.borrower_type }}</div>
+            {% endif %}
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label for="borrowerRegistration" class="form-label fw-semibold">
+                {% translate "Registration No" %}
+            </label>
+            <input
+                type="text"
+                class="form-control{% if errors.registration_no %} is-invalid{% endif %}"
+                id="borrowerRegistration"
+                name="registration_no"
+                value="{{ form_data.registration_no }}"
+                maxlength="100"
+                {% if errors.registration_no %}aria-invalid="true"{% endif %}
+            >
+            {% if errors.registration_no %}
+                <div class="invalid-feedback">{{ errors.registration_no }}</div>
+            {% else %}
+                <div class="form-text">{% translate "Optional, and unique if given." %}</div>
+            {% endif %}
+        </div>
+
+        <div class="col-12 col-md-6">
+            <label for="borrowerDepartment" class="form-label fw-semibold">
+                {% translate "Department" %}
+            </label>
+            <input
+                type="text"
+                class="form-control{% if errors.department %} is-invalid{% endif %}"
+                id="borrowerDepartment"
+                name="department"
+                value="{{ form_data.department }}"
+                maxlength="255"
+                {% if errors.department %}aria-invalid="true"{% endif %}
+            >
+            {% if errors.department %}
+                <div class="invalid-feedback">{{ errors.department }}</div>
+            {% endif %}
+        </div>
+
+        <div class="col-12">
+            <label for="borrowerAddress" class="form-label fw-semibold">
+                {% translate "Address" %}
+            </label>
+            <textarea
+                class="form-control"
+                id="borrowerAddress"
+                name="address"
+                rows="2"
+            >{{ form_data.address }}</textarea>
+        </div>
+
+        <div class="col-12">
+            <label for="borrowerNotes" class="form-label fw-semibold">
+                {% translate "Notes" %}
+            </label>
+            <textarea
+                class="form-control"
+                id="borrowerNotes"
+                name="notes"
+                rows="2"
+            >{{ form_data.notes }}</textarea>
+        </div>
+
+        {% comment %}
+          Only when editing. Somebody being added is active by definition —
+          there is no reason to add a borrower the library will not lend
+          to — and offering the switch would invite exactly that.
+        {% endcomment %}
+        {% if borrower %}
+            <div class="col-12">
+                <div class="form-check form-switch">
+                    <input
+                        type="checkbox"
+                        class="form-check-input"
+                        id="borrowerActive"
+                        name="is_active"
+                        value="True"
+                        {% if form_data.is_active %}checked{% endif %}
+                    >
+                    <label class="form-check-label" for="borrowerActive">
+                        {% translate "Active — the library still lends to them" %}
+                    </label>
+                </div>
+                <div class="form-text">
+                    {% translate "Turning this off keeps their whole record and stops new loans." %}
+                </div>
+            </div>
+        {% endif %}
+
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-end gap-2 mt-4 pt-3 border-top">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            {% translate "Cancel" %}
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
+            {% if borrower %}
+                {% translate "Save changes" %}
+            {% else %}
+                {% translate "Add Borrower" %}
+            {% endif %}
+        </button>
+    </div>
+
+=======
         <div class="col-12 col-md-6">
             <label class="form-label fw-semibold" for="borrowerName">{% translate "Name" %}</label>
             <input id="borrowerName" name="name" type="text" class="form-control" value="{{ form_data.name }}" required autofocus>
@@ -70,4 +296,5 @@
             {% if mode == "edit" %}{% translate "Save Changes" %}{% else %}{% translate "Add Borrower" %}{% endif %}
         </button>
     </div>
+>>>>>>> 255e80b83f662a73d00b1fffa5ac2cbf1418ada2
 </form>

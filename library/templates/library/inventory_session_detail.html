@@ -168,6 +168,25 @@
                             autocomplete="off"
                             autofocus
                         >
+                        {% comment %}
+                          The camera trigger, exactly as the issue and
+                          return desks have it. Hidden until app.js decides
+                          this device can scan at all, so a desktop and a
+                          browser without the decoder see the field exactly
+                          as it was. `data-scan-target` names the input the
+                          decoded code goes into.
+                        {% endcomment %}
+                        <button
+                            type="button"
+                            class="btn btn-outline-primary"
+                            data-scan-open
+                            data-scan-target="copy_code"
+                            hidden
+                        >
+                            <i class="bi bi-upc-scan" aria-hidden="true"></i>
+                            <span class="visually-hidden">{% translate "Scan a barcode" %}</span>
+                        </button>
+
                         <button type="submit" class="btn btn-primary">
                             {% translate "Record" %}
                         </button>
@@ -188,7 +207,7 @@
                     {% for scan in recent %}
                         <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
                             <span>
-                                <a href="{% url 'book_copy_detail' scan.copy.id %}"
+                                <a href="{% url 'book_copy_detail' scan.copy.id %}" data-form-modal hx-get="{% url 'book_copy_detail' scan.copy.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
                                    class="fw-semibold text-decoration-none">
                                     {{ scan.copy.copy_code }}
                                 </a>
@@ -256,7 +275,7 @@
                             {% for copy in missing %}
                                 <tr>
                                     <td>
-                                        <a href="{% url 'book_copy_detail' copy.id %}"
+                                        <a href="{% url 'book_copy_detail' copy.id %}" data-form-modal hx-get="{% url 'book_copy_detail' copy.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
                                            class="fw-semibold text-decoration-none">
                                             {{ copy.copy_code }}
                                         </a>
@@ -321,7 +340,7 @@
                             {% for scan in outside %}
                                 <tr>
                                     <td>
-                                        <a href="{% url 'book_copy_detail' scan.copy.id %}"
+                                        <a href="{% url 'book_copy_detail' scan.copy.id %}" data-form-modal hx-get="{% url 'book_copy_detail' scan.copy.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
                                            class="fw-semibold text-decoration-none">
                                             {{ scan.copy.copy_code }}
                                         </a>
@@ -359,7 +378,7 @@
                 <ul class="list-group list-group-flush">
                     {% for scan in duplicates %}
                         <li class="list-group-item d-flex justify-content-between gap-2">
-                            <a href="{% url 'book_copy_detail' scan.copy.id %}"
+                            <a href="{% url 'book_copy_detail' scan.copy.id %}" data-form-modal hx-get="{% url 'book_copy_detail' scan.copy.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
                                class="text-decoration-none">
                                 {{ scan.copy_code }}
                             </a>

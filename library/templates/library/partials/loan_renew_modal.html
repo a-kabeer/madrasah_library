@@ -1,0 +1,126 @@
+{% load i18n %}
+{% comment %}
+Extend a loan, in a dialog, with the date the librarian chooses.
+
+This is the one place where the behaviour changed rather than moved. Renew
+used to compute the new due date from policy and never ask - so a loan
+could only ever be extended by exactly the policy period, and a librarian
+who needed a particular day could not have one.
+
+Now there is a calendar field:
+
+  * `min` is today, or the current due date when that is later. A renewal
+    moves the date forward; offering a past day would let somebody mark a
+    book overdue that is not.
+  * it opens on the policy's own date, so the common case is still one
+    click and nothing has to be typed.
+  * the view re-checks all of it, because `min` on an input is a courtesy
+    to the person using it and not a rule.
+
+The renewal limit is unchanged and still enforced under a lock, so this
+cannot be used to get around it.
+
+Expected context: loan, new_due_date, error_message, renewals_used,
+renewal_limit, loan_period_days, earliest_due_date.
+{% endcomment %}
+
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    <i class="bi bi-arrow-clockwise me-2" aria-hidden="true"></i>
+    {% translate "Renew Loan" %}
+</h5>
+
+<form
+    method="post"
+    action="{% url 'loan_renew' loan.id %}"
+    hx-post="{% url 'loan_renew' loan.id %}?modal=1"
+    hx-target="#formModal .modal-body"
+    hx-swap="innerHTML"
+>
+    {% csrf_token %}
+
+    {% if error_message %}
+        <div class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
+            {{ error_message }}
+        </div>
+    {% endif %}
+
+    <dl class="row small mb-3">
+
+        <dt class="col-5 fw-normal text-body-secondary">{% translate "Book" %}</dt>
+        <dd class="col-7">{{ loan.copy.volume.book.title }}</dd>
+
+        <dt class="col-5 fw-normal text-body-secondary">{% translate "Copy" %}</dt>
+        <dd class="col-7"><span class="copy-code">{{ loan.copy.copy_code }}</span></dd>
+
+        <dt class="col-5 fw-normal text-body-secondary">{% translate "Borrower" %}</dt>
+        <dd class="col-7">{{ loan.borrower.name }}</dd>
+
+        <dt class="col-5 fw-normal text-body-secondary">{% translate "Due now" %}</dt>
+        <dd class="col-7">{{ loan.due_date|date:"j M Y" }}</dd>
+
+        <dt class="col-5 fw-normal text-body-secondary">{% translate "Renewals used" %}</dt>
+        <dd class="col-7">
+            {% if renewal_limit %}
+                {{ renewals_used }} / {{ renewal_limit }}
+            {% else %}
+                {{ renewals_used }}
+                <span class="text-body-secondary">
+                    &mdash; {% translate "no limit set" %}
+                </span>
+            {% endif %}
+        </dd>
+
+    </dl>
+
+    {% comment %}
+      Only offered when the loan can actually be renewed. `error_message`
+      already holds the reason when it cannot - a returned loan, or one
+      that has had its renewals - and showing a date field under that
+      would invite somebody to fill in a form that cannot be submitted.
+    {% endcomment %}
+    {% if not error_message %}
+
+        <div class="mb-3">
+            <label for="new_due_date" class="form-label fw-semibold">
+                {% translate "Extend to" %} <span class="text-danger">*</span>
+            </label>
+            <input
+                type="date"
+                class="form-control"
+                id="new_due_date"
+                name="new_due_date"
+                value="{{ new_due_date|date:'Y-m-d' }}"
+                min="{{ earliest_due_date|date:'Y-m-d' }}"
+                required
+            >
+            <div class="form-text">
+                {% blocktranslate trimmed with suggested=new_due_date|date:"j M Y" days=loan_period_days %}
+                    The policy suggests {{ suggested }}, which is {{ days }}
+                    days on. Pick another day if this one does not suit -
+                    earlier than today is not offered.
+                {% endblocktranslate %}
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 pt-2">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                {% translate "Cancel" %}
+            </button>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
+                {% translate "Renew Loan" %}
+            </button>
+        </div>
+
+    {% else %}
+
+        <div class="d-flex justify-content-end pt-2">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                {% translate "Close" %}
+            </button>
+        </div>
+
+    {% endif %}
+
+</form>

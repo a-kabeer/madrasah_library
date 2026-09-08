@@ -827,6 +827,19 @@ body {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+
+    /*
+      The title gives way, the button does not. This was `flex-shrink: 0`,
+      which meant a page title longer than the space left pushed the user
+      menu off the right edge of a narrow screen - twelve pixels of
+      sideways scroll on a phone, and further in Urdu, where every title is
+      longer. Nothing here changes on a desktop, where there is room.
+    */
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.topbar-left > .menu-button {
     flex-shrink: 0;
 }
 
@@ -851,6 +864,37 @@ body {
 
 
 /* =========================
+   DETAIL DIALOG TABS
+   ========================= */
+
+/*
+  Four panes of very different lengths share one box - a copy's location is
+  six lines, its history can be forty - so the dialog resized on every tab
+  change, which moves the tabs themselves out from under the cursor that
+  just clicked one.
+
+  One `height`, not a floor and a ceiling. A floor was the first attempt
+  and did not work: a short pane sat at the floor and a long one at the
+  ceiling, so the dialog still jumped between them - measured at 592px and
+  736px on the same copy. A single height gives every pane the same box,
+  and the long ones scroll inside it.
+
+  `svh` because a phone's toolbars come and go and `vh` does not notice.
+*/
+.detail-tabs {
+    height: min(60svh, 27rem);
+    overflow-y: auto;
+}
+
+/* Less to spare on a phone, where the dialog is nearly the whole screen
+   already. Still one height, for the same reason. */
+@media (max-width: 575.98px) {
+    .detail-tabs {
+        height: 55svh;
+    }
+}
+
+/* =========================
    MENU BUTTON
    ========================= */
 
@@ -869,12 +913,21 @@ body {
    PAGE HEADING
    ========================= */
 
+.page-heading {
+    min-width: 0;
+}
+
 .page-heading h1 {
     margin: 0;
 
     font-size: 1.35rem;
 
     font-weight: 600;
+
+    /* Cut short rather than pushing the rest of the topbar aside. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 

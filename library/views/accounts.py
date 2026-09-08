@@ -31,7 +31,7 @@ from ..models import (
     User,
 )
 
-from ..features import SUPER_ADMIN
+from ..features import ADMIN, SUPER_ADMIN
 from ..permissions import feature_required, role_required
 from ..security import login_rate_limiter
 
@@ -41,6 +41,10 @@ from .common import (
     USER_CACHE_KEY,
     USER_ROLES,
     create_activity_log,
+    is_form_modal_request,
+    lookup_deleted_response,
+    lookup_saved_response,
+    query_with,
     safe_redirect_target,
 )
 
@@ -231,7 +235,9 @@ def language_set(request):
     return redirect(target)
 
 
-def refuse_user_change(actor, target, new_role=None, ending=False):
+def refuse_user_change(
+    actor, target, new_role=None, ending=False, deleting=False
+):
     """Why `actor` may not make this change to `target`, or "".
 
     Four rules, and each of them is about a way an installation could lose
@@ -277,6 +283,20 @@ def refuse_user_change(actor, target, new_role=None, ending=False):
                 "This is the only active Super Admin. Make another one "
                 "first, or the installation would have none."
             )
+
+    # Only a SuperAdmin may delete an Admin. Deactivating one is still
+    # allowed - that is reversible from the same page, and deletion is not.
+    # Without this, one Admin could remove the others and leave the
+    # installation held by a single person.
+    if (
+        deleting
+        and target.role == ADMIN
+        and getattr(actor, "role", None) != SUPER_ADMIN
+    ):
+        return (
+            "Only a Super Admin can delete an Admin account. You can "
+            "deactivate it instead."
+        )
 
     return ""
 
@@ -343,28 +363,77 @@ def user_list(request):
             "roles": User.ROLE_CHOICES,
             "users": users,
             "search": search,
+            "paginator": paginator,
+            # Everything except `page`, so the search and both filters
+            # survive being paged through.
+            "pagination_query": query_with(request, page=None),
+            "elided_page_range": list(
+                paginator.get_elided_page_range(
+                    users.number,
+                    on_each_side=1,
+                    on_ends=1,
+                )
+            ),
+            "page_ellipsis": Paginator.ELLIPSIS,
         }
     )
 
 
 @feature_required("users", "Admin")
 def user_add(request):
+    """Create an account, from the dialog or from a plain POST.
+
+    This used to pass `password_hash=` to `User.objects.create()`. The
+    model field is `password` with `db_column="password_hash"`, so that
+    keyword was not a field at all and every submission raised TypeError -
+    Add User has been broken since the model was refactored. It now goes
+    through `set_password`, which hashes it; writing the raw value into the
+    column would have left `authenticate()` on the login page unable to
+    verify it anyway.
+    """
+
+    modal = is_form_modal_request(request)
+    error = None
+    username = ""
+    full_name = ""
+    role = ""
 
     if request.method == "POST":
         username = request.POST.get("username", "").strip()
         full_name = request.POST.get("full_name", "").strip()
-        password_hash = request.POST.get("password_hash", "").strip()
+        password = request.POST.get("password", "").strip()
         role = request.POST.get("role", "").strip()
 
-        if username and full_name and password_hash and role in USER_ROLES:
-            user = User.objects.create(
+        if not (username and full_name and password and role):
+
+            error = "Please fill in all required fields."
+
+        elif role not in USER_ROLES:
+
+            # USER_ROLES excludes SuperAdmin on purpose: that account is
+            # made by somebody with database access, deliberately.
+            error = "Choose a role from the list."
+
+        elif len(password) < 8:
+
+            error = "Password must be at least 8 characters."
+
+        elif User.objects.filter(username__iexact=username).exists():
+
+            # Checked rather than left to the unique index, so the dialog
+            # can say so instead of the database returning a 500.
+            error = "A user with this username already exists."
+
+        else:
+            user = User(
                 username=username,
                 full_name=full_name,
-                password_hash=password_hash,
                 role=role,
                 is_active=True,
                 created_at=timezone.now(),
             )
+            user.set_password(password)
+            user.save()
 
             cache.delete(USER_CACHE_KEY)
             cache.delete(DASHBOARD_CACHE_KEY)
@@ -374,15 +443,28 @@ def user_add(request):
                 action="CREATE",
                 entity_type="User",
                 entity_id=user.id,
-                description=f"{user.username} شامل کیا گیا",
+                description=f"{user.username} added",
             )
+
+            if modal:
+                return lookup_saved_response(user.username)
 
             return redirect("user_list")
 
-    return render(
-        request,
-        "library/user_add.html"
-    )
+    if modal:
+        return user_form_modal(
+            request,
+            reverse("user_add"),
+            error=error,
+            username=username,
+            full_name=full_name,
+            role=role,
+        )
+
+    if error:
+        messages.error(request, error)
+
+    return redirect("user_list")
 
 
 @feature_required("users", "Admin")
@@ -418,6 +500,12 @@ def user_toggle_active(request, user_id):
                 f"{'activated' if user.is_active else 'deactivated'}"
             ),
         )
+
+    # The Status switch posts with HTMX and swaps nothing: the list
+    # re-requests itself off the event, which keeps the row's badge and the
+    # switch in step without this view knowing how either is drawn.
+    if request.headers.get("HX-Request") == "true":
+        return lookup_saved_response(user.username)
 
     fallback = reverse("user_list")
     return redirect(safe_redirect_target(request, fallback))
@@ -508,18 +596,29 @@ def user_edit(request, user_id):
                 description=f"{target_user.username} updated",
             )
 
+            if is_form_modal_request(request):
+                return lookup_saved_response(target_user.username)
+
             return redirect(
                 "user_list"
             )
 
-    return render(
-        request,
-        "library/user_edit.html",
-        {
-            "target_user": target_user,
-            "error": error,
-        }
-    )
+    if is_form_modal_request(request):
+        return user_form_modal(
+            request,
+            reverse("user_edit", args=[target_user.id]),
+            error=error,
+            username=target_user.username,
+            full_name=target_user.full_name or "",
+            role=target_user.role,
+            editing=True,
+            target_user=target_user,
+        )
+
+    if error:
+        messages.error(request, error)
+
+    return redirect("user_list")
 
 
 @feature_required("users", "Admin")
@@ -539,24 +638,31 @@ def user_delete(request, user_id):
         or ActivityLog.objects.filter(user_id=target_user.id).exists()
     )
 
+    modal = is_form_modal_request(request)
+
+    # Why this account cannot go, if it cannot: either a rule refuses it or
+    # the records point at it. Both are shown in the dialog rather than
+    # discovered on submit.
+    blocker = refuse_user_change(
+        request.user, target_user, ending=True, deleting=True
+    )
+
+    if not blocker and has_related_records:
+        blocker = (
+            "This account has issued or returned loans, or appears in the "
+            "activity log. Deactivate it instead - deleting it would take "
+            "that history with it."
+        )
+
     if request.method == "POST":
 
-        refusal = refuse_user_change(request.user, target_user, ending=True)
+        if blocker:
 
-        if refusal:
-            messages.error(request, refusal)
+            if modal:
+                return user_delete_modal(request, target_user, blocker)
+
+            messages.error(request, blocker)
             return redirect("user_list")
-
-        if has_related_records:
-
-            return render(
-                request,
-                "library/user_delete.html",
-                {
-                    "target_user": target_user,
-                    "has_related_records": True,
-                }
-            )
 
         deleted_user_id = target_user.id
         deleted_username = target_user.username
@@ -574,13 +680,65 @@ def user_delete(request, user_id):
             description=f"{deleted_username} deleted",
         )
 
+        if modal:
+            return lookup_deleted_response(deleted_username)
+
         return redirect("user_list")
+
+    if modal:
+        return user_delete_modal(request, target_user, blocker)
+
+    if blocker:
+        messages.error(request, blocker)
+
+    return redirect("user_list")
+
+
+def user_form_modal(
+    request,
+    action,
+    error=None,
+    username="",
+    full_name="",
+    role="",
+    editing=False,
+    target_user=None,
+):
+    """The Add or Edit User dialog.
+
+    One template for both, the same way one template serves all six lookup
+    dialogs. `editing` decides the title, the button and whether the
+    password field is required - on an edit it is optional, and blank means
+    leave the current one alone.
+
+    Only the roles in USER_ROLES are offered, so SuperAdmin cannot be
+    granted through the form however the request is shaped.
+    """
 
     return render(
         request,
-        "library/user_delete.html",
+        "library/partials/user_form_modal.html",
+        {
+            "action": action,
+            "editing": editing,
+            "error": error,
+            "username": username,
+            "full_name": full_name,
+            "role": role,
+            "roles": USER_ROLES,
+            "target_user": target_user,
+        },
+    )
+
+
+def user_delete_modal(request, target_user, blocker):
+    """The Delete User confirmation, or the reason there is no button."""
+
+    return render(
+        request,
+        "library/partials/user_delete_modal.html",
         {
             "target_user": target_user,
-            "has_related_records": has_related_records,
-        }
+            "blocker": blocker,
+        },
     )

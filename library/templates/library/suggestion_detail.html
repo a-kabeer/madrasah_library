@@ -182,9 +182,19 @@
                             </p>
 
                             <div class="d-flex flex-wrap gap-2">
+                                {% comment %}
+                                  The suggestion rides in the query
+                                  string on both, so the dialog arrives
+                                  prefilled from that row exactly as the
+                                  page did.
+                                {% endcomment %}
                                 <a
                                     href="{% url 'book_add' %}?suggestion={{ suggestion.id }}"
                                     class="btn btn-primary"
+                                    data-form-modal
+                                    hx-get="{% url 'book_add' %}?suggestion={{ suggestion.id }}&modal=1"
+                                    hx-target="#formModal .modal-body"
+                                    hx-swap="innerHTML"
                                 >
                                     <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
                                     {% translate "Add to catalogue" %}

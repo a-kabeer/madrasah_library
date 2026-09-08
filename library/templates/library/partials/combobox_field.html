@@ -23,6 +23,13 @@ Expected context:
                 (list filters), so filtering can never add data.
   compact       True to drop the hint line and bottom margin, so the field
                 lines up with plain inputs in a filter row.
+  error         What is wrong with this field, or "" / None. Shown under
+                the control and marked with Bootstrap's `is-invalid`, so
+                the message sits beside the box it is about rather than in
+                an alert at the top of the form. Pass it explicitly like
+                the rest - an omitted one would inherit whatever the
+                surrounding page happens to call `error`, which on the Add
+                and Edit pages is the form-wide alert.
   submit_on_select
                 Optional. True makes picking an option submit the
                 surrounding form, which is how the book list filters
@@ -64,7 +71,7 @@ whatever the surrounding page happens to have.
 
             <input
                 type="text"
-                class="form-control combobox-input"
+                class="form-control combobox-input{% if error %} is-invalid{% endif %}"
                 id="{{ input_id }}"
                 value="{{ selected_name|default_if_none:'' }}"
                 placeholder="{% if allow_create %}Search or add {{ entity_label }}...{% else %}Any {{ entity_label }}{% endif %}"
@@ -128,6 +135,15 @@ whatever the surrounding page happens to have.
         ></div>
 
     </div>
+
+    {% comment %}
+      `d-block` because the input this belongs to is not a sibling of it -
+      Bootstrap only reveals `.invalid-feedback` next to an `.is-invalid`
+      control, and the combobox wraps its input two levels down.
+    {% endcomment %}
+    {% if error %}
+        <div class="invalid-feedback d-block">{{ error }}</div>
+    {% endif %}
 
     {% if not compact %}
         <div class="form-text">

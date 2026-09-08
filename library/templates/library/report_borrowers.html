@@ -49,7 +49,7 @@
                 </div>
                 <div class="col-12 col-md-4">
                     {% url 'borrower_list' as borrower_search_url %}
-                    {% include "library/partials/combobox_field.html" with label="Borrower" field_name="borrower" input_id="reportBorrower" entity_label="borrower" search_url=borrower_search_url selected_id=borrower_id selected_name=borrower_name required=False allow_create=False compact=True submit_on_select=False %}
+                    {% include "library/partials/combobox_field.html" with label="Borrower" field_name="borrower" input_id="reportBorrower" entity_label="borrower" search_url=borrower_search_url selected_id=borrower_id selected_name=borrower_name required=False allow_create=False compact=True submit_on_select=False error="" %}
                 </div>
                 <div class="col-12 col-md-auto">
                     <button type="submit" class="btn btn-primary btn-sm">
@@ -88,7 +88,7 @@
                         {% for row in rows %}
                             <tr>
                                 <td>
-                                    <a href="{% url 'borrower_detail' row.id %}"
+                                    <a href="{% url 'borrower_detail' row.id %}" data-form-modal hx-get="{% url 'borrower_detail' row.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
                                        class="text-decoration-none">{{ row.name }}</a>
                                 </td>
                                 <td class="text-body-secondary">

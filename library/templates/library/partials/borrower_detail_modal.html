@@ -1,4 +1,466 @@
 {% load i18n %}
+<<<<<<< HEAD
+{% comment %}
+One borrower, in tabs.
+
+The page this replaced said four things stacked down a long scroll: who
+they are, what they are holding, what they are waiting for, and what they
+have had. They are four separate questions, and a librarian has one of them
+at a time - so they are four tabs, and the answer is on screen without
+scrolling past the other three.
+
+There are no inline links in the tables. Inside a dialog a link is a trap:
+following it throws away the dialog and whatever the reader was in the
+middle of. So the tables are plain text, and the things worth going to have
+proper buttons in the footer, one each.
+
+Dual out-of-band titles, the same as the loan dialog: this one fragment is
+opened both by a row click (into #globalModal) and by a link on another
+page (into #formModal), and only the one that exists gets swapped.
+
+Expected context: borrower, current_loans, active_count, overdue_count,
+history, history_count, history_preview, history_url, reservations,
+can_delete.
+{% endcomment %}
+
+<h5 class="modal-title" id="globalModalLabel" hx-swap-oob="true">
+    <i class="bi bi-person me-2" aria-hidden="true"></i>{{ borrower.name }}
+</h5>
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    <i class="bi bi-person me-2" aria-hidden="true"></i>{{ borrower.name }}
+</h5>
+
+{% comment %}
+  What is true of them right now, above the tabs, because it is what
+  changes how everything below should be read - and because a person who
+  has three books a fortnight late should not have to find the right tab
+  to learn it.
+{% endcomment %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+
+    {% if borrower.is_active %}
+        <span class="badge text-bg-success">{% translate "Active" %}</span>
+    {% else %}
+        <span class="badge text-bg-secondary">{% translate "Inactive" %}</span>
+    {% endif %}
+
+    {% if borrower.borrower_type %}
+        <span class="badge text-bg-light">{{ borrower.borrower_type }}</span>
+    {% endif %}
+
+    {% if overdue_count %}
+        <span class="badge text-bg-danger">
+            {% blocktranslate trimmed count n=overdue_count %}
+                {{ n }} overdue
+            {% plural %}
+                {{ n }} overdue
+            {% endblocktranslate %}
+        </span>
+    {% endif %}
+
+    <span class="text-body-secondary small ms-auto">
+        {% blocktranslate trimmed count n=active_count %}
+            holding {{ n }} book
+        {% plural %}
+            holding {{ n }} books
+        {% endblocktranslate %}
+    </span>
+
+</div>
+
+{% comment %}
+  What being inactive actually means, said rather than left to be inferred
+  from a grey badge - and it is the reason the Issue button below is
+  missing, which is worth saying where the reader is looking for it.
+{% endcomment %}
+{% if not borrower.is_active %}
+    <div class="alert alert-warning d-flex align-items-start py-2" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2 mt-1" aria-hidden="true"></i>
+        <div class="small">
+            {% translate "They cannot receive new loans while they are inactive." %}
+            {% if active_count %}
+                {% blocktranslate trimmed count n=active_count %}
+                    They still have {{ n }} book out.
+                {% plural %}
+                    They still have {{ n }} books out.
+                {% endblocktranslate %}
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+
+<ul class="nav nav-tabs mb-3" role="tablist">
+
+    <li class="nav-item" role="presentation">
+        <button
+            class="nav-link active"
+            id="borrowerTabWho"
+            data-bs-toggle="tab"
+            data-bs-target="#borrowerPaneWho"
+            type="button"
+            role="tab"
+            aria-controls="borrowerPaneWho"
+            aria-selected="true"
+        >
+            <i class="bi bi-person-vcard me-1" aria-hidden="true"></i>
+            {% translate "Details" %}
+        </button>
+    </li>
+
+    <li class="nav-item" role="presentation">
+        <button
+            class="nav-link"
+            id="borrowerTabOut"
+            data-bs-toggle="tab"
+            data-bs-target="#borrowerPaneOut"
+            type="button"
+            role="tab"
+            aria-controls="borrowerPaneOut"
+            aria-selected="false"
+        >
+            <i class="bi bi-journal-arrow-up me-1" aria-hidden="true"></i>
+            {% translate "On loan" %}
+            {% if active_count %}
+                <span class="badge text-bg-secondary ms-1">{{ active_count }}</span>
+            {% endif %}
+        </button>
+    </li>
+
+    <li class="nav-item" role="presentation">
+        <button
+            class="nav-link"
+            id="borrowerTabQueue"
+            data-bs-toggle="tab"
+            data-bs-target="#borrowerPaneQueue"
+            type="button"
+            role="tab"
+            aria-controls="borrowerPaneQueue"
+            aria-selected="false"
+        >
+            <i class="bi bi-bookmark-star me-1" aria-hidden="true"></i>
+            {% translate "Reservations" %}
+            {% if reservations %}
+                <span class="badge text-bg-secondary ms-1">{{ reservations|length }}</span>
+            {% endif %}
+        </button>
+    </li>
+
+    <li class="nav-item" role="presentation">
+        <button
+            class="nav-link"
+            id="borrowerTabHistory"
+            data-bs-toggle="tab"
+            data-bs-target="#borrowerPaneHistory"
+            type="button"
+            role="tab"
+            aria-controls="borrowerPaneHistory"
+            aria-selected="false"
+        >
+            <i class="bi bi-clock-history me-1" aria-hidden="true"></i>
+            {% translate "History" %}
+        </button>
+    </li>
+
+</ul>
+
+<div class="tab-content">
+
+    {% comment %} ---------------------------------------- who they are {% endcomment %}
+    <div
+        class="tab-pane fade show active"
+        id="borrowerPaneWho"
+        role="tabpanel"
+        aria-labelledby="borrowerTabWho"
+        tabindex="0"
+    >
+        <dl class="row small mb-0">
+
+            <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Phone" %}</dt>
+            <dd class="col-sm-8 mb-2">{{ borrower.phone|default:"—" }}</dd>
+
+            <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Registration No" %}</dt>
+            <dd class="col-sm-8 mb-2">{{ borrower.registration_no|default:"—" }}</dd>
+
+            <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Type" %}</dt>
+            <dd class="col-sm-8 mb-2">{{ borrower.borrower_type|default:"—" }}</dd>
+
+            <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Department" %}</dt>
+            <dd class="col-sm-8 mb-2">{{ borrower.department|default:"—" }}</dd>
+
+            <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Address" %}</dt>
+            <dd class="col-sm-8 mb-2">{{ borrower.address|default:"—" }}</dd>
+
+            <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Member since" %}</dt>
+            <dd class="col-sm-8 mb-2">{{ borrower.created_at|date:"j M Y"|default:"—" }}</dd>
+
+            <dt class="col-sm-4 fw-normal text-body-secondary">{% translate "Notes" %}</dt>
+            <dd class="col-sm-8 mb-0">
+                {% if borrower.notes %}
+                    {{ borrower.notes|linebreaksbr }}
+                {% else %}
+                    <span class="text-body-secondary">—</span>
+                {% endif %}
+            </dd>
+
+        </dl>
+    </div>
+
+    {% comment %} ------------------------------------- what they hold {% endcomment %}
+    <div
+        class="tab-pane fade"
+        id="borrowerPaneOut"
+        role="tabpanel"
+        aria-labelledby="borrowerTabOut"
+        tabindex="0"
+    >
+        {% if current_loans %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0 small">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>{% translate "Copy" %}</th>
+                            <th>{% translate "Book" %}</th>
+                            <th>{% translate "Due" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for loan in current_loans %}
+                            <tr>
+                                <td><span class="copy-code">{{ loan.copy.copy_code }}</span></td>
+                                <td>
+                                    {{ loan.copy.volume.book.title }}
+                                    {% if loan.copy.volume.volume_number != 1 or loan.copy.volume.title %}
+                                        <span class="d-block text-body-secondary">
+                                            {% blocktranslate with number=loan.copy.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% if loan.copy.volume.title %} · {{ loan.copy.volume.title }}{% endif %}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-nowrap">
+                                    {{ loan.due_date|date:"j M Y" }}
+                                    {% if loan.days_overdue %}
+                                        <span class="d-block text-danger">
+                                            {% blocktranslate trimmed count n=loan.days_overdue %}
+                                                {{ n }} day late
+                                            {% plural %}
+                                                {{ n }} days late
+                                            {% endblocktranslate %}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-body-secondary mb-0">
+                {% translate "They have nothing out at the moment." %}
+            </p>
+        {% endif %}
+    </div>
+
+    {% comment %} ------------------------------ what they are waiting for {% endcomment %}
+    <div
+        class="tab-pane fade"
+        id="borrowerPaneQueue"
+        role="tabpanel"
+        aria-labelledby="borrowerTabQueue"
+        tabindex="0"
+    >
+        {% if reservations %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0 small">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>{% translate "Book" %}</th>
+                            <th>{% translate "Place" %}</th>
+                            <th>{% translate "Since" %}</th>
+                            <th class="text-end">{% translate "Cancel" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reservation in reservations %}
+                            <tr>
+                                <td>
+                                    {{ reservation.book.title }}
+                                    {% if reservation.book.author %}
+                                        <span class="d-block text-body-secondary">
+                                            {{ reservation.book.author.name }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-nowrap">
+                                    {% if reservation.is_active %}
+                                        {% if reservation.ahead == 0 %}
+                                            <span class="badge text-bg-success">
+                                                {% translate "Next in line" %}
+                                            </span>
+                                        {% else %}
+                                            {% blocktranslate trimmed with ahead=reservation.ahead %}
+                                                {{ ahead }} ahead
+                                            {% endblocktranslate %}
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-body-secondary">
+                                            {{ reservation.status }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-nowrap">
+                                    {{ reservation.created_at|date:"j M Y" }}
+                                </td>
+                                <td class="text-end">
+                                    {% if reservation.is_active %}
+                                        <form
+                                            method="post"
+                                            action="{% url 'reservation_cancel' reservation.id %}"
+                                            class="d-inline"
+                                        >
+                                            {% csrf_token %}
+                                            <input
+                                                type="hidden"
+                                                name="next"
+                                                value="{% url 'borrower_list' %}"
+                                            >
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-outline-danger"
+                                                title="{% translate 'Cancel this reservation' %}"
+                                            >
+                                                <i class="bi bi-x-lg" aria-hidden="true"></i>
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span class="text-body-secondary">&mdash;</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-body-secondary mb-0">
+                {% translate "They are not waiting for anything." %}
+            </p>
+        {% endif %}
+    </div>
+
+    {% comment %} ------------------------------------ what they have had {% endcomment %}
+    <div
+        class="tab-pane fade"
+        id="borrowerPaneHistory"
+        role="tabpanel"
+        aria-labelledby="borrowerTabHistory"
+        tabindex="0"
+    >
+        {% if history %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0 small">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th>{% translate "Copy" %}</th>
+                            <th>{% translate "Book" %}</th>
+                            <th>{% translate "Issued" %}</th>
+                            <th>{% translate "Returned" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for loan in history %}
+                            <tr>
+                                <td><span class="copy-code">{{ loan.copy.copy_code }}</span></td>
+                                <td>{{ loan.copy.volume.book.title }}</td>
+                                <td class="text-nowrap">{{ loan.issue_date|date:"j M Y" }}</td>
+                                <td class="text-nowrap">
+                                    {% if loan.return_date %}
+                                        {{ loan.return_date|date:"j M Y" }}
+                                    {% else %}
+                                        <span class="badge text-bg-info">
+                                            {% translate "Still out" %}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% comment %}
+              The whole history lives on the loan list, which pages and
+              sorts already. Showing the last ten here and pointing at
+              that is one screenful and no second pagination to keep in
+              step with the first.
+            {% endcomment %}
+            {% if history_count > history_preview %}
+                <p class="text-body-secondary small mt-2 mb-0">
+                    {% blocktranslate trimmed with shown=history_preview total=history_count %}
+                        The {{ shown }} most recent of {{ total }}.
+                    {% endblocktranslate %}
+                </p>
+            {% endif %}
+        {% else %}
+            <p class="text-body-secondary mb-0">
+                {% translate "They have never borrowed anything." %}
+            </p>
+        {% endif %}
+    </div>
+
+</div>
+
+{% comment %}
+  One button per thing worth doing, and each appears once. Edit and Delete
+  re-target #formModal deliberately: this dialog may itself be in
+  #globalModal, and a fragment that replaced its own container would take
+  its own trigger with it.
+{% endcomment %}
+<div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
+
+    <a
+        href="{{ history_url }}"
+        class="btn btn-sm btn-outline-secondary"
+    >
+        <i class="bi bi-journals me-1" aria-hidden="true"></i>
+        {% translate "All their loans" %}
+    </a>
+
+    {% if borrower.is_active %}
+        <a
+            href="{% url 'circulation_issue' %}?borrower={{ borrower.id }}"
+            class="btn btn-sm btn-outline-primary"
+        >
+            <i class="bi bi-box-arrow-right me-1" aria-hidden="true"></i>
+            {% translate "Issue a book" %}
+        </a>
+    {% endif %}
+
+    <a
+        href="{% url 'borrower_edit' borrower.id %}"
+        class="btn btn-sm btn-outline-warning ms-auto"
+        data-form-modal
+        hx-get="{% url 'borrower_edit' borrower.id %}?modal=1"
+        hx-target="#formModal .modal-body"
+        hx-swap="innerHTML"
+    >
+        <i class="bi bi-pencil me-1" aria-hidden="true"></i>
+        {% translate "Edit" %}
+    </a>
+
+    {% if can_delete %}
+        <a
+            href="{% url 'borrower_delete' borrower.id %}"
+            class="btn btn-sm btn-outline-danger"
+            data-form-modal
+            hx-get="{% url 'borrower_delete' borrower.id %}?modal=1"
+            hx-target="#formModal .modal-body"
+            hx-swap="innerHTML"
+        >
+            <i class="bi bi-trash me-1" aria-hidden="true"></i>
+            {% translate "Delete" %}
+        </a>
+    {% endif %}
+
+=======
 <style>
     /* Borrower detail is intentionally a stable-size modal: switching tabs
        must not make the dialog jump as each tab contains a different amount
@@ -114,4 +576,5 @@
     <a href="{% url 'borrower_edit' borrower.id %}" class="btn btn-outline-warning" data-form-modal hx-get="{% url 'borrower_edit' borrower.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"><i class="bi bi-pencil me-1"></i>{% translate "Edit" %}</a>
     {% if can_delete %}<a href="{% url 'borrower_delete' borrower.id %}" class="btn btn-outline-danger" data-form-modal hx-get="{% url 'borrower_delete' borrower.id %}?modal=1" hx-target="#formModal .modal-body"><i class="bi bi-trash me-1"></i>{% translate "Delete" %}</a>{% endif %}
     <button type="button" class="btn btn-outline-secondary ms-auto" data-bs-dismiss="modal">{% translate "Close" %}</button>
+>>>>>>> 255e80b83f662a73d00b1fffa5ac2cbf1418ada2
 </div>

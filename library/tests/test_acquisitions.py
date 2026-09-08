@@ -741,6 +741,19 @@ class CatalogueIntegrationTests(SuggestionTestCase):
             reverse("book_add"), (suggestion or self.suggestion).id
         )
 
+    def open_shortcut(self, url=None):
+        """The Add Book dialog the shortcut opens.
+
+        There is no Add Book page any more, so the shortcut opens the
+        same dialog every other Add Book link opens - with the suggestion
+        still riding in the query string.
+        """
+
+        return self.client.get(
+            (url or self.shortcut()) + "&modal=1",
+            headers={"HX-Request": "true"},
+        )
+
     def book_payload(self, **overrides):
         data = {
             "title": "Fath al-Bari",
@@ -760,21 +773,27 @@ class CatalogueIntegrationTests(SuggestionTestCase):
         self.assertContains(response, "suggestion=%d" % self.suggestion.id)
         self.assertContains(response, "Add to catalogue")
 
-    def test_the_shortcut_opens_the_ordinary_add_book_page(self):
-        response = self.client.get(self.shortcut())
+    def test_the_shortcut_opens_the_ordinary_add_book_dialog(self):
+        # The same dialog every other Add Book link opens, with the
+        # suggestion riding in the query string - not a second form.
+        response = self.client.get(
+            self.shortcut() + "&modal=1", headers={"HX-Request": "true"}
+        )
 
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "library/book_add.html")
+        self.assertTemplateUsed(
+            response, "library/partials/book_add_modal.html"
+        )
 
     def test_the_title_is_prefilled(self):
-        response = self.client.get(self.shortcut())
+        response = self.open_shortcut()
 
         self.assertEqual(
             response.context["form_data"]["title"], "Fath al-Bari"
         )
 
     def test_a_catalogued_author_is_prefilled(self):
-        response = self.client.get(self.shortcut())
+        response = self.open_shortcut()
 
         self.assertEqual(
             response.context["form_data"]["author"], str(self.author.id)
@@ -790,7 +809,7 @@ class CatalogueIntegrationTests(SuggestionTestCase):
             status=AcquisitionSuggestion.STATUS_APPROVED,
         )
 
-        response = self.client.get(self.shortcut(suggestion))
+        response = self.open_shortcut(self.shortcut(suggestion))
 
         self.assertEqual(response.context["form_data"]["author"], "")
         self.assertFalse(
@@ -806,7 +825,7 @@ class CatalogueIntegrationTests(SuggestionTestCase):
             status=AcquisitionSuggestion.STATUS_APPROVED,
         )
 
-        response = self.client.get(self.shortcut(suggestion))
+        response = self.open_shortcut(self.shortcut(suggestion))
 
         self.assertEqual(
             response.context["form_data"]["publisher"], str(publisher.id)
@@ -815,7 +834,7 @@ class CatalogueIntegrationTests(SuggestionTestCase):
     def test_opening_the_shortcut_creates_nothing(self):
         before = self.catalogue_counts()
 
-        self.client.get(self.shortcut())
+        self.open_shortcut()
 
         self.assertEqual(self.catalogue_counts(), before)
         self.assertEqual(
@@ -836,11 +855,15 @@ class CatalogueIntegrationTests(SuggestionTestCase):
 
     def test_add_book_validation_still_applies(self):
         response = self.client.post(
-            self.shortcut(), self.book_payload(author="")
+            self.shortcut() + "&modal=1",
+            self.book_payload(author=""),
+            headers={"HX-Request": "true"},
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Title and Author are required")
+        # Said under the Author field now, rather than as one sentence at
+        # the top naming both fields when only one was missing.
+        self.assertContains(response, "Choose the author.")
         self.assertEqual(Book.objects.count(), 0)
 
         self.suggestion.refresh_from_db()
@@ -850,7 +873,11 @@ class CatalogueIntegrationTests(SuggestionTestCase):
     def test_add_books_duplicate_detection_still_applies(self):
         make_book(title="Fath al-Bari", author=self.author)
 
-        response = self.client.post(self.shortcut(), self.book_payload())
+        response = self.client.post(
+            self.shortcut() + "&modal=1",
+            self.book_payload(),
+            headers={"HX-Request": "true"},
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "already in the catalogue")
@@ -863,10 +890,10 @@ class CatalogueIntegrationTests(SuggestionTestCase):
     def test_a_pending_suggestion_cannot_use_the_shortcut(self):
         pending = self.a_suggestion(title="Still waiting")
 
-        response = self.client.get(self.shortcut(pending))
+        response = self.open_shortcut(self.shortcut(pending))
 
-        # The page opens - it is just Add Book - but nothing is prefilled
-        # from a suggestion nobody has approved.
+        # The dialog opens - it is just Add Book - but nothing is
+        # prefilled from a suggestion nobody has approved.
         self.assertEqual(response.context["form_data"]["title"], "")
 
         self.client.post(
@@ -891,7 +918,7 @@ class CatalogueIntegrationTests(SuggestionTestCase):
         self.assertEqual(rejected.status, "Rejected")
 
     def test_a_forged_suggestion_id_does_nothing(self):
-        response = self.client.get(
+        response = self.open_shortcut(
             "%s?suggestion=999999" % reverse("book_add")
         )
 
@@ -899,7 +926,7 @@ class CatalogueIntegrationTests(SuggestionTestCase):
         self.assertEqual(response.context["form_data"]["title"], "")
 
     def test_a_nonsense_suggestion_parameter_does_nothing(self):
-        response = self.client.get(
+        response = self.open_shortcut(
             "%s?suggestion=not-a-number" % reverse("book_add")
         )
 
@@ -909,7 +936,7 @@ class CatalogueIntegrationTests(SuggestionTestCase):
         # Only the suggestion id is read from the URL; the title and the
         # author come off the stored row. A posted title still has to pass
         # `book_add`'s own checks.
-        response = self.client.get(
+        response = self.open_shortcut(
             "%s?suggestion=%d&title=Injected&author=%d"
             % (reverse("book_add"), self.suggestion.id, self.author.id)
         )
@@ -928,7 +955,10 @@ class CatalogueIntegrationTests(SuggestionTestCase):
         self.assertEqual(self.suggestion.status, "Approved")
 
     def test_ordinary_book_creation_is_unchanged(self):
-        before = self.client.get(reverse("book_add"))
+        before = self.client.get(
+            reverse("book_add") + "?modal=1",
+            headers={"HX-Request": "true"},
+        )
 
         self.assertEqual(before.context["form_data"]["title"], "")
 
