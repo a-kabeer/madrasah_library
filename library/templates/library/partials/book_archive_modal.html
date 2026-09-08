@@ -1,0 +1,86 @@
+{% load i18n %}
+
+<div class="modal-content book-action-modal">
+    <div class="modal-header">
+        <div class="d-flex align-items-center gap-2 min-w-0">
+            <span class="rounded-circle bg-warning-subtle text-warning-emphasis d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width: 2.25rem; height: 2.25rem;">
+                <i class="bi bi-archive" aria-hidden="true"></i>
+            </span>
+            <div class="min-w-0">
+                <h2 class="modal-title fs-5 fw-bold mb-0">{% translate "Archive Book" %}</h2>
+                <div class="small text-body-secondary text-truncate">{{ book.title }}</div>
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% translate 'Close' %}"></button>
+    </div>
+
+    <div class="modal-body">
+        {% if book.is_archived %}
+            <div class="alert alert-secondary d-flex align-items-start gap-2 mb-0" role="alert">
+                <i class="bi bi-info-circle mt-1" aria-hidden="true"></i>
+                <div>
+                    <strong>{% translate "Already archived" %}</strong><br>
+                    {% blocktranslate trimmed with archived_at=book.archived_at|date:"j M Y" %}
+                        This book was archived on {{ archived_at }}. Its records remain preserved.
+                    {% endblocktranslate %}
+                </div>
+            </div>
+        {% elif blocker %}
+            <div class="alert alert-warning d-flex align-items-start gap-2 mb-3" role="alert">
+                <i class="bi bi-shield-exclamation mt-1" aria-hidden="true"></i>
+                <div>
+                    <strong>{% translate "Archive is blocked" %}</strong>
+                    <div class="mt-1">{{ blocker }}</div>
+                </div>
+            </div>
+            <p class="text-body-secondary small mb-0">
+                {% translate "Return all currently issued copies before archiving this book. No catalogue data has been changed." %}
+            </p>
+        {% else %}
+            <p class="mb-3">
+                {% blocktranslate trimmed with title=book.title %}
+                    Archive <strong>{{ title }}</strong> from the active catalogue?
+                {% endblocktranslate %}
+            </p>
+
+            <div class="border rounded p-3 mb-3">
+                <div class="d-flex gap-3 mb-2">
+                    <i class="bi bi-check2-circle text-success mt-1" aria-hidden="true"></i>
+                    <div class="small">{% translate "Volumes, physical copies, copy codes and shelf locations will be kept." %}</div>
+                </div>
+                <div class="d-flex gap-3 mb-2">
+                    <i class="bi bi-clock-history text-success mt-1" aria-hidden="true"></i>
+                    <div class="small">{% translate "Loan history will remain available." %}</div>
+                </div>
+                <div class="d-flex gap-3">
+                    <i class="bi bi-arrow-counterclockwise text-primary mt-1" aria-hidden="true"></i>
+                    <div class="small">{% translate "The book can be restored to the active catalogue later." %}</div>
+                </div>
+            </div>
+
+            <div class="small text-body-secondary">
+                <i class="bi bi-box-seam me-1" aria-hidden="true"></i>
+                {% blocktranslate trimmed count n=copy_count %}
+                    {{ n }} physical copy is associated with this book.
+                {% plural %}
+                    {{ n }} physical copies are associated with this book.
+                {% endblocktranslate %}
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            {% translate "Cancel" %}
+        </button>
+        {% if not book.is_archived and not blocker %}
+            <form method="post" action="{% url 'book_archive' book.id %}?modal=1" hx-post="{% url 'book_archive' book.id %}?modal=1" hx-swap="none" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-warning">
+                    <i class="bi bi-archive me-1" aria-hidden="true"></i>
+                    {% translate "Archive Book" %}
+                </button>
+            </form>
+        {% endif %}
+    </div>
+</div>
