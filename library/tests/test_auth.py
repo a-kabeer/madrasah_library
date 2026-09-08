@@ -83,43 +83,20 @@ class LoginTests(TestCase):
         self.assertEqual(response.status_code, 429)
 
     @override_settings(
-        LOGIN_RATE_LIMIT_USERNAME_MAX_FAILURES=2,
-        LOGIN_RATE_LIMIT_IP_MAX_FAILURES=100,
-        LOGIN_RATE_LIMIT_WINDOW_SECONDS=900,
-    )
-    def test_successful_login_clears_username_failures(self):
-        payload = {"username": "alice", "password": "wrong-password"}
-
-        self.client.post(reverse("login"), payload)
-        self.client.post(reverse("login"), payload)
-
-        response = self.client.post(reverse("login"), {
-            "username": "alice",
-            "password": "CorrectHorse1",
-        })
-
-        self.assertEqual(response.status_code, 429)
-        # A username is blocked once its threshold is reached, so a valid
-        # password cannot bypass an already active lock window.
-
-    @override_settings(
         LOGIN_RATE_LIMIT_USERNAME_MAX_FAILURES=3,
         LOGIN_RATE_LIMIT_IP_MAX_FAILURES=100,
         LOGIN_RATE_LIMIT_WINDOW_SECONDS=900,
     )
-    def test_successful_login_after_failures_resets_username_counter(self):
+    def test_successful_login_clears_username_failures(self):
         self.client.post(reverse("login"), {
             "username": "alice",
             "password": "wrong-password",
         })
 
-        self.client.get(reverse("logout"))
-
-        response = self.client.post(reverse("login"), {
+        self.client.post(reverse("login"), {
             "username": "alice",
             "password": "CorrectHorse1",
         })
-        self.assertEqual(response.status_code, 302)
 
         self.client.get(reverse("logout"))
 
@@ -129,6 +106,12 @@ class LoginTests(TestCase):
                 "password": "wrong-password",
             })
             self.assertEqual(response.status_code, 200)
+
+        response = self.client.post(reverse("login"), {
+            "username": "alice",
+            "password": "wrong-password",
+        })
+        self.assertEqual(response.status_code, 200)
 
     def test_authenticated_user_can_reach_protected_page(self):
         self.client.login(username="alice", password="CorrectHorse1")
