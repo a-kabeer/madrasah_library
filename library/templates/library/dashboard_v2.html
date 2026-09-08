@@ -1,0 +1,291 @@
+{% extends layout %}
+{% load i18n %}
+
+{% block title %}
+{% translate "Dashboard" %} | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+{% translate "Dashboard" %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">{% translate "Library Dashboard" %}</h2>
+            <p class="text-body-secondary mb-0">
+                {% translate "Start with today's work, then review the collection and recent activity." %}
+            </p>
+        </div>
+        <a href="{% url 'circulation_dashboard' %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i>
+            {% translate "Circulation Overview" %}
+        </a>
+    </div>
+
+    <!-- TODAY: operational work comes first. -->
+    <section class="mb-4" aria-labelledby="dashboard-today">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h3 id="dashboard-today" class="h5 fw-bold mb-1">{% translate "Today's Work" %}</h3>
+                <p class="small text-body-secondary mb-0">{% translate "Items that may need attention now." %}</p>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12 col-md-4">
+                <a href="{% url 'loan_list' %}?status=overdue" class="text-decoration-none">
+                    <div class="card shadow-sm h-100 {% if overdue_loans %}border-danger border-2{% else %}border-0{% endif %}">
+                        <div class="card-body d-flex align-items-center gap-3">
+                            <i class="bi bi-exclamation-triangle fs-2 {% if overdue_loans %}text-danger{% else %}text-body-secondary{% endif %}" aria-hidden="true"></i>
+                            <div class="min-w-0">
+                                <div class="display-6 fw-bold lh-1 {% if overdue_loans %}text-danger{% endif %}">{{ overdue_loans }}</div>
+                                <div class="fw-semibold mt-1">{% translate "Overdue" %}</div>
+                                {% if overdue_loans %}<div class="small text-danger">{% translate "Needs attention" %}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-12 col-md-4">
+                <a href="{% url 'loan_list' %}?status=due_today" class="text-decoration-none">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body d-flex align-items-center gap-3">
+                            <i class="bi bi-calendar-check fs-2 text-body-secondary" aria-hidden="true"></i>
+                            <div>
+                                <div class="display-6 fw-bold lh-1">{{ due_today_loans }}</div>
+                                <div class="fw-semibold mt-1">{% translate "Due Today" %}</div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-12 col-md-4">
+                <a href="{% url 'loan_list' %}?status=active" class="text-decoration-none">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body d-flex align-items-center gap-3">
+                            <i class="bi bi-journal-arrow-up fs-2 text-body-secondary" aria-hidden="true"></i>
+                            <div>
+                                <div class="display-6 fw-bold lh-1">{{ active_loans }}</div>
+                                <div class="fw-semibold mt-1">{% translate "Currently Out" %}</div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- QUICK ACTIONS: the most common workflows stay one tap away. -->
+    <section class="card shadow-sm border-0 mb-4" aria-labelledby="dashboard-actions">
+        <div class="card-body">
+            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
+                <div>
+                    <h3 id="dashboard-actions" class="h5 fw-bold mb-1">{% translate "Quick Actions" %}</h3>
+                    <p class="small text-body-secondary mb-0">{% translate "Common library tasks." %}</p>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'circulation_issue' %}" class="btn btn-primary">
+                    <i class="bi bi-box-arrow-right me-1" aria-hidden="true"></i>{% translate "Issue Book" %}
+                </a>
+                <a href="{% url 'circulation_return_lookup' %}" class="btn btn-success">
+                    <i class="bi bi-arrow-return-left me-1" aria-hidden="true"></i>{% translate "Return Book" %}
+                </a>
+                {% if can_edit %}
+                    <a href="{% url 'book_add' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-book me-1" aria-hidden="true"></i>{% translate "Add Book" %}
+                    </a>
+                {% endif %}
+                <a href="{% url 'borrower_add' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-person-plus me-1" aria-hidden="true"></i>{% translate "Add Borrower" %}
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- COLLECTION: core numbers are grouped by the thing they describe. -->
+    <section class="mb-4" aria-labelledby="dashboard-collection">
+        <div class="mb-3">
+            <h3 id="dashboard-collection" class="h5 fw-bold mb-1">{% translate "Collection Snapshot" %}</h3>
+            <p class="small text-body-secondary mb-0">{% translate "Books and physical copies currently in the library." %}</p>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-6 col-xl-3">
+                <a href="{% url 'book_list' %}" class="text-decoration-none">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body">
+                            <div class="small text-body-secondary">{% translate "Books" %}</div>
+                            <div class="h3 fw-bold mb-0 mt-1">{{ total_books }}</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-xl-3">
+                <a href="{% url 'book_copy_list' %}" class="text-decoration-none">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body">
+                            <div class="small text-body-secondary">{% translate "Total Copies" %}</div>
+                            <div class="h3 fw-bold mb-0 mt-1">{{ total_book_copies }}</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-xl-3">
+                <a href="{% url 'book_copy_list' %}?status=Available" class="text-decoration-none">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body">
+                            <div class="small text-body-secondary">{% translate "Available Copies" %}</div>
+                            <div class="h3 fw-bold mb-0 mt-1">{{ available_copies }}</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-xl-3">
+                <a href="{% url 'book_copy_list' %}?status=Issued" class="text-decoration-none">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-body">
+                            <div class="small text-body-secondary">{% translate "Issued Copies" %}</div>
+                            <div class="h3 fw-bold mb-0 mt-1">{{ issued_copies }}</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- PEOPLE + CATALOG SUPPORTING COUNTS. -->
+    <section class="mb-4" aria-labelledby="dashboard-library">
+        <div class="mb-3">
+            <h3 id="dashboard-library" class="h5 fw-bold mb-1">{% translate "Library Overview" %}</h3>
+            <p class="small text-body-secondary mb-0">{% translate "People and catalogue dimensions behind the collection." %}</p>
+        </div>
+        <div class="row g-3">
+            <div class="col-6 col-md-3">
+                <a href="{% url 'borrower_list' %}" class="text-decoration-none">
+                    <div class="card shadow-sm border-0 h-100"><div class="card-body"><div class="small text-body-secondary">{% translate "Borrowers" %}</div><div class="h4 fw-bold mb-0 mt-1">{{ total_borrowers }}</div></div></div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a href="{% url 'borrower_list' %}?status=active" class="text-decoration-none">
+                    <div class="card shadow-sm border-0 h-100"><div class="card-body"><div class="small text-body-secondary">{% translate "Active Borrowers" %}</div><div class="h4 fw-bold mb-0 mt-1">{{ active_borrowers }}</div></div></div>
+                </a>
+            </div>
+            <div class="col-6 col-md-2">
+                <a href="{% url 'author_list' %}" class="text-decoration-none"><div class="card shadow-sm border-0 h-100"><div class="card-body"><div class="small text-body-secondary">{% translate "Authors" %}</div><div class="h5 fw-bold mb-0 mt-1">{{ total_authors }}</div></div></div></a>
+            </div>
+            <div class="col-6 col-md-2">
+                <a href="{% url 'category_list' %}" class="text-decoration-none"><div class="card shadow-sm border-0 h-100"><div class="card-body"><div class="small text-body-secondary">{% translate "Categories" %}</div><div class="h5 fw-bold mb-0 mt-1">{{ total_categories }}</div></div></div></a>
+            </div>
+            <div class="col-12 col-md-2">
+                <a href="{% url 'publisher_list' %}" class="text-decoration-none"><div class="card shadow-sm border-0 h-100"><div class="card-body"><div class="small text-body-secondary">{% translate "Publishers" %}</div><div class="h5 fw-bold mb-0 mt-1">{{ total_publishers }}</div></div></div></a>
+            </div>
+        </div>
+    </section>
+
+    <!-- RECENT CIRCULATION: the operational history is below the live work. -->
+    <section class="mb-4" aria-labelledby="dashboard-recent">
+        <div class="mb-3">
+            <h3 id="dashboard-recent" class="h5 fw-bold mb-1">{% translate "Recent Circulation" %}</h3>
+            <p class="small text-body-secondary mb-0">{% translate "The latest issue and return activity." %}</p>
+        </div>
+        <div class="row g-4">
+
+            <div class="col-12 col-xl-6">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="h6 fw-bold mb-0">{% translate "Recently Issued" %}</h4>
+                            <a href="{% url 'loan_list' %}" class="btn btn-sm btn-outline-primary">{% translate "View All" %}</a>
+                        </div>
+                        {% if recent_loans %}
+                            <div class="list-group list-group-flush">
+                                {% for loan in recent_loans %}
+                                    <a href="{% url 'loan_detail' loan.id %}" class="list-group-item list-group-item-action px-0">
+                                        <div class="fw-semibold">{{ loan.copy.volume.book.title }}</div>
+                                        <div class="small text-body-secondary">{% blocktranslate trimmed with copy_code=loan.copy.copy_code name=loan.borrower.name %}Copy: {{ copy_code }} · Borrower: {{ name }}{% endblocktranslate %}</div>
+                                        <div class="small text-body-secondary mt-1">{% translate "Issued:" %} {{ loan.issue_date }}{% if loan.issued_by %} · {% translate "By:" %} {% if loan.issued_by.full_name %}{{ loan.issued_by.full_name }}{% else %}{{ loan.issued_by.username }}{% endif %}{% endif %}</div>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-body-secondary mb-0">{% translate "No recent loans found." %}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-6">
+                <div class="card shadow-sm border-0 h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h4 class="h6 fw-bold mb-0">{% translate "Recently Returned" %}</h4>
+                            <a href="{% url 'loan_list' %}?status=returned" class="btn btn-sm btn-outline-primary">{% translate "View All" %}</a>
+                        </div>
+                        {% if recent_returns %}
+                            <div class="list-group list-group-flush">
+                                {% for loan in recent_returns %}
+                                    <a href="{% url 'loan_detail' loan.id %}" class="list-group-item list-group-item-action px-0">
+                                        <div class="fw-semibold">{{ loan.copy.volume.book.title }}</div>
+                                        <div class="small text-body-secondary">{% blocktranslate trimmed with copy_code=loan.copy.copy_code name=loan.borrower.name %}Copy: {{ copy_code }} · Borrower: {{ name }}{% endblocktranslate %}</div>
+                                        <div class="small text-body-secondary mt-1">{% translate "Returned:" %} {{ loan.return_date }}{% if loan.returned_to %} · {% translate "To:" %} {% if loan.returned_to.full_name %}{{ loan.returned_to.full_name }}{% else %}{{ loan.returned_to.username }}{% endif %}{% endif %}</div>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-body-secondary mb-0">{% translate "Nothing has been returned yet." %}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- RECENT ACTIVITY: audit trail is useful, but not the first thing the librarian sees. -->
+    <section aria-labelledby="dashboard-activity">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h3 id="dashboard-activity" class="h5 fw-bold mb-1">{% translate "Recent Activity" %}</h3>
+                        <p class="small text-body-secondary mb-0">{% translate "The latest recorded changes and circulation events." %}</p>
+                    </div>
+                    <a href="{% url 'activity_log_list' %}" class="btn btn-sm btn-outline-primary">{% translate "View All" %}</a>
+                </div>
+
+                {% if recent_logs %}
+                    <div class="list-group list-group-flush">
+                        {% for log in recent_logs %}
+                            {% if log.target_url %}
+                                <a href="{{ log.target_url }}" class="list-group-item list-group-item-action px-0">
+                            {% else %}
+                                <div class="list-group-item px-0">
+                            {% endif %}
+                                    <div class="d-flex flex-column flex-md-row justify-content-between gap-1">
+                                        <div class="fw-semibold">{{ log.action }} · {{ log.entity_type }}</div>
+                                        <time class="small text-body-secondary" datetime="{{ log.created_at|date:'c' }}">{{ log.created_at }}</time>
+                                    </div>
+                                    {% if log.description %}<div class="small text-body-secondary mt-1">{{ log.description }}</div>{% endif %}
+                                    {% if log.user %}<div class="small text-body-secondary mt-1">{% translate "By:" %} {% if log.user.full_name %}{{ log.user.full_name }}{% else %}{{ log.user.username }}{% endif %}</div>{% endif %}
+                            {% if log.target_url %}
+                                </a>
+                            {% else %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-body-secondary mb-0">{% translate "No recent activity found." %}</p>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+</div>
+{% endblock %}
