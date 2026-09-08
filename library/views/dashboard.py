@@ -5,8 +5,6 @@ the record of who changed what; and the analytics page, which is what the
 records add up to over a period.
 """
 
-from datetime import date
-
 from django.core.paginator import Paginator
 from django.shortcuts import render
 from django.core.cache import cache
@@ -16,7 +14,6 @@ from django.db import models
 from ..models import (
     ActivityLog,
     Author,
-    Book,
     BookCopy,
     Borrower,
     Category,
@@ -26,8 +23,9 @@ from ..models import (
 )
 
 from .. import analytics as analytics_module
+from .. import queries
 
-from ..permissions import can_edit_library, feature_required, role_required
+from ..permissions import can_edit_library, feature_required
 
 from .common import (
     DASHBOARD_CACHE_KEY,
@@ -60,42 +58,28 @@ def activity_log_list(request):
         )
 
         if search.isdigit():
-            query |= models.Q(
-                entity_id=int(search)
-            )
+            query |= models.Q(entity_id=int(search))
 
         logs_query = logs_query.filter(query)
 
     if user_id:
-        logs_query = logs_query.filter(
-            user_id=user_id
-        )
+        logs_query = logs_query.filter(user_id=user_id)
 
     if action:
-        logs_query = logs_query.filter(
-            action=action
-        )
+        logs_query = logs_query.filter(action=action)
 
     if entity_type:
-        logs_query = logs_query.filter(
-            entity_type=entity_type
-        )
+        logs_query = logs_query.filter(entity_type=entity_type)
 
     if date:
-        logs_query = logs_query.filter(
-            created_at__date=date
-        )
+        logs_query = logs_query.filter(created_at__date=date)
 
-    logs = logs_query.order_by(
-        "-created_at"
-    )
+    logs = logs_query.order_by("-created_at")
 
     paginator = Paginator(logs, PAGE_SIZE)
     logs = paginator.get_page(request.GET.get("page"))
 
-    users = User.objects.all().order_by(
-        "full_name"
-    )
+    users = User.objects.all().order_by("full_name")
 
     actions = [
         "CREATE",
@@ -138,49 +122,42 @@ def activity_log_list(request):
     )
 
 
-
 @feature_required("dashboard")
 def library_home(request):
 
-    dashboard_stats = cache.get(
-        DASHBOARD_CACHE_KEY
-    )
+    dashboard_stats = cache.get(DASHBOARD_CACHE_KEY)
 
     if dashboard_stats is None:
 
         today = timezone.now().date()
 
         dashboard_stats = {
-            "total_books": Book.objects.count(),
+            # "Books" on the dashboard means books currently in the
+            # catalogue, matching the default Books page. Archived books
+            # are intentionally excluded; they are an administrative
+            # history state, not part of the active collection count.
+            "total_books": queries.active_books().count(),
             "total_authors": Author.objects.count(),
             "total_categories": Category.objects.count(),
             "total_publishers": Publisher.objects.count(),
-
             "total_book_copies": BookCopy.objects.count(),
-
             "available_copies": BookCopy.objects.filter(
                 status="Available"
             ).count(),
-
             "issued_copies": BookCopy.objects.filter(
                 status="Issued"
             ).count(),
-
             "total_borrowers": Borrower.objects.count(),
-
             "active_borrowers": Borrower.objects.filter(
                 is_active=True
             ).count(),
-
             "active_loans": Loan.objects.filter(
                 return_date__isnull=True
             ).count(),
-
             "overdue_loans": Loan.objects.filter(
                 return_date__isnull=True,
                 due_date__lt=today
             ).count(),
-
             "due_today_loans": Loan.objects.filter(
                 return_date__isnull=True,
                 due_date=today
@@ -305,28 +282,19 @@ def analytics(request):
                 for key in analytics_module.PERIODS
             ],
             "categories": Category.objects.order_by("name"),
-
             "loans": analytics_module.loan_summary(period),
             "collection": analytics_module.collection_summary(period),
-
             "trend": trend,
             "trend_format": analytics_module.TREND_FORMATS[period.grain],
-            # The busiest bucket, so each row's bar is a share of the peak
-            # rather than of whichever bucket happened to come first.
             "trend_max": max([row["loans"] for row in trend] or [0]),
-
             "most_borrowed": analytics_module.most_borrowed(period),
             "underused": analytics_module.underused(period),
             "never_borrowed": analytics_module.never_borrowed_list(period),
-
             "top_borrowers": analytics_module.most_active_borrowers(period),
             "category_usage": analytics_module.category_usage(period),
-
             "duration": analytics_module.loan_duration(period),
-
             "attention": analytics_module.collection_attention(period),
             "stock_checks": analytics_module.recent_stock_check_findings(),
-
             "top_n": analytics_module.TOP_N,
             "recent_sessions": analytics_module.RECENT_SESSIONS,
         },
