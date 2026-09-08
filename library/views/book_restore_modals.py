@@ -13,6 +13,7 @@ from .common import BOOK_CACHE_KEY, BOOK_COPY_CACHE_KEY, DASHBOARD_CACHE_KEY, cr
 def book_restore_modal(request, book_id):
     """Confirm or perform a book restore without leaving the current page."""
     book = get_object_or_404(Book, id=book_id)
+    modal_request = is_form_modal_request(request)
 
     if request.method == "POST" and book.is_archived:
         book.archived_at = None
@@ -30,20 +31,20 @@ def book_restore_modal(request, book_id):
             description="%s restored to the catalogue" % book.title,
         )
 
-        response = HttpResponse(status=204)
-        response["HX-Redirect"] = request.build_absolute_uri(
-            "/library/books/%s/" % book.id
-        )
-        return response
+        if modal_request:
+            response = HttpResponse(status=204)
+            response["HX-Redirect"] = request.build_absolute_uri(
+                "/library/books/%s/" % book.id
+            )
+            return response
 
-    if is_form_modal_request(request):
+        return redirect("book_detail", book_id=book.id)
+
+    if modal_request:
         return render(
             request,
             "library/partials/book_restore_modal.html",
             {"book": book},
         )
-
-    if request.method == "POST":
-        return redirect("book_detail", book_id=book.id)
 
     return render(request, "library/book_detail.html", {"book": book})
