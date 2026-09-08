@@ -68,7 +68,6 @@
                             {% else %}
                                 <a href="{% url 'book_copy_detail' copy.id %}" class="btn btn-sm btn-outline-secondary" title="{% translate 'Open' %}" aria-label="Open copy {{ copy.copy_code }}" hx-target="#mainContent" hx-swap="innerHTML"><i class="bi bi-box-arrow-up-right"></i></a>
                             {% endif %}
-<<<<<<< HEAD
 
                             <td class="fw-semibold">{{ copy.copy_code }}</td>
 
@@ -241,13 +240,6 @@
                 </tbody>
             </table>
         </div>
-=======
-                        </div></td>
-                    </tr>
-                {% empty %}<tr><td colspan="{% if can_edit %}8{% else %}7{% endif %}" class="text-center text-body-secondary py-4">{% translate "No copies found." %}</td></tr>{% endfor %}
-            </tbody>
-        </table>
->>>>>>> 255e80b83f662a73d00b1fffa5ac2cbf1418ada2
     </div>
 </div>
 
