@@ -2,7 +2,13 @@ from django.urls import path
 from django.views.generic import RedirectView
 
 from . import views
-
+from .views.borrower_modals import (
+    borrower_add_modal,
+    borrower_delete_modal,
+    borrower_detail_modal,
+    borrower_edit_modal,
+    borrower_list_modal,
+)
 
 urlpatterns = [
     path("login/", views.login_view, name="login"),
@@ -12,11 +18,8 @@ urlpatterns = [
     path("language/", views.language_set, name="language_set"),
     path("settings/branding/", views.branding_settings, name="branding_settings"),
     path("settings/permissions/", views.permissions_matrix, name="permissions_matrix"),
-
-    # One canonical staff home. Existing /dashboard/ bookmarks redirect here.
     path("", views.library_home, name="dashboard"),
     path("dashboard/", RedirectView.as_view(url="/library/", permanent=True), name="dashboard_legacy"),
-
     path("categories/", views.category_list, name="category_list"),
     path("categories/add/", views.category_add, name="category_add"),
     path("categories/<int:category_id>/edit/", views.category_edit, name="category_edit"),
@@ -29,7 +32,6 @@ urlpatterns = [
     path("publishers/add/", views.publisher_add, name="publisher_add"),
     path("publishers/<int:publisher_id>/edit/", views.publisher_edit, name="publisher_edit"),
     path("publishers/<int:publisher_id>/delete/", views.publisher_delete, name="publisher_delete"),
-
     path("locations/", views.location_list, name="location_list"),
     path("locations/<int:location_id>/", views.location_detail, name="location_detail"),
     path("locations/add/", views.location_add, name="location_add"),
@@ -40,7 +42,6 @@ urlpatterns = [
     path("shelves/add/", views.shelf_add, name="shelf_add"),
     path("shelves/<int:shelf_id>/edit/", views.shelf_edit, name="shelf_edit"),
     path("shelves/<int:shelf_id>/delete/", views.shelf_delete, name="shelf_delete"),
-
     path("books/", views.book_list, name="book_list"),
     path("books/add/", views.book_add, name="book_add"),
     path("books/import/", views.book_import, name="book_import"),
@@ -52,7 +53,6 @@ urlpatterns = [
     path("books/<int:book_id>/archive/", views.book_archive, name="book_archive"),
     path("books/<int:book_id>/restore/", views.book_restore, name="book_restore"),
     path("books/<int:book_id>/delete/", views.book_delete, name="book_delete"),
-
     path("book-volumes/", views.book_volume_list, name="book_volume_list"),
     path("book-volumes/add/", views.book_volume_add, name="book_volume_add"),
     path("book-volumes/<int:volume_id>/", views.book_volume_detail, name="book_volume_detail"),
@@ -63,7 +63,6 @@ urlpatterns = [
     path("book-contents/<int:content_id>/", views.book_content_detail, name="book_content_detail"),
     path("book-contents/<int:content_id>/edit/", views.book_content_edit, name="book_content_edit"),
     path("book-contents/<int:content_id>/delete/", views.book_content_delete, name="book_content_delete"),
-
     path("book-copies/", views.book_copy_list, name="book_copy_list"),
     path("book-copies/<int:copy_id>/", views.book_copy_detail, name="book_copy_detail"),
     path("book-copies/add/", views.book_copy_add, name="book_copy_add"),
@@ -73,13 +72,11 @@ urlpatterns = [
     path("book-copies/labels/", views.book_copy_labels, name="book_copy_labels"),
     path("book-copies/<int:copy_id>/withdraw/", views.book_copy_withdraw, name="book_copy_withdraw"),
     path("book-copies/<int:copy_id>/delete/", views.book_copy_delete, name="book_copy_delete"),
-
     path("stock-check/", views.inventory_session_list, name="inventory_session_list"),
     path("stock-check/start/", views.inventory_session_start, name="inventory_session_start"),
     path("stock-check/<int:session_id>/", views.inventory_session_detail, name="inventory_session_detail"),
     path("stock-check/<int:session_id>/scan/", views.inventory_session_scan, name="inventory_session_scan"),
     path("stock-check/<int:session_id>/complete/", views.inventory_session_complete, name="inventory_session_complete"),
-
     path("suggestions/", views.suggestion_list, name="suggestion_list"),
     path("suggestions/add/", views.suggestion_add, name="suggestion_add"),
     path("suggestions/<int:suggestion_id>/", views.suggestion_detail, name="suggestion_detail"),
@@ -91,7 +88,6 @@ urlpatterns = [
     path("reservations/", views.reservation_list, name="reservation_list"),
     path("reservations/add/", views.reservation_add, name="reservation_add"),
     path("reservations/<int:reservation_id>/cancel/", views.reservation_cancel, name="reservation_cancel"),
-
     path("analytics/", views.analytics, name="analytics"),
     path("reports/", views.reports_home, name="reports_home"),
     path("reports/circulation/", views.report_circulation, name="report_circulation"),
@@ -100,7 +96,6 @@ urlpatterns = [
     path("reports/condition/", views.report_condition, name="report_condition"),
     path("reports/borrowers/", views.report_borrowers, name="report_borrowers"),
     path("reports/popular/", views.report_popular, name="report_popular"),
-
     path("loans/", views.loan_list, name="loan_list"),
     path("loans/add/", RedirectView.as_view(url="/library/circulation/issue/", permanent=True), name="loan_add"),
     path("loans/<int:loan_id>/edit/", views.loan_edit, name="loan_edit"),
@@ -108,18 +103,19 @@ urlpatterns = [
     path("loans/<int:loan_id>/renew/", views.loan_renew, name="loan_renew"),
     path("loans/<int:loan_id>/delete/", views.loan_delete, name="loan_delete"),
     path("loans/<int:loan_id>/", views.loan_detail, name="loan_detail"),
-
     path("circulation/", views.circulation_dashboard, name="circulation_dashboard"),
     path("circulation/issue/", views.loan_add, name="circulation_issue"),
     path("circulation/return/", views.loan_return_lookup, name="circulation_return_lookup"),
     path("circulation/active-loans/", RedirectView.as_view(url="/library/loans/?status=active", permanent=True), name="circulation_active_loans"),
 
-    path("borrowers/", views.borrower_list, name="borrower_list"),
-    path("borrowers/add/", views.borrower_add, name="borrower_add"),
-    path("borrowers/<int:borrower_id>/", views.borrower_detail, name="borrower_detail"),
-    path("borrowers/<int:borrower_id>/edit/", views.borrower_edit, name="borrower_edit"),
+    # Borrowers are modal-first: the list is the working surface and all
+    # record interactions use the shared dialogs.
+    path("borrowers/", borrower_list_modal, name="borrower_list"),
+    path("borrowers/add/", borrower_add_modal, name="borrower_add"),
+    path("borrowers/<int:borrower_id>/", borrower_detail_modal, name="borrower_detail"),
+    path("borrowers/<int:borrower_id>/edit/", borrower_edit_modal, name="borrower_edit"),
     path("borrowers/<int:borrower_id>/toggle-active/", views.borrower_toggle_active, name="borrower_toggle_active"),
-    path("borrowers/<int:borrower_id>/delete/", views.borrower_delete, name="borrower_delete"),
+    path("borrowers/<int:borrower_id>/delete/", borrower_delete_modal, name="borrower_delete"),
     path("users/", views.user_list, name="user_list"),
     path("users/add/", views.user_add, name="user_add"),
     path("users/<int:user_id>/edit/", views.user_edit, name="user_edit"),
