@@ -1,5 +1,4 @@
 {% load i18n %}
-<<<<<<< HEAD
 {% comment %}
 One physical copy, in tabs.
 
@@ -379,22 +378,4 @@ last_check, last_check_found, can_edit.
         {% endif %}
     </div>
 
-=======
-<h5 class="modal-title" id="globalModalLabel" hx-swap-oob="true">{{ copy.copy_code }}</h5>
-<div class="mb-3"><span class="badge text-bg-{{ copy.state_tone }}">{{ copy.state_label }}</span>{% if copy.days_overdue %}<span class="text-danger small ms-1">{{ copy.days_overdue }} {% translate "days overdue" %}</span>{% endif %}</div>
-<dl class="row mb-4">
-    <dt class="col-5 col-sm-4 fw-normal text-body-secondary">{% translate "Copy code" %}</dt><dd class="col-7 col-sm-8 fw-semibold">{{ copy.copy_code }}</dd>
-    <dt class="col-5 col-sm-4 fw-normal text-body-secondary">{% translate "Book" %}</dt><dd class="col-7 col-sm-8">{{ copy.volume.book.title }}{% if copy.volume.book.author %}<span class="d-block small text-body-secondary">{{ copy.volume.book.author.name }}</span>{% endif %}</dd>
-    {% if copy.volume.volume_number != 1 or copy.volume.title %}<dt class="col-5 col-sm-4 fw-normal text-body-secondary">{% translate "Volume" %}</dt><dd class="col-7 col-sm-8">{% translate "Volume" %} {{ copy.volume.volume_number }}{% if copy.volume.title %} — {{ copy.volume.title }}{% endif %}</dd>{% endif %}
-    <dt class="col-5 col-sm-4 fw-normal text-body-secondary">{% translate "Location" %}</dt><dd class="col-7 col-sm-8">{% if copy.shelf %}{{ copy.shelf.location.name }}{% else %}{% translate "Not placed yet" %}{% endif %}</dd>
-    <dt class="col-5 col-sm-4 fw-normal text-body-secondary">{% translate "Shelf" %}</dt><dd class="col-7 col-sm-8">{% if copy.shelf %}{{ copy.shelf.shelf_code }}{% else %}{% translate "Unshelved" %}{% endif %}</dd>
-</dl>
-{% if active_loan %}<div class="alert alert-light border"><strong>{{ active_loan.borrower.name }}</strong><div class="small text-body-secondary">{% translate "Due" %}: {{ active_loan.due_date }}{% if copy.days_overdue %} · {% translate "Overdue" %}{% endif %}</div></div>{% else %}<p class="text-body-secondary">{% translate "Not out on loan." %}</p>{% endif %}
-<div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
-    <a href="{% url 'book_copy_detail' copy.id %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>{% translate "Full page &amp; loan history" %}</a>
-    {% if can_edit %}
-        <a href="{% url 'book_copy_edit' copy.id %}?modal=1&amp;next={{ request.get_full_path|urlencode }}" data-form-modal hx-get="{% url 'book_copy_edit' copy.id %}?modal=1&amp;next={{ request.get_full_path|urlencode }}" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil me-1" aria-hidden="true"></i>{% translate "Edit copy" %}</a>
-        <a href="{% url 'book_copy_move' copy.id %}?modal=1&amp;next={{ request.get_full_path|urlencode }}" data-form-modal hx-get="{% url 'book_copy_move' copy.id %}?modal=1&amp;next={{ request.get_full_path|urlencode }}" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-sm btn-outline-primary"><i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i>{% translate "Move" %}</a>
-    {% endif %}
->>>>>>> 255e80b83f662a73d00b1fffa5ac2cbf1418ada2
 </div>

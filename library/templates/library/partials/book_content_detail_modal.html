@@ -5,7 +5,7 @@
 <div class="modal-detail-panel">
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
         <div>
-            <div class="small text-body-secondary">{{ content.volume.book.title }} · {% blocktranslate with number=content.volume.volume_number %}Volume {{ number }}{% endblocktranslate}</div>
+            <div class="small text-body-secondary">{{ content.volume.book.title }} · {% blocktranslate with number=content.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}</div>
             <h4 class="fw-bold mb-0">{{ content.title }}</h4>
             {% if content.content_type %}<div class="text-body-secondary">{{ content.content_type }}</div>{% endif %}
         </div>
@@ -18,7 +18,7 @@
         <dt class="col-5 col-sm-4 text-body-secondary fw-normal">{% translate "Book" %}</dt>
         <dd class="col-7 col-sm-8"><a href="{% url 'book_detail' content.volume.book.id %}" class="text-decoration-none">{{ content.volume.book.title }}</a></dd>
         <dt class="col-5 col-sm-4 text-body-secondary fw-normal">{% translate "Volume" %}</dt>
-        <dd class="col-7 col-sm-8"><a href="{% url 'book_volume_detail' content.volume.id %}?modal=1" data-form-modal hx-get="{% url 'book_volume_detail' content.volume.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="text-decoration-none">{% blocktranslate with number=content.volume.volume_number %}Volume {{ number }}{% endblocktranslate} — {{ content.volume.title }}</a></dd>
+        <dd class="col-7 col-sm-8"><a href="{% url 'book_volume_detail' content.volume.id %}?modal=1" data-form-modal hx-get="{% url 'book_volume_detail' content.volume.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="text-decoration-none">{% blocktranslate with number=content.volume.volume_number %}Volume {{ number }}{% endblocktranslate %} — {{ content.volume.title }}</a></dd>
         <dt class="col-5 col-sm-4 text-body-secondary fw-normal">{% translate "Parent" %}</dt>
         <dd class="col-7 col-sm-8">{% if content.parent %}{{ content.parent.title }}{% else %}{% translate "No Parent" %}{% endif %}</dd>
         <dt class="col-5 col-sm-4 text-body-secondary fw-normal">{% translate "Page Number" %}</dt>

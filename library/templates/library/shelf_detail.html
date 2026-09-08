@@ -1,11 +1,35 @@
 {% extends layout %}
 {% load i18n %}
-{% block title %}{{ shelf.shelf_code }} | {{ branding.display_name }}{% endblock %}
-{% block page_title %}{% translate "Shelf" %}{% endblock %}
-{% block breadcrumbs %}<nav aria-label="{% translate 'Breadcrumb' %}"><ol class="breadcrumb mb-0 small"><li class="breadcrumb-item"><a href="{% url 'location_list' %}">{% translate "Locations" %}</a></li><li class="breadcrumb-item"><a href="{% url 'location_detail' shelf.location.id %}">{{ shelf.location.name }}</a></li><li class="breadcrumb-item active" aria-current="page">{{ shelf.shelf_code }}</li></ol></nav>{% endblock %}
+
+{% block title %}
+    {{ shelf.shelf_code }} | {{ branding.display_name }}
+{% endblock %}
+
+{% block page_title %}
+    {% translate "Shelf" %}
+{% endblock %}
+
+{% block breadcrumbs %}
+    <nav aria-label="{% translate 'Breadcrumb' %}">
+        <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item">
+                <a href="{% url 'location_list' %}">{% translate "Locations" %}</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'location_detail' shelf.location.id %}">
+                    {{ shelf.location.name }}
+                </a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                {{ shelf.shelf_code }}
+            </li>
+        </ol>
+    </nav>
+{% endblock %}
+
 {% block content %}
+
 <div class="container-fluid px-0">
-<<<<<<< HEAD
 
     <!-- Page Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
@@ -24,10 +48,10 @@
         </div>
         {% if can_edit %}
             <div class="d-flex flex-wrap gap-2">
-                <a href="{% url 'shelf_edit' shelf.id %}" class="btn btn-warning">
+                <a href="{% url 'shelf_edit' shelf.id %}" class="btn btn-warning" data-form-modal hx-get="{% url 'shelf_edit' shelf.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML">
                     <i class="bi bi-pencil me-1"></i> {% translate "Edit" %}
                 </a>
-                <a href="{% url 'shelf_delete' shelf.id %}" class="btn btn-outline-danger">
+                <a href="{% url 'shelf_delete' shelf.id %}" class="btn btn-outline-danger" data-form-modal hx-get="{% url 'shelf_delete' shelf.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML">
                     <i class="bi bi-trash me-1"></i> {% translate "Delete" %}
                 </a>
             </div>
@@ -201,15 +225,8 @@
         </div>
     </div>
 
-=======
-    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4"><div><a href="{% url 'location_detail' shelf.location.id %}" class="small text-decoration-none"><i class="bi bi-arrow-left me-1"></i>{{ shelf.location.name }}</a><h2 class="fw-bold mb-1 mt-1">{{ shelf.shelf_code }}</h2><p class="text-body-secondary mb-0">{% blocktranslate trimmed count n=paginator.count with titles=title_count %}{{ n }} copy across {{ titles }} titles{% plural %}{{ n }} copies across {{ titles }} titles{% endblocktranslate %}{% if shelf.description %} · {{ shelf.description }}{% endif %}</p></div>{% if can_edit %}<div class="d-flex flex-wrap gap-2"><a href="{% url 'shelf_edit' shelf.id %}?modal=1" data-form-modal hx-get="{% url 'shelf_edit' shelf.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-warning"><i class="bi bi-pencil me-1"></i>{% translate "Edit" %}</a><a href="{% url 'shelf_delete' shelf.id %}?modal=1" data-form-modal hx-get="{% url 'shelf_delete' shelf.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-outline-danger"><i class="bi bi-trash me-1"></i>{% translate "Delete" %}</a></div>{% endif %}</div>
-    {% if titles %}<div class="card shadow-sm border-0 mb-4"><div class="card-header bg-body"><h5 class="mb-0 fw-bold"><i class="bi bi-book me-2"></i>{% translate "Books on this shelf" %}</h5></div><div class="card-body"><div class="d-flex flex-wrap gap-2">{% for title in titles %}<a href="{% url 'book_detail' title.volume__book_id %}" class="filter-chip text-decoration-none"><span>{{ title.volume__book__title }}</span><span class="badge text-bg-secondary">{{ title.copies }}</span></a>{% endfor %}</div></div></div>{% endif %}
-    <div class="card shadow-sm border-0 mb-4"><div class="card-body"><form method="get" class="d-flex flex-wrap gap-2"><input type="search" class="form-control" name="search" value="{{ search }}" placeholder="{% translate 'Copy code or book title...' %}" style="max-width:26rem" aria-label="{% translate 'Search copies on this shelf' %}"><button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>{% translate "Search" %}</button>{% if search %}<a href="{% url 'shelf_detail' shelf.id %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg me-1"></i>{% translate "Clear" %}</a>{% endif %}</form></div></div>
-    <div class="card shadow-sm border-0"><div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2"><h5 class="mb-0 fw-bold"><i class="bi bi-collection me-2"></i>{% translate "Copies" %}</h5><div class="d-flex flex-wrap gap-2"><a href="{% url 'book_copy_list' %}?shelf={{ shelf.id }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-list-ul me-1"></i>{% translate "Manage copies" %}</a>{% if can_edit %}<a href="{% url 'book_copy_add' %}" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>{% translate "Add Copy" %}</a>{% endif %}</div></div><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-secondary"><tr><th>{% translate "Copy Code" %}</th><th>{% translate "Book" %}</th><th>{% translate "Volume" %}</th><th>{% translate "Status" %}</th><th class="text-end">{% translate "Actions" %}</th></tr></thead><tbody>
-    {% for copy in copies %}<tr class="book-row" data-copy-row data-copy-url="{% url 'book_copy_detail' copy.id %}?modal=1" tabindex="0" role="button" aria-label="Show details for copy {{ copy.copy_code }}"><td class="fw-semibold">{{ copy.copy_code }}</td><td>{{ copy.volume.book.title }}</td><td class="text-body-secondary small">{% if copy.volume.volume_number == 1 and not copy.volume.title %}—{% else %}{% blocktranslate with number=copy.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% endif %}</td><td><span class="badge text-bg-{{ copy.state_tone }}">{{ copy.state_label }}</span></td><td class="text-end"><div class="d-inline-flex gap-1" data-row-actions>{% if can_edit %}<a href="{% url 'book_copy_edit' copy.id %}?modal=1&amp;from=shelf" data-form-modal hx-get="{% url 'book_copy_edit' copy.id %}?modal=1&amp;from=shelf" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-sm btn-outline-warning" title="{% translate 'Edit' %}" aria-label="Edit copy {{ copy.copy_code }}"><i class="bi bi-pencil"></i></a><a href="{% url 'book_copy_move' copy.id %}?modal=1&amp;from=shelf" data-form-modal hx-get="{% url 'book_copy_move' copy.id %}?modal=1&amp;from=shelf" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-sm btn-outline-primary" title="{% translate 'Move' %}" aria-label="Move copy {{ copy.copy_code }}"><i class="bi bi-arrow-left-right"></i></a>{% else %}<a href="{% url 'book_copy_detail' copy.id %}?from=shelf" class="btn btn-sm btn-outline-secondary" title="{% translate 'Open' %}" aria-label="Open copy {{ copy.copy_code }}"><i class="bi bi-box-arrow-up-right"></i></a>{% endif %}</div></td></tr>
-    {% empty %}<tr><td colspan="5" class="text-center text-body-secondary py-4">{% if search %}{% translate "Nothing on this shelf matches that." %}{% else %}{% translate "This shelf is empty." %}{% endif %}</td></tr>{% endfor %}
-    </tbody></table></div></div>
->>>>>>> 255e80b83f662a73d00b1fffa5ac2cbf1418ada2
     {% include "library/partials/pagination.html" with page_obj=copies %}
+
 </div>
+
 {% endblock %}
