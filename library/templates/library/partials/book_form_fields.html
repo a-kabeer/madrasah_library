@@ -1,18 +1,7 @@
 {% load i18n %}
 {% comment %}
 The book's own details: title, author, category, publisher, cover.
-
-Shared by all four places a book is described — the Add and Edit pages and
-the Add and Edit dialogs — so there is one set of fields, one set of names
-and one thing to keep in step with `book_add` / `book_edit`.
-
-Expected context:
-  form_data   the dict both views build (title, author, author_name, ...)
-  book        the book being edited, or absent when adding. Its presence is
-              what turns on the current-cover preview and the "remove
-              cover" checkbox, which only make sense for an edit.
-  id_prefix   prefix for element ids, so a dialog and the page behind it
-              can both be in the DOM without colliding.
+Shared by Add/Edit pages and dialogs so validation and field behaviour stay consistent.
 {% endcomment %}
 
 {% url 'author_list' as author_search_url %}
@@ -29,8 +18,12 @@ Expected context:
         id="{{ id_prefix }}Title"
         name="title"
         value="{{ form_data.title }}"
+        maxlength="500"
+        autocomplete="off"
         required
+        aria-required="true"
     >
+    <div class="form-text">{% translate "Use the complete official book title." %}</div>
 </div>
 
 {% include "library/partials/combobox_field.html" with label="Author" field_name="author" input_id=id_prefix|add:"Author" entity_label="author" search_url=author_search_url selected_id=form_data.author selected_name=form_data.author_name required=True allow_create=True compact=False submit_on_select=False %}
@@ -84,6 +77,6 @@ Expected context:
         {% else %}
             {% translate "Optional." %}
         {% endif %}
-        {% translate "JPG, PNG, WEBP or GIF, up to 2&nbsp;MB." %}
+        {% translate "JPG, PNG, WEBP or GIF, up to 2 MB." %}
     </div>
 </div>
