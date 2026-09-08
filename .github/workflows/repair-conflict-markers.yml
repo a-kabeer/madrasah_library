@@ -1,0 +1,50 @@
+name: Repair committed merge conflict markers
+
+on:
+  push:
+    branches:
+      - audit/task-3-modal-conversion
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch history
+        uses: actions/checkout@v4
+        with:
+          ref: audit/task-3-modal-conversion
+          fetch-depth: 0
+
+      - name: Restore clean template versions
+        run: |
+          set -e
+          git checkout 255e80b -- \
+            library/templates/library/book_copy_list.html \
+            library/templates/library/book_detail.html \
+            library/templates/library/book_volume_detail.html \
+            library/templates/library/partials/book_form_fields.html \
+            library/templates/library/partials/borrower_delete_modal.html \
+            library/templates/library/partials/borrower_detail_modal.html \
+            library/templates/library/partials/borrower_form_modal.html \
+            library/templates/library/partials/copy_detail_modal.html \
+            library/templates/library/partials/copy_list_results.html
+
+          if git grep -n -E '^(<<<<<<<|>>>>>>> )' -- ':!library/static/library/css/style.css'; then
+            echo 'Conflict markers remain.'
+            exit 1
+          fi
+
+      - name: Commit repaired templates and remove this workflow
+        run: |
+          set -e
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/repair-conflict-markers.yml
+          git add library/templates
+          git diff --cached --check
+          git commit -m 'Repair committed merge conflict markers'
+          git push origin HEAD:audit/task-3-modal-conversion
