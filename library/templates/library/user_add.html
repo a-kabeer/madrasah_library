@@ -1,0 +1,66 @@
+{% extends layout %}
+{% load i18n %}
+
+{% block title %}{% translate "Add User" %} | {{ branding.display_name }}{% endblock %}
+{% block page_title %}{% translate "Add User" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">{% translate "Add User" %}</h2>
+            <p class="text-body-secondary mb-0">{% translate "Create a staff account with a secure password." %}</p>
+        </div>
+        <a href="{% url 'user_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>{% translate "Back to Users" %}
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0" style="max-width: 760px;">
+        <div class="card-body p-4">
+            {% if error %}
+                <div class="alert alert-danger" role="alert">{{ error }}</div>
+            {% endif %}
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <label for="username" class="form-label fw-semibold">{% translate "Username" %}</label>
+                        <input type="text" class="form-control" id="username" name="username" value="{{ form_data.username }}" maxlength="150" required autocomplete="username">
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="full_name" class="form-label fw-semibold">{% translate "Full name" %}</label>
+                        <input type="text" class="form-control" id="full_name" name="full_name" value="{{ form_data.full_name }}" maxlength="255" required autocomplete="name">
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="role" class="form-label fw-semibold">{% translate "Role" %}</label>
+                        <select class="form-select" id="role" name="role" required>
+                            {% for value, label in roles %}
+                                <option value="{{ value }}" {% if form_data.role == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12"></div>
+                    <div class="col-12 col-md-6">
+                        <label for="password" class="form-label fw-semibold">{% translate "Password" %}</label>
+                        <input type="password" class="form-control" id="password" name="password" minlength="8" required autocomplete="new-password">
+                        <div class="form-text">{% translate "At least 8 characters." %}</div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="confirm_password" class="form-label fw-semibold">{% translate "Confirm password" %}</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" minlength="8" required autocomplete="new-password">
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-person-plus me-1" aria-hidden="true"></i>{% translate "Create User" %}
+                    </button>
+                    <a href="{% url 'user_list' %}" class="btn btn-outline-secondary">{% translate "Cancel" %}</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
