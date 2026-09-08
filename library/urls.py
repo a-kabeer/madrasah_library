@@ -13,10 +13,9 @@ urlpatterns = [
     path("settings/branding/", views.branding_settings, name="branding_settings"),
     path("settings/permissions/", views.permissions_matrix, name="permissions_matrix"),
 
-    path("", views.library_home, name="library_home"),
-    # Keep the named dashboard endpoint for existing internal callers/tests;
-    # route cleanup below removes the other duplicate workflow bindings.
-    path("dashboard/", views.library_home, name="dashboard"),
+    # One canonical staff home. The dashboard name is retained for existing
+    # callers and tests, but it now resolves to the canonical root URL.
+    path("", views.library_home, name="dashboard"),
 
     path("categories/", views.category_list, name="category_list"),
     path("categories/add/", views.category_add, name="category_add"),
