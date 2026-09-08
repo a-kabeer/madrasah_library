@@ -19,20 +19,11 @@ jobs:
           ref: audit/task-3-modal-conversion
           fetch-depth: 0
 
-      - name: Merge main and preserve repaired task-side files on conflicts
+      - name: Merge main while preserving repaired task-side conflicts
         run: |
           set -e
           git fetch origin main --no-tags
-          if ! git merge --no-edit origin/main; then
-            conflicts=$(git diff --name-only --diff-filter=U)
-            if [ -n "$conflicts" ]; then
-              while IFS= read -r file; do
-                git checkout --ours -- "$file"
-                git add -- "$file"
-              done <<< "$conflicts"
-            fi
-            git commit --no-edit
-          fi
+          git merge --no-edit -X ours origin/main
 
           if git grep -n -E '^(<<<<<<<|>>>>>>> )'; then
             echo 'Conflict markers remain after reconciliation.'
