@@ -1,7 +1,5 @@
 """Which roles may reach which part of the library, and who decides."""
 
-from functools import wraps
-
 # The four roles, widest first. SuperAdmin is deliberately absent from every
 # `ceiling` below: it is answered before the table is consulted at all.
 SUPER_ADMIN = "SuperAdmin"
