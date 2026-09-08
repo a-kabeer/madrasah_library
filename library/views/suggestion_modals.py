@@ -1,9 +1,9 @@
 """Modal-first workflows for acquisition suggestions."""
 
 from django.contrib import messages
-from django.shortcuts import get_object_or_404, render
-from django.utils.translation import gettext
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, render, redirect
+from django.utils.translation import gettext
 
 from .. import acquisitions, notifications
 from ..models import AcquisitionSuggestion
@@ -30,6 +30,10 @@ def _modal(request):
 
 @feature_required("suggestions")
 def suggestion_add_modal(request):
+    if not _modal(request):
+        from .acquisitions import suggestion_add
+        return suggestion_add(request)
+
     form = {
         "title": "",
         "author_name": "",
@@ -97,6 +101,10 @@ def suggestion_add_modal(request):
 
 @feature_required("suggestions")
 def suggestion_detail_modal(request, suggestion_id):
+    if not _modal(request):
+        from .acquisitions import suggestion_detail
+        return suggestion_detail(request, suggestion_id)
+
     suggestion = get_object_or_404(
         AcquisitionSuggestion.objects.select_related("suggested_by", "reviewed_by"),
         id=suggestion_id,
@@ -115,12 +123,7 @@ def suggestion_detail_modal(request, suggestion_id):
 @feature_required("suggestions", "Admin", "Librarian")
 def suggestion_review_modal(request, suggestion_id):
     if request.method != "POST":
-        suggestion = get_object_or_404(AcquisitionSuggestion, id=suggestion_id)
-        return render(
-            request,
-            "library/partials/suggestion_review_modal.html",
-            {"suggestion": suggestion},
-        )
+        return redirect("suggestion_detail", suggestion_id=suggestion_id)
 
     to_status = (request.POST.get("status") or "").strip()
     if to_status not in dict(AcquisitionSuggestion.STATUS_CHOICES):
