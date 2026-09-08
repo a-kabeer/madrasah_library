@@ -63,6 +63,28 @@ SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=0, cast=int)
 SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
 SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0
 
+# Login abuse protection. Limits are deliberately configurable because a
+# small desk application and a public deployment have different traffic
+# patterns. Both an IP and a username bucket are checked; a successful login
+# clears the username bucket. Keep this cache shared when running multiple
+# Gunicorn workers.
+LOGIN_RATE_LIMIT_ENABLED = config("LOGIN_RATE_LIMIT_ENABLED", default=True, cast=bool)
+LOGIN_RATE_LIMIT_WINDOW_SECONDS = config(
+    "LOGIN_RATE_LIMIT_WINDOW_SECONDS",
+    default=900,
+    cast=int,
+)
+LOGIN_RATE_LIMIT_IP_MAX_FAILURES = config(
+    "LOGIN_RATE_LIMIT_IP_MAX_FAILURES",
+    default=20,
+    cast=int,
+)
+LOGIN_RATE_LIMIT_USERNAME_MAX_FAILURES = config(
+    "LOGIN_RATE_LIMIT_USERNAME_MAX_FAILURES",
+    default=5,
+    cast=int,
+)
+
 
 # Application definition
 
