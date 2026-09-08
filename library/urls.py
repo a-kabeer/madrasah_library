@@ -13,9 +13,9 @@ urlpatterns = [
     path("settings/branding/", views.branding_settings, name="branding_settings"),
     path("settings/permissions/", views.permissions_matrix, name="permissions_matrix"),
 
-    # One canonical staff home. The dashboard name is retained for existing
-    # callers and tests, but it now resolves to the canonical root URL.
+    # One canonical staff home. Existing /dashboard/ bookmarks redirect here.
     path("", views.library_home, name="dashboard"),
+    path("dashboard/", RedirectView.as_view(url="/library/", permanent=True), name="dashboard_legacy"),
 
     path("categories/", views.category_list, name="category_list"),
     path("categories/add/", views.category_add, name="category_add"),
@@ -102,7 +102,6 @@ urlpatterns = [
     path("reports/popular/", views.report_popular, name="report_popular"),
 
     path("loans/", views.loan_list, name="loan_list"),
-    # Legacy add-loan URL now points at the canonical circulation workflow.
     path("loans/add/", RedirectView.as_view(url="/library/circulation/issue/", permanent=True), name="loan_add"),
     path("loans/<int:loan_id>/edit/", views.loan_edit, name="loan_edit"),
     path("loans/<int:loan_id>/return/", views.loan_return, name="loan_return"),
@@ -113,12 +112,7 @@ urlpatterns = [
     path("circulation/", views.circulation_dashboard, name="circulation_dashboard"),
     path("circulation/issue/", views.loan_add, name="circulation_issue"),
     path("circulation/return/", views.loan_return_lookup, name="circulation_return_lookup"),
-    # Legacy active-loans URL now uses the canonical loan list + filter.
-    path(
-        "circulation/active-loans/",
-        RedirectView.as_view(url="/library/loans/?status=active", permanent=True),
-        name="circulation_active_loans",
-    ),
+    path("circulation/active-loans/", RedirectView.as_view(url="/library/loans/?status=active", permanent=True), name="circulation_active_loans"),
 
     path("borrowers/", views.borrower_list, name="borrower_list"),
     path("borrowers/add/", views.borrower_add, name="borrower_add"),
