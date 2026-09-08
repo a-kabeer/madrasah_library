@@ -1,201 +1,27 @@
 {% extends layout %}
 {% load i18n %}
-
-{% block title %}
-{% translate "Book Contents" %} | {{ branding.display_name }}
-{% endblock %}
-
-{% block page_title %}
-    {% translate "Book Contents" %}
-{% endblock %}
-
-{% block breadcrumbs %}
-    <nav aria-label="{% translate 'Breadcrumb' %}">
-        <ol class="breadcrumb mb-0 small">
-            <li class="breadcrumb-item">
-                <a href="{% url 'book_list' %}">{% translate "Books" %}</a>
-            </li>
-            <li class="breadcrumb-item active" aria-current="page">
-                {% translate "Contents" %}
-            </li>
-        </ol>
-    </nav>
-{% endblock %}
-
+{% url 'book_content_filter_volumes' as volume_filter_url %}
+{% block title %}{% translate "Book Contents" %} | {{ branding.display_name }}{% endblock %}
+{% block page_title %}{% translate "Book Contents" %}{% endblock %}
+{% block breadcrumbs %}<nav aria-label="{% translate 'Breadcrumb' %}"><ol class="breadcrumb mb-0 small"><li class="breadcrumb-item"><a href="{% url 'book_list' %}">{% translate "Books" %}</a></li><li class="breadcrumb-item active" aria-current="page">{% translate "Contents" %}</li></ol></nav>{% endblock %}
 {% block content %}
-
 <div class="container-fluid px-0">
-
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <div>
-            <h2 class="fw-bold mb-1">{% translate "Book Contents" %}</h2>
-            <p class="text-body-secondary mb-0">
-                {% translate "Chapters, sections and other entries inside a volume." %}
-            </p>
-        </div>
-        <a href="{% url 'book_content_add' %}" class="btn btn-primary">
-            <i class="bi bi-plus-lg me-1"></i> {% translate "Add Content" %}
-        </a>
-    </div>
-
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body">
-            <form method="get" class="row g-3 align-items-end">
-
-                <div class="col-12 col-lg-4">
-                    <label for="contentSearch" class="form-label fw-semibold">
-                        {% translate "Search" %}
-                    </label>
-                    <input
-                        type="text"
-                        class="form-control"
-                        id="contentSearch"
-                        name="search"
-                        value="{{ search }}"
-                        placeholder="{% translate 'Search contents...' %}"
-                    >
-                </div>
-
-                <div class="col-12 col-lg-4">
-                    <label for="volume" class="form-label fw-semibold">
-                        {% translate "Volume" %}
-                    </label>
-                    <select class="form-select" name="volume" id="volume">
-                        <option value="">{% translate "All Volumes" %}</option>
-                        {% for volume in volumes %}
-                            <option
-                                value="{{ volume.id }}"
-                                {% if volume_id == volume.id|stringformat:"s" %}selected{% endif %}
-                            >
-                                {{ volume.book.title }} - {% blocktranslate with number=volume.volume_number %}Volume {{ number }}{% endblocktranslate %}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="col-12 col-lg-2">
-                    <label for="content_type" class="form-label fw-semibold">
-                        {% translate "Content Type" %}
-                    </label>
-                    <select class="form-select" name="content_type" id="content_type">
-                        <option value="">{% translate "All Types" %}</option>
-                        {% for item in content_types %}
-                            <option
-                                value="{{ item }}"
-                                {% if content_type == item %}selected{% endif %}
-                            >
-                                {{ item }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="col-12 col-lg-2 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-search me-1"></i> {% translate "Search" %}
-                    </button>
-                    {% if search or volume_id or content_type %}
-                        <a href="{% url 'book_content_list' %}" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-lg"></i>
-                            <span class="visually-hidden">{% translate "Clear" %}</span>
-                        </a>
-                    {% endif %}
-                </div>
-
-            </form>
-        </div>
-    </div>
-
-    {% comment %}
-      Only while filtered, as before.
-    {% endcomment %}
-    {% if search or volume_id or content_type %}
-        <p class="text-body-secondary mb-3">
-            {% blocktranslate trimmed count n=contents.paginator.count %}
-                Found <strong>{{ n }}</strong> content item.
-            {% plural %}
-                Found <strong>{{ n }}</strong> content items.
-            {% endblocktranslate %}
-        </p>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3"><div><h2 class="fw-bold mb-1">{% translate "Book Contents" %}</h2><p class="text-body-secondary mb-0">{% translate "Chapters, sections and other entries inside a volume." %}</p></div><a href="{% url 'book_content_add' %}?modal=1" data-form-modal hx-get="{% url 'book_content_add' %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>{% translate "Add Content" %}</a></div>
+<div class="card shadow-sm border-0 mb-4"><div class="card-body"><form method="get" class="row g-3 align-items-end"><div class="col-12 col-lg-4"><label for="contentSearch" class="form-label fw-semibold">{% translate "Search" %}</label><input type="text" class="form-control" id="contentSearch" name="search" value="{{ search }}" placeholder="{% translate 'Search contents...' %}"></div><div class="col-12 col-lg-4">
+    {% if volume_id %}
+        {% for volume in volumes %}
+            {% if volume_id == volume.id|stringformat:"s" %}
+                {% include "library/partials/combobox_field.html" with label="Volume" field_name="volume" input_id="contentVolumeFilter" entity_label="volume" search_url=volume_filter_url selected_id=volume_id selected_name=volume.title required=False allow_create=False compact=True submit_on_select=True %}
+            {% endif %}
+        {% endfor %}
+    {% else %}
+        {% include "library/partials/combobox_field.html" with label="Volume" field_name="volume" input_id="contentVolumeFilter" entity_label="volume" search_url=volume_filter_url selected_id="" selected_name="" required=False allow_create=False compact=True submit_on_select=True %}
     {% endif %}
-
-    <div class="card shadow-sm border-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-secondary">
-                    <tr>
-                        <th>{% translate "ID" %}</th>
-                        <th>{% translate "Volume" %}</th>
-                        <th>{% translate "Content" %}</th>
-                        <th>{% translate "Parent" %}</th>
-                        <th class="text-end">{% translate "Actions" %}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for content in contents %}
-                        <tr>
-                            <td class="text-body-secondary">{{ content.id }}</td>
-                            <td>
-                                <a href="{% url 'book_volume_detail' content.volume.id %}"
-                                   class="text-decoration-none">
-                                    {{ content.volume.book.title }}
-                                </a>
-                                <span class="d-block small text-body-secondary">
-                                    {{ content.volume.title }}
-                                </span>
-                            </td>
-                            <td class="fw-semibold">{{ content.title }}</td>
-                            <td class="text-body-secondary">
-                                {% if content.parent %}
-                                    {{ content.parent.title }}
-                                {% else %}
-                                    —
-                                {% endif %}
-                            </td>
-                            <td class="text-end">
-                                <div class="d-inline-flex gap-1">
-                                    <a
-                                        href="{% url 'book_content_detail' content.id %}"
-                                        class="btn btn-sm btn-outline-secondary"
-                                        title="{% translate 'View Details' %}"
-                                    >
-                                        <i class="bi bi-box-arrow-up-right"></i>
-                                    </a>
-                                    <a
-                                        href="{% url 'book_content_edit' content.id %}"
-                                        class="btn btn-sm btn-outline-warning"
-                                        title="{% translate 'Edit' %}"
-                                    >
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <a
-                                        href="{% url 'book_content_delete' content.id %}"
-                                        class="btn btn-sm btn-outline-danger"
-                                        title="{% translate 'Delete' %}"
-                                    >
-                                        <i class="bi bi-trash"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="5" class="text-center text-body-secondary py-4">
-                                {% translate "No contents found." %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    {% comment %}
-      `_pagination.html` still: this view supplies neither
-      `pagination_query` nor the elided range the Bootstrap partial wants.
-    {% endcomment %}
-    {% include "library/_pagination.html" with page_obj=contents %}
-
+</div><div class="col-12 col-lg-2"><label for="content_type" class="form-label fw-semibold">{% translate "Content Type" %}</label><select class="form-select" name="content_type" id="content_type"><option value="">{% translate "All Types" %}</option>{% for item in content_types %}<option value="{{ item }}" {% if content_type == item %}selected{% endif %}>{{ item }}</option>{% endfor %}</select></div><div class="col-12 col-lg-2 d-flex gap-2"><button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>{% translate "Search" %}</button>{% if search or volume_id or content_type %}<a href="{% url 'book_content_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i><span class="visually-hidden">{% translate "Clear" %}</span></a>{% endif %}</div></form></div></div>
+{% if search or volume_id or content_type %}<p class="text-body-secondary mb-3">{% blocktranslate trimmed count n=contents.paginator.count %}Found <strong>{{ n }}</strong> content item.{% plural %}Found <strong>{{ n }}</strong> content items.{% endblocktranslate %}</p>{% endif %}
+<div class="card shadow-sm border-0"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-secondary"><tr><th>{% translate "ID" %}</th><th>{% translate "Volume" %}</th><th>{% translate "Content" %}</th><th>{% translate "Parent" %}</th><th class="text-end">{% translate "Actions" %}</th></tr></thead><tbody>
+{% for content in contents %}<tr class="book-row" data-book-row data-book-url="{% url 'book_content_detail' content.id %}?modal=1" tabindex="0" role="button" aria-label="{% translate 'Open details for' %} {{ content.title }}"><td class="text-body-secondary">{{ content.id }}</td><td><a href="{% url 'book_volume_detail' content.volume.id %}?modal=1" data-form-modal hx-get="{% url 'book_volume_detail' content.volume.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="text-decoration-none">{{ content.volume.book.title }}</a><span class="d-block small text-body-secondary">{{ content.volume.title }}</span></td><td class="fw-semibold">{{ content.title }}</td><td class="text-body-secondary">{% if content.parent %}{{ content.parent.title }}{% else %}—{% endif %}</td><td class="text-end"><div class="d-inline-flex gap-1" data-row-actions><a href="{% url 'book_content_edit' content.id %}?modal=1" data-form-modal hx-get="{% url 'book_content_edit' content.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-sm btn-outline-warning" title="{% translate 'Edit' %}"><i class="bi bi-pencil"></i></a><a href="{% url 'book_content_delete' content.id %}?modal=1" data-form-modal hx-get="{% url 'book_content_delete' content.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-sm btn-outline-danger" title="{% translate 'Delete' %}"><i class="bi bi-trash"></i></a></div></td></tr>{% empty %}<tr><td colspan="5" class="text-center text-body-secondary py-4">{% translate "No contents found." %}</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% include "library/_pagination.html" with page_obj=contents %}
 </div>
-
 {% endblock %}

@@ -1,0 +1,48 @@
+{% load i18n %}
+
+<div class="modal-content book-action-modal">
+    <div class="modal-header">
+        <div class="d-flex align-items-center gap-2 min-w-0">
+            <span class="rounded-circle bg-primary-subtle text-primary-emphasis d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width: 2.25rem; height: 2.25rem;">
+                <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
+            </span>
+            <div class="min-w-0">
+                <h2 class="modal-title fs-5 fw-bold mb-0">{% translate "Restore Book" %}</h2>
+                <div class="small text-body-secondary text-truncate">{{ book.title }}</div>
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% translate 'Close' %}"></button>
+    </div>
+
+    <div class="modal-body">
+        {% if book.is_archived %}
+            <p class="mb-3">
+                {% blocktranslate trimmed with title=book.title %}
+                    Restore <strong>{{ title }}</strong> to the active catalogue?
+                {% endblocktranslate %}
+            </p>
+            <div class="border rounded p-3">
+                <div class="d-flex gap-3 mb-2"><i class="bi bi-check2-circle text-success mt-1" aria-hidden="true"></i><div class="small">{% translate "Its volumes, physical copies, copy codes and shelf locations remain unchanged." %}</div></div>
+                <div class="d-flex gap-3"><i class="bi bi-eye text-primary mt-1" aria-hidden="true"></i><div class="small">{% translate "The book will become visible in the active catalogue and available for normal circulation again." %}</div></div>
+            </div>
+        {% else %}
+            <div class="alert alert-info d-flex align-items-start gap-2 mb-0" role="alert">
+                <i class="bi bi-info-circle mt-1" aria-hidden="true"></i>
+                <div>
+                    <strong>{% translate "Already in the catalogue" %}</strong><br>
+                    {% translate "This book is not currently archived, so no restore is needed." %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
+        {% if book.is_archived %}
+            <form method="post" action="{% url 'book_restore' book.id %}?modal=1" hx-post="{% url 'book_restore' book.id %}?modal=1" hx-swap="none" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>{% translate "Restore Book" %}</button>
+            </form>
+        {% endif %}
+    </div>
+</div>

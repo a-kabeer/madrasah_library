@@ -1,4 +1,5 @@
 {% load i18n %}
+<<<<<<< HEAD
 {% comment %}
 Delete Borrower confirmation, served into #formModal by `borrower_delete`.
 
@@ -109,3 +110,28 @@ Expected context: borrower, blocker.
     {% endif %}
 
 </div>
+=======
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true"><i class="bi bi-trash me-2" aria-hidden="true"></i>{% translate "Delete Borrower" %}</h5>
+
+{% if loan_history_exists %}
+    <div class="alert alert-warning" role="alert">
+        <div class="fw-semibold mb-1">{% translate "This borrower cannot be deleted." %}</div>
+        <div>{% blocktranslate trimmed with name=borrower.name %}{{ name }} has {{ loan_count }} loan record(s), including {{ active_loan_count }} active loan(s). Loan history is preserved and must not be deleted with the borrower.{% endblocktranslate %}</div>
+    </div>
+    <p class="text-body-secondary mb-4">{% translate "Deactivate the borrower instead if they should no longer be allowed to borrow." %}</p>
+    <div class="d-flex justify-content-end gap-2">
+        <a href="{% url 'borrower_edit' borrower.id %}" class="btn btn-warning" data-form-modal hx-get="{% url 'borrower_edit' borrower.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML">{% translate "Edit / Deactivate" %}</a>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% translate "Close" %}</button>
+    </div>
+{% else %}
+    <p>{% blocktranslate trimmed with name=borrower.name %}You are about to permanently delete <strong>{{ name }}</strong>. This borrower has no loan history, so deletion is safe.{% endblocktranslate %}</p>
+    <div class="alert alert-danger" role="alert">{% translate "This action cannot be undone." %}</div>
+    <form hx-post="{% url 'borrower_delete' borrower.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML">
+        {% csrf_token %}
+        <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
+            <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>{% translate "Delete Borrower" %}</button>
+        </div>
+    </form>
+{% endif %}
+>>>>>>> 255e80b83f662a73d00b1fffa5ac2cbf1418ada2

@@ -1,6 +1,7 @@
 {% load i18n %}
 {% comment %}
 The book's own details: title, author, category, publisher, cover.
+<<<<<<< HEAD
 
 Shared by all four places a book is described — the Add and Edit pages and
 the Add and Edit dialogs — so there is one set of fields, one set of names
@@ -19,6 +20,9 @@ Expected context:
               sentence above the form could not say which box to go back
               to, and "Title and Author are required." named both when
               only one was missing.
+=======
+Shared by Add/Edit pages and dialogs so validation and field behaviour stay consistent.
+>>>>>>> 255e80b83f662a73d00b1fffa5ac2cbf1418ada2
 {% endcomment %}
 
 {% url 'author_list' as author_search_url %}
@@ -35,6 +39,7 @@ Expected context:
         id="{{ id_prefix }}Title"
         name="title"
         value="{{ form_data.title }}"
+<<<<<<< HEAD
         {% comment %}
           `maxlength` matches the column, so the box will not take a title
           the database cannot hold. The view checks the length as well -
@@ -48,6 +53,14 @@ Expected context:
     {% if errors.title %}
         <div class="invalid-feedback">{{ errors.title }}</div>
     {% endif %}
+=======
+        maxlength="500"
+        autocomplete="off"
+        required
+        aria-required="true"
+    >
+    <div class="form-text">{% translate "Use the complete official book title." %}</div>
+>>>>>>> 255e80b83f662a73d00b1fffa5ac2cbf1418ada2
 </div>
 
 {% include "library/partials/combobox_field.html" with label="Author" field_name="author" input_id=id_prefix|add:"Author" entity_label="author" search_url=author_search_url selected_id=form_data.author selected_name=form_data.author_name required=True allow_create=True compact=False submit_on_select=False error=errors.author %}
@@ -105,6 +118,6 @@ Expected context:
         {% else %}
             {% translate "Optional." %}
         {% endif %}
-        {% translate "JPG, PNG, WEBP or GIF, up to 2&nbsp;MB." %}
+        {% translate "JPG, PNG, WEBP or GIF, up to 2 MB." %}
     </div>
 </div>

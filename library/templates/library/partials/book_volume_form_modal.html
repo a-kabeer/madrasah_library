@@ -1,0 +1,12 @@
+{% load i18n %}
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    <i class="bi {% if editing %}bi-pencil{% else %}bi-plus-lg{% endif %} me-2" aria-hidden="true"></i>
+    {% if editing %}{% translate "Edit Volume" %}{% else %}{% translate "Add Volume" %}{% endif %}
+</h5>
+<form id="bookVolumeModalForm" method="post" action="" hx-post="?modal=1{% if volume %}&amp;id={{ volume.id }}{% endif %}{% if request.GET.next %}&amp;next={{ request.GET.next|urlencode }}{% endif %}" hx-target="#bookVolumeModalForm" hx-swap="outerHTML" hx-disabled-elt="find button[type=submit]" hx-disinherit="*">
+    {% csrf_token %}
+    {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+    <div class="mb-3"><label for="volumeBook" class="form-label fw-semibold">{% translate "Book" %}</label><select id="volumeBook" name="book" class="form-select" required><option value="">{% translate "Choose a book" %}</option>{% for item in books %}<option value="{{ item.id }}" {% if item.id == book.id %}selected{% endif %}>{{ item.title }}</option>{% endfor %}</select></div>
+    <div class="row g-3"><div class="col-sm-4"><label for="volumeNumber" class="form-label fw-semibold">{% translate "Volume Number" %}</label><input id="volumeNumber" name="volume_number" type="number" min="1" class="form-control" value="{{ volume_number }}" required></div><div class="col-sm-8"><label for="volumeTitle" class="form-label fw-semibold">{% translate "Title" %}</label><input id="volumeTitle" name="title" type="text" maxlength="255" class="form-control" value="{{ title }}" required></div></div>
+    <div class="d-flex gap-2 mt-4 pt-3 border-top"><button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1" aria-hidden="true"></i>{% if editing %}{% translate "Save Changes" %}{% else %}{% translate "Add Volume" %}{% endif %}</button><button type="button" class="btn btn-outline-secondary ms-auto" data-bs-dismiss="modal">{% translate "Cancel" %}</button></div>
+</form>

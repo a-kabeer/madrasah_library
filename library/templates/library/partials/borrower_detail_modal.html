@@ -1,4 +1,5 @@
 {% load i18n %}
+<<<<<<< HEAD
 {% comment %}
 One borrower, in tabs.
 
@@ -459,4 +460,121 @@ can_delete.
         </a>
     {% endif %}
 
+=======
+<style>
+    /* Borrower detail is intentionally a stable-size modal: switching tabs
+       must not make the dialog jump as each tab contains a different amount
+       of information. The scroll belongs to the tab content, not the modal. */
+    #globalModal .borrower-detail-tabs {
+        height: 360px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        min-height: 360px;
+    }
+    #globalModal .borrower-detail-tabs > .tab-pane {
+        min-height: 340px;
+    }
+</style>
+
+<h5 class="modal-title" id="globalModalLabel" hx-swap-oob="true">{{ borrower.name }}</h5>
+
+<div class="row g-3 mb-4">
+    <div class="col-12 col-md-6">
+        <div class="small text-body-secondary">{% translate "Phone" %}</div>
+        <div class="fw-semibold">{{ borrower.phone|default:"—" }}</div>
+    </div>
+    <div class="col-12 col-md-6">
+        <div class="small text-body-secondary">{% translate "Registration No" %}</div>
+        <div class="fw-semibold">{{ borrower.registration_no|default:"—" }}</div>
+    </div>
+    <div class="col-12 col-md-6">
+        <div class="small text-body-secondary">{% translate "Type" %}</div>
+        <div class="fw-semibold">{{ borrower.borrower_type|default:"—" }}</div>
+    </div>
+    <div class="col-12 col-md-6">
+        <div class="small text-body-secondary">{% translate "Department" %}</div>
+        <div class="fw-semibold">{{ borrower.department|default:"—" }}</div>
+    </div>
+    <div class="col-12">
+        <div class="small text-body-secondary">{% translate "Address" %}</div>
+        <div>{{ borrower.address|default:"—" }}</div>
+    </div>
+    {% if borrower.notes %}
+        <div class="col-12">
+            <div class="small text-body-secondary">{% translate "Notes" %}</div>
+            <div>{{ borrower.notes }}</div>
+        </div>
+    {% endif %}
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <span class="badge {% if borrower.is_active %}text-bg-success{% else %}text-bg-secondary{% endif %}">
+        {% if borrower.is_active %}{% translate "Active" %}{% else %}{% translate "Inactive" %}{% endif %}
+    </span>
+    <span class="badge text-bg-info">{{ active_count }} {% translate "active loan(s)" %}</span>
+    {% if overdue_count %}<span class="badge text-bg-danger">{{ overdue_count }} {% translate "overdue" %}</span>{% endif %}
+</div>
+
+<ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#borrowerCurrent" type="button" role="tab" aria-controls="borrowerCurrent" aria-selected="true">{% translate "Current Loans" %}</button></li>
+    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#borrowerHistory" type="button" role="tab" aria-controls="borrowerHistory" aria-selected="false">{% translate "History" %}</button></li>
+    <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#borrowerReservations" type="button" role="tab" aria-controls="borrowerReservations" aria-selected="false">{% translate "Reservations" %}</button></li>
+</ul>
+
+<div class="tab-content borrower-detail-tabs">
+    <div class="tab-pane fade show active" id="borrowerCurrent" role="tabpanel" tabindex="0">
+        {% if current_loans %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead><tr><th>{% translate "Book" %}</th><th>{% translate "Due" %}</th><th>{% translate "Status" %}</th></tr></thead>
+                    <tbody>
+                    {% for loan in current_loans %}
+                        <tr>
+                            <td class="fw-semibold">{{ loan.copy.volume.book.title }}<div class="small text-body-secondary">{{ loan.copy.copy_code }}</div></td>
+                            <td>{{ loan.due_date|default:"—" }}</td>
+                            <td>{% if loan.days_overdue %}<span class="badge text-bg-danger">{{ loan.days_overdue }} {% translate "days overdue" %}</span>{% else %}<span class="badge text-bg-success">{% translate "On time" %}</span>{% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}<div class="d-flex align-items-center justify-content-center h-100 py-5 text-body-secondary">{% translate "No active loans." %}</div>{% endif %}
+    </div>
+
+    <div class="tab-pane fade" id="borrowerHistory" role="tabpanel" tabindex="0">
+        {% if loans.object_list %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead><tr><th>{% translate "Book" %}</th><th>{% translate "Issued" %}</th><th>{% translate "Returned" %}</th></tr></thead>
+                    <tbody>{% for loan in loans %}<tr><td>{{ loan.copy.volume.book.title }}</td><td>{{ loan.issue_date|default:"—" }}</td><td>{{ loan.return_date|default:"—" }}</td></tr>{% endfor %}</tbody>
+                </table>
+            </div>
+            {% if loans.has_other_pages %}
+                <nav class="mt-3" aria-label="{% translate 'Borrower loan history pages' %}">
+                    <ul class="pagination pagination-sm mb-0 justify-content-center">
+                        {% if loans.has_previous %}
+                            <li class="page-item"><a class="page-link" href="{% url 'borrower_detail' borrower.id %}?modal=1&page={{ loans.previous_page_number }}" hx-get="{% url 'borrower_detail' borrower.id %}?modal=1&page={{ loans.previous_page_number }}" hx-target="#globalModal .modal-body" hx-swap="innerHTML">{% translate "Previous" %}</a></li>
+                        {% endif %}
+                        <li class="page-item active"><span class="page-link">{{ loans.number }} / {{ loans.paginator.num_pages }}</span></li>
+                        {% if loans.has_next %}
+                            <li class="page-item"><a class="page-link" href="{% url 'borrower_detail' borrower.id %}?modal=1&page={{ loans.next_page_number }}" hx-get="{% url 'borrower_detail' borrower.id %}?modal=1&page={{ loans.next_page_number }}" hx-target="#globalModal .modal-body" hx-swap="innerHTML">{% translate "Next" %}</a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
+        {% else %}<div class="d-flex align-items-center justify-content-center h-100 py-5 text-body-secondary">{% translate "No loan history." %}</div>{% endif %}
+    </div>
+
+    <div class="tab-pane fade" id="borrowerReservations" role="tabpanel" tabindex="0">
+        {% if reservations %}
+            <div class="list-group list-group-flush">{% for reservation in reservations %}<div class="list-group-item px-0"><strong>{{ reservation.book.title }}</strong><span class="d-block small text-body-secondary">{{ reservation.status|default:"Active" }}</span></div>{% endfor %}</div>
+        {% else %}<div class="d-flex align-items-center justify-content-center h-100 py-5 text-body-secondary">{% translate "No active reservations." %}</div>{% endif %}
+    </div>
+</div>
+
+<div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
+    <a href="{% url 'borrower_edit' borrower.id %}" class="btn btn-outline-warning" data-form-modal hx-get="{% url 'borrower_edit' borrower.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"><i class="bi bi-pencil me-1"></i>{% translate "Edit" %}</a>
+    {% if can_delete %}<a href="{% url 'borrower_delete' borrower.id %}" class="btn btn-outline-danger" data-form-modal hx-get="{% url 'borrower_delete' borrower.id %}?modal=1" hx-target="#formModal .modal-body"><i class="bi bi-trash me-1"></i>{% translate "Delete" %}</a>{% endif %}
+    <button type="button" class="btn btn-outline-secondary ms-auto" data-bs-dismiss="modal">{% translate "Close" %}</button>
+>>>>>>> 255e80b83f662a73d00b1fffa5ac2cbf1418ada2
 </div>

@@ -1,0 +1,44 @@
+{% load i18n %}
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    <i class="bi bi-file-earmark-text me-2" aria-hidden="true"></i>{% translate "Content Details" %}
+</h5>
+<div class="modal-detail-panel">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+        <div>
+            <div class="small text-body-secondary">{{ content.volume.book.title }} · {% blocktranslate with number=content.volume.volume_number %}Volume {{ number }}{% endblocktranslate}</div>
+            <h4 class="fw-bold mb-0">{{ content.title }}</h4>
+            {% if content.content_type %}<div class="text-body-secondary">{{ content.content_type }}</div>{% endif %}
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'book_content_edit' content.id %}?modal=1" data-form-modal hx-get="{% url 'book_content_edit' content.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil me-1"></i>{% translate "Edit" %}</a>
+            <a href="{% url 'book_content_delete' content.id %}?modal=1" data-form-modal hx-get="{% url 'book_content_delete' content.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>{% translate "Delete" %}</a>
+        </div>
+    </div>
+    <dl class="row mb-0">
+        <dt class="col-5 col-sm-4 text-body-secondary fw-normal">{% translate "Book" %}</dt>
+        <dd class="col-7 col-sm-8"><a href="{% url 'book_detail' content.volume.book.id %}" class="text-decoration-none">{{ content.volume.book.title }}</a></dd>
+        <dt class="col-5 col-sm-4 text-body-secondary fw-normal">{% translate "Volume" %}</dt>
+        <dd class="col-7 col-sm-8"><a href="{% url 'book_volume_detail' content.volume.id %}?modal=1" data-form-modal hx-get="{% url 'book_volume_detail' content.volume.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="text-decoration-none">{% blocktranslate with number=content.volume.volume_number %}Volume {{ number }}{% endblocktranslate} — {{ content.volume.title }}</a></dd>
+        <dt class="col-5 col-sm-4 text-body-secondary fw-normal">{% translate "Parent" %}</dt>
+        <dd class="col-7 col-sm-8">{% if content.parent %}{{ content.parent.title }}{% else %}{% translate "No Parent" %}{% endif %}</dd>
+        <dt class="col-5 col-sm-4 text-body-secondary fw-normal">{% translate "Page Number" %}</dt>
+        <dd class="col-7 col-sm-8">{{ content.page_number|default:"N/A" }}</dd>
+        <dt class="col-5 col-sm-4 text-body-secondary fw-normal">{% translate "Sort Order" %}</dt>
+        <dd class="col-7 col-sm-8 mb-0">{{ content.sort_order }}</dd>
+    </dl>
+    <div class="border-top mt-3 pt-3">
+        <h6 class="fw-bold">{% translate "Child Entries" %}</h6>
+        {% if children %}
+            <ul class="list-group list-group-flush">
+                {% for child in children|slice:":8" %}
+                    <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                        <a href="{% url 'book_content_detail' child.id %}?modal=1" data-form-modal hx-get="{% url 'book_content_detail' child.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="text-decoration-none">{{ child.title }}</a>
+                        {% if child.content_type %}<span class="small text-body-secondary ms-2">{{ child.content_type }}</span>{% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-body-secondary mb-0">{% translate "No child entries." %}</p>
+        {% endif %}
+    </div>
+</div>

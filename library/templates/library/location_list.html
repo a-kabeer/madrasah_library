@@ -1,186 +1,32 @@
 {% extends layout %}
 {% load i18n %}
-{% comment %}
-  `layout` rather than base.html by name: an ordinary request renders the
-  whole application shell, an HTMX navigation renders only the main-content
-  region. One template, one URL, one view behind both. `{% extends %}` has
-  to be the very first tag, so this note sits under it.
-  See library/context_processors.py.
-{% endcomment %}
 
-{% block title %}
-{% translate "Locations" %} | {{ branding.display_name }}
-{% endblock %}
-
-{% block page_title %}
-    {% translate "Locations" %}
-{% endblock %}
-
+{% block title %}{% translate "Locations" %} | {{ branding.display_name }}{% endblock %}
+{% block page_title %}{% translate "Locations" %}{% endblock %}
 {% block content %}
-
 <div class="container-fluid px-0">
-
-    <!-- Page Header -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-        <div>
-            <h2 class="fw-bold mb-1">{% translate "Locations" %}</h2>
-            <p class="text-body-secondary mb-0">
-                {% translate "Where the library keeps its books. Open a location to see its shelves." %}
-            </p>
-        </div>
-        {% if can_edit %}
-            <a href="{% url 'location_add' %}" class="btn btn-primary">
-                <i class="bi bi-plus-lg me-1"></i> {% translate "Add Location" %}
-            </a>
-        {% endif %}
+        <div><h2 class="fw-bold mb-1">{% translate "Locations" %}</h2><p class="text-body-secondary mb-0">{% translate "Where the library keeps its books. Open a location to see its shelves." %}</p></div>
+        {% if can_edit %}<a href="{% url 'location_add' %}" data-form-modal hx-get="{% url 'location_add' %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>{% translate "Add Location" %}</a>{% endif %}
     </div>
-
-    <div class="card shadow-sm border-0 mb-4">
-        <div class="card-body">
-            <form method="get" class="d-flex flex-wrap gap-2">
-                <input
-                    type="search"
-                    class="form-control"
-                    name="search"
-                    value="{{ search }}"
-                    placeholder="{% translate 'Search locations...' %}"
-                    style="max-width: 26rem;"
-                    aria-label="{% translate 'Search locations' %}"
-                >
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-search me-1"></i> {% translate "Search" %}
-                </button>
-                {% if search %}
-                    <a href="{% url 'location_list' %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-x-lg me-1"></i> {% translate "Clear" %}
-                    </a>
+    <div class="card shadow-sm border-0 mb-4"><div class="card-body"><form method="get" class="d-flex flex-wrap gap-2"><input type="search" class="form-control" name="search" value="{{ search }}" placeholder="{% translate 'Search locations...' %}" style="max-width:26rem" aria-label="{% translate 'Search locations' %}"><button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>{% translate "Search" %}</button>{% if search %}<a href="{% url 'location_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg me-1"></i>{% translate "Clear" %}</a>{% endif %}</form></div></div>
+    {% if unshelved_count %}<a href="{% url 'book_copy_list' %}?status=unshelved" class="alert alert-warning d-flex align-items-center gap-2 text-decoration-none mb-4"><i class="bi bi-inbox" aria-hidden="true"></i><span>{% blocktranslate trimmed count n=unshelved_count %}<strong>{{ n }}</strong> copy has arrived but is not on a shelf yet.{% plural %}<strong>{{ n }}</strong> copies have arrived but are not on a shelf yet.{% endblocktranslate %}</span><i class="bi bi-chevron-right ms-auto" aria-hidden="true"></i></a>{% endif %}
+    <p class="text-body-secondary mb-3">{% blocktranslate trimmed count n=paginator.count %}Found <strong>{{ n }}</strong> location.{% plural %}Found <strong>{{ n }}</strong> locations.{% endblocktranslate %}</p>
+    <div class="card shadow-sm border-0"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-secondary"><tr><th>{% translate "Location" %}</th><th>{% translate "Shelves" %}</th><th>{% translate "Copies" %}</th><th class="text-end">{% translate "Actions" %}</th></tr></thead><tbody>
+    {% for location in locations %}
+        <tr class="book-row" data-row-url="{% url 'location_detail' location.id %}" tabindex="0" role="button" aria-label="Open {{ location.name }}">
+            <td><span class="fw-semibold">{{ location.name }}</span>{% if location.description %}<span class="d-block small text-body-secondary">{{ location.description|truncatechars:80 }}</span>{% endif %}</td>
+            <td><span class="badge text-bg-secondary">{{ location.shelf_count }}</span></td><td><span class="badge text-bg-secondary">{{ location.copy_count }}</span></td>
+            <td class="text-end"><div class="d-inline-flex gap-1" data-row-actions>
+                <a href="{% url 'location_detail' location.id %}" data-row-primary class="btn btn-sm btn-outline-secondary" title="{% translate 'Open' %}" aria-label="Open {{ location.name }}"><i class="bi bi-box-arrow-up-right"></i></a>
+                {% if can_edit %}
+                    <a href="{% url 'location_edit' location.id %}?modal=1" data-form-modal hx-get="{% url 'location_edit' location.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-sm btn-outline-warning" title="{% translate 'Edit' %}" aria-label="Edit {{ location.name }}"><i class="bi bi-pencil"></i></a>
+                    <a href="{% url 'location_delete' location.id %}?modal=1" data-form-modal hx-get="{% url 'location_delete' location.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-sm btn-outline-danger" title="{% translate 'Delete' %}" aria-label="Delete {{ location.name }}"><i class="bi bi-trash"></i></a>
                 {% endif %}
-            </form>
-        </div>
-    </div>
-
-    {% comment %}
-      Copies with no shelf belong to no location, so this is the only place
-      they can be reached from. Shown as a count so it reads as inventory
-      waiting to be placed rather than as an error.
-    {% endcomment %}
-    {% if unshelved_count %}
-        <a
-            href="{% url 'book_copy_list' %}?status=unshelved"
-            class="alert alert-warning d-flex align-items-center gap-2 text-decoration-none mb-4"
-        >
-            <i class="bi bi-inbox" aria-hidden="true"></i>
-            <span>
-                {% blocktranslate trimmed count n=unshelved_count %}
-                    <strong>{{ n }}</strong> copy has arrived but is not on
-                    a shelf yet.
-                {% plural %}
-                    <strong>{{ n }}</strong> copies have arrived but are not
-                    on a shelf yet.
-                {% endblocktranslate %}
-            </span>
-            <i class="bi bi-chevron-right ms-auto" aria-hidden="true"></i>
-        </a>
-    {% endif %}
-
-    <p class="text-body-secondary mb-3">
-        {% blocktranslate trimmed count n=paginator.count %}
-            Found <strong>{{ n }}</strong> location.
-        {% plural %}
-            Found <strong>{{ n }}</strong> locations.
-        {% endblocktranslate %}
-    </p>
-
-    <div class="card shadow-sm border-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-secondary">
-                    <tr>
-                        <th>{% translate "Location" %}</th>
-                        <th>{% translate "Shelves" %}</th>
-                        <th>{% translate "Copies" %}</th>
-                        <th class="text-end">{% translate "Actions" %}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for location in locations %}
-                        {% comment %}
-                          The whole row opens the location, the same pattern
-                          the book and copy lists use. The action buttons
-                          sit inside [data-row-actions], which is what keeps
-                          the row handler off them.
-                        {% endcomment %}
-                        <tr
-                            class="book-row"
-                            data-row-url="{% url 'location_detail' location.id %}"
-                            tabindex="0"
-                            role="button"
-                            aria-label="Open {{ location.name }}"
-                        >
-                            <td>
-                                <span class="fw-semibold">{{ location.name }}</span>
-                                {% if location.description %}
-                                    <span class="d-block small text-body-secondary">
-                                        {{ location.description|truncatechars:80 }}
-                                    </span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <span class="badge text-bg-secondary">
-                                    {{ location.shelf_count }}
-                                </span>
-                            </td>
-                            <td>
-                                <span class="badge text-bg-secondary">
-                                    {{ location.copy_count }}
-                                </span>
-                            </td>
-                            <td class="text-end">
-                                <div class="d-inline-flex gap-1" data-row-actions>
-                                    <a
-                                        href="{% url 'location_detail' location.id %}"
-                                        data-row-primary
-                                        class="btn btn-sm btn-outline-secondary"
-                                        title="{% translate 'Open' %}"
-                                        aria-label="Open {{ location.name }}"
-                                    >
-                                        <i class="bi bi-box-arrow-up-right"></i>
-                                    </a>
-                                    {% if can_edit %}
-                                        <a
-                                            href="{% url 'location_edit' location.id %}"
-                                            class="btn btn-sm btn-outline-warning"
-                                            title="{% translate 'Edit' %}"
-                                            aria-label="Edit {{ location.name }}"
-                                        >
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        <a
-                                            href="{% url 'location_delete' location.id %}"
-                                            class="btn btn-sm btn-outline-danger"
-                                            title="{% translate 'Delete' %}"
-                                            aria-label="Delete {{ location.name }}"
-                                        >
-                                            <i class="bi bi-trash"></i>
-                                        </a>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="4" class="text-center text-body-secondary py-4">
-                                {% translate "No locations found." %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
+            </div></td>
+        </tr>
+    {% empty %}<tr><td colspan="4" class="text-center text-body-secondary py-4">{% translate "No locations found." %}</td></tr>{% endfor %}
+    </tbody></table></div></div>
     {% include "library/partials/pagination.html" with page_obj=locations %}
-
 </div>
-
 {% endblock %}
