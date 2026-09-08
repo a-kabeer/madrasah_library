@@ -93,14 +93,17 @@ class LoginTests(TestCase):
             "password": "wrong-password",
         })
 
-        self.client.post(reverse("login"), {
+        response = self.client.post(reverse("login"), {
             "username": "alice",
             "password": "CorrectHorse1",
         })
+        self.assertEqual(response.status_code, 302)
 
         self.client.get(reverse("logout"))
 
-        for _ in range(2):
+        # The previous failed attempt was cleared by the successful login.
+        # Three new failures therefore still fit inside the threshold.
+        for _ in range(3):
             response = self.client.post(reverse("login"), {
                 "username": "alice",
                 "password": "wrong-password",
@@ -111,7 +114,7 @@ class LoginTests(TestCase):
             "username": "alice",
             "password": "wrong-password",
         })
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 429)
 
     def test_authenticated_user_can_reach_protected_page(self):
         self.client.login(username="alice", password="CorrectHorse1")
