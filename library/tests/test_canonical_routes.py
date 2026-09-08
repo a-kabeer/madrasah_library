@@ -14,6 +14,11 @@ class CanonicalRouteTests(TestCase):
     def test_dashboard_name_resolves_to_the_canonical_root(self):
         self.assertEqual(reverse("dashboard"), "/library/")
 
+    def test_legacy_dashboard_url_redirects_to_the_canonical_root(self):
+        response = self.client.get("/library/dashboard/")
+
+        self.assertRedirects(response, "/library/", status_code=301)
+
     def test_loan_add_alias_redirects_to_circulation_issue(self):
         response = self.client.get(reverse("loan_add"))
 
