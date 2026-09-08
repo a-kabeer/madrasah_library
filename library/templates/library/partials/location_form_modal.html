@@ -1,0 +1,9 @@
+{% load i18n %}
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true"><i class="bi {% if editing %}bi-pencil{% else %}bi-plus-lg{% endif %} me-2" aria-hidden="true"></i>{% if editing %}{% translate "Edit Location" %}{% else %}{% translate "Add Location" %}{% endif %}</h5>
+<form id="locationModalForm" method="post" action="{% url action location.id %}{% if editing %} {% endif %}" hx-post="{% url action location.id %}?modal=1" hx-target="#locationModalForm" hx-swap="outerHTML" hx-disabled-elt="find button[type=submit]" hx-disinherit="*">
+    {% csrf_token %}
+    {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+    <div class="mb-3"><label for="locationName" class="form-label fw-semibold">{% translate "Name" %}</label><input id="locationName" name="name" class="form-control" value="{{ name }}" maxlength="255" required autofocus></div>
+    <div class="mb-3"><label for="locationDescription" class="form-label fw-semibold">{% translate "Description" %} <span class="text-body-secondary fw-normal">({% translate "optional" %})</span></label><textarea id="locationDescription" name="description" class="form-control" rows="3" maxlength="1000">{{ description }}</textarea></div>
+    <div class="d-flex gap-2 mt-4 pt-3 border-top"><button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>{% if editing %}{% translate "Save Changes" %}{% else %}{% translate "Add Location" %}{% endif %}</button><button type="button" class="btn btn-outline-secondary ms-auto" data-bs-dismiss="modal">{% translate "Cancel" %}</button></div>
+</form>
