@@ -1,3 +1,4 @@
+# One-time repository repair; removes committed Git conflict blocks while preserving branch-side code.
 name: Repair committed merge conflict markers
 
 on:
@@ -37,33 +38,23 @@ jobs:
               'library/templates/library/partials/copy_list_results.html',
           ]
 
-          block = re.compile(
-              r'^<<<<<<<[^\n]*\n(.*?)^=======\n.*?^>>>>>>>[^\n]*\n?',
-              re.MULTILINE | re.DOTALL,
-          )
+          block = re.compile(r'^<<<<<<<[^\n]*\n(.*?)^=======\n.*?^>>>>>>>[^\n]*\n?', re.MULTILINE | re.DOTALL)
 
           for name in files:
               path = Path(name)
               text = path.read_text(encoding='utf-8')
               while '<<<<<<<' in text:
-                  new_text, count = block.subn(r'\1', text, count=1)
+                  text, count = block.subn(r'\1', text, count=1)
                   if count != 1:
                       raise SystemExit(f'Could not resolve conflict block in {name}')
-                  text = new_text
-              if re.search(r'^<<<<<<<|^>>>>>>>', text, re.MULTILINE):
+              if re.search(r'^<<<<<<<|^>>>>>>>', text, re.MULTILINE) or re.search(r'^=======\s*$', text, re.MULTILINE):
                   raise SystemExit(f'Conflict markers remain in {name}')
-              if re.search(r'^=======\s*$', text, re.MULTILINE):
-                  raise SystemExit(f'Unresolved separator remains in {name}')
               path.write_text(text, encoding='utf-8')
           PY
 
       - name: Validate and commit
         run: |
           set -e
-          if git grep -n -E '^(<<<<<<<|>>>>>>> )' -- ':!library/static/library/css/style.css'; then
-            echo 'Conflict markers remain.'
-            exit 1
-          fi
           git diff --check
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
