@@ -22,18 +22,20 @@ jobs:
       - name: Restore clean template versions
         run: |
           set -e
-          git fetch origin 255e80b --no-tags
-          git checkout 255e80b -- \
-            library/templates/library/book_copy_list.html \
-            library/templates/library/book_detail.html \
-            library/templates/library/book_volume_detail.html \
-            library/templates/library/partials/book_form_fields.html \
-            library/templates/library/partials/borrower_delete_modal.html \
-            library/templates/library/partials/borrower_detail_modal.html \
-            library/templates/library/partials/borrower_form_modal.html \
-            library/templates/library/partials/copy_detail_modal.html \
-            library/templates/library/partials/copy_list_results.html
-          ! git grep -n -E '^(<<<<<<<|>>>>>>> )' -- ':!library/static/library/css/style.css'
+          git fetch origin main --no-tags
+          git show 255e80b:library/templates/library/book_copy_list.html > library/templates/library/book_copy_list.html
+          git show 255e80b:library/templates/library/book_detail.html > library/templates/library/book_detail.html
+          git show 255e80b:library/templates/library/book_volume_detail.html > library/templates/library/book_volume_detail.html
+          git show 255e80b:library/templates/library/partials/book_form_fields.html > library/templates/library/partials/book_form_fields.html
+          git show 255e80b:library/templates/library/partials/borrower_delete_modal.html > library/templates/library/partials/borrower_delete_modal.html
+          git show 255e80b:library/templates/library/partials/borrower_detail_modal.html > library/templates/library/partials/borrower_detail_modal.html
+          git show 255e80b:library/templates/library/partials/borrower_form_modal.html > library/templates/library/partials/borrower_form_modal.html
+          git show 255e80b:library/templates/library/partials/copy_detail_modal.html > library/templates/library/partials/copy_detail_modal.html
+          git show 255e80b:library/templates/library/partials/copy_list_results.html > library/templates/library/partials/copy_list_results.html
+          if git grep -n -E '^(<<<<<<<|>>>>>>> )' -- ':!library/static/library/css/style.css'; then
+            echo 'Conflict markers remain.'
+            exit 1
+          fi
 
       - name: Commit repaired templates and remove this workflow
         run: |
