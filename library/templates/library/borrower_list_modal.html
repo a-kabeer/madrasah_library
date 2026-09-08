@@ -1,0 +1,54 @@
+{% extends layout %}
+{% load i18n %}
+
+{% block title %}{% translate "Borrowers" %} | {{ branding.display_name }}{% endblock %}
+{% block page_title %}{% translate "Borrowers" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <div>
+            <h2 class="fw-bold mb-1">{% translate "Borrowers" %}</h2>
+            <p class="text-body-secondary mb-0">{% translate "Who borrows from the library, and what they are holding." %}</p>
+        </div>
+        <a href="{% url 'borrower_add' %}" class="btn btn-primary" data-form-modal hx-get="{% url 'borrower_add' %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML">
+            <i class="bi bi-plus-lg me-1"></i>{% translate "Add Borrower" %}
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4"><div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-12 col-lg-4"><label for="borrowerSearch" class="form-label fw-semibold">{% translate "Search" %}</label><input id="borrowerSearch" type="search" class="form-control" name="search" value="{{ search }}" placeholder="{% translate 'Name, phone, registration no or department...' %}"></div>
+            <div class="col-6 col-lg-2"><label for="borrowerType" class="form-label fw-semibold">{% translate "Type" %}</label><select id="borrowerType" name="borrower_type" class="form-select"><option value="">{% translate "Any type" %}</option>{% for option in borrower_types %}<option value="{{ option }}" {% if borrower_type == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></div>
+            <div class="col-6 col-lg-2"><label for="borrowerStatus" class="form-label fw-semibold">{% translate "Status" %}</label><select id="borrowerStatus" name="status" class="form-select"><option value="">{% translate "All" %}</option><option value="active" {% if active_status == 'active' %}selected{% endif %}>{% translate "Active" %}</option><option value="inactive" {% if active_status == 'inactive' %}selected{% endif %}>{% translate "Inactive" %}</option></select></div>
+            <div class="col-6 col-lg-2"><label for="borrowerActivity" class="form-label fw-semibold">{% translate "Loans" %}</label><select id="borrowerActivity" name="activity" class="form-select"><option value="">{% translate "Any" %}</option><option value="has_loans" {% if activity == 'has_loans' %}selected{% endif %}>{% translate "Has active loans" %}</option><option value="no_loans" {% if activity == 'no_loans' %}selected{% endif %}>{% translate "No active loans" %}</option><option value="overdue" {% if activity == 'overdue' %}selected{% endif %}>{% translate "Has overdue items" %}</option><option value="no_overdue" {% if activity == 'no_overdue' %}selected{% endif %}>{% translate "Nothing overdue" %}</option></select></div>
+            <div class="col-6 col-lg-2 d-flex gap-2"><button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>{% translate "Search" %}</button>{% if search or borrower_type or active_status or activity %}<a href="{% url 'borrower_list' %}" class="btn btn-outline-secondary" aria-label="{% translate 'Clear filters' %}"><i class="bi bi-x-lg"></i></a>{% endif %}</div>
+        </form>
+    </div></div>
+
+    {% if overdue_borrowers and activity != 'overdue' %}<a href="?activity=overdue" class="alert alert-danger d-flex align-items-center gap-2 text-decoration-none mb-4"><i class="bi bi-clock-history" aria-hidden="true"></i><span>{% blocktranslate trimmed count n=overdue_borrowers %}<strong>{{ n }}</strong> borrower has something overdue.{% plural %}<strong>{{ n }}</strong> borrowers have something overdue.{% endblocktranslate %}</span><i class="bi bi-chevron-right ms-auto" aria-hidden="true"></i></a>{% endif %}
+
+    <p class="text-body-secondary mb-3">{% blocktranslate trimmed count n=paginator.count %}Found <strong>{{ n }}</strong> borrower.{% plural %}Found <strong>{{ n }}</strong> borrowers.{% endblocktranslate %}</p>
+
+    <div class="card shadow-sm border-0"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+        <thead class="table-secondary"><tr><th>{% translate "Borrower" %}</th><th>{% translate "Registration No" %}</th><th>{% translate "Type" %}</th><th>{% translate "On loan" %}</th><th>{% translate "Status" %}</th><th class="text-end">{% translate "Actions" %}</th></tr></thead>
+        <tbody>
+        {% for borrower in borrowers %}
+            <tr tabindex="0" role="button" class="book-row" data-form-modal hx-get="{% url 'borrower_detail' borrower.id %}?modal=1" hx-target="#globalModal .modal-body" hx-swap="innerHTML" aria-label="{% translate 'Open' %} {{ borrower.name }}">
+                <td><span class="fw-semibold">{{ borrower.name }}</span><span class="d-block small text-body-secondary">{{ borrower.phone }}{% if borrower.department %} · {{ borrower.department }}{% endif %}</span></td>
+                <td class="text-body-secondary">{{ borrower.registration_no|default:'—' }}</td>
+                <td>{{ borrower.borrower_type }}</td>
+                <td>{% if borrower.overdue_loans %}<span class="badge text-bg-danger">{{ borrower.overdue_loans }} {% translate "overdue" %}</span>{% endif %}{% if borrower.active_loans %}<span class="badge text-bg-info">{{ borrower.active_loans }} {% translate "out" %}</span>{% elif not borrower.overdue_loans %}—{% endif %}</td>
+                <td>{% if borrower.is_active %}<span class="badge text-bg-success">{% translate "Active" %}</span>{% else %}<span class="badge text-bg-secondary">{% translate "Inactive" %}</span>{% endif %}</td>
+                <td class="text-end"><div class="d-inline-flex gap-1" data-row-actions>
+                    <a href="{% url 'borrower_detail' borrower.id %}" class="btn btn-sm btn-outline-secondary" data-form-modal hx-get="{% url 'borrower_detail' borrower.id %}?modal=1" hx-target="#globalModal .modal-body" hx-swap="innerHTML" aria-label="{% translate 'Open' %}"><i class="bi bi-eye"></i></a>
+                    <a href="{% url 'borrower_edit' borrower.id %}" class="btn btn-sm btn-outline-warning" data-form-modal hx-get="{% url 'borrower_edit' borrower.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" aria-label="{% translate 'Edit' %}"><i class="bi bi-pencil"></i></a>
+                    {% if can_delete %}<a href="{% url 'borrower_delete' borrower.id %}" class="btn btn-sm btn-outline-danger" data-form-modal hx-get="{% url 'borrower_delete' borrower.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" aria-label="{% translate 'Delete' %}"><i class="bi bi-trash"></i></a>{% endif %}
+                </div></td>
+            </tr>
+        {% empty %}<tr><td colspan="6" class="text-center text-body-secondary py-5">{% translate "No borrowers found." %}</td></tr>{% endfor %}
+        </tbody>
+    </table></div></div>
+    {% include "library/partials/pagination.html" with page_obj=borrowers %}
+</div>
+{% endblock %}
