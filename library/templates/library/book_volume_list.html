@@ -14,7 +14,7 @@
     </div>
     <div class="card shadow-sm border-0 mb-4"><div class="card-body"><form method="get" class="row g-3 align-items-end">
         <div class="col-12 col-lg-5"><label for="volumeSearch" class="form-label fw-semibold">{% translate "Search" %}</label><input type="text" class="form-control" id="volumeSearch" name="search" value="{{ search }}" placeholder="{% translate 'Search book volumes...' %"></div>
-        <div class="col-12 col-lg-5"><label for="book" class="form-label fw-semibold">{% translate "Book" %}</label>{% if books|length > 5 %}<div class="input-group mb-2"><span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span><input type="search" class="form-control" data-combobox-search="book" placeholder="{% translate 'Search books...' %}" autocomplete="off" aria-controls="book"></div>{% endif %}<select class="form-select" name="book" id="book"{% if books|length > 5 %} data-combobox-select="book"{% endif %}><option value="">{% translate "All Books" %}</option>{% for book in books %}<option value="{{ book.id }}" {% if book_id == book.id|stringformat:"s" %}selected{% endif %}>{{ book.title }}</option>{% endfor %}</select>{% if books|length > 5 %}<div class="form-text">{% translate "Type to narrow the book choices." %}</div>{% endif %}</div>
+        <div class="col-12 col-lg-5"><label for="book" class="form-label fw-semibold">{% translate "Book" %}</label><select class="form-select" name="book" id="book"><option value="">{% translate "All Books" %}</option>{% for book in books %}<option value="{{ book.id }}" {% if book_id == book.id|stringformat:"s" %}selected{% endif %}>{{ book.title }}</option>{% endfor %}</select></div>
         <div class="col-12 col-lg-2 d-flex gap-2"><button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>{% translate "Search" %}</button>{% if search or book_id %}<a href="{% url 'book_volume_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i><span class="visually-hidden">{% translate "Clear" %}</span></a>{% endif %}</div>
     </form></div></div>
     {% if search or book_id %}<p class="text-body-secondary mb-3">{% blocktranslate trimmed count n=volumes.paginator.count %}Found <strong>{{ n }}</strong> volume.{% plural %}Found <strong>{{ n }}</strong> volumes.{% endblocktranslate %}</p>{% endif %}
@@ -26,30 +26,4 @@
     </tbody></table></div></div>
     {% include "library/_pagination.html" with page_obj=volumes %}
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-(function () {
-    function wireComboboxes(root) {
-        (root || document).querySelectorAll('[data-combobox-search]').forEach(function (input) {
-            if (input.dataset.comboboxReady === '1') return;
-            input.dataset.comboboxReady = '1';
-            var select = document.querySelector('[data-combobox-select="' + input.dataset.comboboxSearch + '"]');
-            if (!select) return;
-            input.value = '';
-            input.addEventListener('input', function () {
-                var needle = input.value.trim().toLocaleLowerCase();
-                Array.from(select.options).forEach(function (option) {
-                    if (!option.value) { option.hidden = false; return; }
-                    option.hidden = !!needle && option.textContent.toLocaleLowerCase().indexOf(needle) === -1;
-                });
-                if (select.selectedOptions.length && select.selectedOptions[0].hidden) select.value = '';
-            });
-        });
-    }
-    wireComboboxes(document);
-    document.body.addEventListener('htmx:afterSwap', function (event) { wireComboboxes(event.target); });
-})();
-</script>
 {% endblock %}
