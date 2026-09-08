@@ -33,6 +33,7 @@ from ..models import (
 
 from ..features import SUPER_ADMIN
 from ..permissions import feature_required, role_required
+from ..security import login_rate_limiter
 
 from .common import (
     DASHBOARD_CACHE_KEY,
@@ -48,6 +49,7 @@ from .common import (
 def login_view(request):
 
     error = None
+    rate_limited = False
 
     if request.user.is_authenticated:
         return redirect("dashboard")
@@ -56,22 +58,35 @@ def login_view(request):
         username = request.POST.get("username", "").strip()
         password = request.POST.get("password", "")
 
-        user = authenticate(request, username=username, password=password)
+        if login_rate_limiter.is_blocked(request, username):
+            rate_limited = True
+            error = "Too many failed login attempts. Please try again later."
+        else:
+            user = authenticate(request, username=username, password=password)
 
-        if user is not None:
-            login(request, user)
+            if user is not None:
+                login_rate_limiter.clear_username_failures(username)
+                login(request, user)
 
-            return redirect(safe_redirect_target(request, "dashboard"))
+                return redirect(safe_redirect_target(request, "dashboard"))
 
-        error = "Invalid username or password."
+            login_rate_limiter.record_failure(request, username)
+            error = "Invalid username or password."
 
-    return render(
+    response = render(
         request,
         "library/login.html",
         {
             "error": error,
+            "rate_limited": rate_limited,
         }
     )
+
+    if rate_limited:
+        response.status_code = 429
+        response["Retry-After"] = str(settings.LOGIN_RATE_LIMIT_WINDOW_SECONDS)
+
+    return response
 
 
 def logout_view(request):
