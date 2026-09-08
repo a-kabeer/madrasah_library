@@ -1,0 +1,63 @@
+{% load i18n %}
+
+<h5 class="modal-title" id="formModalLabel">{% translate "Edit Copy" %}</h5>
+
+<form method="post" action="{% url 'book_copy_edit' copy.id %}?modal=1" hx-post="{% url 'book_copy_edit' copy.id %}?modal=1" hx-swap="none">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.GET.next|default:'/library/book-copies/' }}">
+
+    {% if error_message %}
+        <div class="alert alert-danger" role="alert">{{ error_message }}</div>
+    {% endif %}
+
+    <div class="mb-3">
+        <label class="form-label fw-semibold">{% translate "Copy code" %}</label>
+        <input type="text" class="form-control" value="{{ copy.copy_code }}" readonly>
+        <div class="form-text">{% translate "Copy codes are fixed after creation." %}</div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label fw-semibold">{% translate "Book" %}</label>
+        <input type="text" class="form-control" value="{{ copy.volume.book.title }}" readonly>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label for="copyEditLocation" class="form-label fw-semibold">{% translate "Location" %}</label>
+            <select class="form-select" id="copyEditLocation" name="location" data-location-select
+                    hx-get="{% url 'shelf_list' %}" hx-vals='{"options":"1"}' hx-trigger="change"
+                    hx-target="#copyEditShelf" hx-include="this" required>
+                {% include "library/partials/location_options.html" with locations=locations selected_id=form_data.location_id %}
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label for="copyEditShelf" class="form-label fw-semibold">{% translate "Shelf" %}</label>
+            <select class="form-select" id="copyEditShelf" name="shelf" required>
+                {% include "library/partials/shelf_options.html" with shelves=shelves selected_id=form_data.shelf_id has_location=form_data.location_id %}
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label for="copyEditStatus" class="form-label fw-semibold">{% translate "Status" %}</label>
+            <select class="form-select" id="copyEditStatus" name="status" {% if is_issued %}disabled{% endif %}>
+                {% for status in statuses %}
+                    <option value="{{ status }}" {% if form_data.status == status %}selected{% endif %}>{{ status }}</option>
+                {% endfor %}
+            </select>
+            {% if is_issued %}<div class="form-text">{% translate "Issued copies are controlled by circulation." %}</div>{% endif %}
+        </div>
+        <div class="col-md-6">
+            <label for="copyEditAcquired" class="form-label fw-semibold">{% translate "Acquisition date" %}</label>
+            <input type="date" class="form-control" id="copyEditAcquired" name="acquisition_date" value="{{ form_data.acquisition_date }}">
+        </div>
+    </div>
+
+    <div class="mt-3">
+        <label for="copyEditNotes" class="form-label fw-semibold">{% translate "Notes" %}</label>
+        <textarea class="form-control" id="copyEditNotes" name="notes" rows="3">{{ form_data.notes }}</textarea>
+    </div>
+
+    <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1" aria-hidden="true"></i>{% translate "Save changes" %}</button>
+    </div>
+</form>
