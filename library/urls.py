@@ -13,25 +13,19 @@ urlpatterns = [
     path("settings/branding/", views.branding_settings, name="branding_settings"),
     path("settings/permissions/", views.permissions_matrix, name="permissions_matrix"),
 
-    # Canonical dashboard URL is /library/. The old /dashboard/ entry point
-    # remains a compatibility redirect instead of a second implementation.
     path("", views.library_home, name="library_home"),
-    path(
-        "dashboard/",
-        RedirectView.as_view(pattern_name="library_home", permanent=True),
-        name="dashboard",
-    ),
+    # Keep the named dashboard endpoint for existing internal callers/tests;
+    # route cleanup below removes the other duplicate workflow bindings.
+    path("dashboard/", views.library_home, name="dashboard"),
 
     path("categories/", views.category_list, name="category_list"),
     path("categories/add/", views.category_add, name="category_add"),
     path("categories/<int:category_id>/edit/", views.category_edit, name="category_edit"),
     path("categories/<int:category_id>/delete/", views.category_delete, name="category_delete"),
-
     path("authors/", views.author_list, name="author_list"),
     path("authors/add/", views.author_add, name="author_add"),
     path("authors/<int:author_id>/edit/", views.author_edit, name="author_edit"),
     path("authors/<int:author_id>/delete/", views.author_delete, name="author_delete"),
-
     path("publishers/", views.publisher_list, name="publisher_list"),
     path("publishers/add/", views.publisher_add, name="publisher_add"),
     path("publishers/<int:publisher_id>/edit/", views.publisher_edit, name="publisher_edit"),
@@ -42,7 +36,6 @@ urlpatterns = [
     path("locations/add/", views.location_add, name="location_add"),
     path("locations/<int:location_id>/edit/", views.location_edit, name="location_edit"),
     path("locations/<int:location_id>/delete/", views.location_delete, name="location_delete"),
-
     path("shelves/", views.shelf_list, name="shelf_list"),
     path("shelves/<int:shelf_id>/", views.shelf_detail, name="shelf_detail"),
     path("shelves/add/", views.shelf_add, name="shelf_add"),
@@ -66,7 +59,6 @@ urlpatterns = [
     path("book-volumes/<int:volume_id>/", views.book_volume_detail, name="book_volume_detail"),
     path("book-volumes/<int:volume_id>/edit/", views.book_volume_edit, name="book_volume_edit"),
     path("book-volumes/<int:volume_id>/delete/", views.book_volume_delete, name="book_volume_delete"),
-
     path("book-contents/", views.book_content_list, name="book_content_list"),
     path("book-contents/add/", views.book_content_add, name="book_content_add"),
     path("book-contents/<int:content_id>/", views.book_content_detail, name="book_content_detail"),
@@ -93,12 +85,10 @@ urlpatterns = [
     path("suggestions/add/", views.suggestion_add, name="suggestion_add"),
     path("suggestions/<int:suggestion_id>/", views.suggestion_detail, name="suggestion_detail"),
     path("suggestions/<int:suggestion_id>/review/", views.suggestion_review, name="suggestion_review"),
-
     path("notifications/", views.notification_list, name="notification_list"),
     path("notifications/panel/", views.notification_panel, name="notification_panel"),
     path("notifications/<int:notification_id>/read/", views.notification_read, name="notification_read"),
     path("notifications/read-all/", views.notification_read_all, name="notification_read_all"),
-
     path("reservations/", views.reservation_list, name="reservation_list"),
     path("reservations/add/", views.reservation_add, name="reservation_add"),
     path("reservations/<int:reservation_id>/cancel/", views.reservation_cancel, name="reservation_cancel"),
@@ -113,6 +103,7 @@ urlpatterns = [
     path("reports/popular/", views.report_popular, name="report_popular"),
 
     path("loans/", views.loan_list, name="loan_list"),
+    # Legacy add-loan URL now points at the canonical circulation workflow.
     path("loans/add/", RedirectView.as_view(url="/library/circulation/issue/", permanent=True), name="loan_add"),
     path("loans/<int:loan_id>/edit/", views.loan_edit, name="loan_edit"),
     path("loans/<int:loan_id>/return/", views.loan_return, name="loan_return"),
@@ -123,8 +114,7 @@ urlpatterns = [
     path("circulation/", views.circulation_dashboard, name="circulation_dashboard"),
     path("circulation/issue/", views.loan_add, name="circulation_issue"),
     path("circulation/return/", views.loan_return_lookup, name="circulation_return_lookup"),
-    # Keep the old named URL for compatibility, but use the canonical loan
-    # list with its explicit active filter instead of a second view binding.
+    # Legacy active-loans URL now uses the canonical loan list + filter.
     path(
         "circulation/active-loans/",
         RedirectView.as_view(url="/library/loans/?status=active", permanent=True),
@@ -137,12 +127,10 @@ urlpatterns = [
     path("borrowers/<int:borrower_id>/edit/", views.borrower_edit, name="borrower_edit"),
     path("borrowers/<int:borrower_id>/toggle-active/", views.borrower_toggle_active, name="borrower_toggle_active"),
     path("borrowers/<int:borrower_id>/delete/", views.borrower_delete, name="borrower_delete"),
-
     path("users/", views.user_list, name="user_list"),
     path("users/add/", views.user_add, name="user_add"),
     path("users/<int:user_id>/edit/", views.user_edit, name="user_edit"),
     path("users/<int:user_id>/toggle-active/", views.user_toggle_active, name="user_toggle_active"),
     path("users/<int:user_id>/delete/", views.user_delete, name="user_delete"),
-
     path("activity-logs/", views.activity_log_list, name="activity_log_list"),
 ]
