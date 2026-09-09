@@ -259,13 +259,10 @@
                         <tr
                             data-loan-row
                             data-loan-url="{% url 'loan_detail' loan.id %}?modal=1"
-                            role="button"
-                            tabindex="0"
-                            aria-label="{% blocktranslate with code=loan.copy.copy_code %}Open loan of {{ code }}{% endblocktranslate %}"
                             style="cursor: pointer;"
                         >
 
-                            <td class="text-nowrap"><span class="copy-code">{{ loan.copy.copy_code }}</span></td>
+                            <td class="text-nowrap"><a href="{% url 'loan_detail' loan.id %}?modal=1" class="text-decoration-none" data-form-modal hx-get="{% url 'loan_detail' loan.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"><span class="copy-code">{{ loan.copy.copy_code }}</span></a></td>
 
                             <td class="fw-semibold">{{ loan.copy.volume.book.title }}</td>
 

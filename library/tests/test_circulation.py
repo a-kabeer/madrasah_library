@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from django.test import TestCase
 from django.urls import reverse
 
-from library.models import BookCopy, Loan, Borrower
+from library.models import Loan
 from library.tests.helpers import (
     make_user, make_copy, make_borrower, make_loan, make_author, make_book, make_volume,
 )

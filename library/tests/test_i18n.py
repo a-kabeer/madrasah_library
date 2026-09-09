@@ -356,7 +356,6 @@ class MarkupTests(LanguageTestCase):
                 if not name.endswith(".html"):
                     continue
                 path = os.path.join(dirpath, name)
-                import io
                 if pattern.search(io.open(path, encoding="utf-8").read()):
                     offenders.append(path)
 

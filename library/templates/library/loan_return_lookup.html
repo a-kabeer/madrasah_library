@@ -62,9 +62,9 @@ error_message, chosen, chosen_ids, return_date, notes, today.
             {% endcomment %}
             <form method="get" action="{% url 'circulation_return_lookup' %}" class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-body">
-                    <h5 class="mb-0 fw-bold">
+                    <h3 class="h5 mb-0 fw-bold">
                         <i class="bi bi-upc-scan me-2" aria-hidden="true"></i>{% translate "1. Find the book" %}
-                    </h5>
+                    </h3>
                 </div>
                 <div class="card-body">
 
@@ -129,9 +129,9 @@ error_message, chosen, chosen_ids, return_date, notes, today.
             {% if loan %}
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <h5 class="mb-0 fw-bold">
+                    <h3 class="h5 mb-0 fw-bold">
                         <i class="bi bi-check2-circle me-2" aria-hidden="true"></i>{% translate "Out on loan" %}
-                    </h5>
+                    </h3>
                     <span class="copy-code">{{ loan.copy.copy_code }}</span>
                 </div>
                 <div class="card-body">
@@ -216,9 +216,9 @@ error_message, chosen, chosen_ids, return_date, notes, today.
             {% if matches %}
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <h5 class="mb-0 fw-bold">
+                    <h3 class="h5 mb-0 fw-bold">
                         <i class="bi bi-search me-2" aria-hidden="true"></i>{% translate "Out on loan now" %}
-                    </h5>
+                    </h3>
                     <span class="text-body-secondary small">
                         {% if more_matches %}
                             {% blocktranslate with shown=lookup_limit %}first {{ shown }} — narrow the search{% endblocktranslate %}
@@ -304,9 +304,9 @@ error_message, chosen, chosen_ids, return_date, notes, today.
                 {% endfor %}
 
                 <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <h5 class="mb-0 fw-bold">
+                    <h3 class="h5 mb-0 fw-bold">
                         <i class="bi bi-arrow-return-left me-2" aria-hidden="true"></i>{% translate "2. Take them back" %}
-                    </h5>
+                    </h3>
                     {% if chosen %}
                         <span class="badge text-bg-secondary">
                             {% blocktranslate trimmed count n=chosen|length %}

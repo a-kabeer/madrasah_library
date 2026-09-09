@@ -10,7 +10,12 @@
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
+-- `SET transaction_timeout = 0;` was here. pg_dump 18 writes it; the
+-- parameter did not exist before PostgreSQL 17, so on the 16 server this
+-- schema is documented against it is an error - and with ON_ERROR_STOP,
+-- which is what anyone loading a schema should use, the whole file aborts
+-- on line 13. It is the parameter's own default, so dropping the line
+-- changes nothing except that the file loads.
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -22,6 +27,24 @@ SET row_security = off;
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
+--
+-- The trigram search indexes further down need this, and pg_dump does not
+-- write it when the extension lives outside the dumped schema. Without it
+-- a fresh database gets 20 tables, 62 of the 69 indexes, and seven silent
+-- failures - every one of them a search index, so every list search
+-- sequentially scans and nothing says why. Verified against an empty
+-- PostgreSQL 16: `operator class "public.gin_trgm_ops" does not exist`,
+-- seven times.
+--
+-- Creating an extension needs a superuser (or rds_superuser, or Render's
+-- provided role, all of which have it) the first time only; `IF NOT
+-- EXISTS` makes re-running the file safe.
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 
 --
 -- Name: activity_logs; Type: TABLE; Schema: public; Owner: postgres

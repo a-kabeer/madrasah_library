@@ -157,14 +157,14 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = "en"
 LANGUAGES = [("en", "English"), ("ur", "اردو"), ("ar", "العربية")]
 LOCALE_PATHS = [BASE_DIR / "locale"]
-FORMAT_MODULE_PATH = ["config.formats"]
-# Wire up config/formats/. The `ur` and `ar` modules there have existed
-# since the app was made translatable - they keep the digits Latin and the
-# date order the same in every language, because a copy code read off a
-# spine has to look the same on screen - but nothing pointed at them, so
-# they had never taken effect: Django only consults format modules named
-# by this setting. The `en` module beside them is what makes a date printed
-# with no `|date` filter match the 37 that carry one.
+# config/formats/. The `ur` and `ar` modules there have existed since the
+# app was made translatable, and this setting with them: they keep the
+# digits Latin and the date order the same in every language, because a
+# copy code read off a spine has to look the same on screen. What was
+# missing was the `en` module beside them - so English fell through to
+# Django's own `N j, Y` while Urdu and Arabic already used `j M Y`, and the
+# 17 places that print a date with no `|date` filter disagreed with the 37
+# that carry one.
 FORMAT_MODULE_PATH = ["config.formats"]
 
 TIME_ZONE = "UTC"
@@ -186,8 +186,90 @@ COVER_IMAGE_MAX_BYTES = 2 * 1024 * 1024
 LOGO_MAX_BYTES = 1 * 1024 * 1024
 FAVICON_MAX_BYTES = 256 * 1024
 
+# Mail.
+#
+# Nothing in this application sends any yet - there is no password-reset
+# flow, and the notifications are in-app rows rather than messages - so the
+# console backend is the honest default for development: a message would
+# appear in the terminal rather than vanishing.
+#
+# It is not an honest default for production, though, and `manage.py check
+# --deploy` says so with an *error* rather than a warning (mail.E001): with
+# DEBUG off, a console backend means anything sent goes to stdout and
+# nobody is told. So the backend is configurable, and setting EMAIL_HOST in
+# the environment is enough to switch it - which is also what stops that
+# check failing on a real deployment.
+#
+# The host is read into a lowercase name deliberately: Django 6 refuses to
+# start if the deprecated top-level EMAIL_* settings are defined alongside
+# MAILERS, and a settings module exports every uppercase name it defines.
+email_host = config("EMAIL_HOST", default="")
+
 MAILERS = {
     "default": {
-        "BACKEND": "django.core.mail.backends.console.EmailBackend",
+        "BACKEND": (
+            "django.core.mail.backends.smtp.EmailBackend"
+            if email_host
+            else "django.core.mail.backends.console.EmailBackend"
+        ),
+        "HOST": email_host,
+        "PORT": config("EMAIL_PORT", default=587, cast=int),
+        "USER": config("EMAIL_HOST_USER", default=""),
+        "PASSWORD": config("EMAIL_HOST_PASSWORD", default=""),
+        "USE_TLS": config("EMAIL_USE_TLS", default=True, cast=bool),
+    },
+}
+
+DEFAULT_FROM_EMAIL = config(
+    "DEFAULT_FROM_EMAIL", default="madrasah-library@localhost"
+)
+
+
+# Logging.
+#
+# Django's own default configuration sends `django.request` errors to
+# `mail_admins` and puts nothing on the console unless DEBUG is on. With
+# DEBUG off, no ADMINS and no mailer - which is this project's production
+# shape - an unhandled 500 goes nowhere at all: the visitor gets the error
+# page and the traceback is discarded. That is not a thing to discover
+# while trying to work out why a librarian cannot issue a book.
+#
+# So: everything to stderr, which is what Render, systemd and `docker logs`
+# all collect, at a level the environment can raise. `propagate` off on
+# `django` so this replaces Django's handlers rather than adding to them.
+LOG_LEVEL = config("LOG_LEVEL", default="INFO")
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "plain": {
+            "format": "{asctime} {levelname} {name} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "stderr": {
+            "class": "logging.StreamHandler",
+            "formatter": "plain",
+        },
+    },
+    "root": {
+        "handlers": ["stderr"],
+        "level": LOG_LEVEL,
+    },
+    "loggers": {
+        # The one that carries a 500's traceback.
+        "django.request": {
+            "handlers": ["stderr"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        # Every SQL statement, and only when asked for by name.
+        "django.db.backends": {
+            "handlers": ["stderr"],
+            "level": config("SQL_LOG_LEVEL", default="WARNING"),
+            "propagate": False,
+        },
     },
 }

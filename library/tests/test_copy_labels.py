@@ -17,7 +17,6 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from library import barcode
-from library.models import BookCopy
 
 from .helpers import (
     main_content,

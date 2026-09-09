@@ -64,10 +64,10 @@ none.
       carry them raw.
     {% endcomment %}
 
-    <link
+    {% if branding %}<link
         rel="icon"
         href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='7'%20fill='%23{{ branding.display_primary_color|slice:'1:' }}'/%3E%3Ctext%20x='16'%20y='23'%20font-size='19'%20font-weight='bold'%20font-family='sans-serif'%20text-anchor='middle'%20fill='%23{{ branding.display_on_primary|slice:'1:' }}'%3E{{ branding.display_name|first|upper }}%3C/text%3E%3C/svg%3E"
-    >
+    >{% endif %}
 
     <link
         {% comment %}
@@ -105,6 +105,7 @@ none.
                 --brand-secondary: {{ branding.display_secondary_color }};
                 --brand-accent: {{ branding.display_accent_color }};
                 --bs-primary-rgb: {{ branding.display_primary_rgb }};
+                --brand-primary-rgb-on-dark: {{ branding.display_primary_rgb_on_dark }};
                 --brand-on-primary: {{ branding.display_on_primary }};
             }
         </style>

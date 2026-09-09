@@ -83,11 +83,17 @@
                                     class="book-row"
                                     data-copy-row
                                     data-copy-url="{% url 'book_copy_detail' copy.id %}?modal=1"
-                                    tabindex="0"
-                                    role="button"
-                                    aria-label="Show details for copy {{ copy.copy_code }}"
                                 >
-                                    <td class="fw-semibold">{{ copy.copy_code }}</td>
+                                    <td class="fw-semibold">
+                                        <a
+                                            href="{% url 'book_copy_detail' copy.id %}?modal=1"
+                                            class="text-decoration-none"
+                                            data-form-modal
+                                            hx-get="{% url 'book_copy_detail' copy.id %}?modal=1"
+                                            hx-target="#formModal .modal-body"
+                                            hx-swap="innerHTML"
+                                        >{{ copy.copy_code }}</a>
+                                    </td>
                                     <td>
                                         {% if copy.shelf %}
                                             {{ copy.shelf.location.name }}

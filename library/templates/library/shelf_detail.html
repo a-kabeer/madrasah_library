@@ -67,9 +67,9 @@
     {% if titles %}
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header bg-body">
-                <h5 class="mb-0 fw-bold">
+                <h3 class="h5 mb-0 fw-bold">
                     <i class="bi bi-book me-2"></i>{% translate "Books on this shelf" %}
-                </h5>
+                </h3>
             </div>
             <div class="card-body">
                 <div class="d-flex flex-wrap gap-2">
@@ -114,9 +114,9 @@
     <!-- Copies -->
     <div class="card shadow-sm border-0">
         <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <h5 class="mb-0 fw-bold">
+            <h3 class="h5 mb-0 fw-bold">
                 <i class="bi bi-collection me-2"></i>{% translate "Copies" %}
-            </h5>
+            </h3>
             <div class="d-flex flex-wrap gap-2">
                 {% comment %}
                   The copy list, filtered to this shelf, is where selecting
@@ -155,11 +155,8 @@
                             class="book-row"
                             data-copy-row
                             data-copy-url="{% url 'book_copy_detail' copy.id %}?modal=1"
-                            tabindex="0"
-                            role="button"
-                            aria-label="Show details for copy {{ copy.copy_code }}"
                         >
-                            <td class="fw-semibold">{{ copy.copy_code }}</td>
+                            <td class="fw-semibold"><a href="{% url 'book_copy_detail' copy.id %}?modal=1" class="text-decoration-none" data-form-modal hx-get="{% url 'book_copy_detail' copy.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML">{{ copy.copy_code }}</a></td>
                             <td>{{ copy.volume.book.title }}</td>
                             <td class="text-body-secondary small">
                                 {% if copy.volume.volume_number == 1 and not copy.volume.title %}

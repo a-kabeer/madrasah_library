@@ -1395,23 +1395,23 @@ document.addEventListener(
             });
 
 
-            /* Rows carry role="button" and tabindex, so honour the keys a
-               button would. */
-            document.addEventListener("keydown", function (e) {
+            /* No keyboard handler here, deliberately.
 
-                if (e.key !== "Enter" && e.key !== " ") {
-                    return;
-                }
+               The rows used to carry role="button" and tabindex="0", and
+               this listener honoured Enter and Space on them. That markup
+               was invalid: a widget-role element may not contain focusable
+               descendants, and every one of these rows contains the Edit
+               and Delete buttons - axe-core reported it as
+               `nested-interactive`, serious, on twelve pages. A screen
+               reader was being told each row was a button and then finding
+               buttons inside it.
 
-                var row = rowFor(e.target);
-
-                if (!row) {
-                    return;
-                }
-
-                e.preventDefault();
-                open(row);
-            });
+               So the row is a row again, and the keyboard path is a real
+               link in its first cell pointing at the same dialog. That is
+               what a keyboard or a screen reader follows; the click
+               handler above is a convenience for the mouse, widening the
+               target to the whole row. `rowFor` already ignores anything
+               inside a link, so the two never both fire. */
 
         })();
 

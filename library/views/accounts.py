@@ -133,6 +133,19 @@ def profile_view(request):
             # Keep the current session valid after changing our own password.
             update_session_auth_hash(request, request.user)
 
+            # The log records an Admin resetting somebody else's password
+            # (`user_edit` below) and did not record this - somebody
+            # changing their own. That is the half a question about a
+            # compromised account actually starts from, and it is the one
+            # write in the application that was not in the audit trail.
+            create_activity_log(
+                user=request.user,
+                action="UPDATE",
+                entity_type="User",
+                entity_id=request.user.id,
+                description=f"{request.user.username} changed their password",
+            )
+
             success = "Password updated successfully."
 
     return render(

@@ -204,16 +204,13 @@ and history behaviour are inherited from #bookResults in book_list.html.
                             class="book-row"
                             data-book-row
                             data-book-url="{% url 'book_detail' book.id %}?modal=1"
-                            tabindex="0"
-                            role="button"
-                            aria-label="Show details for {{ book.title }}"
                             {% if book.cover_image %}
                                 data-cover-url="{{ book.cover_image.url }}"
                                 data-cover-title="{{ book.title }}"
                             {% endif %}
                         >
 
-                            <td class="fw-semibold">{{ book.title }}</td>
+                            <td class="fw-semibold"><a href="{% url 'book_detail' book.id %}?modal=1" class="text-decoration-none" data-form-modal hx-get="{% url 'book_detail' book.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML">{{ book.title }}</a></td>
 
                             <td>{{ book.author.name }}</td>
 

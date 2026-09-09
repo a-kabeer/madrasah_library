@@ -96,9 +96,16 @@
 
     {% if branding.favicon %}
         <link rel="icon" href="{{ branding.favicon.url }}">
-    {% else %}
+    {% elif branding %}
 
         {% comment %}
+          `{% elif branding %}`, not `{% else %}`: Django renders 500.html
+          with `template.render()` and no request, so no context processor
+          runs and `branding` is undefined. Everything inherited from
+          base.html is guarded for that, and this has to be too - without
+          the guard the page emits `fill='%23'` and an empty letter. The
+          500 page names no icon, which is the one place that is right.
+
           No upload, so a generated one rather than nothing. A browser asks
           for /favicon.ico by itself when a page names no icon, and that is
           a 404 on every page load of every deployment - visible in the
@@ -181,6 +188,15 @@
                 /* Bootstrap composes alpha from the -rgb channels, which CSS
                    cannot derive from a hex value. */
                 --bs-primary-rgb: {{ branding.display_primary_rgb }};
+
+                /* The same colour lifted towards white until it is legible
+                   on the dark theme's near-black ground. A brand colour is
+                   chosen against a light page, and on the dark one it is
+                   often unreadable - the default indigo comes to 2.99:1
+                   where WCAG AA wants 4.5. The dark block in style.css
+                   reads this for links and the outline buttons that borrow
+                   the link colour. */
+                --brand-primary-rgb-on-dark: {{ branding.display_primary_rgb_on_dark }};
 
                 /* Chosen for contrast against the primary colour, so a pale
                    brand colour does not leave white-on-white text. */

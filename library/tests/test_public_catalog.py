@@ -32,7 +32,7 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
-from library.models import Book, Category, Publisher
+from library.models import Book
 
 from .helpers import (
     make_author,

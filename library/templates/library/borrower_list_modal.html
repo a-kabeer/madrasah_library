@@ -26,8 +26,8 @@
         <thead class="table-secondary"><tr><th>{% translate "Borrower" %}</th><th>{% translate "Registration No" %}</th><th>{% translate "Type" %}</th><th>{% translate "On loan" %}</th><th>{% translate "Status" %}</th><th class="text-end">{% translate "Actions" %}</th></tr></thead>
         <tbody>
         {% for borrower in borrowers %}
-            <tr tabindex="0" role="button" class="book-row" data-book-row data-book-url="{% url 'borrower_detail' borrower.id %}?modal=1" aria-label="{% translate 'Open' %} {{ borrower.name }}">
-                <td><span class="fw-semibold">{{ borrower.name }}</span><span class="d-block small text-body-secondary">{{ borrower.phone }}{% if borrower.department %} · {{ borrower.department }}{% endif %}</span></td>
+            <tr class="book-row" data-book-row data-book-url="{% url 'borrower_detail' borrower.id %}?modal=1">
+                <td><a href="{% url 'borrower_detail' borrower.id %}?modal=1" class="fw-semibold text-decoration-none" data-form-modal hx-get="{% url 'borrower_detail' borrower.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML">{{ borrower.name }}</a><span class="d-block small text-body-secondary">{{ borrower.phone }}{% if borrower.department %} · {{ borrower.department }}{% endif %}</span></td>
                 <td class="text-body-secondary">{{ borrower.registration_no|default:'—' }}</td>
                 <td>{{ borrower.borrower_type }}</td>
                 <td>{% if borrower.overdue_loans %}<span class="badge text-bg-danger">{{ borrower.overdue_loans }} {% translate "overdue" %}</span>{% endif %}{% if borrower.active_loans %}<span class="badge text-bg-info">{{ borrower.active_loans }} {% translate "out" %}</span>{% elif not borrower.overdue_loans %}—{% endif %}</td>

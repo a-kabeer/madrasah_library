@@ -1,9 +1,10 @@
+import re
 from datetime import date, timedelta
 
 from django.test import TestCase
 from django.urls import reverse
 
-from library.models import BookCopy, Loan
+from library.models import Loan
 from library.tests.helpers import (
     make_author,
     make_book,
@@ -390,10 +391,32 @@ class LoanListRowTests(TestCase):
         )
 
     def test_the_row_is_reachable_from_the_keyboard(self):
-        body = self.body()
+        """Through a real link in the first cell, not through the row.
 
-        self.assertIn('role="button"', body)
-        self.assertIn('tabindex="0"', body)
+        The row used to carry `role="button"` and `tabindex="0"`, which was
+        invalid markup: an element with a widget role may not contain
+        focusable descendants, and this row contains Renew. axe-core
+        reported it as `nested-interactive` on twelve pages - a screen
+        reader was told the row was a button and then found a button inside
+        it. So the keyboard path is an anchor to the same dialog, which is
+        what a keyboard and a screen reader both already know how to use.
+        """
+
+        body = self.body()
+        opens_the_loan = "%s?modal=1" % reverse(
+            "loan_detail", args=[self.loan.id])
+
+        self.assertNotIn('role="button"', body)
+        self.assertNotIn('tabindex="0"', body)
+
+        # An <a href> to the dialog, carrying the modal wiring, inside the
+        # row - so Tab reaches it and Enter opens the same thing a click
+        # anywhere else in the row does.
+        self.assertRegex(
+            body,
+            r'<a[^>]*href="%s"[^>]*data-form-modal' % re.escape(
+                opens_the_loan),
+        )
 
     def test_the_actions_are_excluded_from_the_row_click(self):
         """Renew must keep its own behaviour.

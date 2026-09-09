@@ -1,16 +1,19 @@
 """English formats, so an unfiltered date matches every filtered one.
 
 `config/formats/ur/formats.py` and `config/formats/ar/formats.py` have been
-here since the app was made translatable, and they say what they are for.
-This is their English sibling, and it exists because of the seventeen
-places that print a date with no `|date` filter at all.
+here since the app was made translatable, along with the
+`FORMAT_MODULE_PATH` that finds them, and they say what they are for. This
+is the English sibling they never had, and it exists because of the
+seventeen places that print a date with no `|date` filter at all.
 
 37 templates write `|date:"j M Y"` and 11 write `j M Y, H:i`. The
-seventeen wrote nothing, and fell through to Django's own `en` locale
-format, `N j, Y`. So a loan issued on 9 March read "9 Mar 2026" on the
-loans list and "March 9, 2026" on the book's own page, and the dashboard's
-activity feed disagreed with the activity log page it links to - which are
-one click apart.
+seventeen wrote nothing. In Urdu and Arabic that was already fine - those
+modules set `DATE_FORMAT = "j M Y"` - but English had no module here, so it
+fell through to Django's own `en` locale format, `N j, Y`. A loan issued on
+9 March therefore read "9 Mar 2026" on the loans list and "March 9, 2026"
+on the book's own page, and the dashboard's activity feed disagreed with
+the activity log page it links to, one click apart. The two right-to-left
+languages were the only ones getting it right.
 
 `DATE_FORMAT` in settings.py cannot fix that: formats are looked up in the
 active locale's format module before the settings fall-back, and Django

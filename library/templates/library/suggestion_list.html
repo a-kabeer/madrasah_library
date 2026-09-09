@@ -36,7 +36,7 @@
                 <thead class="table-secondary"><tr><th>{% translate "Title" %}</th><th>{% translate "Author" %}</th><th>{% translate "Suggested by" %}</th><th>{% translate "Asked" %}</th><th>{% translate "Status" %}</th></tr></thead>
                 <tbody>
                 {% for suggestion in suggestions %}
-                    <tr tabindex="0" role="button" class="book-row" data-book-row data-book-url="{% url 'suggestion_detail' suggestion.id %}?modal=1" aria-label="{% translate 'Open details for' %} {{ suggestion.title }}">
+                    <tr class="book-row" data-book-row data-book-url="{% url 'suggestion_detail' suggestion.id %}?modal=1">
                         <td><a href="{% url 'suggestion_detail' suggestion.id %}?modal=1" data-form-modal hx-get="{% url 'suggestion_detail' suggestion.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="fw-semibold text-decoration-none">{{ suggestion.title }}</a>{% if suggestion.isbn %}<span class="d-block small text-body-secondary">ISBN {{ suggestion.isbn }}</span>{% endif %}</td>
                         <td class="text-body-secondary">{{ suggestion.author_name|default:"—" }}</td>
                         <td class="text-body-secondary">{% if suggestion.suggested_by %}{{ suggestion.suggested_by.full_name }}{% else %}—{% endif %}</td>

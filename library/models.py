@@ -83,6 +83,83 @@ def readable_foreground(value):
     return "#000" if luminance > 0.45 else "#fff"
 
 
+# The darkest surface in the dark theme (--slate-950 in style.css). A link
+# has to be legible against this one, which is the sidebar and the page
+# ground both.
+DARK_GROUND = (11, 17, 32)
+
+# WCAG AA for body text is 4.5. The target is a little above it because a
+# lifted colour is read on several dark surfaces, some of them a translucent
+# panel over another - a card cap over a card - and a value that only just
+# clears the line on the darkest ground falls under it on the lightest.
+MINIMUM_CONTRAST = 5.2
+
+
+def _relative_luminance(red, green, blue):
+    """WCAG relative luminance for one 0-255 triplet."""
+
+    def channel(raw):
+        proportion = raw / 255
+
+        if proportion <= 0.03928:
+            return proportion / 12.92
+
+        return ((proportion + 0.055) / 1.055) ** 2.4
+
+    return (
+        0.2126 * channel(red)
+        + 0.7152 * channel(green)
+        + 0.0722 * channel(blue)
+    )
+
+
+def _contrast(first, second):
+    lighter = max(_relative_luminance(*first), _relative_luminance(*second))
+    darker = min(_relative_luminance(*first), _relative_luminance(*second))
+
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+def lifted_for_dark(value, ground=DARK_GROUND, minimum=MINIMUM_CONTRAST):
+    """`value` mixed towards white until it is legible on a dark ground.
+
+    The companion to `readable_foreground`, and the same bargain: an
+    administrator picks one brand colour, against the light page they are
+    looking at while they pick it. On the dark theme's near-black ground
+    that same colour is often unreadable - the default indigo #4f46e5 comes
+    to 2.99:1, where WCAG AA wants 4.5 - so links, and the outline buttons
+    that borrow the link colour, need a lifted version of it rather than a
+    different colour.
+
+    Mixing towards white rather than choosing a new hue is what keeps it
+    recognisably the same brand. Steps of 5% are fine enough that the
+    result is never noticeably paler than it needs to be, and white itself
+    is the guaranteed terminus, so this always returns something.
+
+    Returns the "r, g, b" form, because that is what Bootstrap's
+    --bs-link-color-rgb wants and CSS cannot compute it.
+    """
+
+    triplet = hex_to_rgb_triplet(value)
+
+    if not triplet:
+        return ""
+
+    red, green, blue = (int(part) for part in triplet.split(", "))
+
+    for step in range(0, 21):
+        weight = step / 20
+        mixed = tuple(
+            round(part + (255 - part) * weight)
+            for part in (red, green, blue)
+        )
+
+        if _contrast(mixed, ground) >= minimum:
+            return ", ".join(str(part) for part in mixed)
+
+    return "255, 255, 255"
+
+
 # Create your models here.
 class Author(models.Model):
     id = models.AutoField(primary_key=True)
@@ -871,6 +948,18 @@ class OrganizationSettings(models.Model):
     @property
     def display_primary_rgb(self):
         return hex_to_rgb_triplet(self.display_primary_color)
+
+    @property
+    def display_primary_rgb_on_dark(self):
+        """The brand colour, lifted enough to read on the dark theme.
+
+        `display_primary_rgb` is what Bootstrap's --bs-link-color-rgb and
+        the -rgb utilities read on the light theme. On the dark one the
+        same channels give a link 2.99:1 against the ground for the default
+        indigo, so the dark block in style.css reads this instead.
+        """
+
+        return lifted_for_dark(self.display_primary_color)
 
     @property
     def display_on_primary(self):

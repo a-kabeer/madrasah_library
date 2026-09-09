@@ -337,10 +337,25 @@ def is_combobox_request(request):
 
 
 # Where an activity-log entry points, by the entity_type recorded with it.
-# `User` is absent deliberately: it has no detail page. So is
-# OrganizationSettings, whose page is Admin-only — linking it would hand
-# other roles a 403.
+#
+# Four of the seventeen entity types the log records are absent, and each
+# for a reason rather than by oversight:
+#
+#   User                  has no detail page.
+#   RoleFeature           likewise - the matrix is the page, and a row in
+#                         it is not a record with a URL.
+#   OrganizationSettings  its page is Admin-only, so linking it would hand
+#                         every other role a 403.
+#   InventorySession      its page has an Admin/Librarian ceiling, same
+#                         objection: an Assistant can never open it.
+#
+# The rule that separates those last two from everything here is *ceiling*,
+# not toggle. Book, Loan and the rest can all be switched off for a role,
+# and are still linked: a link to something switched off is a link the
+# viewer would not have been shown the entry for. A link to something whose
+# ceiling excludes the role is a link that can never work.
 ACTIVITY_LOG_DETAIL_ROUTES = {
+    "AcquisitionSuggestion": "suggestion_detail",
     "Book": "book_detail",
     "BookContent": "book_content_detail",
     "BookCopy": "book_copy_detail",

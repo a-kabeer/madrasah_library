@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 
-from library.tests.helpers import make_user, make_category, make_book
+from library.tests.helpers import make_user, make_category
 
 
 class RolePermissionTests(TestCase):
