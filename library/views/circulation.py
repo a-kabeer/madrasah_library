@@ -28,7 +28,6 @@ from .. import reservations
 from ..permissions import (
     feature_required,
     passes_ceiling,
-    role_required,
 )
 
 from django.utils.translation import gettext
@@ -41,7 +40,6 @@ from .common import (
     LOAN_SORT_DEFAULT,
     LOAN_SORT_DEFAULT_DIRECTION,
     LOAN_SORT_FIELDS,
-    PAGE_SIZE,
     PolicyRefused,
     copy_for_code,
     create_activity_log,

@@ -1,10 +1,9 @@
 """Searchable combobox endpoints for catalogue list filters."""
 
 from django.db import models
-from django.shortcuts import render
 from django.urls import reverse
 
-from ..models import BookContent, BookVolume
+from ..models import BookVolume
 from ..permissions import feature_required
 from .common import combobox_options_response
 
@@ -68,37 +67,4 @@ def book_filter_combobox(request):
         search=search,
         entity_label="book",
         add_url=reverse("book_add"),
-    )
-
-
-@feature_required("books")
-def content_type_filter_combobox(request):
-    """Return content-type choices when a searchable type filter is useful."""
-    search = request.GET.get("search", "").strip()
-    values = BookContent.objects.exclude(
-        content_type__isnull=True
-    ).exclude(
-        content_type=""
-    ).values_list("content_type", flat=True).distinct().order_by("content_type")
-
-    if search:
-        values = values.filter(content_type__icontains=search)
-
-    items = []
-    for value in values:
-        items.append(type("ComboItem", (), {"id": value, "name": value})())
-
-    return render(
-        request,
-        "library/partials/combobox_options.html",
-        {
-            "items": items[:20],
-            "total_count": len(items),
-            "limit": 20,
-            "search": search,
-            "exact_match": any(item.name.casefold() == search.casefold() for item in items),
-            "entity_label": "content type",
-            "add_url": "",
-            "can_create": False,
-        },
     )

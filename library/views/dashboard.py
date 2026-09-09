@@ -5,7 +5,6 @@ the record of who changed what; and the analytics page, which is what the
 records add up to over a period.
 """
 
-from datetime import date
 
 from django.core.paginator import Paginator
 from django.shortcuts import render
@@ -28,7 +27,7 @@ from ..models import (
 from .. import analytics as analytics_module
 from .. import features
 
-from ..permissions import can_edit_library, feature_required, role_required
+from ..permissions import can_edit_library, feature_required
 
 from .common import (
     DASHBOARD_CACHE_KEY,

@@ -32,7 +32,7 @@ from ..models import (
 )
 
 from ..features import ADMIN, SUPER_ADMIN
-from ..permissions import feature_required, role_required
+from ..permissions import feature_required
 from ..security import login_rate_limiter
 
 from .common import (

@@ -1,7 +1,6 @@
 """Modal-first workflows for acquisition suggestions."""
 
 from django.contrib import messages
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.utils.translation import gettext
 

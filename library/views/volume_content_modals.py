@@ -2,7 +2,6 @@
 
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 
 from ..models import Book, BookContent, BookCopy, BookVolume

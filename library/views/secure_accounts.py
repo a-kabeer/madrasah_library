@@ -6,14 +6,13 @@ re-exported by library.views for the staff URL layer.
 """
 
 from django.contrib import messages
-from django.core.paginator import Paginator
 from django.db import IntegrityError
 from django.shortcuts import render, redirect
 from django.utils import timezone
 
 from ..models import User
 from ..permissions import feature_required
-from .common import DASHBOARD_CACHE_KEY, PAGE_SIZE, USER_CACHE_KEY, USER_ROLES, create_activity_log
+from .common import DASHBOARD_CACHE_KEY, USER_CACHE_KEY, USER_ROLES, create_activity_log
 from django.core.cache import cache
 
 

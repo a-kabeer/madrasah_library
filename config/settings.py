@@ -46,7 +46,12 @@ LOGIN_RATE_LIMIT_IP_MAX_FAILURES = config("LOGIN_RATE_LIMIT_IP_MAX_FAILURES", de
 LOGIN_RATE_LIMIT_USERNAME_MAX_FAILURES = config("LOGIN_RATE_LIMIT_USERNAME_MAX_FAILURES", default=5, cast=int)
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
+    # `django.contrib.admin` is deliberately absent. This project's `User`
+    # has no `is_staff`, so `AdminSite.has_permission` could never pass and
+    # the site was unreachable; its URLs were removed for that reason. The
+    # app itself is dropped too, so the admin templates and static files
+    # stop being collected and no future URL include can quietly re-expose
+    # a login form that bypasses `LoginRateLimiter`.
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",

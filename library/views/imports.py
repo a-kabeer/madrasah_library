@@ -33,7 +33,7 @@ from ..models import (
 
 from .. import excel as book_excel
 
-from ..permissions import feature_required, role_required
+from ..permissions import feature_required
 
 from .common import (
     AUTHOR_CACHE_KEY,
