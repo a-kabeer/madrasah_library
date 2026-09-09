@@ -63,6 +63,7 @@
     {% endcomment %}
     <div class="row g-3 mb-4">
 
+        {% if "loans.active" in allowed_features %}
         <div class="col-12 col-md-4">
             <a
                 href="{% url 'loan_list' %}?status=overdue"
@@ -93,7 +94,9 @@
                 </div>
             </a>
         </div>
+        {% endif %}
 
+        {% if "loans.active" in allowed_features %}
         <div class="col-12 col-md-4">
             <a
                 href="{% url 'loan_list' %}?status=due_today"
@@ -113,7 +116,9 @@
                 </div>
             </a>
         </div>
+        {% endif %}
 
+        {% if "loans.active" in allowed_features %}
         <div class="col-12 col-md-4">
             <a
                 href="{% url 'loan_list' %}?status=active"
@@ -135,6 +140,7 @@
                 </div>
             </a>
         </div>
+        {% endif %}
 
     </div>
 
@@ -152,18 +158,22 @@
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body d-flex flex-wrap gap-2">
 
-            <a href="{% url 'circulation_issue' %}" class="btn btn-primary">
-                <i class="bi bi-box-arrow-right me-1"></i> {% translate "Issue Book" %}
-            </a>
+            {% if "circulation.issue" in allowed_features %}
+                <a href="{% url 'circulation_issue' %}" class="btn btn-primary">
+                    <i class="bi bi-box-arrow-right me-1"></i> {% translate "Issue Book" %}
+                </a>
+            {% endif %}
 
-            <a
-                href="{% url 'circulation_return_lookup' %}"
-                class="btn btn-success"
-            >
-                <i class="bi bi-arrow-return-left me-1"></i> {% translate "Return Book" %}
-            </a>
+            {% if "circulation.return" in allowed_features %}
+                <a
+                    href="{% url 'circulation_return_lookup' %}"
+                    class="btn btn-success"
+                >
+                    <i class="bi bi-arrow-return-left me-1"></i> {% translate "Return Book" %}
+                </a>
+            {% endif %}
 
-            {% if can_edit %}
+            {% if can_edit and "books" in allowed_features %}
                 <a
                     href="{% url 'book_add' %}"
                     class="btn btn-outline-secondary"
@@ -176,12 +186,14 @@
                 </a>
             {% endif %}
 
-            <a
-                href="{% url 'borrower_add' %}" data-form-modal hx-get="{% url 'borrower_add' %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
-                class="btn btn-outline-secondary"
-            >
-                <i class="bi bi-person-plus me-1"></i> {% translate "Add Borrower" %}
-            </a>
+            {% if "borrowers" in allowed_features %}
+                <a
+                    href="{% url 'borrower_add' %}" data-form-modal hx-get="{% url 'borrower_add' %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
+                    class="btn btn-outline-secondary"
+                >
+                    <i class="bi bi-person-plus me-1"></i> {% translate "Add Borrower" %}
+                </a>
+            {% endif %}
 
         </div>
     </div>
@@ -192,6 +204,7 @@
     <div class="row g-3 mb-4">
 
 
+        {% if "books" in allowed_features %}
         <div class="col-12 col-sm-6 col-xl-3">
 
             <a
@@ -218,9 +231,11 @@
             </a>
 
         </div>
+        {% endif %}
 
 
 
+        {% if "copies" in allowed_features %}
         <div class="col-12 col-sm-6 col-xl-3">
 
             <a
@@ -247,9 +262,11 @@
             </a>
 
         </div>
+        {% endif %}
 
 
 
+        {% if "copies" in allowed_features %}
         <div class="col-12 col-sm-6 col-xl-3">
 
             <a
@@ -276,9 +293,11 @@
             </a>
 
         </div>
+        {% endif %}
 
 
 
+        {% if "copies" in allowed_features %}
         <div class="col-12 col-sm-6 col-xl-3">
 
             <a
@@ -305,8 +324,10 @@
             </a>
 
         </div>
+        {% endif %}
 
 
+        {% if "borrowers" in allowed_features %}
         <div class="col-12 col-sm-6 col-xl-3">
 
             <a
@@ -333,9 +354,11 @@
             </a>
 
         </div>
+        {% endif %}
 
 
 
+        {% if "borrowers" in allowed_features %}
         <div class="col-12 col-sm-6 col-xl-3">
 
             <a
@@ -362,10 +385,12 @@
             </a>
 
         </div>
+        {% endif %}
 
 
 
 
+        {% if "loans.active" in allowed_features %}
         <div class="col-12 col-sm-6 col-xl-3">
 
             <a
@@ -392,6 +417,7 @@
             </a>
 
         </div>
+        {% endif %}
 
 
     </div>
@@ -403,6 +429,7 @@
     <div class="row g-3 mb-4">
 
 
+        {% if "authors" in allowed_features %}
         <div class="col-12 col-md-4">
 
             <a
@@ -429,9 +456,11 @@
             </a>
 
         </div>
+        {% endif %}
 
 
 
+        {% if "categories" in allowed_features %}
         <div class="col-12 col-md-4">
 
             <a
@@ -458,9 +487,11 @@
             </a>
 
         </div>
+        {% endif %}
 
 
 
+        {% if "publishers" in allowed_features %}
         <div class="col-12 col-md-4">
 
             <a
@@ -487,6 +518,7 @@
             </a>
 
         </div>
+        {% endif %}
 
 
     </div>
@@ -500,6 +532,7 @@
 
         <!-- Recently Issued -->
 
+        {% if "loans.active" in allowed_features %}
         <div class="col-12 col-xl-6">
 
             <div class="card shadow-sm border-0 h-100">
@@ -595,6 +628,7 @@
             </div>
 
         </div>
+        {% endif %}
 
 
 
@@ -605,6 +639,7 @@
           return is recorded, rather than from the activity log - which
           would mean reading a sentence to find out which book came back.
         {% endcomment %}
+        {% if "loans.active" in allowed_features %}
         <div class="col-12 col-xl-6">
 
             <div class="card shadow-sm border-0 h-100">
@@ -686,7 +721,17 @@
             </div>
 
         </div>
+        {% endif %}
 
+
+        {% comment %}
+          Gated on the same feature as the Activity Log page. Without this
+          a role the log is turned off for still got the card, a "View All"
+          button that answers 403 - the two doors this project deliberately
+          does not offer - and "No recent activity found.", which was not
+          true: there was activity, they were simply not allowed to see it.
+        {% endcomment %}
+        {% if "activity_log" in allowed_features %}
 
         <!-- Recent Activity -->
 
@@ -762,6 +807,8 @@
             </div>
 
         </div>
+
+        {% endif %}
 
 
     </div>

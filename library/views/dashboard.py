@@ -26,6 +26,7 @@ from ..models import (
 )
 
 from .. import analytics as analytics_module
+from .. import features
 
 from ..permissions import can_edit_library, feature_required, role_required
 
@@ -165,41 +166,44 @@ def library_home(request):
 
         today = timezone.now().date()
 
+        # One pass per table rather than one per number. These were twelve
+        # separate COUNT(*) round trips; the copies, borrowers and loans
+        # figures are all counts over the same rows with different
+        # conditions, which is what a filtered Count is for - the same
+        # shape analytics.py already uses. Twelve queries become seven.
+        copies = BookCopy.objects.aggregate(
+            total=models.Count("id"),
+            available=models.Count("id", filter=models.Q(status="Available")),
+            issued=models.Count("id", filter=models.Q(status="Issued")),
+        )
+
+        borrowers = Borrower.objects.aggregate(
+            total=models.Count("id"),
+            active=models.Count("id", filter=models.Q(is_active=True)),
+        )
+
+        loans = Loan.objects.filter(return_date__isnull=True).aggregate(
+            active=models.Count("id"),
+            overdue=models.Count("id", filter=models.Q(due_date__lt=today)),
+            due_today=models.Count("id", filter=models.Q(due_date=today)),
+        )
+
         dashboard_stats = {
             "total_books": Book.objects.count(),
             "total_authors": Author.objects.count(),
             "total_categories": Category.objects.count(),
             "total_publishers": Publisher.objects.count(),
 
-            "total_book_copies": BookCopy.objects.count(),
+            "total_book_copies": copies["total"],
+            "available_copies": copies["available"],
+            "issued_copies": copies["issued"],
 
-            "available_copies": BookCopy.objects.filter(
-                status="Available"
-            ).count(),
+            "total_borrowers": borrowers["total"],
+            "active_borrowers": borrowers["active"],
 
-            "issued_copies": BookCopy.objects.filter(
-                status="Issued"
-            ).count(),
-
-            "total_borrowers": Borrower.objects.count(),
-
-            "active_borrowers": Borrower.objects.filter(
-                is_active=True
-            ).count(),
-
-            "active_loans": Loan.objects.filter(
-                return_date__isnull=True
-            ).count(),
-
-            "overdue_loans": Loan.objects.filter(
-                return_date__isnull=True,
-                due_date__lt=today
-            ).count(),
-
-            "due_today_loans": Loan.objects.filter(
-                return_date__isnull=True,
-                due_date=today
-            ).count(),
+            "active_loans": loans["active"],
+            "overdue_loans": loans["overdue"],
+            "due_today_loans": loans["due_today"],
         }
 
         cache.set(
@@ -240,16 +244,24 @@ def library_home(request):
         "-id",
     )[:5]
 
-    recent_logs = list(
-        ActivityLog.objects.select_related(
-            "user"
-        ).order_by(
-            "-created_at"
-        )[:5]
-    )
+    # Gated on the same feature as the Activity Log page itself. Turning
+    # that page off for a role used to hide the page and the sidebar entry
+    # while the last five entries still sat on their dashboard, which is
+    # the data the toggle exists to withhold.
+    if features.user_has(request.user, "activity_log"):
+        recent_logs = list(
+            ActivityLog.objects.select_related(
+                "user"
+            ).order_by(
+                "-created_at"
+            )[:5]
+        )
 
-    for log in recent_logs:
-        log.target_url = activity_log_target(log)
+        for log in recent_logs:
+            log.target_url = activity_log_target(log)
+
+    else:
+        recent_logs = []
 
     dashboard_stats["recent_loans"] = recent_loans
     dashboard_stats["recent_returns"] = recent_returns

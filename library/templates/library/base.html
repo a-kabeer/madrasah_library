@@ -391,7 +391,14 @@
               makes this entry match only while that filter is in force, and
               step aside otherwise.
             {% endcomment %}
-            {% if "loans.overdue" in allowed_features %}
+            {% comment %}
+              Both keys, because Overdue is a filter on the Active Loans
+              page rather than a page of its own: `loan_list` is gated on
+              "loans.active", and no view is keyed to "loans.overdue" at
+              all. With only the one condition, switching Active Loans off
+              while leaving Overdue on offered a shortcut that answered 403.
+            {% endcomment %}
+            {% if "loans.overdue" in allowed_features and "loans.active" in allowed_features %}
             <a
                 href="{% url 'loan_list' %}?status=overdue"
                 class="nav-link-custom"
