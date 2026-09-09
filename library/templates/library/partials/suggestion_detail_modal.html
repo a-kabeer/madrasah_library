@@ -19,5 +19,5 @@
             {% if can_review %}<form class="mt-2" method="post" action="{% url 'suggestion_review' suggestion.id %}" hx-post="{% url 'suggestion_review' suggestion.id %}?modal=1" hx-swap="none">{% csrf_token %}<input type="hidden" name="status" value="Acquired"><input type="hidden" name="modal" value="1"><button class="btn btn-outline-secondary" type="submit">{% translate "Already acquired" %}</button></form>{% endif %}
         {% else %}<hr><p class="text-body-secondary small mb-0">{% translate "This suggestion is finished and cannot be changed." %}</p>{% endif %}
     </div>
-    <div class="modal-footer"><a href="{% url 'suggestion_detail' suggestion.id %}" class="btn btn-sm btn-outline-secondary">{% translate "Open full details" %}</a><button type="button" class="btn btn-primary" data-bs-dismiss="modal">{% translate "Close" %}</button></div>
+    <div class="modal-actions justify-content-end"><a href="{% url 'suggestion_detail' suggestion.id %}" class="btn btn-sm btn-outline-secondary">{% translate "Open full details" %}</a><button type="button" class="btn btn-primary" data-bs-dismiss="modal">{% translate "Close" %}</button></div>
 </div>

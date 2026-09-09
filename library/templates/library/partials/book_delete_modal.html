@@ -42,7 +42,7 @@ database's foreign keys. See `book_delete_blocker`.
             </a>
         {% endif %}
 
-        <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
+        <div class="modal-actions">
             <a href="{% url 'book_detail' book.id %}" class="btn btn-outline-primary">
                 <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>
                 {% translate "Open the book" %}
@@ -81,7 +81,7 @@ database's foreign keys. See `book_delete_blocker`.
             {% translate "This cannot be undone." %}
         </p>
 
-        <div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
+        <div class="modal-actions">
 
             <form
                 hx-post="{% url 'book_delete' book.id %}?modal=1"

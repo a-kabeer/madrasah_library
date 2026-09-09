@@ -1288,8 +1288,11 @@ document.addEventListener(
 
             var body = modalEl ? modalEl.querySelector(".modal-body") : null;
 
+            /* `modal-loading` gives the spinner a box the height the
+               record will be, so the dialog opens at the size it stays
+               at rather than growing around the reply. */
             var placeholder =
-                '<div class="text-center text-body-secondary py-4">' +
+                '<div class="modal-loading text-center text-body-secondary">' +
                 '<span class="spinner-border spinner-border-sm" role="status"></span>' +
                 '<span class="visually-hidden">Loading</span>' +
                 "</div>";
@@ -2426,8 +2429,11 @@ document.addEventListener(
                 return;
             }
 
+            /* `modal-loading` gives the spinner a box the height the
+               record will be, so the dialog opens at the size it stays
+               at rather than growing around the reply. */
             var placeholder =
-                '<div class="text-center text-body-secondary py-4">' +
+                '<div class="modal-loading text-center text-body-secondary">' +
                 '<span class="spinner-border spinner-border-sm" role="status"></span>' +
                 '<span class="visually-hidden">Loading</span>' +
                 "</div>";
@@ -2463,6 +2469,77 @@ document.addEventListener(
             });
 
             modal.addEventListener("hidden.bs.modal", reset);
+
+        })();
+
+
+        /* =========================
+           MODAL SCROLL POSITION
+
+           The dialogs keep their box between one record and the next: the
+           same element, the same width, only the body swapped. That is
+           what stops them jumping - and it is also why a scroll position
+           outlives what it belonged to. Opening a second copy after
+           reading to the end of the first showed it halfway down, and
+           clicking a tab showed a fresh pane at the previous pane's
+           offset, which reads as content missing from the top.
+
+           So the two things that scroll are put back to the top when what
+           is in them changes: the body when a fragment lands in it, and
+           the tab box when a tab is shown.
+
+           Delegated from the document, because neither the fragment nor
+           its tabs exist until a dialog has been opened.
+           ========================= */
+
+        (function () {
+
+            function toTop(el) {
+
+                if (el) {
+                    el.scrollTop = 0;
+                }
+            }
+
+            /* Only when the body itself was the target - that is a new
+               fragment arriving. A swap into something inside it is a form
+               re-rendering its own errors or a select refreshing its
+               options, and the reader is looking at the field they were
+               already on; moving them would be the bug, not the fix. */
+            document.body.addEventListener("htmx:afterSwap", function (e) {
+
+                var target = e.target;
+
+                if (
+                    target
+                    && target.classList
+                    && target.classList.contains("modal-body")
+                ) {
+                    toTop(target);
+                }
+
+            });
+
+            /* Bootstrap's tab events bubble, so one listener covers every
+               tabbed fragment. The box that scrolls is the `.detail-tabs`
+               around the pane, not the pane. */
+            document.body.addEventListener("shown.bs.tab", function (e) {
+
+                if (!e.target || !e.target.getAttribute) {
+                    return;
+                }
+
+                var selector = e.target.getAttribute("data-bs-target");
+
+                if (!selector) {
+                    return;
+                }
+
+                var pane = document.querySelector(selector);
+
+                toTop(pane ? pane.closest(".detail-tabs") : null);
+
+            });
 
         })();
 

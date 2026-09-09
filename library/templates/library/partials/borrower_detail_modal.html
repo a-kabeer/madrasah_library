@@ -162,7 +162,15 @@ can_delete.
 
 </ul>
 
-<div class="tab-content">
+{% comment %}
+  `detail-tabs` gives the four panes one height, the same as the copy
+  dialog: a borrower with nothing out has a two-line pane and one with a
+  term's history has a forty-line one, and switching between them resized
+  the dialog - which moves the tabs out from under the cursor that just
+  clicked one. The long panes scroll inside the box instead. See
+  style.css.
+{% endcomment %}
+<div class="tab-content detail-tabs">
 
     {% comment %} ---------------------------------------- who they are {% endcomment %}
     <div
@@ -413,7 +421,7 @@ can_delete.
   #globalModal, and a fragment that replaced its own container would take
   its own trigger with it.
 {% endcomment %}
-<div class="d-flex flex-wrap gap-2 mt-4 pt-3 border-top">
+<div class="modal-actions">
 
     <a
         href="{{ history_url }}"

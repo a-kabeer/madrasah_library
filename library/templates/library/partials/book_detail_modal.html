@@ -142,9 +142,17 @@ header by id, which saves any JavaScript for the title.
 {% endif %}
 
 
-<hr>
+{% comment %}
+  The one way out of this dialog, in the same sticky row every other
+  fragment puts its buttons in - so a book with thirty copies does not
+  hide it below a scroll. The rule the `<hr>` used to draw is the row's
+  own border now.
+{% endcomment %}
+<div class="modal-actions">
 
-<a href="{% url 'book_detail' book.id %}" class="btn btn-sm btn-outline-secondary">
-    <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>
-    {% translate "Open full details page" %}
-</a>
+    <a href="{% url 'book_detail' book.id %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>
+        {% translate "Open full details page" %}
+    </a>
+
+</div>

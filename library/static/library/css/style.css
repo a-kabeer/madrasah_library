@@ -1130,19 +1130,123 @@ body {
   and the long ones scroll inside it.
 
   `svh` because a phone's toolbars come and go and `vh` does not notice.
+
+  Named, because the loading box in a dialog wants the same number
+  (`.modal-loading`): the spinner then stands in a box the size of the
+  panes that replace it, so the fragment landing does not resize the
+  dialog either. One place to change it, not two to keep in step.
 */
-.detail-tabs {
-    height: min(60svh, 27rem);
-    overflow-y: auto;
+:root {
+    --detail-pane: min(60svh, 27rem);
 }
 
 /* Less to spare on a phone, where the dialog is nearly the whole screen
    already. Still one height, for the same reason. */
 @media (max-width: 575.98px) {
-    .detail-tabs {
-        height: 55svh;
+    :root {
+        --detail-pane: 55svh;
     }
 }
+
+.detail-tabs {
+    height: var(--detail-pane);
+    overflow-y: auto;
+}
+
+
+/* =========================
+   MODAL PANEL
+
+   Where the two shared dialogs get their manners. The positioning is
+   Bootstrap's own and lives in the markup - both are
+   `modal-dialog-scrollable` and neither is `modal-dialog-centered`, so
+   the top edge is fixed and a height change only moves the bottom one
+   (see base.html for why). What is left here is scrolling and reach.
+   ========================= */
+
+/* A dialog's scroll is its own. Without this, reaching the end of a long
+   record carries on into the page behind the backdrop, which then has to
+   be scrolled back when the dialog closes. `.detail-tabs` is the same
+   case one level in. */
+.modal-body,
+.detail-tabs {
+    overscroll-behavior: contain;
+}
+
+/*
+  A fragment's own Save/Cancel row - one class where there were five sets
+  of utilities saying roughly the same thing, so every dialog's buttons
+  now sit the same distance below the same rule.
+
+  The row itself is just that rule and a flex line; being a footer is the
+  next block's job. Split in two on purpose: these fragments are also what
+  a plain request gets back, with no dialog around them, and a bar that
+  stuck to the bottom of the window there would be a bar in the middle of
+  nothing.
+*/
+.modal-actions {
+    display: flex;
+    flex-wrap: wrap;
+
+    align-items: center;
+
+    gap: 0.5rem;
+
+    margin-top: 1.5rem;
+
+    padding-top: 0.75rem;
+
+    border-top: 1px solid var(--border-subtle);
+}
+
+/*
+  Inside a dialog that row is the dialog's footer. #formModal has none of
+  its own - each fragment brings its own buttons, since only the fragment
+  knows what they should say - so a long form used to scroll its Save off
+  the bottom. Sticky rather than fixed: it sits at the end of the content
+  like any other block and only stops when it would leave the box.
+
+  The negative margins take it out to the body's edges so content
+  scrolling underneath passes behind it rather than beside it, and the
+  negative bottom sets it flush with the body's bottom edge - where
+  Bootstrap's own `.modal-footer` sits.
+*/
+.modal-body .modal-actions {
+    position: sticky;
+    bottom: calc(var(--bs-modal-padding) * -1);
+    z-index: 2;
+
+    margin-inline: calc(var(--bs-modal-padding) * -1);
+    margin-bottom: calc(var(--bs-modal-padding) * -1);
+
+    padding: 0.75rem var(--bs-modal-padding);
+
+    background-color: var(--bs-modal-bg);
+}
+
+/* What the spinner sits in while a record is on its way. The same height
+   as the panes it is about to be replaced by (`--detail-pane` above), so
+   the dialog is the size it will stay at from the moment it opens rather
+   than growing around the reply. */
+.modal-loading {
+    display: grid;
+
+    place-items: center;
+
+    min-height: var(--detail-pane);
+}
+
+/* The camera image, sized so that it, its status line and the footer fit
+   the dialog without the body having to scroll - a viewfinder that has to
+   be scrolled into view is not a viewfinder. `svh` for the reason
+   `.detail-tabs` uses it: a phone's toolbars come and go and `vh` does
+   not notice. */
+.scan-viewfinder {
+    max-height: 45svh;
+
+    object-fit: cover;
+}
+
 
 /* =========================
    MENU BUTTON

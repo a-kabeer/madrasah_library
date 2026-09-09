@@ -22,7 +22,13 @@ Expected context: nothing.
     aria-hidden="true"
     data-scan-dialog
 >
-    <div class="modal-dialog modal-dialog-centered">
+    {% comment %}
+      Scrollable and not centred, the same shape as the two shared
+      dialogs: the status line under the viewfinder changes as the scan
+      goes on, and centred that re-centred the whole dialog - moving the
+      camera image while someone was aiming it.
+    {% endcomment %}
+    <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
 
             <div class="modal-header">
@@ -47,8 +53,7 @@ Expected context: nothing.
                 {% endcomment %}
                 <video
                     data-scan-video
-                    class="w-100 rounded bg-dark"
-                    style="max-height: 60vh; object-fit: cover;"
+                    class="w-100 rounded bg-dark scan-viewfinder"
                     playsinline
                     muted
                 ></video>

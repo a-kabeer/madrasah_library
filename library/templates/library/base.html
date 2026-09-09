@@ -1040,7 +1040,24 @@
     aria-hidden="true"
 >
 
-    <div class="modal-dialog modal-dialog-centered">
+    {% comment %}
+      `modal-lg` because this holds the same fragments #formModal does -
+      the borrower and copy dialogs open into whichever of the two the
+      trigger names - and at two different widths the same record read as
+      two different dialogs.
+
+      `modal-dialog-scrollable` and no `modal-dialog-centered`, the same
+      pair as #formModal below and for the same reason. Scrollable caps
+      the dialog at the viewport and gives the body the scrollbar, so a
+      long record scrolls inside the box instead of stretching it past
+      the screen, and the header and its close button stay where they
+      are. Centred is what made it jump: with the dialog centred, every
+      height change - the fragment landing on top of the spinner, a tab
+      switching, a form growing an error - moved the top edge, and with
+      it the tabs out from under the cursor that had just clicked one.
+      Anchored, a height change only moves the bottom edge.
+    {% endcomment %}
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
 
         <div class="modal-content">
 
@@ -1100,7 +1117,11 @@
     aria-hidden="true"
 >
 
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    {% comment %}
+      Scrollable and deliberately not centred - see #globalModal above for
+      why the two are the same shape.
+    {% endcomment %}
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
 
         <div class="modal-content">
 
