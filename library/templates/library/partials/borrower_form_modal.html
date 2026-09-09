@@ -62,7 +62,8 @@ borrower_types.
                 maxlength="255"
                 required
                 {% if errors.name %}aria-invalid="true"{% endif %}
-            >
+        autofocus
+    >
             {% if errors.name %}
                 <div class="invalid-feedback">{{ errors.name }}</div>
             {% endif %}

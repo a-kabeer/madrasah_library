@@ -19,7 +19,7 @@
 
             <div class="mb-3">
                 <label for="copyAddVolume" class="form-label fw-semibold">{% translate "Volume" %}</label>
-                <select class="form-select" id="copyAddVolume" name="volume" required>
+                <select class="form-select" id="copyAddVolume" name="volume" required autofocus>
                     <option value="">{% translate "Choose a volume" %}</option>
                     {% for volume in volumes %}
                         <option value="{{ volume.id }}" {% if form_data.volume_id == volume.id %}selected{% endif %}>{{ volume.book.title }} — {% translate "Volume" %} {{ volume.volume_number }}{% if volume.title %} — {{ volume.title }}{% endif %}</option>

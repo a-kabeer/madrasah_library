@@ -94,7 +94,8 @@ selected_volume, volumes, locations, shelves, statuses, is_issued.
                     name="volume"
                     required
                     {% if errors.volume %}aria-invalid="true"{% endif %}
-                >
+        autofocus
+    >
                     <option value="">{% translate "Choose…" %}</option>
                     {% for volume in volumes %}
                         <option
