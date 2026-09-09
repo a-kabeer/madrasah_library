@@ -12,8 +12,9 @@ be translated - a copy code, an ISBN - are not.
 """
 
 import io
+import re
 
-from django.test import TestCase, override_settings
+from django.test import TestCase
 from django.urls import reverse
 from django.utils import translation
 
@@ -92,7 +93,9 @@ class DirectionTests(LanguageTestCase):
 
         self.assertIn('dir="ltr"', body)
         self.assertIn('lang="en"', body)
-        self.assertNotIn("bootstrap.rtl.min.css", body)
+        # The vendored filename, allowing for the content hash
+        # ManifestStaticFilesStorage inserts before the extension.
+        self.assertNotIn("bootstrap.rtl.min", body)
 
     def test_urdu_and_arabic_are_right_to_left(self):
         for language in ("ur", "ar"):
@@ -103,20 +106,23 @@ class DirectionTests(LanguageTestCase):
                 self.assertIn('lang="%s"' % language, body)
                 # Bootstrap's own RTL build, or every one of its components
                 # stays the wrong way round.
-                self.assertIn("bootstrap.rtl.min.css", body)
+                self.assertIn("bootstrap.rtl.min", body)
 
     def test_the_two_bootstrap_builds_are_the_same_version(self):
         # If they drift, the two directions get different component styles.
+        # Both builds are vendored under a directory named for the version
+        # (see docs/VENDORED_ASSETS.md), so that is where the version is.
         ltr = self.page("en").content.decode()
         rtl = self.page("ur").content.decode()
 
-        import re
+        version = re.compile(r"bootstrap-([\d.]+)/bootstrap")
 
-        version = re.compile(r"bootstrap@([\d.]+)/dist/css")
+        found_ltr = version.search(ltr)
+        found_rtl = version.search(rtl)
 
-        self.assertEqual(
-            version.search(ltr).group(1), version.search(rtl).group(1)
-        )
+        self.assertIsNotNone(found_ltr, "no Bootstrap stylesheet on the LTR page")
+        self.assertIsNotNone(found_rtl, "no Bootstrap stylesheet on the RTL page")
+        self.assertEqual(found_ltr.group(1), found_rtl.group(1))
 
 
 class ChoosingTests(LanguageTestCase):

@@ -14,7 +14,7 @@
         <a href="{% url 'book_volume_add' %}?modal=1" data-form-modal hx-get="{% url 'book_volume_add' %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>{% translate "Add Volume" %}</a>
     </div>
     <div class="card shadow-sm border-0 mb-4"><div class="card-body"><form method="get" class="row g-3 align-items-end">
-        <div class="col-12 col-lg-5"><label for="volumeSearch" class="form-label fw-semibold">{% translate "Search" %}</label><input type="text" class="form-control" id="volumeSearch" name="search" value="{{ search }}" placeholder="{% translate 'Search book volumes...' %"></div>
+        <div class="col-12 col-lg-5"><label for="volumeSearch" class="form-label fw-semibold">{% translate "Search" %}</label><input type="text" class="form-control" id="volumeSearch" name="search" value="{{ search }}" placeholder="{% translate 'Search book volumes...' %}"></div>
         <div class="col-12 col-lg-5">
             {% if book_id %}
                 {% for book in books %}

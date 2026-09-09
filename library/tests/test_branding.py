@@ -556,16 +556,50 @@ class BrandingUploadTests(TestCase):
 
         self.assertTrue(OrganizationSettings.load().logo)
 
-    def test_favicon_is_linked_only_when_set(self):
-        response = self.client.get(reverse("dashboard"))
-        self.assertNotContains(response, 'rel="icon"')
-
+    def test_the_uploaded_favicon_is_used_when_there_is_one(self):
         self.client.post(
             self.url,
             self.base_payload(favicon=make_image_bytes(name="icon.png")),
         )
 
         response = self.client.get(reverse("dashboard"))
+
+        self.assertContains(response, 'rel="icon"')
+        self.assertContains(response, OrganizationSettings.load().favicon.url)
+        self.assertNotContains(response, "data:image/svg+xml")
+
+    def test_a_generated_favicon_stands_in_when_there_is_not(self):
+        """A page that names no icon makes the browser ask for
+        /favicon.ico by itself, which is a 404 on every page load - so
+        there is always a link, and without an upload it is an inline SVG
+        in the organisation's own colour."""
+
+        self.assertFalse(OrganizationSettings.load().favicon)
+
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertContains(response, 'rel="icon"')
+        self.assertContains(response, "data:image/svg+xml")
+
+    def test_the_generated_favicon_carries_the_organisation_colour(self):
+        self.client.post(self.url, self.base_payload(primary_color="#7c3aed"))
+
+        response = self.client.get(reverse("dashboard")).content.decode()
+
+        self.assertIn("%237c3aed", response)
+
+        # And its text colour is the readable one for that background, by
+        # the same rule the rest of the chrome uses.
+        self.assertIn(
+            "%23" + OrganizationSettings.load().display_on_primary.lstrip("#"),
+            response,
+        )
+
+    def test_the_public_catalogue_gets_one_too(self):
+        self.client.logout()
+
+        response = self.client.get(reverse("public_book_list"))
+
         self.assertContains(response, 'rel="icon"')
 
 

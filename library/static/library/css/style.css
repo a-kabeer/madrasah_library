@@ -37,9 +37,15 @@
        soon, red for overdue - so a brand-coloured button can never be
        misread as a status.
 
-       An installation overrides these three from Settings > Branding
-       and base.html emits them inline. Everything downstream reads the
-       token, so nothing else needs to know a colour was configured.
+       An installation overrides all three from Settings > Branding and
+       base.html emits them inline. Only --brand-primary is read by any
+       rule, though: nothing downstream uses --brand-secondary or
+       --brand-accent, so setting either of those on the Branding page
+       currently changes nothing on screen. Deciding what they should
+       drive is a design question - the rule at the top of this block
+       says a brand colour must never read as a status, which rules out
+       the obvious green and amber - and it is recorded rather than
+       guessed at here.
        --------------------------------------------------------------- */
     --brand-primary: #4f46e5;
     --brand-secondary: #64748b;
@@ -351,6 +357,27 @@
 }
 
 /*
+  `.table-responsive` scrolls a wide table sideways instead of widening the
+  page - but `overflow-x: auto` only clips descendants whose containing
+  block is inside it, and Bootstrap's `.visually-hidden` is
+  `position: absolute !important`. Its containing block was therefore
+  `.card`, which is `position: relative` and sits *outside* the scroll
+  area, so the screen-reader labels on the action buttons escaped the
+  clip and widened the document itself. Measured at 375px on the users
+  list: 598px of document for a 375px viewport, all of it from a 1px span
+  sitting at x=597, with the table happily scrolling inside its container
+  the whole time.
+
+  Making the scroll container the containing block keeps them inside.
+  Nothing else here is absolutely positioned - no table in this project
+  holds a dropdown, which is the usual reason to leave a scroll container
+  static - so this only affects the labels it is meant to.
+*/
+.table-responsive {
+    position: relative;
+}
+
+/*
   Tables draw their own lines rather than inheriting the card's, and
   --bs-table-bg has to stay transparent so a table inside a card takes
   the card's colour instead of painting over it.
@@ -570,12 +597,6 @@
     border-color: var(--brand-primary);
 
     box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
-}
-
-.form-check-input:checked {
-    background-color: var(--brand-primary);
-
-    border-color: var(--brand-primary);
 }
 
 .btn:focus-visible {

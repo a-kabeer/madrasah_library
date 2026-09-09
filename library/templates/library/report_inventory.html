@@ -24,7 +24,13 @@
 
 <div class="container-fluid px-0">
 
-    {% include "library/partials/report_header.html" with report_title="{{ heading }}" report_blurb="Counts and records, by the statuses that already exist." %}
+    {% comment %}
+      `report_title=heading`, not `report_title="{{ heading }}"`: template
+      syntax inside a quoted argument is not evaluated, so that spelling
+      passed the seven literal characters `{{ heading }}` and both pages
+      that use this template printed them as their own heading.
+    {% endcomment %}
+    {% include "library/partials/report_header.html" with report_title=heading report_blurb="Counts and records, by the statuses that already exist." %}
 
     {% comment %}
       The filters. A plain GET form, so every state of this report is a URL

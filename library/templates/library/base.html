@@ -91,11 +91,33 @@
     </title>
 
 
-    <!-- Favicon: only emitted when one has been uploaded, so there is
-         never a link pointing at a missing file. -->
+    <!-- Favicon: the uploaded one when there is one, a generated one in
+         the organisation's colour when there is not. -->
 
     {% if branding.favicon %}
         <link rel="icon" href="{{ branding.favicon.url }}">
+    {% else %}
+
+        {% comment %}
+          No upload, so a generated one rather than nothing. A browser asks
+          for /favicon.ico by itself when a page names no icon, and that is
+          a 404 on every page load of every deployment - visible in the
+          server log and in devtools, and the tab gets the browser's blank
+          sheet.
+
+          An inline SVG in the organisation's own colour, with the first
+          letter of its name, costs no request and no file to keep. The
+          colours come from the same two properties the rest of the chrome
+          uses, so a brand colour pale enough to need dark text gets it
+          here too. Every space is %20 and every # is %23: a data URI in an
+          attribute may not carry them raw.
+        {% endcomment %}
+
+        <link
+            rel="icon"
+            href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='7'%20fill='%23{{ branding.display_primary_color|slice:'1:' }}'/%3E%3Ctext%20x='16'%20y='23'%20font-size='19'%20font-weight='bold'%20font-family='sans-serif'%20text-anchor='middle'%20fill='%23{{ branding.display_on_primary|slice:'1:' }}'%3E{{ branding.display_name|first|upper }}%3C/text%3E%3C/svg%3E"
+        >
+
     {% endif %}
 
 
@@ -108,7 +130,11 @@
           component styles. `LANGUAGE_BIDI` comes from the i18n context
           processor.
         {% endcomment %}
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap{% if LANGUAGE_BIDI %}.rtl{% endif %}.min.css"
+        {% if LANGUAGE_BIDI %}
+            href="{% static 'library/vendor/bootstrap-5.3.8/bootstrap.rtl.min.css' %}"
+        {% else %}
+            href="{% static 'library/vendor/bootstrap-5.3.8/bootstrap.min.css' %}"
+        {% endif %}
         rel="stylesheet"
     >
 
@@ -117,7 +143,7 @@
 
     <link
         rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+        href="{% static 'library/vendor/bootstrap-icons-1.13.1/bootstrap-icons.min.css' %}"
     >
 
 
@@ -1124,14 +1150,14 @@
 <!-- HTMX -->
 
 <script
-    src="https://unpkg.com/htmx.org@2.0.8"
+    src="{% static 'library/vendor/htmx-2.0.8/htmx.min.js' %}"
 ></script>
 
 
 <!-- Bootstrap JavaScript -->
 
 <script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+    src="{% static 'library/vendor/bootstrap-5.3.8/bootstrap.bundle.min.js' %}"
 ></script>
 
 
