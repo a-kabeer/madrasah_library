@@ -27,27 +27,34 @@
         {% endcomment %}
         {% comment %}
           Bulk work sits beside Add Book rather than behind a menu: it is
-          the same job at a different scale. Both are Admin/Librarian only,
-          which `role_required` on the views enforces.
+          the same job at a different scale.
+
+          All three carry the Admin/Librarian ceiling on their views, which
+          is the enforcement - but the buttons were shown to everyone, so an
+          Assistant got Import, Export and Add Book and a 403 from each. The
+          copy list has always asked `can_edit` before drawing its own
+          controls; this page now does the same.
         {% endcomment %}
-        <a href="{% url 'book_import' %}" class="btn btn-outline-primary">
-            <i class="bi bi-upload me-1"></i> {% translate "Import" %}
-        </a>
-        {% comment %} A file, not a page: a background fetch would swap a
-           spreadsheet into the layout. {% endcomment %}
-        <a href="{% url 'book_export' %}" hx-boost="false" class="btn btn-outline-secondary">
-            <i class="bi bi-download me-1"></i> {% translate "Export" %}
-        </a>
-        <a
-            href="{% url 'book_add' %}"
-            class="btn btn-primary"
-            data-form-modal
-            hx-get="{% url 'book_add' %}?modal=1"
-            hx-target="#formModal .modal-body"
-            hx-swap="innerHTML"
-        >
-            <i class="bi bi-plus-lg me-1"></i> {% translate "Add Book" %}
-        </a>
+        {% if can_edit %}
+            <a href="{% url 'book_import' %}" class="btn btn-outline-primary">
+                <i class="bi bi-upload me-1"></i> {% translate "Import" %}
+            </a>
+            {% comment %} A file, not a page: a background fetch would swap a
+               spreadsheet into the layout. {% endcomment %}
+            <a href="{% url 'book_export' %}" hx-boost="false" class="btn btn-outline-secondary">
+                <i class="bi bi-download me-1"></i> {% translate "Export" %}
+            </a>
+            <a
+                href="{% url 'book_add' %}"
+                class="btn btn-primary"
+                data-form-modal
+                hx-get="{% url 'book_add' %}?modal=1"
+                hx-target="#formModal .modal-body"
+                hx-swap="innerHTML"
+            >
+                <i class="bi bi-plus-lg me-1"></i> {% translate "Add Book" %}
+            </a>
+        {% endif %}
     </div>
 
     {% comment %}

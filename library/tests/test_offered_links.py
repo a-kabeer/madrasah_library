@@ -46,36 +46,54 @@ class OfferedLinksTests(TestCase):
             )
         cache.clear()
 
+    # Following every link means visiting /library/logout/ too, which ends
+    # the session and turns every later link into a redirect to the sign-in
+    # page - a 302, not a 4xx, so a refusal would go unnoticed. Sign-out is
+    # skipped, and the session is re-established before each follow so one
+    # link cannot mask the next.
+    NOT_FOLLOWED = ("/library/logout/",)
+
     def links_on(self, url):
         """Every distinct in-app link the page at `url` renders."""
 
+        self.sign_in()
         body = self.client.get(url).content.decode(errors="replace")
+        found = sorted(set(re.findall(r'href="(/library/[^"#?]*)', body)))
 
-        return sorted(set(re.findall(r'href="(/library/[^"#?]*)', body)))
+        return [h for h in found if h not in self.NOT_FOLLOWED]
+
+    def sign_in(self):
+        self.client.force_login(self.assistant)
 
     def refused(self, url):
-        """The links on `url` that answer 4xx when followed."""
+        """The links on `url` that do not open for the person shown them."""
 
-        return [
-            (href, self.client.get(href).status_code)
-            for href in self.links_on(url)
-            if self.client.get(href).status_code >= 400
-        ]
+        out = []
+
+        for href in self.links_on(url):
+            self.sign_in()
+            response = self.client.get(href)
+
+            # A redirect to the sign-in page means the session was lost
+            # rather than the link refused; that would hide a real refusal,
+            # so it is reported rather than skipped.
+            if response.status_code >= 400 or "/login/" in response.headers.get(
+                "Location", ""
+            ):
+                out.append((href, response.status_code))
+
+        return out
 
     def test_the_dashboard_offers_nothing_a_switched_off_role_cannot_open(self):
         self.switch_off(
             "copies", "authors", "categories", "publishers",
             "borrowers", "loans.active",
         )
-        self.client.login(username="asst_u", password="pass12345")
-
         self.assertEqual(self.refused(reverse("dashboard")), [])
 
     def test_the_dashboard_still_offers_what_is_left_on(self):
         # The counterpart: the guards must hide what is off, not everything.
         self.switch_off("copies", "borrowers")
-        self.client.login(username="asst_u", password="pass12345")
-
         links = self.links_on(reverse("dashboard"))
 
         self.assertIn(reverse("book_list"), links)
@@ -86,8 +104,6 @@ class OfferedLinksTests(TestCase):
         # `loan_list` is gated on loans.active and nothing is keyed to
         # loans.overdue, so Overdue alone must not appear.
         self.switch_off("loans.active")
-        self.client.login(username="asst_u", password="pass12345")
-
         links = self.links_on(reverse("dashboard"))
 
         self.assertNotIn(reverse("loan_list"), links)
@@ -136,3 +152,125 @@ class ActivityOnTheDashboardTests(TestCase):
 
         self.assertEqual(len(response.context["recent_logs"]), 1)
         self.assertContains(response, self.DESCRIPTION)
+
+NAVIGATION = (
+    "library_home", "circulation_issue", "circulation_return_lookup",
+    "reservation_list", "loan_list", "book_list", "suggestion_list",
+    "author_list", "category_list", "publisher_list", "borrower_list",
+    "location_list", "book_copy_list", "shelf_list",
+    "inventory_session_list", "user_list", "branding_settings",
+    "permissions_matrix", "analytics", "reports_home",
+    "activity_log_list", "notification_list", "profile",
+)
+
+
+@override_settings(CACHES=LOCMEM)
+class EveryNavigationPageTests(TestCase):
+    """No sidebar destination offers an Assistant a control that refuses.
+
+    Assistant is the role with the least, so it is where a control shown to
+    everybody shows up as a refusal. The Books page offered five - Add,
+    Import, Export and per-row Edit and Delete - while its own comment noted
+    that all of them are Admin/Librarian only.
+
+    Pages the role cannot open at all are skipped: a 403 for Stock Check or
+    Users is the boundary working, not a broken link.
+    """
+
+    NOT_FOLLOWED = ("/library/logout/",)
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.assistant = make_user(
+            username="sweep_asst", password="pass12345", role="Assistant"
+        )
+        copy = make_copy()
+        make_loan(copy=copy)
+
+    def setUp(self):
+        cache.clear()
+
+    def test_no_navigation_page_offers_a_control_that_refuses(self):
+        offenders = {}
+
+        for name in NAVIGATION:
+            url = reverse(name)
+            self.client.force_login(self.assistant)
+            page = self.client.get(url)
+
+            if page.status_code != 200:
+                continue
+
+            body = page.content.decode(errors="replace")
+            refused = []
+
+            for href in sorted(set(re.findall(r'href="(/library/[^"#?]*)', body))):
+                if href in self.NOT_FOLLOWED:
+                    continue
+
+                # Signed in again each time: following every link means
+                # visiting sign-out too, and a lost session turns later
+                # links into redirects that would hide a real refusal.
+                self.client.force_login(self.assistant)
+                followed = self.client.get(href)
+
+                if followed.status_code >= 400 or "/login/" in followed.headers.get(
+                    "Location", ""
+                ):
+                    refused.append((href, followed.status_code))
+
+            if refused:
+                offenders[name] = refused
+
+        self.assertEqual(offenders, {})
+
+@override_settings(CACHES=LOCMEM)
+class BookListControlsTests(TestCase):
+    """The Books page hides its editing controls from the role that lacks them.
+
+    Gating them is only half the requirement: the first attempt read
+    `can_edit` in the templates while the view never put it in the context,
+    so the controls vanished for everybody, Admin included, and the sweep
+    reported a clean page because there was nothing left to refuse. Both
+    directions are asserted here for that reason.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = make_user(username="bl_admin", password="p", role="Admin")
+        cls.assistant = make_user(username="bl_asst", password="p", role="Assistant")
+        cls.copy = make_copy()
+
+    def setUp(self):
+        cache.clear()
+
+    def body_for(self, user):
+        self.client.force_login(user)
+
+        return self.client.get(reverse("book_list")).content.decode(errors="replace")
+
+    def test_an_admin_is_offered_add_import_export_and_the_row_actions(self):
+        body = self.body_for(self.admin)
+        book = self.copy.volume.book
+
+        self.assertIn(reverse("book_add"), body)
+        self.assertIn(reverse("book_import"), body)
+        self.assertIn(reverse("book_export"), body)
+        self.assertIn(reverse("book_edit", args=[book.id]), body)
+        self.assertIn(reverse("book_delete", args=[book.id]), body)
+
+    def test_an_assistant_is_offered_none_of_them(self):
+        body = self.body_for(self.assistant)
+        book = self.copy.volume.book
+
+        self.assertNotIn(reverse("book_add"), body)
+        self.assertNotIn(reverse("book_import"), body)
+        self.assertNotIn(reverse("book_export"), body)
+        self.assertNotIn(reverse("book_edit", args=[book.id]), body)
+        self.assertNotIn(reverse("book_delete", args=[book.id]), body)
+
+    def test_an_assistant_can_still_read_the_list(self):
+        body = self.body_for(self.assistant)
+
+        self.assertIn(self.copy.volume.book.title, body)
+        self.assertIn("data-book-row", body)

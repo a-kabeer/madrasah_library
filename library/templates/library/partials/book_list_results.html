@@ -184,7 +184,9 @@ and history behaviour are inherited from #bookResults in book_list.html.
                         {% endcomment %}
                         <th>{% translate "Copies" %}</th>
 
-                        <th class="text-end">{% translate "Actions" %}</th>
+                        {% if can_edit %}
+                            <th class="text-end">{% translate "Actions" %}</th>
+                        {% endif %}
 
                     </tr>
                 </thead>
@@ -257,6 +259,7 @@ and history behaviour are inherited from #bookResults in book_list.html.
                                 {% endif %}
                             </td>
 
+                            {% if can_edit %}
                             <td class="text-end">
                                 {% comment %}
                                   Both buttons open a dialog instead of
@@ -307,11 +310,12 @@ and history behaviour are inherited from #bookResults in book_list.html.
                                     </a>
                                 </div>
                             </td>
+                            {% endif %}
 
                         </tr>
                     {% empty %}
                         <tr>
-                            <td colspan="4" class="text-center text-body-secondary py-4">
+                            <td colspan="{% if can_edit %}4{% else %}3{% endif %}" class="text-center text-body-secondary py-4">
                                 {% translate "No books found." %}
                             </td>
                         </tr>

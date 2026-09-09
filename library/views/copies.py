@@ -41,6 +41,7 @@ from .. import history
 from .. import inventory
 from ..context_processors import is_main_nav_request
 from ..permissions import (
+    can_edit_library,
     feature_required,
     passes_ceiling,
     role_required,
@@ -862,6 +863,11 @@ def book_list(request):
     ]
 
     context = {
+        # Whether to draw Add, Import, Export and the per-row Edit and
+        # Delete at all. Every one of those views carries the
+        # Admin/Librarian ceiling, so an Assistant was being offered five
+        # controls that each answered 403.
+        "can_edit": can_edit_library(request.user),
         "books": page,
         "paginator": paginator,
         "search": search,
