@@ -46,15 +46,26 @@ CACHE_TIMEOUT = 300
 class Feature:
     """One switchable part of the library."""
 
-    __slots__ = ("key", "label", "section", "ceiling", "default", "locked")
+    __slots__ = ("key", "label", "section", "ceiling", "default", "locked",
+                 "menu_only")
 
-    def __init__(self, key, label, section, ceiling, default=None, locked=False):
+    def __init__(self, key, label, section, ceiling, default=None,
+                 locked=False, menu_only=False):
         self.key = key
         self.label = label
         self.section = section
         self.ceiling = tuple(ceiling)
         self.default = tuple(default if default is not None else ceiling)
         self.locked = locked
+
+        # `menu_only` says this key decides whether a menu entry is offered
+        # and nothing more - no view carries `@feature_required` for it,
+        # because the rows behind the entry are reachable another way. It
+        # exists so that "every feature gates a view" can be a test rather
+        # than an assumption, with the one exception named here instead of
+        # discovered later. Do not add another without reading the note on
+        # `loans.overdue` below.
+        self.menu_only = menu_only
 
         assert set(self.default) <= set(self.ceiling), key
 
@@ -66,7 +77,19 @@ FEATURES = (
     Feature("circulation.return", "Return Books", "CIRCULATION", EVERYONE),
     Feature("reservations", "Reservations", "CIRCULATION", EVERYONE),
     Feature("loans.active", "Active Loans", "CIRCULATION", EVERYONE),
-    Feature("loans.overdue", "Overdue", "CIRCULATION", EVERYONE),
+    # Menu-only, and honestly so. "Overdue" links to the loans list with a
+    # status filter, and an overdue loan *is* an active loan: anyone with
+    # `loans.active` reaches the same rows by sorting that list by due
+    # date. Gating the filtered URL as well would be theatre - it would
+    # refuse a URL while leaving the data one click away - so this key
+    # decides whether the entry is offered and nothing more. The sidebar
+    # requires both this and `loans.active` before showing it.
+    #
+    # If it should become a real boundary, the loans list has to stop
+    # showing overdue rows to a role without it, which is a different and
+    # larger change than a decorator.
+    Feature("loans.overdue", "Overdue", "CIRCULATION", EVERYONE,
+            menu_only=True),
 
     Feature("books", "Books", "CATALOG", EVERYONE),
     Feature("suggestions", "Suggestions", "CATALOG", EVERYONE),

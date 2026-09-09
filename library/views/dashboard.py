@@ -5,7 +5,6 @@ the record of who changed what; and the analytics page, which is what the
 records add up to over a period.
 """
 
-from datetime import date
 
 from django.core.paginator import Paginator
 from django.shortcuts import render
@@ -26,26 +25,85 @@ from ..models import (
 )
 
 from .. import analytics as analytics_module
+from .. import features
 
-from ..permissions import can_edit_library, feature_required, role_required
+from ..permissions import can_edit_library, feature_required
 
 from .common import (
+    ACTIVITY_LOG_CACHE_KEY,
     DASHBOARD_CACHE_KEY,
     PAGE_SIZE,
     activity_log_target,
+    date_param,
+    day_bounds,
     label_activity_log,
+    numeric_param,
     query_with,
 )
+
+
+def activity_log_filter_options():
+    """The values the two filter dropdowns offer, cached.
+
+    Both lists come from what is actually recorded, not from a list written
+    by hand. The hand-written ones had drifted: they offered six actions
+    while the log held ten, so a librarian could not filter for a
+    reservation, a cancellation, a fulfilment or an import at all - the
+    option simply was not there. Reading them back cannot drift.
+
+    What reading them back does cost is a DISTINCT over the whole table,
+    twice, on every page load - and the activity log is the fastest-growing
+    table in the database, one row per action anybody takes. Measured on
+    60,000 rows: 11.0 ms and 10.8 ms, both sequential scans, and neither
+    helped by any index, since a DISTINCT has to see every row. That is 22
+    ms of the page's own time, growing linearly and forever.
+
+    So they are cached, and `create_activity_log` already deletes
+    ACTIVITY_LOG_CACHE_KEY on every write - the invalidation was written
+    before anything stored under that key, which is why this could be added
+    without inventing a new one. A new action or entity type appears in the
+    dropdown as soon as the entry that introduced it is recorded, because
+    recording it is what clears the cache.
+    """
+
+    cached = cache.get(ACTIVITY_LOG_CACHE_KEY)
+
+    if cached is not None:
+        return cached
+
+    actions = list(
+        ActivityLog.objects.order_by()
+        .values_list("action", flat=True)
+        .distinct()
+        .order_by("action")
+    )
+
+    entity_types = [
+        kind
+        for kind in ActivityLog.objects.order_by()
+        .values_list("entity_type", flat=True)
+        .distinct()
+        .order_by("entity_type")
+        if kind
+    ]
+
+    options = (actions, entity_types)
+    # Same 300 s as the dashboard counts below, and for the same
+    # reason: long enough to matter under a burst, short enough that
+    # a stale list cannot outlive a shift.
+    cache.set(ACTIVITY_LOG_CACHE_KEY, options, timeout=300)
+
+    return options
 
 
 @feature_required("activity_log")
 def activity_log_list(request):
 
     search = request.GET.get("search", "").strip()
-    user_id = request.GET.get("user", "").strip()
+    user_id = numeric_param(request, "user")
     action = request.GET.get("action", "").strip()
     entity_type = request.GET.get("entity_type", "").strip()
-    date = request.GET.get("date", "").strip()
+    date = date_param(request, "date")
 
     logs_query = ActivityLog.objects.select_related(
         "user"
@@ -84,8 +142,13 @@ def activity_log_list(request):
         )
 
     if date:
+        # A range on the bare column, not `created_at__date=`, so the
+        # index on created_at can serve it - see `day_bounds`.
+        start, end = day_bounds(date)
+
         logs_query = logs_query.filter(
-            created_at__date=date
+            created_at__gte=start,
+            created_at__lt=end,
         )
 
     logs = logs_query.order_by(
@@ -103,26 +166,7 @@ def activity_log_list(request):
         "full_name"
     )
 
-    # Both filter lists come from what is actually recorded, not from a
-    # list written by hand. The hand-written ones had drifted: they offered
-    # six actions while the log held ten, so a librarian could not filter
-    # for a reservation, a cancellation, a fulfilment or an import at all -
-    # the option simply was not there. Reading them back cannot drift.
-    actions = list(
-        ActivityLog.objects.order_by()
-        .values_list("action", flat=True)
-        .distinct()
-        .order_by("action")
-    )
-
-    entity_types = [
-        kind
-        for kind in ActivityLog.objects.order_by()
-        .values_list("entity_type", flat=True)
-        .distinct()
-        .order_by("entity_type")
-        if kind
-    ]
+    actions, entity_types = activity_log_filter_options()
 
     return render(
         request,
@@ -133,7 +177,7 @@ def activity_log_list(request):
             "user_id": user_id,
             "action": action,
             "entity_type": entity_type,
-            "date": date,
+            "date": date.isoformat() if date else "",
             "users": users,
             "actions": actions,
             "entity_types": entity_types,
@@ -165,41 +209,44 @@ def library_home(request):
 
         today = timezone.now().date()
 
+        # One pass per table rather than one per number. These were twelve
+        # separate COUNT(*) round trips; the copies, borrowers and loans
+        # figures are all counts over the same rows with different
+        # conditions, which is what a filtered Count is for - the same
+        # shape analytics.py already uses. Twelve queries become seven.
+        copies = BookCopy.objects.aggregate(
+            total=models.Count("id"),
+            available=models.Count("id", filter=models.Q(status="Available")),
+            issued=models.Count("id", filter=models.Q(status="Issued")),
+        )
+
+        borrowers = Borrower.objects.aggregate(
+            total=models.Count("id"),
+            active=models.Count("id", filter=models.Q(is_active=True)),
+        )
+
+        loans = Loan.objects.filter(return_date__isnull=True).aggregate(
+            active=models.Count("id"),
+            overdue=models.Count("id", filter=models.Q(due_date__lt=today)),
+            due_today=models.Count("id", filter=models.Q(due_date=today)),
+        )
+
         dashboard_stats = {
             "total_books": Book.objects.count(),
             "total_authors": Author.objects.count(),
             "total_categories": Category.objects.count(),
             "total_publishers": Publisher.objects.count(),
 
-            "total_book_copies": BookCopy.objects.count(),
+            "total_book_copies": copies["total"],
+            "available_copies": copies["available"],
+            "issued_copies": copies["issued"],
 
-            "available_copies": BookCopy.objects.filter(
-                status="Available"
-            ).count(),
+            "total_borrowers": borrowers["total"],
+            "active_borrowers": borrowers["active"],
 
-            "issued_copies": BookCopy.objects.filter(
-                status="Issued"
-            ).count(),
-
-            "total_borrowers": Borrower.objects.count(),
-
-            "active_borrowers": Borrower.objects.filter(
-                is_active=True
-            ).count(),
-
-            "active_loans": Loan.objects.filter(
-                return_date__isnull=True
-            ).count(),
-
-            "overdue_loans": Loan.objects.filter(
-                return_date__isnull=True,
-                due_date__lt=today
-            ).count(),
-
-            "due_today_loans": Loan.objects.filter(
-                return_date__isnull=True,
-                due_date=today
-            ).count(),
+            "active_loans": loans["active"],
+            "overdue_loans": loans["overdue"],
+            "due_today_loans": loans["due_today"],
         }
 
         cache.set(
@@ -240,16 +287,24 @@ def library_home(request):
         "-id",
     )[:5]
 
-    recent_logs = list(
-        ActivityLog.objects.select_related(
-            "user"
-        ).order_by(
-            "-created_at"
-        )[:5]
-    )
+    # Gated on the same feature as the Activity Log page itself. Turning
+    # that page off for a role used to hide the page and the sidebar entry
+    # while the last five entries still sat on their dashboard, which is
+    # the data the toggle exists to withhold.
+    if features.user_has(request.user, "activity_log"):
+        recent_logs = list(
+            ActivityLog.objects.select_related(
+                "user"
+            ).order_by(
+                "-created_at"
+            )[:5]
+        )
 
-    for log in recent_logs:
-        log.target_url = activity_log_target(log)
+        for log in recent_logs:
+            log.target_url = activity_log_target(log)
+
+    else:
+        recent_logs = []
 
     dashboard_stats["recent_loans"] = recent_loans
     dashboard_stats["recent_returns"] = recent_returns

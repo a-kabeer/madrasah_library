@@ -22,6 +22,9 @@ Not a general-purpose barcode library. It encodes what a copy code can
 contain and refuses anything else rather than guessing.
 """
 
+from django.utils.html import escape
+
+
 
 # The 107 symbols, as bar/space widths. Index is the Code 128 value; each
 # entry is six digits giving the widths of bar, space, bar, space, bar,
@@ -221,6 +224,14 @@ def svg(value, height=38, module=1.0, quiet_zone=10):
         position += width
         is_bar = not is_bar
 
+    # `value` is escaped because this markup is handed to `mark_safe` by
+    # the label view, so nothing downstream will escape it. Today every
+    # copy code is generated (`_next_copy_code`), but the only checks a
+    # posted one passes are emptiness, length and uniqueness - no
+    # restriction on characters - and `copy_add_modal` has a fallback that
+    # delegates to a view which does read the code from the request. One
+    # escape here costs nothing and closes that off wherever the value
+    # comes from.
     return (
         '<svg class="label-barcode" xmlns="http://www.w3.org/2000/svg" '
         'viewBox="0 0 %g %g" preserveAspectRatio="none" '
@@ -230,6 +241,6 @@ def svg(value, height=38, module=1.0, quiet_zone=10):
     ) % (
         total * module,
         height,
-        value,
+        escape(value),
         "".join(segments),
     )

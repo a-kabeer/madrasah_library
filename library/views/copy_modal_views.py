@@ -1,18 +1,18 @@
 """Modal-first workflows for physical book copies."""
 
 from django.core.cache import cache
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 
 from ..models import BookCopy, Location, Shelf
 from ..permissions import feature_required
 from .common import (
     BOOK_COPY_CACHE_KEY,
+    create_activity_log,
     DASHBOARD_CACHE_KEY,
     LOCATION_CACHE_KEY,
-    SHELF_CACHE_KEY,
-    create_activity_log,
+    modal_redirect,
     safe_redirect_target,
+    SHELF_CACHE_KEY,
     shelf_options_for,
     volume_label,
 )
@@ -24,10 +24,8 @@ def _next_url(request):
     return safe_redirect_target(request, "book_copy_list")
 
 
-def _redirect_response(url):
-    response = HttpResponse(status=204)
-    response["HX-Redirect"] = url
-    return response
+def _redirect_response(request, url):
+    return modal_redirect(request, url)
 
 
 @feature_required("copies", "Admin", "Librarian")
@@ -68,7 +66,7 @@ def book_copy_edit_modal(request, copy_id):
                 create_activity_log(user=request.user, action="UPDATE", entity_type="BookCopy", entity_id=copy.id, description=f"{copy.copy_code} status changed from {old_status} to {copy.status}")
             if (copy.acquisition_date, copy.notes) != old_details:
                 create_activity_log(user=request.user, action="UPDATE", entity_type="BookCopy", entity_id=copy.id, description=f"{copy.copy_code} details updated")
-            return _redirect_response(_next_url(request))
+            return _redirect_response(request, _next_url(request))
     return render(request, "library/partials/copy_edit_modal.html", {"copy": copy, "volume_name": volume_label(copy.volume), "locations": Location.objects.order_by("name"), "shelves": shelf_options_for(form_data["location_id"]), "statuses": COPY_STATUSES, "is_issued": is_issued, "error_message": error_message, "form_data": form_data})
 
 
@@ -91,5 +89,5 @@ def book_copy_move_modal(request, copy_id):
                 copy.save(update_fields=["shelf"])
                 cache.delete(BOOK_COPY_CACHE_KEY); cache.delete(SHELF_CACHE_KEY); cache.delete(LOCATION_CACHE_KEY); cache.delete(DASHBOARD_CACHE_KEY)
                 create_activity_log(user=request.user, action="UPDATE", entity_type="BookCopy", entity_id=copy.id, description=f"{copy.copy_code} moved from {old_shelf or 'no shelf'} to {shelf}")
-            return _redirect_response(_next_url(request))
+            return _redirect_response(request, _next_url(request))
     return render(request, "library/partials/copy_move_modal.html", {"copy": copy, "location_id": location_id, "locations": Location.objects.order_by("name"), "shelves": shelf_options_for(location_id), "error_message": error_message})

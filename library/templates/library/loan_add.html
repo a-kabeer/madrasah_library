@@ -41,9 +41,9 @@
             {% endcomment %}
             <form method="get" class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-body">
-                    <h5 class="mb-0 fw-bold">
+                    <h3 class="h5 mb-0 fw-bold">
                         <i class="bi bi-person me-2"></i>{% translate "1. Borrower" %}
-                    </h5>
+                    </h3>
                 </div>
                 <div class="card-body">
 
@@ -78,9 +78,9 @@
 
                     <hr class="my-4">
 
-                    <h5 class="mb-3 fw-bold">
+                    <h3 class="h5 mb-3 fw-bold">
                         <i class="bi bi-upc-scan me-2"></i>{% translate "2. Find copies" %}
-                    </h5>
+                    </h3>
 
                     {% comment %}
                       The copies already chosen ride along as hidden fields,
@@ -144,9 +144,9 @@
             {% if query %}
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
-                        <h5 class="mb-0 fw-bold">
+                        <h3 class="h5 mb-0 fw-bold">
                             <i class="bi bi-search me-2"></i>{% translate "Matches" %}
-                        </h5>
+                        </h3>
                         <span class="text-body-secondary small">
                             {% if more_matches %}
                                 {% blocktranslate with shown=lookup_limit %}first {{ shown }} — narrow the search{% endblocktranslate %}
@@ -232,9 +232,9 @@
                 {% endfor %}
 
                 <div class="card-header bg-body">
-                    <h5 class="mb-0 fw-bold">
+                    <h3 class="h5 mb-0 fw-bold">
                         <i class="bi bi-check2-square me-2"></i>{% translate "3. Review and issue" %}
-                    </h5>
+                    </h3>
                 </div>
                 <div class="card-body">
 

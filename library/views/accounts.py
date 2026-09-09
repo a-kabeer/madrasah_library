@@ -32,7 +32,7 @@ from ..models import (
 )
 
 from ..features import ADMIN, SUPER_ADMIN
-from ..permissions import feature_required, role_required
+from ..permissions import feature_required
 from ..security import login_rate_limiter
 
 from .common import (
@@ -132,6 +132,19 @@ def profile_view(request):
 
             # Keep the current session valid after changing our own password.
             update_session_auth_hash(request, request.user)
+
+            # The log records an Admin resetting somebody else's password
+            # (`user_edit` below) and did not record this - somebody
+            # changing their own. That is the half a question about a
+            # compromised account actually starts from, and it is the one
+            # write in the application that was not in the audit trail.
+            create_activity_log(
+                user=request.user,
+                action="UPDATE",
+                entity_type="User",
+                entity_id=request.user.id,
+                description=f"{request.user.username} changed their password",
+            )
 
             success = "Password updated successfully."
 
@@ -439,7 +452,7 @@ def user_add(request):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="CREATE",
                 entity_type="User",
                 entity_id=user.id,
@@ -491,7 +504,7 @@ def user_toggle_active(request, user_id):
         cache.delete(DASHBOARD_CACHE_KEY)
 
         create_activity_log(
-            user=None,
+            user=request.user,
             action="UPDATE",
             entity_type="User",
             entity_id=user.id,
@@ -589,7 +602,7 @@ def user_edit(request, user_id):
             )
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="UPDATE",
                 entity_type="User",
                 entity_id=target_user.id,
@@ -673,7 +686,7 @@ def user_delete(request, user_id):
         cache.delete(DASHBOARD_CACHE_KEY)
 
         create_activity_log(
-            user=None,
+            user=request.user,
             action="DELETE",
             entity_type="User",
             entity_id=deleted_user_id,

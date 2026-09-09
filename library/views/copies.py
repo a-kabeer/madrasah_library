@@ -15,7 +15,6 @@ from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
-from django.template.loader import render_to_string
 from django.core.cache import cache
 from django.utils import timezone
 from django.utils.safestring import mark_safe
@@ -41,9 +40,9 @@ from .. import history
 from .. import inventory
 from ..context_processors import is_main_nav_request
 from ..permissions import (
+    can_edit_library,
     feature_required,
     passes_ceiling,
-    role_required,
 )
 
 from .common import (
@@ -184,164 +183,12 @@ def location_detail(request, location_id):
         }
     )
 
-#Location Add
-@feature_required("locations", "Admin", "Librarian")
-def location_add(request):
 
-    # Quick-add from the Add Book dialog: answer with the refreshed option
-    # list rather than a redirect, so the librarian carries on where they
-    # were instead of losing the half-filled form.
-    options = is_options_request(request)
-
-    error = ""
-
-    if request.method == "POST":
-        name = request.POST.get("name", "").strip()
-        description = request.POST.get("description", "").strip()
-
-        # `locations.name` is UNIQUE, so a repeat would otherwise be an
-        # IntegrityError. Treat it as "you meant this one", the same way
-        # the searchable dropdowns handle a duplicate author.
-        existing = (
-            Location.objects.filter(name__iexact=name).first()
-            if name
-            else None
-        )
-
-        if not name:
-
-            error = "Location name is required."
-
-        elif existing is not None:
-
-            if options:
-                return location_options_response(existing)
-
-            error = "A location with this name already exists."
-
-        else:
-            location = Location.objects.create(
-                name=name,
-                description=description or None
-            )
-
-            cache.delete(LOCATION_CACHE_KEY)
-            cache.delete(DASHBOARD_CACHE_KEY)
-
-            create_activity_log(
-                user=None,
-                action="CREATE",
-                entity_type="Location",
-                entity_id=location.id,
-                description=f"{location.name} شامل کی گئی",
-            )
-
-            if options:
-                return location_options_response(location)
-
-            return redirect("location_list")
-
-    if options:
-        return location_options_response(None, error=error)
-
-    return render(
-        request,
-        "library/location_add.html"
-    )
-
-#Location Edit
-@feature_required("locations", "Admin", "Librarian")
-def location_edit(request, location_id):
-
-    location = get_object_or_404(Location, id=location_id)
-
-    if request.method == "POST":
-        name = request.POST.get("name", "").strip()
-        description = request.POST.get("description", "").strip()
-
-        if name:
-            location.name = name
-            location.description = description or None
-
-            location.save()
-
-            cache.delete(LOCATION_CACHE_KEY)
-            cache.delete(DASHBOARD_CACHE_KEY)
-
-            create_activity_log(
-                user=None,
-                action="UPDATE",
-                entity_type="Location",
-                entity_id=location.id,
-                description=f"{location.name} updated",
-            )
-
-            return redirect("location_detail", location_id=location.id)
-
-    return render(
-        request,
-        "library/location_edit.html",
-        {
-            "location": location
-        }
-    )
-
-#Location Delete
-@feature_required("locations", "Admin", "Librarian")
-def location_delete(request, location_id):
-
-    location = get_object_or_404(Location, id=location_id)
-
-    shelves_exist = Shelf.objects.filter(
-        location_id=location.id
-    ).exists()
-
-    if request.method == "POST":
-
-        if shelves_exist:
-
-            return render(
-                request,
-                "library/location_delete.html",
-                {
-                    "location": location,
-                    "shelves_exist": True,
-                }
-            )
-
-        deleted_location_id = location.id
-        deleted_location_name = location.name
-
-        location.delete()
-
-        cache.delete(LOCATION_CACHE_KEY)
-        cache.delete(DASHBOARD_CACHE_KEY)
-
-        create_activity_log(
-            user=None,
-            action="DELETE",
-            entity_type="Location",
-            entity_id=deleted_location_id,
-            description=f"{deleted_location_name} deleted",
-        )
-
-        return redirect("location_list")
-
-    return render(
-        request,
-        "library/location_delete.html",
-        {
-            "location": location,
-            "shelves_exist": shelves_exist,
-        }
-    )
-
-#Shelf List
 @feature_required("shelves")
 def shelf_list(request):
 
     search = request.GET.get("search", "").strip()
-    location_id = request.GET.get("location", "").strip()
+    location_id = numeric_param(request, "location")
 
     # The copy count comes back with the shelves, in the same query, so the
     # list costs the same however many copies the library holds.
@@ -505,189 +352,6 @@ def shelf_detail(request, shelf_id):
             ),
         }
     )
-
-#Shelf Add
-@feature_required("shelves", "Admin", "Librarian")
-def shelf_add(request):
-
-    # Quick-add from the Add Book dialog, as in `location_add`.
-    options = is_options_request(request)
-
-    locations = Location.objects.all()
-
-    # Preselect location when coming from Location Detail page
-    preselected_location_id = request.GET.get("location", "").strip()
-    preselected_location = None
-    if preselected_location_id.isdigit():
-        preselected_location = Location.objects.filter(
-            id=int(preselected_location_id)
-        ).first()
-
-    error = ""
-
-    if request.method == "POST":
-        location_id = request.POST.get("location")
-        shelf_code = request.POST.get("shelf_code", "").strip()
-        description = request.POST.get("description", "").strip()
-
-        # A shelf only means anything inside a location, and the pair is
-        # UNIQUE, so both are required and a repeat resolves to the shelf
-        # that is already there. This is also what stops the dialog
-        # creating a shelf under the wrong location.
-        existing = None
-
-        if location_id and str(location_id).isdigit() and shelf_code:
-            existing = Shelf.objects.filter(
-                location_id=location_id,
-                shelf_code__iexact=shelf_code,
-            ).first()
-
-        if not location_id or not str(location_id).isdigit():
-
-            error = "Choose a location for the shelf."
-
-        elif not shelf_code:
-
-            error = "Shelf code is required."
-
-        elif existing is not None:
-
-            if options:
-                return shelf_options_response(location_id, existing)
-
-            error = "That location already has a shelf with this code."
-
-        else:
-            shelf = Shelf.objects.create(
-                location_id=location_id,
-                shelf_code=shelf_code,
-                description=description or None
-            )
-
-            cache.delete(SHELF_CACHE_KEY)
-            cache.delete(DASHBOARD_CACHE_KEY)
-
-            create_activity_log(
-                user=None,
-                action="CREATE",
-                entity_type="Shelf",
-                entity_id=shelf.id,
-                description=f"{shelf.shelf_code} شامل کیا گیا",
-            )
-
-            if options:
-                return shelf_options_response(location_id, shelf)
-
-            return redirect(safe_redirect_target(request, "shelf_list"))
-
-    if options:
-        return shelf_options_response(
-            request.POST.get("location", ""),
-            None,
-            error=error,
-        )
-
-    return render(
-        request,
-        "library/shelf_add.html",
-        {
-            "locations": locations,
-            "preselected_location": preselected_location,
-        }
-    )
-
-#Shelf Edit
-@feature_required("shelves", "Admin", "Librarian")
-def shelf_edit(request, shelf_id):
-
-    shelf = get_object_or_404(Shelf, id=shelf_id)
-    locations = Location.objects.all()
-
-    if request.method == "POST":
-        location_id = request.POST.get("location")
-        shelf_code = request.POST.get("shelf_code", "").strip()
-        description = request.POST.get("description", "").strip()
-
-        if location_id and shelf_code:
-            shelf.location_id = location_id
-            shelf.shelf_code = shelf_code
-            shelf.description = description or None
-
-            shelf.save()
-
-            cache.delete(SHELF_CACHE_KEY)
-            cache.delete(DASHBOARD_CACHE_KEY)
-
-            create_activity_log(
-                user=None,
-                action="UPDATE",
-                entity_type="Shelf",
-                entity_id=shelf.id,
-                description=f"{shelf.shelf_code} updated",
-            )
-
-            return redirect("shelf_detail", shelf_id=shelf.id)
-
-    return render(
-        request,
-        "library/shelf_edit.html",
-        {
-            "shelf": shelf,
-            "locations": locations
-        }
-    )
-
-#Shelf Delete
-@feature_required("shelves", "Admin", "Librarian")
-def shelf_delete(request, shelf_id):
-
-    shelf = get_object_or_404(Shelf, id=shelf_id)
-
-    copies_exist = BookCopy.objects.filter(
-        shelf_id=shelf.id
-    ).exists()
-
-    if request.method == "POST":
-
-        if copies_exist:
-
-            return render(
-                request,
-                "library/shelf_delete.html",
-                {
-                    "shelf": shelf,
-                    "copies_exist": True,
-                }
-            )
-
-        deleted_shelf_id = shelf.id
-        deleted_shelf_code = shelf.shelf_code
-
-        shelf.delete()
-
-        cache.delete(SHELF_CACHE_KEY)
-        cache.delete(DASHBOARD_CACHE_KEY)
-
-        create_activity_log(
-            user=None,
-            action="DELETE",
-            entity_type="Shelf",
-            entity_id=deleted_shelf_id,
-            description=f"{deleted_shelf_code} deleted",
-        )
-
-        return redirect("shelf_list")
-
-    return render(
-        request,
-        "library/shelf_delete.html",
-        {
-            "shelf": shelf,
-            "copies_exist": copies_exist,
-        }
-    )
-
-
 
 
 @feature_required("books")
@@ -862,6 +526,11 @@ def book_list(request):
     ]
 
     context = {
+        # Whether to draw Add, Import, Export and the per-row Edit and
+        # Delete at all. Every one of those views carries the
+        # Admin/Librarian ceiling, so an Assistant was being offered five
+        # controls that each answered 403.
+        "can_edit": can_edit_library(request.user),
         "books": page,
         "paginator": paginator,
         "search": search,
@@ -1141,84 +810,6 @@ def copy_field_error_summary(errors):
         return "There is a problem with one of the fields below."
 
     return "There are problems with %d of the fields below." % len(errors)
-
-
-def location_options_response(selected, error=""):
-    """The Location dropdown's options, with `selected` chosen.
-
-    Answers the dialog's quick-add. The whole option list is re-rendered
-    rather than one <option> appended, so the new location lands in
-    alphabetical order like the rest.
-    """
-
-    return render_options(
-        "library/partials/location_options.html",
-        {
-            "locations": Location.objects.order_by("name"),
-            "selected_id": str(selected.id) if selected else "",
-            "error": error,
-        },
-        selected,
-        "location",
-    )
-
-
-def shelf_options_response(location_id, selected, error=""):
-    """The Shelf dropdown's options for one location, with `selected` chosen."""
-
-    return render_options(
-        "library/partials/shelf_options.html",
-        {
-            "shelves": shelf_options_for(location_id),
-            "selected_id": str(selected.id) if selected else "",
-            "has_location": str(location_id).isdigit(),
-            "error": error,
-        },
-        selected,
-        "shelf",
-    )
-
-
-def render_options(template, context, selected, entity):
-    """Render an option list, and say in the headers how it went.
-
-    The body is nothing but <option> elements, because it is swapped into a
-    <select>, where the browser's parser moves or discards anything else.
-    That is why the outcome travels as an event rather than as markup:
-
-      quickAddDone   — created (or matched something already there). Closes
-                       the quick-add box.
-      quickAddFailed — nothing was created. Leaves the box open and shows
-                       the reason.
-
-    `entity` matters on success: a new location means the Shelf list now
-    belongs to the wrong one and has to be reloaded, while a new shelf is
-    already in the list this very response carries — reloading then would
-    only discard the selection just made.
-    """
-
-    response = HttpResponse(render_to_string(template, context))
-
-    if selected is not None:
-        response["HX-Trigger"] = json.dumps({
-            "quickAddDone": {
-                "entity": entity,
-                "id": selected.id,
-                "label": str(selected),
-            }
-        })
-
-    elif context.get("error"):
-        response["HX-Trigger"] = json.dumps({
-            "quickAddFailed": {
-                "entity": entity,
-                "message": context["error"],
-            }
-        })
-
-    return response
-
-
 COPY_LIST_FRAGMENTS = {
     "results": "library/partials/copy_list_results.html",
 }
@@ -1776,117 +1367,6 @@ def book_copy_detail(request, copy_id):
     # the list rather than 404ing on a link somebody has bookmarked.
     return redirect("book_copy_list")
 
-def copy_move_modal(request, copy, location_id, shelves, errors):
-    return render(
-        request,
-        "library/partials/copy_move_modal.html",
-        {
-            "copy": copy,
-            "volume_name": volume_label(copy.volume),
-            "locations": Location.objects.order_by("name"),
-            "shelves": shelves,
-            "location_id": location_id,
-            "errors": errors,
-            "error": (
-                copy_field_error_summary(errors) if errors else ""
-            ),
-        },
-    )
-
-
-@feature_required("copies", "Admin", "Librarian")
-def book_copy_move(request, copy_id):
-    """Put one copy on a different shelf, in a dialog.
-
-    Only the shelf: the volume it is a copy of and the code on its label
-    are not this view's business, and a copy that is out on loan is still
-    on the shelf it was taken from as far as the record is concerned.
-
-    Bulk move is a separate view and is untouched - it moves the copies
-    ticked on the list, which is a different question from this one.
-    """
-
-    copy = get_object_or_404(
-        BookCopy.objects.select_related(
-            "volume__book",
-            "shelf__location",
-        ),
-        id=copy_id
-    )
-
-    # Where it is now, so the Location dropdown opens on it.
-    location_id = str(copy.shelf.location_id) if copy.shelf_id else ""
-
-    errors = {}
-
-    if request.method == "POST":
-
-        location_id = request.POST.get("location", "").strip()
-        new_shelf_id = request.POST.get("shelf", "").strip()
-
-        new_shelf = None
-
-        if not new_shelf_id.isdigit() or not location_id.isdigit():
-
-            errors["shelf"] = "Choose a location and a shelf."
-
-        else:
-            # The shelf has to be on the location chosen alongside it. The
-            # dropdowns only offer matching pairs, but that is the
-            # browser's word for it.
-            new_shelf = Shelf.objects.filter(
-                id=new_shelf_id,
-                location_id=location_id,
-            ).select_related("location").first()
-
-            if new_shelf is None:
-                errors["shelf"] = (
-                    "That shelf is not in the location you chose."
-                )
-
-        if not errors:
-
-            old_shelf = copy.shelf
-
-            copy.shelf = new_shelf
-            copy.save(update_fields=["shelf"])
-
-            cache.delete(BOOK_COPY_CACHE_KEY)
-            cache.delete(SHELF_CACHE_KEY)
-            cache.delete(LOCATION_CACHE_KEY)
-            cache.delete(DASHBOARD_CACHE_KEY)
-
-            create_activity_log(
-                user=request.user,
-                action="UPDATE",
-                entity_type="BookCopy",
-                entity_id=copy.id,
-                description=(
-                    f"{copy.copy_code} moved from "
-                    f"{old_shelf if old_shelf else 'no shelf'} "
-                    f"to {new_shelf}"
-                ),
-            )
-
-            if is_form_modal_request(request):
-                return lookup_saved_response(copy.copy_code)
-
-            return redirect("book_copy_list")
-
-    if is_form_modal_request(request):
-        return copy_move_modal(
-            request,
-            copy,
-            location_id,
-            shelf_options_for(location_id),
-            errors,
-        )
-
-    if errors:
-        messages.error(request, copy_field_error_summary(errors))
-
-    return redirect("book_copy_list")
-
 
 def copy_form_modal(request, action, form_data, errors, copy=None,
                     selected_volume=None, volumes=None):
@@ -1981,7 +1461,7 @@ def book_copy_add(request):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="CREATE",
                 entity_type="BookCopy",
                 entity_id=copy.id,
@@ -2018,158 +1498,6 @@ def book_copy_add(request):
         messages.error(request, copy_field_error_summary(errors))
 
     return redirect("book_copy_list")
-
-
-
-@feature_required("copies", "Admin", "Librarian")
-def book_copy_edit(request, copy_id):
-    """Where one copy sits, and what condition it is in - in a dialog.
-
-    Copy-level only. Nothing here reads or writes the Book or the
-    BookVolume, so the title, author, category and every other copy are
-    untouched by anything done here.
-
-    Two things it deliberately does not offer, both enforced in the shared
-    validator rather than by leaving the input out:
-
-      * the copy code, which is printed on the book itself and quoted in
-        past activity-log entries - retyping it would leave the label, the
-        record and the shelf disagreeing.
-      * moving the copy to another volume, which would silently change
-        which book a past loan appears to have been for. A wrongly-filed
-        copy is a delete-and-re-add, not an edit.
-    """
-
-    copy = get_object_or_404(
-        BookCopy.objects.select_related(
-            "volume__book",
-            "shelf__location",
-        ),
-        id=copy_id,
-    )
-
-    from_page = request.GET.get("from", request.POST.get("from", ""))
-
-    form_data = {
-        "volume_id": copy.volume_id,
-        "copy_code": copy.copy_code,
-        # Where it is now, so Location opens on it and Shelf can be
-        # narrowed to that location's shelves.
-        "location_id": (
-            str(copy.shelf.location_id) if copy.shelf_id else ""
-        ),
-        "shelf_id": copy.shelf_id,
-        "status": copy.status,
-        "acquisition_date": (
-            copy.acquisition_date.strftime("%Y-%m-%d")
-            if copy.acquisition_date
-            else ""
-        ),
-        "notes": copy.notes or "",
-    }
-
-    errors = {}
-
-    if request.method == "POST":
-
-        was_shelf = copy.shelf
-        was_status = copy.status
-        was_details = (copy.acquisition_date, copy.notes)
-
-        form_data, errors = validate_copy_details(request, copy)
-
-        if not errors:
-
-            copy.shelf_id = form_data["shelf_id"]
-            copy.status = form_data["status"]
-            copy.acquisition_date = form_data["acquisition_date"] or None
-            copy.notes = form_data["notes"] or None
-
-            copy.save(update_fields=[
-                "shelf",
-                "status",
-                "acquisition_date",
-                "notes",
-            ])
-
-            cache.delete(BOOK_COPY_CACHE_KEY)
-            cache.delete(SHELF_CACHE_KEY)
-            cache.delete(LOCATION_CACHE_KEY)
-            cache.delete(DASHBOARD_CACHE_KEY)
-
-            # A move and a change of condition are different events and
-            # are logged as such, which is what the copy's own history
-            # reads back. Unchanged from what this view already did.
-            # Worded exactly as the move views word it - "from A to B" -
-            # so a copy's timeline reads the same whichever route moved
-            # it. `action` stays UPDATE, which is what the history reader
-            # already looks for.
-            if copy.shelf_id != (was_shelf.id if was_shelf else None):
-                create_activity_log(
-                    user=request.user,
-                    action="UPDATE",
-                    entity_type="BookCopy",
-                    entity_id=copy.id,
-                    description=(
-                        f"{copy.copy_code} moved from "
-                        f"{was_shelf if was_shelf else 'no shelf'} "
-                        f"to {copy.shelf if copy.shelf else 'no shelf'}"
-                    ),
-                )
-
-            if copy.status != was_status:
-                create_activity_log(
-                    user=request.user,
-                    action="UPDATE",
-                    entity_type="BookCopy",
-                    entity_id=copy.id,
-                    description=(
-                        f"{copy.copy_code} status changed from "
-                        f"{was_status} to {copy.status}"
-                    ),
-                )
-
-            # The rest of the form. Recorded generally, because a note or
-            # an acquisition date is not a movement and spelling out its
-            # before and after would put the note's whole text in the
-            # history twice. Still attributed and still dated, which is
-            # what an edit needs to be answerable for.
-            if (copy.acquisition_date, copy.notes) != was_details:
-                create_activity_log(
-                    user=request.user,
-                    action="UPDATE",
-                    entity_type="BookCopy",
-                    entity_id=copy.id,
-                    description="%s details updated" % copy.copy_code,
-                )
-
-            if is_form_modal_request(request):
-                return lookup_saved_response(copy.copy_code)
-
-            if from_page == "shelf" and copy.shelf_id:
-                return redirect("shelf_detail", shelf_id=copy.shelf_id)
-
-            if from_page == "volume":
-                return redirect(
-                    "book_volume_detail", volume_id=copy.volume_id
-                )
-
-            return redirect("book_copy_list")
-
-    if is_form_modal_request(request):
-        return copy_form_modal(
-            request,
-            reverse("book_copy_edit", args=[copy.id]),
-            form_data,
-            errors,
-            copy=copy,
-        )
-
-    if errors:
-        messages.error(request, copy_field_error_summary(errors))
-
-    return redirect("book_copy_list")
-
 
 
 def copy_delete_blocker(copy):
@@ -2267,7 +1595,7 @@ def book_copy_delete(request, copy_id):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="DELETE",
                 entity_type="BookCopy",
                 entity_id=deleted_id,

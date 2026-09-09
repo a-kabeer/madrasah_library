@@ -26,7 +26,7 @@
             <label for="copyEditLocation" class="form-label fw-semibold">{% translate "Location" %}</label>
             <select class="form-select" id="copyEditLocation" name="location" data-location-select
                     hx-get="{% url 'shelf_list' %}" hx-vals='{"options":"1"}' hx-trigger="change"
-                    hx-target="#copyEditShelf" hx-include="this" required>
+                    hx-target="#copyEditShelf" hx-include="this" required autofocus>
                 {% include "library/partials/location_options.html" with locations=locations selected_id=form_data.location_id %}
             </select>
         </div>

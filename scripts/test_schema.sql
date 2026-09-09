@@ -10,7 +10,12 @@
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
-SET transaction_timeout = 0;
+-- `SET transaction_timeout = 0;` was here. pg_dump 18 writes it; the
+-- parameter did not exist before PostgreSQL 17, so on the 16 server this
+-- schema is documented against it is an error - and with ON_ERROR_STOP,
+-- which is what anyone loading a schema should use, the whole file aborts
+-- on line 13. It is the parameter's own default, so dropping the line
+-- changes nothing except that the file loads.
 SET client_encoding = 'UTF8';
 SET standard_conforming_strings = on;
 SELECT pg_catalog.set_config('search_path', '', false);
@@ -22,6 +27,24 @@ SET row_security = off;
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
+--
+-- The trigram search indexes further down need this, and pg_dump does not
+-- write it when the extension lives outside the dumped schema. Without it
+-- a fresh database gets 20 tables, 62 of the 69 indexes, and seven silent
+-- failures - every one of them a search index, so every list search
+-- sequentially scans and nothing says why. Verified against an empty
+-- PostgreSQL 16: `operator class "public.gin_trgm_ops" does not exist`,
+-- seven times.
+--
+-- Creating an extension needs a superuser (or rds_superuser, or Render's
+-- provided role, all of which have it) the first time only; `IF NOT
+-- EXISTS` makes re-running the file safe.
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
 
 --
 -- Name: activity_logs; Type: TABLE; Schema: public; Owner: postgres
@@ -655,10 +678,10 @@ CREATE INDEX idx_activity_logs_user_id ON public.activity_logs USING btree (user
 
 
 --
--- Name: idx_authors_name_trgm; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_authors_name_upper_trgm; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX idx_authors_name_trgm ON public.authors USING gin (name public.gin_trgm_ops);
+CREATE INDEX idx_authors_name_upper_trgm ON public.authors USING gin (UPPER(name) public.gin_trgm_ops);
 
 
 --
@@ -676,10 +699,10 @@ CREATE INDEX idx_book_contents_title ON public.book_contents USING btree (title)
 
 
 --
--- Name: idx_book_contents_title_trgm; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_book_contents_title_upper_trgm; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX idx_book_contents_title_trgm ON public.book_contents USING gin (title public.gin_trgm_ops);
+CREATE INDEX idx_book_contents_title_upper_trgm ON public.book_contents USING gin (UPPER(title) public.gin_trgm_ops);
 
 
 --
@@ -739,10 +762,10 @@ CREATE INDEX idx_books_title ON public.books USING btree (title);
 
 
 --
--- Name: idx_books_title_trgm; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_books_title_upper_trgm; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX idx_books_title_trgm ON public.books USING gin (title public.gin_trgm_ops);
+CREATE INDEX idx_books_title_upper_trgm ON public.books USING gin (UPPER(title) public.gin_trgm_ops);
 
 
 --
@@ -753,10 +776,10 @@ CREATE INDEX idx_borrowers_name ON public.borrowers USING btree (name);
 
 
 --
--- Name: idx_borrowers_name_trgm; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_borrowers_name_upper_trgm; Type: INDEX; Schema: public; Owner: postgres
 --
 
-CREATE INDEX idx_borrowers_name_trgm ON public.borrowers USING gin (name public.gin_trgm_ops);
+CREATE INDEX idx_borrowers_name_upper_trgm ON public.borrowers USING gin (UPPER(name) public.gin_trgm_ops);
 
 
 --
@@ -799,6 +822,48 @@ CREATE INDEX idx_loans_issued_by ON public.loans USING btree (issued_by);
 --
 
 CREATE INDEX idx_shelves_shelf_code ON public.shelves USING btree (shelf_code);
+
+
+--
+-- Name: idx_authors_name_upper; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_authors_name_upper ON public.authors USING btree (UPPER(name));
+
+
+--
+-- Name: idx_book_copies_copy_code_upper; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_book_copies_copy_code_upper ON public.book_copies USING btree (UPPER(copy_code));
+
+
+--
+-- Name: idx_book_copies_status_upper; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_book_copies_status_upper ON public.book_copies USING btree (UPPER(status));
+
+
+--
+-- Name: idx_borrowers_department_upper_trgm; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_borrowers_department_upper_trgm ON public.borrowers USING gin (UPPER(department) public.gin_trgm_ops);
+
+
+--
+-- Name: idx_borrowers_phone_upper_trgm; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_borrowers_phone_upper_trgm ON public.borrowers USING gin (UPPER(phone) public.gin_trgm_ops);
+
+
+--
+-- Name: idx_borrowers_registration_no_upper_trgm; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_borrowers_registration_no_upper_trgm ON public.borrowers USING gin (UPPER(registration_no) public.gin_trgm_ops);
 
 
 --

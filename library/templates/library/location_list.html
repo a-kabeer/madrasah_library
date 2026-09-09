@@ -14,7 +14,7 @@
     <p class="text-body-secondary mb-3">{% blocktranslate trimmed count n=paginator.count %}Found <strong>{{ n }}</strong> location.{% plural %}Found <strong>{{ n }}</strong> locations.{% endblocktranslate %}</p>
     <div class="card shadow-sm border-0"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-secondary"><tr><th>{% translate "Location" %}</th><th>{% translate "Shelves" %}</th><th>{% translate "Copies" %}</th><th class="text-end">{% translate "Actions" %}</th></tr></thead><tbody>
     {% for location in locations %}
-        <tr class="book-row" data-row-url="{% url 'location_detail' location.id %}" tabindex="0" role="button" aria-label="Open {{ location.name }}">
+        <tr class="book-row" data-row-url="{% url 'location_detail' location.id %}">
             <td><span class="fw-semibold">{{ location.name }}</span>{% if location.description %}<span class="d-block small text-body-secondary">{{ location.description|truncatechars:80 }}</span>{% endif %}</td>
             <td><span class="badge text-bg-secondary">{{ location.shelf_count }}</span></td><td><span class="badge text-bg-secondary">{{ location.copy_count }}</span></td>
             <td class="text-end"><div class="d-inline-flex gap-1" data-row-actions>

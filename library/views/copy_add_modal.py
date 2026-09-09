@@ -2,7 +2,6 @@
 
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
-from django.http import HttpResponse
 from django.shortcuts import render
 
 from ..models import BookCopy, BookVolume, Location, Shelf
@@ -11,11 +10,12 @@ from .common import (
     BOOK_COPY_CACHE_KEY,
     COPY_CODE_DIGITS,
     COPY_CODE_PREFIX,
+    create_activity_log,
     DASHBOARD_CACHE_KEY,
     LOCATION_CACHE_KEY,
-    SHELF_CACHE_KEY,
-    create_activity_log,
+    modal_redirect,
     safe_redirect_target,
+    SHELF_CACHE_KEY,
     shelf_options_for,
     volume_label,
 )
@@ -29,11 +29,10 @@ def _modal_request(request):
 
 
 def _redirect_response(request, fallback="book_copy_list"):
-    response = HttpResponse(status=204)
-    response["HX-Redirect"] = request.build_absolute_uri(
-        safe_redirect_target(request, fallback)
+    return modal_redirect(
+        request,
+        request.build_absolute_uri(safe_redirect_target(request, fallback)),
     )
-    return response
 
 
 def _next_copy_code():

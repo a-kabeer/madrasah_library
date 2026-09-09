@@ -28,7 +28,6 @@ from .. import reservations
 from ..permissions import (
     feature_required,
     passes_ceiling,
-    role_required,
 )
 
 from django.utils.translation import gettext
@@ -41,12 +40,13 @@ from .common import (
     LOAN_SORT_DEFAULT,
     LOAN_SORT_DEFAULT_DIRECTION,
     LOAN_SORT_FIELDS,
-    PAGE_SIZE,
     PolicyRefused,
     copy_for_code,
     create_activity_log,
+    date_param,
     describe_loans,
     is_form_modal_request,
+    numeric_param,
     lookup_saved_response,
     page_size_options,
     resolve_page_size,
@@ -183,9 +183,9 @@ def loan_list(request):
 
     search = request.GET.get("search", "").strip()
     status = request.GET.get("status", "").strip()
-    borrower_id = request.GET.get("borrower", "").strip()
-    issue_date = request.GET.get("issue_date", "").strip()
-    due_date = request.GET.get("due_date", "").strip()
+    borrower_id = numeric_param(request, "borrower")
+    issue_date = date_param(request, "issue_date")
+    due_date = date_param(request, "due_date")
 
     loans_query = Loan.objects.select_related(
         "copy__volume__book",
@@ -304,8 +304,8 @@ def loan_list(request):
             "search": search,
             "status": status,
             "borrower_id": borrower_id,
-            "issue_date": issue_date,
-            "due_date": due_date,
+            "issue_date": issue_date.isoformat() if issue_date else "",
+            "due_date": due_date.isoformat() if due_date else "",
 
             "columns": sortable_columns(
                 request,
@@ -972,43 +972,59 @@ def loan_edit(request, loan_id):
 
                     try:
 
-                        new_copy = BookCopy.objects.get(
-                            id=copy_id
-                        )
+                        # Moving an open loan to a different copy writes
+                        # three rows that only make sense together: the
+                        # loan, the copy it is leaving and the copy it is
+                        # going to. Half of that applied would leave a copy
+                        # marked Issued with no loan against it, or a copy
+                        # on loan that the shelf list calls Available - so
+                        # all three go in one transaction.
+                        #
+                        # The copies are locked and the availability read
+                        # again inside it: the check outside is made before
+                        # anything is held, so two librarians moving loans
+                        # onto the same copy would both have passed it.
+                        with transaction.atomic():
 
-                        if (
-                            int(copy_id) != loan.copy_id
-                            and new_copy.status != "Available"
-                        ):
-
-                            error_message = (
-                                "Selected book copy is "
-                                "no longer available."
+                            new_copy = BookCopy.objects.select_for_update().get(
+                                id=copy_id
                             )
 
-                        else:
+                            if (
+                                int(copy_id) != loan.copy_id
+                                and new_copy.status != "Available"
+                            ):
 
-                            old_copy_id = loan.copy_id
-
-                            loan.copy_id = copy_id
-                            loan.borrower_id = borrower_id
-                            loan.issue_date = issue_date
-                            loan.due_date = due_date
-                            loan.notes = notes or None
-
-                            loan.save()
-
-                            if old_copy_id != int(copy_id):
-
-                                old_copy = BookCopy.objects.get(
-                                    id=old_copy_id
+                                error_message = (
+                                    "Selected book copy is "
+                                    "no longer available."
                                 )
 
-                                old_copy.status = "Available"
-                                old_copy.save()
+                            else:
 
-                                new_copy.status = "Issued"
-                                new_copy.save()
+                                old_copy_id = loan.copy_id
+
+                                loan.copy_id = copy_id
+                                loan.borrower_id = borrower_id
+                                loan.issue_date = issue_date
+                                loan.due_date = due_date
+                                loan.notes = notes or None
+
+                                loan.save()
+
+                                if old_copy_id != int(copy_id):
+
+                                    old_copy = (
+                                        BookCopy.objects
+                                        .select_for_update()
+                                        .get(id=old_copy_id)
+                                    )
+
+                                    old_copy.status = "Available"
+                                    old_copy.save()
+
+                                    new_copy.status = "Issued"
+                                    new_copy.save()
 
                     except (BookCopy.DoesNotExist, ValueError):
 
@@ -1031,7 +1047,10 @@ def loan_edit(request, loan_id):
                 )
 
                 create_activity_log(
-                    user=loan.issued_by,
+                    # The person making the change, not the one who issued
+                    # the loan in the first place - this said the wrong
+                    # name, which is worse than saying none.
+                    user=request.user,
                     action="UPDATE",
                     entity_type="Loan",
                     entity_id=loan.id,
@@ -1168,19 +1187,29 @@ def loan_delete(request, loan_id):
 
         was_active = loan.return_date is None
 
-        if was_active:
+        # Removing an open loan frees its copy, and the two only make sense
+        # together: done separately, a failure between them leaves the copy
+        # marked Available while the loan is still there - a book the shelf
+        # list offers that is actually out. The loan goes first so the copy
+        # is never freed while something still points at it.
+        with transaction.atomic():
 
-            loan.copy.status = "Available"
-            loan.copy.save()
+            loan.delete()
 
-        loan.delete()
+            if was_active:
+
+                copy = BookCopy.objects.select_for_update().get(
+                    id=loan.copy_id
+                )
+                copy.status = "Available"
+                copy.save(update_fields=["status"])
 
         cache.delete(LOAN_CACHE_KEY)
         cache.delete(BOOK_COPY_CACHE_KEY)
         cache.delete(DASHBOARD_CACHE_KEY)
 
         create_activity_log(
-            user=None,
+            user=request.user,
             action="DELETE",
             entity_type="Loan",
             entity_id=deleted_loan_id,

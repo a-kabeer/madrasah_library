@@ -10,7 +10,24 @@ truth; `models.py` is a read/write mapping onto it, not the other way around.
 1. Copy `.env.example` to `.env` and fill in real values (DB password,
    `SECRET_KEY`, etc.). `.env` is git-ignored — never commit it.
 2. Install dependencies: `pip install -r requirements.txt`
-3. `python manage.py check` to confirm settings load correctly.
+3. Create the database and load the schema. Every model is
+   `managed = False`, so `migrate` will not create the app's tables:
+   `scripts/test_schema.sql` is what does, and it is the source of truth.
+   It creates the `pg_trgm` extension itself, which the search indexes
+   need and which requires a superuser (or Render's provided role) the
+   first time only.
+
+   ```
+   createdb madrasah_library
+   psql -d madrasah_library -f scripts/test_schema.sql
+   python manage.py migrate            # records them; the SQL did the work
+   python manage.py createcachetable
+   ```
+
+   `createcachetable` is not optional: the permission matrix, the dashboard
+   counts and the login rate limiter all use `DatabaseCache`, so that every
+   Gunicorn worker sees the same state.
+4. `python manage.py check` to confirm settings load correctly.
 
 Django reads `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, and all `DB_*` values
 from the environment via `python-decouple` (see `config/settings.py`).
@@ -35,7 +52,23 @@ erDiagram
     USERS |o--o{ LOANS : "issues (issued_by)"
     USERS |o--o{ LOANS : "receives (returned_to)"
     USERS |o--o{ ACTIVITY_LOGS : performs
+    BORROWERS ||--o{ RESERVATIONS : requests
+    BOOKS ||--o{ RESERVATIONS : "queued for"
+    LOCATIONS |o--o{ INVENTORY_SESSIONS : "scoped to"
+    SHELVES |o--o{ INVENTORY_SESSIONS : "scoped to"
+    INVENTORY_SESSIONS ||--o{ INVENTORY_SCANS : records
+    BOOK_COPIES |o--o{ INVENTORY_SCANS : "scanned as"
+    USERS |o--o{ INVENTORY_SESSIONS : "starts (started_by)"
+    USERS |o--o{ ROLE_FEATURES : "last changed (updated_by)"
+    USERS |o--o{ NOTIFICATIONS : "addressed to (recipient_id)"
+    USERS |o--o{ ACQUISITION_SUGGESTIONS : "suggests / reviews"
 ```
+
+`ROLE_FEATURES` has no foreign key to anything but `USERS`: it is keyed by
+`(role, feature_key)` as plain text, because the features it names live in
+`library/features.py` rather than in a table. A row for a feature that no
+longer exists is ignored rather than an error, so retiring one needs no
+migration.
 
 (`||--o{` = required one-to-many, `|o--o{` = optional/nullable one-to-many.)
 
@@ -59,6 +92,10 @@ erDiagram
 | `acquisition_suggestions` | Books suggested for purchase, and what came of each | `title`, `author_name`/`publisher_name` (free text), `isbn`, `status`, `suggested_by`, `reviewed_by`, `reviewed_at` |
 | `notifications` | Actionable in-app messages addressed to a staff user | `recipient_id`, `event_type`, `event_key` (unique per recipient), `title`, `url`, `created_at`, `read_at` |
 | `organization_settings` | Single-row branding, institution metadata and borrowing policy for this installation | `name`, `logo`, `favicon`, `primary_color`/`secondary_color`/`accent_color`, `contact_email`, `contact_phone`, `footer_text`, `name_arabic`, `institution_type`, `address`, `website`, `updated_at` |
+| `reservations` | A borrower's place in the queue for a book that is out | `borrower_id`, `book_id`, `status`, `created_at`, `closed_at` |
+| `inventory_sessions` | One stock check: what was counted, over what scope, and whether it finished | `name`, `scope`, `location_id`/`shelf_id` (optional), `status`, `started_by`, `started_at`, `completed_at` |
+| `inventory_scans` | Each copy scanned during a session, and what the scan meant | `session_id`, `copy_id` (optional), `copy_code`, `outcome`, `scanned_by`, `scanned_at` |
+| `role_features` | Menu-permission overrides. **Only overrides** — no row means the code's own default for that role | `role`, `feature_key` (unique together), `allowed`, `updated_at`, `updated_by` |
 
 > **`organization_settings` is a singleton.** A `CHECK (id = 1)` constraint
 > means there can only ever be one row. `OrganizationSettings.load()` returns
@@ -76,36 +113,115 @@ erDiagram
 > (via `set_password()`/`check_password()`), and `last_login` was added as
 > a nullable column specifically to support this. Login/logout live at
 > `/library/login/` and `/library/logout/`; `LoginRequiredMiddleware` blocks
-> all anonymous access. `role` is enforced per-view via the `role_required()`
-> decorator in `library/permissions.py` — Admin has full access, Librarian
-> can do everything except manage `User` records, Assistant is read-only on
-> the catalog and cannot delete anything anywhere.
+> all anonymous access.
+>
+> **`role` is enforced by `@feature_required` in `library/permissions.py`**,
+> which replaced the earlier `role_required` on the views behind a menu
+> entry and does two jobs where that did one. The decorator names a feature
+> and, per view, a *ceiling* — the roles that may ever reach it, stated in
+> code. The ceiling is checked **before** the `role_features` toggle, which
+> is the whole safety argument: no row in that table can let a role past
+> what the code allows, so a mistaken toggle cannot become a privilege
+> escalation. Turning a feature on for a role the ceiling excludes changes
+> nothing.
+>
+> `library/features.py` lists the 22 switchable features, each with its
+> ceiling, its day-one default and whether it can be switched off at all.
+> Hiding a menu entry is never the boundary — the decorator is — so typing
+> the URL of a feature switched off for you gets the same 403 as typing the
+> URL of a view your role never had.
 
 ## Indexes
 
-The database already has a deliberate indexing strategy — every foreign key
-has a plain b-tree index, and free-text search fields additionally have
-`pg_trgm` GIN indexes for fast `ILIKE`/fuzzy matching:
+Every foreign key has a plain b-tree index, the hot query shapes have
+partial indexes, and the columns the app searches have `pg_trgm` GIN indexes
+— **on `UPPER(column)`, not on the column**, which is the part that matters
+and the part this section used to get wrong.
 
 - **Every FK column** (`books.author_id/category_id/publisher_id`,
   `book_volumes.book_id`, `book_contents.volume_id/parent_id`,
   `book_copies.volume_id/shelf_id`, `shelves.location_id`,
-  `loans.copy_id/borrower_id/issued_by`, `activity_logs.user_id`) has a
+  `loans.copy_id/borrower_id/issued_by`, `activity_logs.user_id`,
+  `reservations.borrower_id/book_id`, `inventory_scans.session_id`) has a
   dedicated b-tree index.
-- **Trigram (`gin_trgm_ops`) indexes** for fuzzy/substring search on
-  `authors.name`, `books.title`, `book_contents.title`, `borrowers.name` —
-  backs the `icontains` searches used throughout `library/views/`.
-- **Partial indexes** for the two hottest query shapes in the app:
+
+- **Trigram (`gin_trgm_ops`) expression indexes** on `UPPER(authors.name)`,
+  `UPPER(books.title)`, `UPPER(book_contents.title)`,
+  `UPPER(borrowers.name/phone/registration_no/department)`.
+
+  Why the `UPPER()`: Django's PostgreSQL backend compiles a
+  case-insensitive lookup with the *column* wrapped in a function —
+  `name__icontains` becomes `UPPER("borrowers"."name"::text) LIKE
+  UPPER(%s)` — and an index on `name` cannot satisfy a predicate on
+  `UPPER(name)`. The schema originally indexed the bare columns, so not one
+  of those four indexes could ever be used by any query the app issues:
+  they collected writes and served nothing. Measured on 40,000 borrowers, a
+  one-column search took 13.7 ms with the index present and 0.6 ms once it
+  was on `UPPER(name)`. Migration
+  `0013_case_insensitive_search_indexes` rebuilt them.
+
+  Note that PostgreSQL needs an index for **every branch** of an `OR` before
+  it will use any of them: the borrower search reads
+  `Q(name) | Q(phone) | Q(registration_no) | Q(department)`, and with only
+  `UPPER(name)` indexed it still scanned (33.9 ms). With all four it was
+  0.45 ms. That is why those four go together.
+
+- **B-tree expression indexes** on `UPPER(book_copies.copy_code)`,
+  `UPPER(book_copies.status)` and `UPPER(authors.name)`, for the `iexact`
+  lookups — which a GIN trigram index cannot serve, since `gin_trgm_ops`
+  supports `LIKE` and similarity but not `=`. `copy_code__iexact` is the
+  barcode behind issue, return and the return lookup, and it is also what
+  `_next_copy_code` calls `.exists()` on in a loop while it hunts for a
+  free code: 9.1 ms per call on 40,000 copies, 0.036 ms indexed. The
+  author one is the per-row dedupe the book import runs for every line of
+  the workbook.
+
+- **Partial indexes** for the hottest query shapes in the app:
   - `idx_loans_active_due` — `loans(due_date) WHERE return_date IS NULL`,
     matching the overdue-loan query in `dashboard`/`loan_list`.
   - `unique_active_loan_per_copy` — a **unique** partial index on
     `loans(copy_id) WHERE return_date IS NULL`, which makes "double-issuing"
     a copy impossible even if the application-level check in
     `loan_add`/`loan_edit` were ever bypassed.
+  - `unique_active_reservation` — one active reservation per
+    borrower-and-book, and `idx_reservations_book_queue` for reading the
+    queue in order.
+  - `idx_books_archived_at`, `idx_notifications_unread`,
+    `unique_found_copy_per_session`, `idx_acquisition_suggestions_queue` —
+    the same shape for archived books, unread notifications, a session's
+    found copies and the suggestion queue.
 
-No further indexing work is needed here. If new list/filter views are added,
-check whether the columns they filter on already have an index above before
-assuming one is missing.
+### What no index can fix
+
+Most of the list searches `OR` across a **join**:
+
+```python
+Q(copy_code__icontains=term) | Q(volume__book__title__icontains=term)
+```
+
+PostgreSQL cannot turn an `OR` spanning two tables into a bitmap `OR`, so it
+joins and filters every row — and this was measured with expression indexes
+on every column involved, unchanged: book list 14.5 ms, copy list 44.2, loan
+list 52.7, at 20,000 books / 40,000 copies / 15,000 loans. Adding an index
+for one of these is wasted work.
+
+The known remedy is a change to the query rather than to the schema: search
+each side on its own and combine by id, e.g.
+
+```python
+Q(copy_code__icontains=term) | Q(volume_id__in=BookVolume.objects
+    .filter(book__title__icontains=term).values("id"))
+```
+
+which makes each half a single-table search the indexes above can serve. It
+is eight call sites and has not been done.
+
+### Before adding an index
+
+Check whether the column already has one above, and check the SQL Django
+actually sends — `qs.query.sql_with_params()` — before assuming the shape.
+The four dead trigram indexes above were added in good faith by someone
+reading the ORM rather than the SQL.
 
 ## Constraints
 

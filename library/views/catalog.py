@@ -29,11 +29,9 @@ from ..models import (
 )
 
 from .. import acquisitions
-from .. import history
-from .. import inventory
 from .. import reservations
 
-from ..permissions import can_edit_library, feature_required, role_required
+from ..permissions import can_edit_library, feature_required
 
 from .common import (
     AUTHOR_CACHE_KEY,
@@ -167,7 +165,7 @@ def category_add(request):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="CREATE",
                 entity_type="Category",
                 entity_id=category.id,
@@ -237,7 +235,7 @@ def category_edit(request, category_id):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="UPDATE",
                 entity_type="Category",
                 entity_id=category.id,
@@ -285,7 +283,7 @@ def category_delete(request, category_id):
         cache.delete(DASHBOARD_CACHE_KEY)
 
         create_activity_log(
-            user=None,
+            user=request.user,
             action="DELETE",
             entity_type="Category",
             entity_id=deleted_category_id,
@@ -394,7 +392,7 @@ def author_add(request):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="CREATE",
                 entity_type="Author",
                 entity_id=author.id,
@@ -464,7 +462,7 @@ def author_edit(request, author_id):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="UPDATE",
                 entity_type="Author",
                 entity_id=author.id,
@@ -512,7 +510,7 @@ def author_delete(request, author_id):
         cache.delete(DASHBOARD_CACHE_KEY)
 
         create_activity_log(
-            user=None,
+            user=request.user,
             action="DELETE",
             entity_type="Author",
             entity_id=deleted_author_id,
@@ -631,7 +629,7 @@ def publisher_add(request):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="CREATE",
                 entity_type="Publisher",
                 entity_id=publisher.id,
@@ -706,7 +704,7 @@ def publisher_edit(request, publisher_id):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="UPDATE",
                 entity_type="Publisher",
                 entity_id=publisher.id,
@@ -755,7 +753,7 @@ def publisher_delete(request, publisher_id):
         cache.delete(DASHBOARD_CACHE_KEY)
 
         create_activity_log(
-            user=None,
+            user=request.user,
             action="DELETE",
             entity_type="Publisher",
             entity_id=deleted_publisher_id,
@@ -1297,7 +1295,7 @@ def book_add(request):
                     cache.delete(BOOK_COPY_CACHE_KEY)
 
                 create_activity_log(
-                    user=None,
+                    user=request.user,
                     action="CREATE",
                     entity_type="Book",
                     entity_id=book.id,
@@ -1333,7 +1331,7 @@ def book_add(request):
 
                 for volume in volumes:
                     create_activity_log(
-                        user=None,
+                        user=request.user,
                         action="CREATE",
                         entity_type="BookVolume",
                         entity_id=volume.id,
@@ -1345,7 +1343,7 @@ def book_add(request):
 
                 if copies_made:
                     create_activity_log(
-                        user=None,
+                        user=request.user,
                         action="CREATE",
                         entity_type="Book",
                         entity_id=book.id,
@@ -1492,7 +1490,7 @@ def book_edit(request, book_id):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="UPDATE",
                 entity_type="Book",
                 entity_id=book.id,
@@ -1820,7 +1818,7 @@ def book_delete(request, book_id):
                 cache.delete(BOOK_VOLUME_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="DELETE",
                 entity_type="Book",
                 entity_id=deleted_book_id,
@@ -2072,7 +2070,7 @@ def book_detail(request, book_id):
 def book_volume_list(request):
 
     search = request.GET.get("search", "").strip()
-    book_id = request.GET.get("book", "").strip()
+    book_id = numeric_param(request, "book")
 
     if search or book_id:
 
@@ -2132,187 +2130,6 @@ def book_volume_list(request):
     )
 
 
-def isolated(text):
-    """`text` wrapped so it cannot reorder the sentence around it.
-
-    Book and volume titles here are mostly Urdu and Arabic, and dropping
-    right-to-left text into the middle of an English sentence makes the
-    bidirectional algorithm reshuffle the words either side of it - the
-    message becomes hard to read even though every character is correct.
-    U+2068/U+2069 are the Unicode isolate pair: they say "treat this run as
-    one opaque item", which is exactly what a title is.
-    """
-
-    return "⁨%s⁩" % text
-
-
-def read_volume_form(request, exclude_id=None):
-    """The volume a form is asking for, and any complaint about it.
-
-    Returns `(book, number, title, error)`, where `error` is "" when the
-    values are usable. `number` comes back as whatever was typed when it is
-    the thing being complained about, so the form can show it again rather
-    than blanking the field.
-
-    Shared by add and edit so the two cannot drift apart. Every check here
-    stands in front of something the database would otherwise refuse:
-
-      * `unique_book_volume` is a real UNIQUE constraint on
-        (book_id, volume_number), so a repeat used to reach Postgres and
-        come back as an unhandled IntegrityError - a 500 where the
-        librarian only needed to be told the number was taken.
-      * `volume_number` is an integer column, so "abc" was a 500 too.
-      * `book_id` is NOT NULL with a foreign key, so an id that does not
-        exist was a third.
-
-    Pass `exclude_id` when editing, so a volume keeping its own number is
-    not treated as clashing with itself.
-    """
-
-    book_id = (request.POST.get("book") or "").strip()
-    raw_number = (request.POST.get("volume_number") or "").strip()
-    title = request.POST.get("title", "").strip()
-
-    # Resolved as early as possible: an error page that has lost the
-    # librarian's book selection is its own small annoyance.
-    book = (
-        Book.objects.filter(id=book_id).first()
-        if book_id.isdigit()
-        else None
-    )
-
-    if not book_id or not raw_number or not title:
-        return book, raw_number, title, "Please fill in all required fields."
-
-    try:
-        number = int(raw_number)
-    except ValueError:
-        return book, raw_number, title, (
-            "Volume number must be a whole number, like 1 or 2."
-        )
-
-    if number < 1:
-        return book, raw_number, title, (
-            "Volume number must be 1 or more."
-        )
-
-    if book is None:
-        return None, raw_number, title, (
-            "Please choose a book from the list."
-        )
-
-    clash = BookVolume.objects.filter(book=book, volume_number=number)
-
-    if exclude_id is not None:
-        clash = clash.exclude(id=exclude_id)
-
-    existing = clash.first()
-
-    if existing is not None:
-        return book, raw_number, title, (
-            "%s already has a Volume %d%s. Give this one a different "
-            "volume number." % (
-                isolated(book.title),
-                number,
-                " (%s)" % isolated(existing.title) if existing.title else "",
-            )
-        )
-
-    return book, number, title, ""
-
-
-@feature_required("books", "Admin", "Librarian")
-def book_volume_add(request):
-
-    books = Book.objects.all()
-
-    selected_book_id = (request.GET.get("book") or "").strip()
-
-    # The book itself, for the back link. Kept apart from the raw id above,
-    # which only has to match an <option> value: `{% url %}` cannot be
-    # guarded inside the template, so handing it an id that resolves to
-    # nothing is a 500 -- which "?book=abc" used to be.
-    book = (
-        Book.objects.filter(id=selected_book_id).first()
-        if selected_book_id.isdigit()
-        else None
-    )
-
-    error = None
-    volume_number = ""
-    title = ""
-
-    if request.method == "POST":
-
-        book, volume_number, title, error = read_volume_form(request)
-
-        # Whatever was typed goes back into the form, so a rejection never
-        # costs the librarian their work.
-        selected_book_id = (request.POST.get("book") or "").strip()
-
-        if not error:
-
-            try:
-
-                # Its own savepoint: a failed insert leaves the connection
-                # usable, so the page can still be rendered to explain
-                # itself. TestCase wraps each test in a transaction, where
-                # that matters even though requests are not atomic here.
-                with transaction.atomic():
-
-                    volume = BookVolume.objects.create(
-                        book=book,
-                        volume_number=volume_number,
-                        title=title,
-                    )
-
-            except IntegrityError:
-
-                # Only reachable if someone else created the same volume
-                # between the check above and this insert. The constraint is
-                # the real guarantee; this turns losing that race into the
-                # same sentence rather than a 500.
-                error = (
-                    "%s already has a Volume %s. Give this one a "
-                    "different volume number."
-                    % (isolated(book.title), volume_number)
-                )
-
-        if not error:
-
-            cache.delete(BOOK_VOLUME_CACHE_KEY)
-            cache.delete(DASHBOARD_CACHE_KEY)
-
-            create_activity_log(
-                user=None,
-                action="CREATE",
-                entity_type="BookVolume",
-                entity_id=volume.id,
-                description=(
-                    f"{volume.title} "
-                    f"(Volume {volume.volume_number}) شامل کی گئی"
-                ),
-            )
-
-            # Return to the selected book
-            return redirect(
-                "book_detail",
-                book_id=book.id
-            )
-
-    return render(
-        request,
-        "library/book_volume_add.html",
-        {
-            "books": books,
-            "selected_book_id": selected_book_id,
-            "selected_book": book,
-            "error": error,
-            "volume_number": volume_number,
-            "title": title,
-        }
-    )
-
 @feature_required("books")
 def book_volume_detail(request, volume_id):
 
@@ -2352,161 +2169,12 @@ def book_volume_detail(request, volume_id):
         }
     )
 
-@feature_required("books", "Admin", "Librarian")
-def book_volume_edit(request, volume_id):
-
-    volume = get_object_or_404(BookVolume, id=volume_id)
-    books = Book.objects.all()
-
-    from_page = request.GET.get(
-        "from",
-        request.POST.get("from", "")
-    )
-
-    error = ""
-
-    if request.method == "POST":
-
-        # `exclude_id`: a volume keeping the number it already has is not
-        # clashing with itself.
-        book, volume_number, title, error = read_volume_form(
-            request,
-            exclude_id=volume.id,
-        )
-
-        # Put what was typed onto the in-memory volume so the form shows it
-        # again on the way back. Nothing is written unless it validates, so
-        # the stored record is untouched on every error path below.
-        if book is not None:
-            volume.book = book
-
-        volume.volume_number = volume_number
-        volume.title = title
-
-        if not error:
-
-            try:
-
-                # Its own savepoint, for the same reason as on the add
-                # page: someone else can take the number between the check
-                # and the write, and losing that race should read as a
-                # sentence rather than a 500.
-                with transaction.atomic():
-                    volume.save()
-
-            except IntegrityError:
-
-                error = (
-                    "%s already has a Volume %s. Give this one a "
-                    "different volume number."
-                    % (isolated(book.title), volume_number)
-                )
-
-        if not error:
-
-            cache.delete(BOOK_VOLUME_CACHE_KEY)
-            cache.delete(DASHBOARD_CACHE_KEY)
-
-            create_activity_log(
-                user=None,
-                action="UPDATE",
-                entity_type="BookVolume",
-                entity_id=volume.id,
-                description=(
-                    f"{volume.title} "
-                    f"(Volume {volume.volume_number}) updated"
-                ),
-            )
-
-            if from_page == "detail":
-
-                return redirect("book_volume_detail", volume_id=volume.id)
-
-            return redirect("book_volume_list")
-
-    return render(
-        request,
-        "library/book_volume_edit.html",
-        {
-            "volume": volume,
-            "books": books,
-            "from_page": from_page,
-            "error": error,
-        }
-    )
-
-
-@feature_required("books", "Admin", "Librarian")
-def book_volume_delete(request, volume_id):
-
-    volume = get_object_or_404(BookVolume, id=volume_id)
-
-    from_page = request.GET.get(
-        "from",
-        request.POST.get("from", "")
-    )
-
-    # `book_copies.volume_id` is a NO ACTION foreign key and BookCopy.volume
-    # is DO_NOTHING, so Django neither cascades nor nullifies: deleting a
-    # volume that still has copies reached Postgres and came back as an
-    # unhandled IntegrityError. Same guard the shelf and copy delete pages
-    # already use.
-    copies_exist = BookCopy.objects.filter(
-        volume_id=volume.id
-    ).exists()
-
-    if request.method == "POST":
-
-        if copies_exist:
-
-            return render(
-                request,
-                "library/book_volume_delete.html",
-                {
-                    "volume": volume,
-                    "from_page": from_page,
-                    "copies_exist": True,
-                }
-            )
-
-        deleted_volume_id = volume.id
-        deleted_volume_title = volume.title
-        deleted_volume_number = volume.volume_number
-
-        volume.delete()
-
-        cache.delete(BOOK_VOLUME_CACHE_KEY)
-        cache.delete(DASHBOARD_CACHE_KEY)
-
-        create_activity_log(
-            user=None,
-            action="DELETE",
-            entity_type="BookVolume",
-            entity_id=deleted_volume_id,
-            description=(
-                f"{deleted_volume_title} "
-                f"(Volume {deleted_volume_number}) deleted"
-            ),
-        )
-
-        return redirect("book_volume_list")
-
-    return render(
-        request,
-        "library/book_volume_delete.html",
-        {
-            "volume": volume,
-            "from_page": from_page,
-            "copies_exist": copies_exist,
-        }
-    )
-
 
 @feature_required("books")
 def book_content_list(request):
 
     search = request.GET.get("search", "").strip()
-    volume_id = request.GET.get("volume", "").strip()
+    volume_id = numeric_param(request, "volume")
     content_type = request.GET.get("content_type", "").strip()
 
     if search or volume_id or content_type:
@@ -2616,349 +2284,5 @@ def book_content_detail(request, content_id):
         {
             "content": content,
             "from_page": from_page,
-        }
-    )
-
-@feature_required("books", "Admin", "Librarian")
-def book_content_add(request):
-
-    selected_volume_id = request.GET.get(
-        "volume",
-        ""
-    )
-
-    selected_volume = None
-
-    if selected_volume_id.isdigit():
-
-        selected_volume = BookVolume.objects.select_related(
-            "book"
-        ).filter(
-            id=selected_volume_id
-        ).first()
-
-
-    volumes = BookVolume.objects.select_related(
-        "book"
-    ).order_by(
-        "book__title",
-        "volume_number"
-    )
-
-
-    parents = BookContent.objects.select_related(
-        "volume"
-    ).order_by(
-        "volume",
-        "sort_order"
-    )
-
-
-    error_message = ""
-
-
-    form_data = {
-        "volume_id": (
-            selected_volume.id
-            if selected_volume
-            else None
-        ),
-        "parent_id": None,
-        "title": "",
-        "content_type": "",
-        "page_number": "",
-        "sort_order": 0,
-    }
-
-
-    if request.method == "POST":
-
-        volume_id = request.POST.get(
-            "volume"
-        )
-
-        parent_id = request.POST.get(
-            "parent"
-        )
-
-        title = request.POST.get(
-            "title",
-            ""
-        ).strip()
-
-        content_type = request.POST.get(
-            "content_type",
-            ""
-        ).strip()
-
-        page_number = request.POST.get(
-            "page_number"
-        )
-
-        sort_order = request.POST.get(
-            "sort_order"
-        ) or 0
-
-
-        form_data = {
-            "volume_id": (
-                int(volume_id)
-                if volume_id and volume_id.isdigit()
-                else None
-            ),
-            "parent_id": (
-                int(parent_id)
-                if parent_id and parent_id.isdigit()
-                else None
-            ),
-            "title": title,
-            "content_type": content_type,
-            "page_number": page_number or "",
-            "sort_order": sort_order,
-        }
-
-
-        if not volume_id or not title:
-
-            error_message = (
-                "Please fill in all required fields."
-            )
-
-        else:
-
-            content = BookContent.objects.create(
-                volume_id=volume_id,
-                parent_id=parent_id or None,
-                title=title,
-                content_type=content_type or None,
-                page_number=page_number or None,
-                sort_order=sort_order,
-            )
-
-
-            cache.delete(
-                BOOK_CONTENT_CACHE_KEY
-            )
-
-            cache.delete(
-                DASHBOARD_CACHE_KEY
-            )
-
-
-            create_activity_log(
-                user=None,
-                action="CREATE",
-                entity_type="BookContent",
-                entity_id=content.id,
-                description=(
-                    f"{content.title} شامل کیا گیا"
-                ),
-            )
-
-
-            # If opened from Volume Detail,
-            # return to the same Volume
-
-            if selected_volume:
-
-                return redirect(
-                    "book_volume_detail",
-                    volume_id=volume_id
-                )
-
-
-            # Otherwise return to content list
-
-            return redirect(
-                "book_content_list"
-            )
-
-
-    # If a volume was selected,
-    # only show parents from that volume
-
-    if selected_volume:
-
-        parents = parents.filter(
-            volume=selected_volume
-        )
-
-
-    return render(
-        request,
-        "library/book_content_add.html",
-        {
-            "volumes": volumes,
-            "selected_volume": selected_volume,
-            "parents": parents,
-            "error_message": error_message,
-            "form_data": form_data,
-        }
-    )
-
-
-@feature_required("books", "Admin", "Librarian")
-def book_content_edit(request, content_id):
-
-    content = get_object_or_404(
-        BookContent.objects.select_related(
-            "volume",
-            "volume__book",
-        ),
-        id=content_id
-    )
-
-    from_page = request.GET.get(
-    "from",
-    request.POST.get("from", "")
-)
-
-    volumes = BookVolume.objects.select_related(
-        "book"
-    ).order_by(
-        "book__title",
-        "volume_number"
-    )
-
-    parents = BookContent.objects.exclude(
-        id=content.id
-    ).filter(
-        volume=content.volume
-    )
-
-    if request.method == "POST":
-
-        volume_id = request.POST.get(
-            "volume"
-        )
-
-        parent_id = request.POST.get(
-            "parent"
-        )
-
-        content.title = request.POST.get(
-            "title",
-            ""
-        ).strip()
-
-        content.content_type = request.POST.get(
-            "content_type",
-            ""
-        ).strip()
-
-        content.page_number = (
-            request.POST.get("page_number")
-            or None
-        )
-
-        content.sort_order = (
-            request.POST.get("sort_order")
-            or 0
-        )
-
-        content.parent_id = (
-            parent_id
-            if parent_id
-            else None
-        )
-
-        # Keep the selected/current volume
-        if volume_id:
-            content.volume_id = volume_id
-
-        content.save()
-
-        cache.delete(
-            BOOK_CONTENT_CACHE_KEY
-        )
-
-        cache.delete(
-            DASHBOARD_CACHE_KEY
-        )
-
-        if from_page == "volume":
-
-            return redirect(
-                "book_volume_detail",
-                volume_id=content.volume.id
-            )
-
-        return redirect(
-            "book_content_list"
-        )
-
-    return render(
-    request,
-    "library/book_content_edit.html",
-    {
-        "content": content,
-        "volumes": volumes,
-        "parents": parents,
-        "from_page": from_page,
-        "volume_id": content.volume_id,
-    }
-)
-
-
-@feature_required("books", "Admin", "Librarian")
-def book_content_delete(request, content_id):
-
-    content = get_object_or_404(
-        BookContent.objects.select_related(
-            "volume",
-            "volume__book",
-        ),
-        id=content_id
-    )
-
-    from_page = request.GET.get(
-        "from",
-        request.POST.get("from", "")
-    )
-
-    volume_id = content.volume_id
-
-    if request.method == "POST":
-
-        content_title = content.title
-
-        content.delete()
-
-        cache.delete(
-            BOOK_CONTENT_CACHE_KEY
-        )
-
-        cache.delete(
-            DASHBOARD_CACHE_KEY
-        )
-
-        create_activity_log(
-            user=None,
-            action="DELETE",
-            entity_type="BookContent",
-            entity_id=content_id,
-            description=(
-                f"{content_title} حذف کیا گیا"
-            ),
-        )
-
-        if from_page == "volume":
-
-            return redirect(
-                "book_volume_detail",
-                volume_id=volume_id
-            )
-
-        return redirect(
-            "book_content_list"
-        )
-
-    return render(
-        request,
-        "library/book_content_delete.html",
-        {
-            "content": content,
-            "from_page": from_page,
-            "volume_id": volume_id,
         }
     )

@@ -121,6 +121,13 @@ def feature_required(feature_key, *ceiling):
 
             return view_func(request, *args, **kwargs)
 
+        # Left on the wrapper so the gate can be read without calling the
+        # view, which is what lets a test check that no page offers a link
+        # to something the viewer's role cannot open - a button that
+        # answers 403 is the thing this project deliberately does not show.
+        wrapped.feature_key = feature_key
+        wrapped.feature_ceiling = ceiling
+
         return wrapped
 
     return decorator

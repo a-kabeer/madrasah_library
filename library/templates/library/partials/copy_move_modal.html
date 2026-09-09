@@ -82,7 +82,8 @@ errors, error.
                 hx-target="#moveShelf"
                 hx-include="this"
                 required
-            >
+        autofocus
+    >
                 {% include "library/partials/location_options.html" with locations=locations selected_id=location_id|stringformat:"s" %}
             </select>
         </div>

@@ -206,7 +206,15 @@
                         <tr>
                             <th>{% translate "Period" %}</th>
                             <th class="text-end">{% translate "Loans" %}</th>
-                            <th class="analytics-bar-column"></th>
+                            {% comment %}
+                              The bar column has no visible heading - the
+                              bar is the value - but a heading cell with no
+                              text leaves a screen reader announcing the
+                              column by its position.
+                            {% endcomment %}
+                            <th class="analytics-bar-column">
+                                <span class="visually-hidden">{% translate "Share" %}</span>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>

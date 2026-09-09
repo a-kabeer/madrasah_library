@@ -10,7 +10,7 @@ from datetime import date
 from django.test import TestCase
 from django.urls import reverse
 
-from library.models import Book, BookCopy, Category, Loan
+from library.models import Book, Category, Loan
 from library.tests.helpers import (
     make_author,
     make_book,

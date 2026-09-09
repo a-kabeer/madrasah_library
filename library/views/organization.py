@@ -24,7 +24,7 @@ from .. import features
 from .. import policy
 
 from ..context_processors import clear_branding_cache
-from ..permissions import feature_required, role_required
+from ..permissions import feature_required
 
 from .common import (
     FAVICON_EXTENSIONS,

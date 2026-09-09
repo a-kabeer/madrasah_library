@@ -12,8 +12,12 @@ from library.context_processors import (
     get_branding,
 )
 from library.models import (
+    DARK_GROUND,
+    MINIMUM_CONTRAST,
     OrganizationSettings,
+    _contrast,
     hex_to_rgb_triplet,
+    lifted_for_dark,
     readable_foreground,
 )
 
@@ -49,7 +53,7 @@ class BrandingDefaultsTests(TestCase):
         self.assertFalse(settings_obj.has_custom_colors)
 
     def test_pages_render_with_no_branding_row(self):
-        user = make_user(username="admin_u", password="pass12345", role="Admin")
+        make_user(username="admin_u", password="pass12345", role="Admin")
         self.client.login(username="admin_u", password="pass12345")
 
         for name in ("dashboard", "book_list", "profile"):
@@ -556,16 +560,50 @@ class BrandingUploadTests(TestCase):
 
         self.assertTrue(OrganizationSettings.load().logo)
 
-    def test_favicon_is_linked_only_when_set(self):
-        response = self.client.get(reverse("dashboard"))
-        self.assertNotContains(response, 'rel="icon"')
-
+    def test_the_uploaded_favicon_is_used_when_there_is_one(self):
         self.client.post(
             self.url,
             self.base_payload(favicon=make_image_bytes(name="icon.png")),
         )
 
         response = self.client.get(reverse("dashboard"))
+
+        self.assertContains(response, 'rel="icon"')
+        self.assertContains(response, OrganizationSettings.load().favicon.url)
+        self.assertNotContains(response, "data:image/svg+xml")
+
+    def test_a_generated_favicon_stands_in_when_there_is_not(self):
+        """A page that names no icon makes the browser ask for
+        /favicon.ico by itself, which is a 404 on every page load - so
+        there is always a link, and without an upload it is an inline SVG
+        in the organisation's own colour."""
+
+        self.assertFalse(OrganizationSettings.load().favicon)
+
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertContains(response, 'rel="icon"')
+        self.assertContains(response, "data:image/svg+xml")
+
+    def test_the_generated_favicon_carries_the_organisation_colour(self):
+        self.client.post(self.url, self.base_payload(primary_color="#7c3aed"))
+
+        response = self.client.get(reverse("dashboard")).content.decode()
+
+        self.assertIn("%237c3aed", response)
+
+        # And its text colour is the readable one for that background, by
+        # the same rule the rest of the chrome uses.
+        self.assertIn(
+            "%23" + OrganizationSettings.load().display_on_primary.lstrip("#"),
+            response,
+        )
+
+    def test_the_public_catalogue_gets_one_too(self):
+        self.client.logout()
+
+        response = self.client.get(reverse("public_book_list"))
+
         self.assertContains(response, 'rel="icon"')
 
 
@@ -592,4 +630,55 @@ class ColorHelperTests(TestCase):
 
     def test_readable_foreground_handles_unusable_input(self):
         self.assertEqual(readable_foreground(""), "#fff")
+
+    def test_lifted_for_dark_clears_wcag_aa_on_the_dark_ground(self):
+        """A brand colour is chosen against a light page. On the dark
+        theme's near-black ground the default indigo is 2.99:1, where AA
+        wants 4.5 - so links and the outline buttons that borrow the link
+        colour read a lifted version of it."""
+
+        for colour in ("#4f46e5", "#0d6efd", "#198754", "#000000", "#7c3aed",
+                       "#dc3545", "#212529"):
+            with self.subTest(color=colour):
+                triplet = lifted_for_dark(colour)
+                channels = tuple(int(part) for part in triplet.split(", "))
+
+                self.assertGreaterEqual(
+                    _contrast(channels, DARK_GROUND), MINIMUM_CONTRAST)
+
+    def test_lifted_for_dark_leaves_a_pale_colour_alone(self):
+        """Nothing to lift: a colour that already reads on the dark ground
+        comes back unchanged, so a light brand is not washed out."""
+
+        self.assertEqual(lifted_for_dark("#ffffff"), "255, 255, 255")
+        self.assertEqual(lifted_for_dark("#ffc107"), "255, 193, 7")
+
+    def test_lifted_for_dark_stays_recognisably_the_same_hue(self):
+        """It mixes towards white rather than substituting a colour, so the
+        channel ordering - which is what makes indigo indigo - survives."""
+
+        red, green, blue = (
+            int(part) for part in lifted_for_dark("#4f46e5").split(", "))
+
+        self.assertGreater(blue, red)
+        self.assertGreater(red, green)
+
+    def test_lifted_for_dark_handles_unusable_input(self):
+        self.assertEqual(lifted_for_dark(""), "")
+        self.assertEqual(lifted_for_dark("nope"), "")
+
+    def test_the_page_carries_the_lifted_channels_when_colours_are_set(self):
+        make_branding(primary_color="#4f46e5")
+
+        make_user(username="lift_admin", password="pass12345", role="Admin")
+        self.client.login(username="lift_admin", password="pass12345")
+
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertContains(response, "--brand-primary-rgb-on-dark:")
+        self.assertContains(
+            response,
+            "--brand-primary-rgb-on-dark: %s"
+            % OrganizationSettings.load().display_primary_rgb_on_dark,
+        )
         self.assertEqual(readable_foreground("nope"), "#fff")

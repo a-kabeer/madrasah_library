@@ -2,7 +2,7 @@ from django.contrib.auth import authenticate
 from django.test import TestCase
 from django.urls import reverse
 
-from library.models import User, Loan
+from library.models import User
 from library.tests.helpers import make_user, make_loan
 
 

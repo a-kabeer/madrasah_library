@@ -48,6 +48,27 @@ none.
         {% block title %}{{ branding.display_name }}{% endblock %}
     </title>
 
+    {% comment %}
+      Favicon. Always the generated one here, never `branding.favicon`,
+      even when an installation has uploaded one: MEDIA_URL is served by
+      `django.views.static.serve`, an ordinary view, so
+      `LoginRequiredMiddleware` protects it like every other one. A visitor
+      following that link gets a redirect to the sign-in page. Publishing
+      the media directory is a decision about the installation and is not
+      made here, so the public pages link to none of it.
+
+      A page that names no icon makes the browser ask for /favicon.ico by
+      itself, which is a 404 on every page load. An inline SVG in the
+      organisation's own colour costs no request and no file to keep. Every
+      space is %20 and every # is %23: a data URI in an attribute may not
+      carry them raw.
+    {% endcomment %}
+
+    {% if branding %}<link
+        rel="icon"
+        href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='7'%20fill='%23{{ branding.display_primary_color|slice:'1:' }}'/%3E%3Ctext%20x='16'%20y='23'%20font-size='19'%20font-weight='bold'%20font-family='sans-serif'%20text-anchor='middle'%20fill='%23{{ branding.display_on_primary|slice:'1:' }}'%3E{{ branding.display_name|first|upper }}%3C/text%3E%3C/svg%3E"
+    >{% endif %}
+
     <link
         {% comment %}
           The RTL build for Urdu and Arabic, same as the staff shell. The
@@ -55,13 +76,17 @@ none.
           comes from the browser or the switcher below, never from a stored
           preference.
         {% endcomment %}
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap{% if LANGUAGE_BIDI %}.rtl{% endif %}.min.css"
+        {% if LANGUAGE_BIDI %}
+            href="{% static 'library/vendor/bootstrap-5.3.8/bootstrap.rtl.min.css' %}"
+        {% else %}
+            href="{% static 'library/vendor/bootstrap-5.3.8/bootstrap.min.css' %}"
+        {% endif %}
         rel="stylesheet"
     >
 
     <link
         rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css"
+        href="{% static 'library/vendor/bootstrap-icons-1.13.1/bootstrap-icons.min.css' %}"
     >
 
     <link
@@ -80,6 +105,7 @@ none.
                 --brand-secondary: {{ branding.display_secondary_color }};
                 --brand-accent: {{ branding.display_accent_color }};
                 --bs-primary-rgb: {{ branding.display_primary_rgb }};
+                --brand-primary-rgb-on-dark: {{ branding.display_primary_rgb_on_dark }};
                 --brand-on-primary: {{ branding.display_on_primary }};
             }
         </style>

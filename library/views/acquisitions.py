@@ -17,7 +17,7 @@ from ..models import (
 from .. import acquisitions
 from .. import notifications
 
-from ..permissions import can_edit_library, feature_required, role_required
+from ..permissions import can_edit_library, feature_required
 
 from .catalog import suggestion_matches
 from .common import (
@@ -243,60 +243,3 @@ def suggestion_detail(request, suggestion_id):
             "statuses": AcquisitionSuggestion.STATUS_CHOICES,
         },
     )
-
-
-@feature_required("suggestions", "Admin", "Librarian")
-def suggestion_review(request, suggestion_id):
-    """Approve, reject, or mark a suggestion acquired.
-
-    POST only, and the transition is decided in the database by
-    `acquisitions.advance` - a conditional UPDATE naming the state the row
-    has to be in. So an arbitrary jump matches no row, a completed
-    suggestion cannot be reopened, and the second of two clicks changes
-    nothing rather than moving the review timestamp.
-
-    The suggestion is not read before the update. There is nothing to read
-    it for: the statement carries the rule, and reading first would only
-    add a window for the row to change in.
-    """
-
-    landing = redirect("suggestion_detail", suggestion_id=suggestion_id)
-
-    if request.method != "POST":
-        return landing
-
-    to_status = (request.POST.get("status") or "").strip()
-
-    if to_status not in dict(AcquisitionSuggestion.STATUS_CHOICES):
-        messages.warning(request, gettext("That is not a state a suggestion can be in."))
-        return landing
-
-    moved = acquisitions.advance(
-        suggestion_id, to_status, user=request.user
-    )
-
-    if not moved:
-        # Either somebody got there first, or this was never a legal move.
-        # The page about to be shown says which state it is actually in,
-        # which is more use than guessing here.
-        messages.info(
-            request,
-            gettext(
-                "Nothing changed — that suggestion is no longer waiting "
-                "for this decision."
-            ),
-        )
-
-        return landing
-
-    create_activity_log(
-        user=request.user,
-        action="UPDATE",
-        entity_type="AcquisitionSuggestion",
-        entity_id=suggestion_id,
-        description="Suggestion marked %s" % to_status,
-    )
-
-    messages.success(request, gettext("Suggestion marked %s.") % to_status)
-
-    return landing

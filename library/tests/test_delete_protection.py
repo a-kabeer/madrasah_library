@@ -6,7 +6,7 @@ from django.urls import reverse
 from library.models import Category, Author, Publisher, Location, Shelf, Borrower, BookCopy
 from library.tests.helpers import (
     make_user, make_category, make_author, make_publisher, make_book,
-    make_location, make_shelf, make_copy, make_volume, make_borrower, make_loan,
+    make_location, make_shelf, make_copy, make_borrower, make_loan,
 )
 
 
@@ -16,10 +16,13 @@ class DeleteProtectionTests(TestCase):
         self.admin = make_user(username="admin_u", password="pass12345", role="Admin")
         self.client.login(username="admin_u", password="pass12345")
 
-    # Authors, categories and publishers confirm in a dialog now, so a
-    # plain POST to one of them has no page to answer with: it says why on
-    # the list instead. `follow=True` is what reads that message. What is
-    # being tested either way is that the record survives.
+    # Every refused delete now behaves the same way: with no dialog to
+    # answer in, it redirects to the list and carries the reason as a
+    # message, which `follow=True` is what reads. Before that was made
+    # uniform these expected 200 with the reason in the body, which the
+    # modal conversion had already stopped being true - so they failed on
+    # the status line and never reached the assertion that matters, which
+    # is that the record survives.
 
     def test_category_delete_blocked_when_books_exist(self):
         category = make_category()
@@ -68,9 +71,10 @@ class DeleteProtectionTests(TestCase):
         location = make_location()
         make_shelf(location=location)
 
-        response = self.client.post(reverse("location_delete", args=[location.id]))
+        response = self.client.post(
+            reverse("location_delete", args=[location.id]), follow=True
+        )
 
-        self.assertEqual(response.status_code, 200)
         self.assertContains(response, "cannot be deleted")
         self.assertTrue(Location.objects.filter(id=location.id).exists())
 
@@ -78,9 +82,10 @@ class DeleteProtectionTests(TestCase):
         shelf = make_shelf()
         make_copy(shelf=shelf)
 
-        response = self.client.post(reverse("shelf_delete", args=[shelf.id]))
+        response = self.client.post(
+            reverse("shelf_delete", args=[shelf.id]), follow=True
+        )
 
-        self.assertEqual(response.status_code, 200)
         self.assertContains(response, "cannot be deleted")
         self.assertTrue(Shelf.objects.filter(id=shelf.id).exists())
 
@@ -88,9 +93,10 @@ class DeleteProtectionTests(TestCase):
         borrower = make_borrower()
         make_loan(borrower=borrower)
 
-        response = self.client.post(reverse("borrower_delete", args=[borrower.id]))
+        response = self.client.post(
+            reverse("borrower_delete", args=[borrower.id]), follow=True
+        )
 
-        self.assertEqual(response.status_code, 200)
         self.assertContains(response, "cannot be deleted")
         self.assertTrue(Borrower.objects.filter(id=borrower.id).exists())
 
@@ -107,9 +113,10 @@ class DeleteProtectionTests(TestCase):
             return_date=date(2020, 1, 15),
         )
 
-        response = self.client.post(reverse("borrower_delete", args=[borrower.id]))
+        response = self.client.post(
+            reverse("borrower_delete", args=[borrower.id]), follow=True
+        )
 
-        self.assertEqual(response.status_code, 200)
         self.assertContains(response, "cannot be deleted")
         self.assertTrue(Borrower.objects.filter(id=borrower.id).exists())
 
@@ -121,13 +128,28 @@ class DeleteProtectionTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertFalse(Borrower.objects.filter(id=borrower.id).exists())
 
+    def test_a_refused_delete_says_so_rather_than_answering_with_a_fragment(self):
+        # The dialog fragment explains the refusal, which is no use to a
+        # browser that has replaced the whole page with it.
+        borrower = make_borrower(name="Held By History", phone="03001110001")
+        make_loan(borrower=borrower)
+
+        response = self.client.post(reverse("borrower_delete", args=[borrower.id]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(
+            "cannot be deleted",
+            " ".join(str(m) for m in response.wsgi_request._messages),
+        )
+
     def test_book_copy_delete_blocked_when_active_loan_exists(self):
         copy = make_copy()
         make_loan(copy=copy)
 
-        response = self.client.post(reverse("book_copy_delete", args=[copy.id]))
+        response = self.client.post(
+            reverse("book_copy_delete", args=[copy.id]), follow=True
+        )
 
-        self.assertEqual(response.status_code, 200)
         self.assertContains(response, "cannot be deleted")
         self.assertTrue(BookCopy.objects.filter(id=copy.id).exists())
 
@@ -142,9 +164,10 @@ class DeleteProtectionTests(TestCase):
             return_date=date(2020, 1, 15),
         )
 
-        response = self.client.post(reverse("book_copy_delete", args=[copy.id]))
+        response = self.client.post(
+            reverse("book_copy_delete", args=[copy.id]), follow=True
+        )
 
-        self.assertEqual(response.status_code, 200)
         self.assertContains(response, "cannot be deleted")
         self.assertTrue(BookCopy.objects.filter(id=copy.id).exists())
 

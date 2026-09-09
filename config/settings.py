@@ -31,8 +31,14 @@ CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=not DEBUG, cast=bool)
 X_FRAME_OPTIONS = "DENY"
 
 SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=0, cast=int)
-SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
-SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0
+# Kept independent of the max-age rather than derived from it. Turning HSTS
+# on for a host says nothing about its subdomains, and on a shared domain
+# (*.onrender.com) those are not this deployment's to claim; preload is
+# effectively irreversible. Both stay off unless deliberately set.
+SECURE_HSTS_INCLUDE_SUBDOMAINS = config(
+    "SECURE_HSTS_INCLUDE_SUBDOMAINS", default=False, cast=bool
+)
+SECURE_HSTS_PRELOAD = config("SECURE_HSTS_PRELOAD", default=False, cast=bool)
 
 LOGIN_RATE_LIMIT_ENABLED = config("LOGIN_RATE_LIMIT_ENABLED", default=True, cast=bool)
 LOGIN_RATE_LIMIT_WINDOW_SECONDS = config("LOGIN_RATE_LIMIT_WINDOW_SECONDS", default=900, cast=int)
@@ -40,7 +46,12 @@ LOGIN_RATE_LIMIT_IP_MAX_FAILURES = config("LOGIN_RATE_LIMIT_IP_MAX_FAILURES", de
 LOGIN_RATE_LIMIT_USERNAME_MAX_FAILURES = config("LOGIN_RATE_LIMIT_USERNAME_MAX_FAILURES", default=5, cast=int)
 
 INSTALLED_APPS = [
-    "django.contrib.admin",
+    # `django.contrib.admin` is deliberately absent. This project's `User`
+    # has no `is_staff`, so `AdminSite.has_permission` could never pass and
+    # the site was unreachable; its URLs were removed for that reason. The
+    # app itself is dropped too, so the admin templates and static files
+    # stop being collected and no future URL include can quietly re-expose
+    # a login form that bypasses `LoginRateLimiter`.
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
@@ -100,6 +111,23 @@ DATABASES = {
         "TEST": {
             "NAME": config("DB_TEST_NAME", default="madrasah_library_test"),
         },
+        # Keep the connection between requests instead of opening a new one
+        # for each. Django's default is 0 - connect, run the page's handful
+        # of queries, disconnect - which on a managed Postgres adds the TCP
+        # handshake, TLS and authentication to every single request, and
+        # that is usually longer than the queries themselves.
+        #
+        # Safe at this size: the start command runs one Gunicorn worker, so
+        # this is one held connection, not one per worker per dyno. Raise
+        # the worker count and this becomes workers x connections, which is
+        # what to watch against the database's limit.
+        #
+        # CONN_HEALTH_CHECKS makes Django check a reused connection is
+        # still alive at the start of each request and reconnect if not -
+        # without it, a connection the database or a sleeping instance
+        # dropped in between comes back as an error on the next page.
+        "CONN_MAX_AGE": config("CONN_MAX_AGE", default=60, cast=int),
+        "CONN_HEALTH_CHECKS": True,
     }
 }
 
@@ -129,7 +157,16 @@ AUTH_PASSWORD_VALIDATORS = [
 LANGUAGE_CODE = "en"
 LANGUAGES = [("en", "English"), ("ur", "اردو"), ("ar", "العربية")]
 LOCALE_PATHS = [BASE_DIR / "locale"]
+# config/formats/. The `ur` and `ar` modules there have existed since the
+# app was made translatable, and this setting with them: they keep the
+# digits Latin and the date order the same in every language, because a
+# copy code read off a spine has to look the same on screen. What was
+# missing was the `en` module beside them - so English fell through to
+# Django's own `N j, Y` while Urdu and Arabic already used `j M Y`, and the
+# 17 places that print a date with no `|date` filter disagreed with the 37
+# that carry one.
 FORMAT_MODULE_PATH = ["config.formats"]
+
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
@@ -149,8 +186,90 @@ COVER_IMAGE_MAX_BYTES = 2 * 1024 * 1024
 LOGO_MAX_BYTES = 1 * 1024 * 1024
 FAVICON_MAX_BYTES = 256 * 1024
 
+# Mail.
+#
+# Nothing in this application sends any yet - there is no password-reset
+# flow, and the notifications are in-app rows rather than messages - so the
+# console backend is the honest default for development: a message would
+# appear in the terminal rather than vanishing.
+#
+# It is not an honest default for production, though, and `manage.py check
+# --deploy` says so with an *error* rather than a warning (mail.E001): with
+# DEBUG off, a console backend means anything sent goes to stdout and
+# nobody is told. So the backend is configurable, and setting EMAIL_HOST in
+# the environment is enough to switch it - which is also what stops that
+# check failing on a real deployment.
+#
+# The host is read into a lowercase name deliberately: Django 6 refuses to
+# start if the deprecated top-level EMAIL_* settings are defined alongside
+# MAILERS, and a settings module exports every uppercase name it defines.
+email_host = config("EMAIL_HOST", default="")
+
 MAILERS = {
     "default": {
-        "BACKEND": "django.core.mail.backends.console.EmailBackend",
+        "BACKEND": (
+            "django.core.mail.backends.smtp.EmailBackend"
+            if email_host
+            else "django.core.mail.backends.console.EmailBackend"
+        ),
+        "HOST": email_host,
+        "PORT": config("EMAIL_PORT", default=587, cast=int),
+        "USER": config("EMAIL_HOST_USER", default=""),
+        "PASSWORD": config("EMAIL_HOST_PASSWORD", default=""),
+        "USE_TLS": config("EMAIL_USE_TLS", default=True, cast=bool),
+    },
+}
+
+DEFAULT_FROM_EMAIL = config(
+    "DEFAULT_FROM_EMAIL", default="madrasah-library@localhost"
+)
+
+
+# Logging.
+#
+# Django's own default configuration sends `django.request` errors to
+# `mail_admins` and puts nothing on the console unless DEBUG is on. With
+# DEBUG off, no ADMINS and no mailer - which is this project's production
+# shape - an unhandled 500 goes nowhere at all: the visitor gets the error
+# page and the traceback is discarded. That is not a thing to discover
+# while trying to work out why a librarian cannot issue a book.
+#
+# So: everything to stderr, which is what Render, systemd and `docker logs`
+# all collect, at a level the environment can raise. `propagate` off on
+# `django` so this replaces Django's handlers rather than adding to them.
+LOG_LEVEL = config("LOG_LEVEL", default="INFO")
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "plain": {
+            "format": "{asctime} {levelname} {name} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "stderr": {
+            "class": "logging.StreamHandler",
+            "formatter": "plain",
+        },
+    },
+    "root": {
+        "handlers": ["stderr"],
+        "level": LOG_LEVEL,
+    },
+    "loggers": {
+        # The one that carries a 500's traceback.
+        "django.request": {
+            "handlers": ["stderr"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        # Every SQL statement, and only when asked for by name.
+        "django.db.backends": {
+            "handlers": ["stderr"],
+            "level": config("SQL_LOG_LEVEL", default="WARNING"),
+            "propagate": False,
+        },
     },
 }

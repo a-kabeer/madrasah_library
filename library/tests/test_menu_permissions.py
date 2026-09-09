@@ -11,7 +11,6 @@ it survives somebody writing the row by hand, so most of what follows
 writes rows directly rather than going through the page.
 """
 
-from django.core.cache import cache
 from django.db import connection
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext

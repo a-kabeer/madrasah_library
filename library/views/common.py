@@ -12,6 +12,7 @@ used by only one belongs in that one.
 
 import json
 import os
+from datetime import date, datetime, time, timedelta
 from uuid import uuid4
 
 from PIL import Image, UnidentifiedImageError
@@ -19,7 +20,8 @@ from PIL import Image, UnidentifiedImageError
 from django.conf import settings
 from django.core.paginator import Paginator
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.contrib import messages
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.core.cache import cache
@@ -335,10 +337,25 @@ def is_combobox_request(request):
 
 
 # Where an activity-log entry points, by the entity_type recorded with it.
-# `User` is absent deliberately: it has no detail page. So is
-# OrganizationSettings, whose page is Admin-only — linking it would hand
-# other roles a 403.
+#
+# Four of the seventeen entity types the log records are absent, and each
+# for a reason rather than by oversight:
+#
+#   User                  has no detail page.
+#   RoleFeature           likewise - the matrix is the page, and a row in
+#                         it is not a record with a URL.
+#   OrganizationSettings  its page is Admin-only, so linking it would hand
+#                         every other role a 403.
+#   InventorySession      its page has an Admin/Librarian ceiling, same
+#                         objection: an Assistant can never open it.
+#
+# The rule that separates those last two from everything here is *ceiling*,
+# not toggle. Book, Loan and the rest can all be switched off for a role,
+# and are still linked: a link to something switched off is a link the
+# viewer would not have been shown the entry for. A link to something whose
+# ceiling excludes the role is a link that can never work.
 ACTIVITY_LOG_DETAIL_ROUTES = {
+    "AcquisitionSuggestion": "suggestion_detail",
     "Book": "book_detail",
     "BookContent": "book_content_detail",
     "BookCopy": "book_copy_detail",
@@ -683,10 +700,10 @@ def lookup_delete_blocker(kind, record_id):
     """Why this author, category or publisher cannot be deleted, or "".
 
     All three are refused on the same ground: books are filed under it.
-    `books.author_id` is NO ACTION, so deleting there would abort the
-    statement and return a 500; category and publisher are SET NULL, so it
-    would silently strip the field from every book that had it. Neither
-    belongs behind a confirm button.
+    All three columns are NO ACTION in Postgres, so letting the delete
+    through would abort the statement and surface as a 500 rather than as
+    anything a librarian could act on. That does not belong behind a
+    confirm button.
 
     Archived books count. They still hold the foreign key, and they still
     come back if the book is restored.
@@ -949,6 +966,52 @@ def numeric_param(request, name):
     value = request.GET.get(name, "").strip()
 
     return value if value.isdigit() else ""
+
+
+def date_param(request, name):
+    """A GET parameter, kept only if it is a real ISO date.
+
+    `numeric_param`'s sibling, and for the same reason: filtering a date
+    column on a string Django cannot parse raises ValidationError, which is
+    a 500 rather than a validation message - and so does a well-formed but
+    impossible date like 2026-02-30. A filter the viewer cannot see is not
+    worth a crash, so anything unreadable is discarded and read as "no
+    filter", exactly as an unknown status or sort value already is.
+
+    Returns a `date`, so a caller can build a half-open range from it - the
+    reason to have the object rather than the string.
+    """
+
+    value = request.GET.get(name, "").strip()
+
+    if not value:
+        return None
+
+    try:
+        return date.fromisoformat(value)
+
+    except ValueError:
+        return None
+
+
+def day_bounds(day):
+    """The half-open range of instants that fall on `day`.
+
+    For filtering a timestamp column by calendar day. The obvious spelling,
+    `created_at__date=day`, compiles to a function call on the column -
+    `(created_at AT TIME ZONE 'UTC')::date = %s` - which no index on
+    `created_at` can satisfy, so PostgreSQL walks rows until it has filled
+    the page. A half-open range on the bare column uses the index directly.
+    Measured on 60,000 activity-log rows: 1.005 ms the first way, 0.030 ms
+    this way, for the same rows.
+
+    Half-open rather than `__range`, which is inclusive at both ends and
+    would take midnight of the following day as well.
+    """
+
+    start = timezone.make_aware(datetime.combine(day, time.min))
+
+    return start, start + timedelta(days=1)
 
 
 def is_modal_request(request):
@@ -1532,6 +1595,45 @@ def combobox_created_response(entity_type, obj):
     return response
 
 
+def modal_refusal(request, message, url):
+    """Say why a POST was refused, for a request with no dialog to say it in.
+
+    The modal endpoints answer a refusal by re-rendering the dialog fragment
+    with the reason inside it, which is right when htmx put that fragment in
+    a dialog and useless otherwise: without JavaScript the browser replaces
+    the whole page with a bare partial that explains nothing. Nothing is lost
+    by redirecting here - a refused delete has no typed input to preserve -
+    so the reason travels as a message instead.
+    """
+
+    messages.error(request, message)
+
+    return redirect(url)
+
+
+def modal_redirect(request, url):
+    """Send the browser to `url`, whether or not htmx is driving.
+
+    htmx will not follow a 302 raised from inside a dialog - it swaps the
+    redirected page into the dialog body instead - so it is told to navigate
+    with HX-Redirect on an empty 204. A form posted without JavaScript has
+    nothing that reads that header and would simply sit there on a 204, so
+    that case gets an ordinary redirect.
+
+    `book_restore_modals` and `language_set` already branched this way; the
+    other modal endpoints returned 204 unconditionally, which is why a
+    scriptless Delete or Save appeared to do nothing at all. This is that
+    same rule in one place.
+    """
+
+    if request.headers.get("HX-Request") == "true":
+        response = HttpResponse(status=204)
+        response["HX-Redirect"] = url
+        return response
+
+    return redirect(url)
+
+
 def safe_redirect_target(request, fallback):
     next_url = request.POST.get("next") or request.GET.get("next")
 
@@ -1630,12 +1732,26 @@ def describe_loans(loans, today=None):
 
 
 def create_activity_log(
-    user=None,
+    user,
     action="",
     entity_type=None,
     entity_id=None,
     description=None,
 ):
+    """Record one state change against the person who made it.
+
+    `user` is required and has no default on purpose. It used to default to
+    None, and 36 of the 84 call sites - every add, edit and delete of users,
+    borrowers, books, volumes, contents, locations, shelves, copies and the
+    lookup tables - quietly took that default. The log therefore could not
+    answer "who deleted this", which is the one question it exists to
+    answer. Leaving it required means a forgotten actor is a TypeError at
+    the call site rather than an anonymous row in the audit trail.
+
+    `activity_logs.user_id` is still nullable, for a genuinely system-driven
+    entry; pass None deliberately in that case.
+    """
+
     ActivityLog.objects.create(
         user=user,
         action=action,

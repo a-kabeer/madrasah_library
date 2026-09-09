@@ -1,13 +1,13 @@
 """Modal-first archive workflow for books."""
 
+from django.contrib import messages
 from django.core.cache import cache
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.utils import timezone
 
 from ..models import Book, BookCopy, Loan
 from ..permissions import feature_required
-from .common import BOOK_CACHE_KEY, DASHBOARD_CACHE_KEY, BOOK_COPY_CACHE_KEY, create_activity_log, is_form_modal_request
+from .common import BOOK_CACHE_KEY, DASHBOARD_CACHE_KEY, BOOK_COPY_CACHE_KEY, create_activity_log, is_form_modal_request, modal_redirect
 
 
 def _archive_blocker(book):
@@ -50,11 +50,10 @@ def book_archive_modal(request, book_id):
             description="%s archived" % book.title,
         )
 
-        response = HttpResponse(status=204)
-        response["HX-Redirect"] = request.build_absolute_uri(
-            "/library/books/%s/" % book.id
+        return modal_redirect(
+            request,
+            request.build_absolute_uri("/library/books/%s/" % book.id),
         )
-        return response
 
     context = {
         "book": book,
@@ -67,6 +66,8 @@ def book_archive_modal(request, book_id):
         return render(request, "library/partials/book_archive_modal.html", context)
 
     if request.method == "POST" and blocker:
+        # Redirected before, but without a word about why.
+        messages.error(request, blocker)
         return redirect("book_detail", book_id=book.id)
 
     return render(request, "library/book_archive.html", context)

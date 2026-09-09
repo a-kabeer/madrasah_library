@@ -12,7 +12,14 @@ services:
     # App tables intentionally use managed=False and are maintained by the
     # existing PostgreSQL schema migrations. Django's cache table is created
     # separately so all Gunicorn workers share cache/rate-limit state.
-    buildCommand: "pip install -r requirements.txt && python manage.py migrate --noinput && python manage.py createcachetable && python manage.py collectstatic --noinput"
+    #
+    # compilemessages turns locale/*/LC_MESSAGES/*.po into the .mo files
+    # gettext actually reads; .mo is gitignored, so without this step the UI
+    # stays English however complete the catalogues are. It is deliberately
+    # non-fatal: it needs GNU gettext (msgfmt) in the build image, and a
+    # missing toolchain should degrade to untranslated rather than fail the
+    # deploy. Make it fatal once the catalogues carry real translations.
+    buildCommand: "pip install -r requirements.txt && python manage.py migrate --noinput && python manage.py createcachetable && (python manage.py compilemessages --ignore=.venv --ignore=venv || echo 'WARNING: compilemessages failed - is gettext installed? translations will be inactive') && python manage.py collectstatic --noinput"
     startCommand: "gunicorn config.wsgi:application"
     envVars:
       - key: PYTHON_VERSION

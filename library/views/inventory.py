@@ -23,7 +23,7 @@ from ..models import (
 from .. import inventory
 from .. import notifications
 
-from ..permissions import feature_required, role_required
+from ..permissions import feature_required
 
 from .common import (
     PAGE_SIZE,

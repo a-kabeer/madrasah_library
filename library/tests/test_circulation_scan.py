@@ -11,7 +11,6 @@ from django.test import TestCase
 from django.urls import reverse
 
 from library.tests.helpers import (
-    make_author,
     make_book,
     make_borrower,
     make_copy,

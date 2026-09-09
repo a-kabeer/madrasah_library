@@ -37,9 +37,15 @@
        soon, red for overdue - so a brand-coloured button can never be
        misread as a status.
 
-       An installation overrides these three from Settings > Branding
-       and base.html emits them inline. Everything downstream reads the
-       token, so nothing else needs to know a colour was configured.
+       An installation overrides all three from Settings > Branding and
+       base.html emits them inline. Only --brand-primary is read by any
+       rule, though: nothing downstream uses --brand-secondary or
+       --brand-accent, so setting either of those on the Branding page
+       currently changes nothing on screen. Deciding what they should
+       drive is a design question - the rule at the top of this block
+       says a brand colour must never read as a status, which rules out
+       the obvious green and amber - and it is recorded rather than
+       guessed at here.
        --------------------------------------------------------------- */
     --brand-primary: #4f46e5;
     --brand-secondary: #64748b;
@@ -63,10 +69,19 @@
     --slate-300: #cbd5e1;
     --slate-400: #94a3b8;
     --slate-500: #64748b;
+    /* The step the ramp was missing. 500 is 4.34:1 on --surface-chrome,
+       just under the 4.5 WCAG AA wants for body text, and 700 is 9.45 -
+       so there was nothing to reach for when the sidebar's own text
+       turned out to fail. */
+    --slate-600: #475569;
     --slate-700: #334155;
     --slate-800: #1e293b;
     --slate-900: #0f172a;
     --slate-950: #0b1120;
+
+    /* Bootstrap's danger red, one step darker, for text and for the
+       outline button's border - see .btn-outline-danger below. */
+    --danger-readable: #c92a3a;
 
     --scrim: rgba(15, 23, 42, 0.5);
     --shadow-soft: rgba(15, 23, 42, 0.06);
@@ -109,7 +124,11 @@
     --border-strong: var(--slate-300);
 
     --text-primary: var(--slate-900);
-    --text-secondary: var(--slate-500);
+    /* slate-600, not 500. Secondary text is read on every surface, and on
+       --surface-inset - which is what a table header is - slate-500 came
+       to 4.34:1 where WCAG AA wants 4.5. That was every table heading and
+       every breadcrumb link in the application. */
+    --text-secondary: var(--slate-600);
     --text-muted: var(--slate-400);
 }
 
@@ -153,10 +172,49 @@
 [data-bs-theme="dark"] {
     --sidebar-bg: var(--surface-chrome);
     --sidebar-hover: var(--surface-hover);
-    --sidebar-text: var(--text-secondary);
     --sidebar-text-strong: var(--text-primary);
-    --sidebar-section: var(--text-muted);
     --sidebar-border: var(--border-subtle);
+
+    --sidebar-text: var(--text-secondary);
+
+    /* The one that cannot alias --text-muted. The sidebar is the only
+       place in the app where muted text is read against --surface-chrome,
+       and there slate-400 came to 2.34:1 in light and slate-500 to 3.95:1
+       in dark - both well under the 4.5 AA wants, and these are 11.2px
+       bold, which is not "large text". That was 170 of the 374 contrast
+       failures on its own, because the sidebar is on every page.
+
+       A consequence worth stating: colour can no longer carry the
+       difference between a section heading and the links under it, because
+       anything quiet enough to read as a heading at 11.2px is too quiet to
+       read at all. The uppercase, the letter-spacing and the size carry
+       it, which is most of what they were already doing.
+
+       Declared here rather than in the theme blocks so that a root
+       carrying no data-bs-theme at all still has a value; the dark block
+       below overrides it. */
+    --sidebar-section: var(--text-secondary);
+}
+
+/*
+  The two that cannot simply alias --text-secondary and --text-muted.
+
+  The sidebar is the one place in the app where those two are read against
+  --surface-chrome rather than a card, and against that ground they both
+  failed WCAG AA: measured with axe-core, the nav labels came to 4.34:1
+  (needs 4.5) and the section headings to 2.34:1 in light and 3.95:1 in
+  dark (needs 4.5 - they are 11.2px bold, which is not "large text"). That
+  was 340 of the 374 contrast failures in the whole application, on 35
+  pages, because the sidebar is on every one of them.
+
+  A consequence worth stating: colour can no longer carry the difference
+  between a section heading and the links under it, because at 11.2px bold
+  everything quiet enough to read as a heading is too quiet to read at all.
+  The uppercase, the letter-spacing and the size carry it instead, which is
+  what they were already doing most of the work of.
+*/
+[data-bs-theme="dark"] {
+    --sidebar-section: var(--slate-400);
 }
 
 /*
@@ -175,10 +233,152 @@
        the configured colour, since CSS cannot split a hex into channels. */
     --bs-primary-rgb: 79, 70, 229;
 
+    /* And the one that actually reaches a link. Bootstrap 5.3 compiles
+       `a` to
+
+           color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1))
+
+       so the two --bs-link-color lines above were never read by anything:
+       every link in the app was Bootstrap's own #0d6efd whatever colour
+       the organisation had configured. Pointing the channels at the brand
+       is what makes branding reach a link at all - and it fixes a WCAG
+       failure at the same time, since #0d6efd came to 4.30:1 on the public
+       catalogue's page ground. */
+    --bs-link-color-rgb: var(--bs-primary-rgb);
+    --bs-link-hover-color-rgb: var(--bs-primary-rgb);
+
     /* Kept as an alias of the brand token — it used to be a separate
        hardcoded colour, which meant the sidebar and Bootstrap disagreed. */
     --primary: var(--brand-primary);
 }
+
+/*
+  ===================================================================
+  DARK THEME CONTRAST
+
+  Everything here is a WCAG AA failure that axe-core measured on the dark
+  theme, and every one of them has the same cause: a colour chosen against
+  a white page, used unchanged against a near-black one. They sit after
+  the alias block above because a custom property is resolved by source
+  order when the selectors are equally specific, and `:root,
+  [data-bs-theme="light"], [data-bs-theme="dark"]` is exactly as specific
+  as `[data-bs-theme="dark"]`.
+  ===================================================================
+*/
+
+[data-bs-theme="dark"] {
+    /*
+      A link, and the outline buttons that borrow its colour. The brand
+      colour is picked by an administrator looking at a light page; against
+      --slate-950 the default indigo is 2.99:1 where AA wants 4.5.
+      `display_primary_rgb_on_dark` mixes it towards white until it clears
+      that, which keeps it recognisably the same brand rather than
+      substituting another colour. base.html emits it when an installation
+      has configured colours; the fallback here is the same computation for
+      the default indigo.
+    */
+    --bs-link-color-rgb: var(--brand-primary-rgb-on-dark, 132, 126, 237);
+    --bs-link-hover-color-rgb: var(--brand-primary-rgb-on-dark, 132, 126, 237);
+}
+
+
+/*
+  Outline buttons.
+
+  Bootstrap's outline variants carry the *solid* colour as their text -
+  --bs-btn-color comes from $secondary, $primary, $danger - and those are
+  chosen against white. On the dark surfaces they measured 2.45:1
+  (outline-primary), 3.28:1 (outline-secondary) and 4.15:1
+  (outline-danger). Each one is a control, so each one needs 4.5.
+
+  Overridden through Bootstrap's own --bs-btn-* properties rather than by
+  restating `color`, so the hover and active states keep composing
+  themselves the way the component expects.
+*/
+/*
+  And the same two in light, which were also short: Bootstrap's own
+  gray-600 is 4.48:1 on --surface-page and its danger red 4.33:1. Both
+  round to "nearly", and neither is a colour this palette chose.
+*/
+.btn-outline-secondary {
+    --bs-btn-color: var(--text-secondary);
+    --bs-btn-border-color: var(--border-strong);
+    --bs-btn-hover-bg: var(--text-secondary);
+    --bs-btn-hover-border-color: var(--text-secondary);
+    --bs-btn-hover-color: var(--surface-card);
+    --bs-btn-active-bg: var(--text-secondary);
+    --bs-btn-active-border-color: var(--text-secondary);
+    --bs-btn-active-color: var(--surface-card);
+    --bs-btn-disabled-color: var(--text-muted);
+    --bs-btn-disabled-border-color: var(--border-subtle);
+}
+
+/* --danger-readable is the same red one step darker, which clears 4.5 on
+   every light surface (5.18 on the page, 5.42 on a card, 4.95 on the
+   chrome) and still reads as Bootstrap's danger rather than maroon. */
+.btn-outline-danger {
+    --bs-btn-color: var(--danger-readable);
+    --bs-btn-border-color: var(--danger-readable);
+    --bs-btn-hover-border-color: var(--danger-readable);
+    --bs-btn-hover-bg: var(--danger-readable);
+    --bs-btn-active-bg: var(--danger-readable);
+    --bs-btn-active-border-color: var(--danger-readable);
+}
+
+[data-bs-theme="dark"] .btn-outline-secondary {
+    --bs-btn-color: var(--slate-300);
+    --bs-btn-border-color: var(--border-strong);
+    --bs-btn-hover-bg: var(--slate-300);
+    --bs-btn-hover-border-color: var(--slate-300);
+    --bs-btn-hover-color: var(--slate-950);
+    --bs-btn-active-bg: var(--slate-300);
+    --bs-btn-active-border-color: var(--slate-300);
+    --bs-btn-active-color: var(--slate-950);
+    --bs-btn-disabled-color: var(--text-muted);
+    --bs-btn-disabled-border-color: var(--border-subtle);
+}
+
+[data-bs-theme="dark"] .btn-outline-primary {
+    --bs-btn-color: rgb(var(--bs-link-color-rgb));
+    --bs-btn-border-color: rgb(var(--bs-link-color-rgb));
+    --bs-btn-hover-bg: rgb(var(--bs-link-color-rgb));
+    --bs-btn-hover-border-color: rgb(var(--bs-link-color-rgb));
+    --bs-btn-hover-color: var(--slate-950);
+    --bs-btn-active-bg: rgb(var(--bs-link-color-rgb));
+    --bs-btn-active-border-color: rgb(var(--bs-link-color-rgb));
+    --bs-btn-active-color: var(--slate-950);
+}
+
+[data-bs-theme="dark"] .btn-outline-danger {
+    --bs-btn-color: var(--bs-danger-text-emphasis);
+    --bs-btn-border-color: var(--bs-danger-text-emphasis);
+    --bs-btn-hover-bg: var(--bs-danger-text-emphasis);
+    --bs-btn-hover-border-color: var(--bs-danger-text-emphasis);
+    --bs-btn-hover-color: var(--slate-950);
+    --bs-btn-active-bg: var(--bs-danger-text-emphasis);
+    --bs-btn-active-border-color: var(--bs-danger-text-emphasis);
+    --bs-btn-active-color: var(--slate-950);
+}
+
+/*
+  `.text-danger` and `.text-primary` compose from --bs-danger-rgb and
+  --bs-primary-rgb, which are the *solid* colours: 3.94:1 and 2.83:1 on
+  the dark page ground. Red text is used for "16 days late" beside a due
+  date - the one piece of red a librarian most needs to read - and
+  .text-primary for a card heading. Bootstrap already computes a per-theme
+  emphasis colour for the first; the second gets the lifted brand the
+  links use.
+
+  `!important` because Bootstrap's own utilities carry it.
+*/
+[data-bs-theme="dark"] .text-danger {
+    color: var(--bs-danger-text-emphasis) !important;
+}
+
+[data-bs-theme="dark"] .text-primary {
+    color: rgb(var(--bs-link-color-rgb)) !important;
+}
+
 
 /*
   ===================================================================
@@ -211,6 +411,41 @@
 
     --bs-border-color: var(--border-subtle);
     --bs-border-color-translucent: var(--border-subtle);
+}
+
+/*
+  The channel companions, and they are not optional.
+
+  Bootstrap compiles its background *utilities* from the -rgb form, not
+  from the variable above it:
+
+      .bg-body { background-color: rgba(var(--bs-body-bg-rgb), ...) }
+
+  and CSS cannot split a hex into channels. So `bg-body` - which is on 47
+  card headers in this app - kept Bootstrap's own #212529 on the dark
+  theme while everything around it followed the slate palette. It showed
+  up as a contrast failure on one button before it showed up as a colour
+  nobody had chosen.
+
+  Written as literals because they are the same three surfaces every
+  time; a var() chain cannot get from a hex to its channels. They must be
+  kept in step with the surface tokens above, which is what the comment
+  on each one is for.
+*/
+[data-bs-theme="light"] {
+    --bs-body-bg-rgb: 248, 250, 252;        /* --slate-50,  --surface-page */
+    --bs-secondary-bg-rgb: 241, 245, 249;   /* --slate-100, --surface-inset */
+    --bs-tertiary-bg-rgb: 241, 245, 249;    /* --slate-100, --surface-inset */
+    --bs-body-color-rgb: 15, 23, 42;        /* --slate-900, --text-primary */
+    --bs-emphasis-color-rgb: 15, 23, 42;    /* --slate-900, --text-primary */
+}
+
+[data-bs-theme="dark"] {
+    --bs-body-bg-rgb: 11, 17, 32;           /* --slate-950, --surface-page */
+    --bs-secondary-bg-rgb: 30, 41, 59;      /* --slate-800, --surface-inset */
+    --bs-tertiary-bg-rgb: 30, 41, 59;       /* --slate-800, --surface-inset */
+    --bs-body-color-rgb: 248, 250, 252;     /* --slate-50,  --text-primary */
+    --bs-emphasis-color-rgb: 248, 250, 252; /* --slate-50,  --text-primary */
 }
 
 
@@ -348,6 +583,27 @@
 .progress-stacked {
     --bs-progress-bg: var(--surface-inset);
     --bs-progress-bar-bg: var(--brand-primary);
+}
+
+/*
+  `.table-responsive` scrolls a wide table sideways instead of widening the
+  page - but `overflow-x: auto` only clips descendants whose containing
+  block is inside it, and Bootstrap's `.visually-hidden` is
+  `position: absolute !important`. Its containing block was therefore
+  `.card`, which is `position: relative` and sits *outside* the scroll
+  area, so the screen-reader labels on the action buttons escaped the
+  clip and widened the document itself. Measured at 375px on the users
+  list: 598px of document for a 375px viewport, all of it from a 1px span
+  sitting at x=597, with the table happily scrolling inside its container
+  the whole time.
+
+  Making the scroll container the containing block keeps them inside.
+  Nothing else here is absolutely positioned - no table in this project
+  holds a dropdown, which is the usual reason to leave a scroll container
+  static - so this only affects the labels it is meant to.
+*/
+.table-responsive {
+    position: relative;
 }
 
 /*
@@ -570,12 +826,6 @@
     border-color: var(--brand-primary);
 
     box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
-}
-
-.form-check-input:checked {
-    background-color: var(--brand-primary);
-
-    border-color: var(--brand-primary);
 }
 
 .btn:focus-visible {

@@ -72,9 +72,9 @@
             <div class="card shadow-sm border-0 mb-4">
 
                 <div class="card-header bg-body">
-                    <h5 class="mb-0 fw-bold">
+                    <h3 class="h5 mb-0 fw-bold">
                         {{ section.title }}
-                    </h5>
+                    </h3>
                 </div>
 
                 <div class="table-responsive">
@@ -136,12 +136,27 @@
                                                   a locked row. Shown as its
                                                   state, not as a control.
                                                 {% endcomment %}
+                                                {% comment %}
+                                                  The label goes in a
+                                                  visually-hidden span, not
+                                                  in aria-label on the
+                                                  icon: an <i> with no role
+                                                  is `generic`, which does
+                                                  not permit a name, so the
+                                                  attribute was being
+                                                  discarded and the cell
+                                                  read as nothing at all.
+                                                  Same shape the row
+                                                  actions elsewhere use.
+                                                {% endcomment %}
                                                 {% if cell.allowed %}
                                                     <i class="bi bi-check-lg text-success"
-                                                       aria-label="{% translate 'On' %}"></i>
+                                                       aria-hidden="true"></i>
+                                                    <span class="visually-hidden">{% translate "On" %}</span>
                                                 {% else %}
                                                     <i class="bi bi-x-lg text-body-secondary"
-                                                       aria-label="{% translate 'Off' %}"></i>
+                                                       aria-hidden="true"></i>
+                                                    <span class="visually-hidden">{% translate "Off" %}</span>
                                                 {% endif %}
                                             {% endif %}
                                         </td>

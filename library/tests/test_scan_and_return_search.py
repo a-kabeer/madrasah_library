@@ -21,7 +21,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.formats import date_format
 
-from library.models import Book, BookCopy, Loan
+from library.models import BookCopy, Loan
 from library.views import RETURN_LOOKUP_LIMIT
 
 from .helpers import (

@@ -2,7 +2,6 @@
 
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 
 from ..models import Book, BookContent, BookCopy, BookVolume
@@ -12,16 +11,18 @@ from .common import (
     BOOK_VOLUME_CACHE_KEY,
     DASHBOARD_CACHE_KEY,
     create_activity_log,
+    is_form_modal_request,
+    modal_redirect,
+    modal_refusal,
     safe_redirect_target,
 )
 
 
 def _redirect_response(request, fallback="book_volume_list"):
-    response = HttpResponse(status=204)
-    response["HX-Redirect"] = request.build_absolute_uri(
-        safe_redirect_target(request, fallback)
+    return modal_redirect(
+        request,
+        request.build_absolute_uri(safe_redirect_target(request, fallback)),
     )
-    return response
 
 
 def _form_request(request):
@@ -126,6 +127,10 @@ def book_volume_delete_modal(request, volume_id):
         cache.delete(DASHBOARD_CACHE_KEY)
         create_activity_log(user=request.user, action="DELETE", entity_type="BookVolume", entity_id=volume_id_value, description=f"{label} deleted")
         return _redirect_response(request)
+
+    if request.method == "POST" and copies_exist and not is_form_modal_request(request):
+        return modal_refusal(request, error, "book_volume_list")
+
     return render(request, "library/partials/book_volume_delete_modal.html", {"volume": volume, "copies_exist": copies_exist, "error": error if copies_exist else ""})
 
 

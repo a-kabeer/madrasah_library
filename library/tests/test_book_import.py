@@ -374,7 +374,7 @@ class MappingTests(ImportTestCase):
         self.assertIn("required", back.context["error"])
 
     def test_the_same_field_mapped_twice_is_refused(self):
-        response = self.upload(["One", "Two", "Three"], [["A", "B", "C"]])
+        self.upload(["One", "Two", "Three"], [["A", "B", "C"]])
 
         payload = {
             "action": "map",
