@@ -186,7 +186,22 @@
                                             {% endif %}
                                         </td>
                                         <td class="text-end">
-                                            <a href="{{ copy.add_url }}" class="btn btn-sm btn-primary">
+                                            {% comment %}
+                                              Boosted like every other link, but this one
+                                              is not a navigation: it adds a copy to the
+                                              list further down the same page. htmx scrolls
+                                              a boosted swap to the top, which throws
+                                              someone working down a long list of matches
+                                              back to the start after every Add.
+                                              `show:none` drops that one step and leaves
+                                              the scroll position where they left it; the
+                                              swap and the pushed URL are unchanged.
+                                            {% endcomment %}
+                                            <a
+                                                href="{{ copy.add_url }}"
+                                                class="btn btn-sm btn-primary"
+                                                hx-swap="innerHTML show:none"
+                                            >
                                                 <i class="bi bi-plus-lg"></i>
                                                 <span class="visually-hidden">
                                                                                   {% blocktranslate trimmed with copy_code=copy.copy_code %}
@@ -240,17 +255,17 @@
 
                     <p class="text-body-secondary small mb-1">{% translate "Borrower" %}</p>
                     {% if borrower_id %}
+                        {% comment %}
+                          `borrower_name`, which the view resolves for the
+                          combobox above, rather than searching a
+                          `borrowers` list for the matching id: that list
+                          was what the old <select> needed and the view
+                          stopped sending it when the combobox replaced it,
+                          so this panel had nothing to loop over and showed
+                          an empty line for whoever had just been picked.
+                        {% endcomment %}
                         <p class="fw-semibold mb-3" id="reviewBorrower">
-                            {% for person in borrowers %}
-                                {% if borrower_id == person.id|stringformat:"s" %}
-                                    {{ person.name }}
-                                    {% if person.registration_no %}
-                                        <span class="d-block small text-body-secondary">
-                                            {{ person.registration_no }}
-                                        </span>
-                                    {% endif %}
-                                {% endif %}
-                            {% endfor %}
+                            {{ borrower_name }}
                         </p>
                     {% else %}
                         <p class="text-body-secondary mb-3">
@@ -306,10 +321,16 @@
                                             {{ copy.volume.book.title }}
                                         </span>
                                     </span>
+                                    {% comment %}
+                                      Removing is the same in-page edit as
+                                      Add above, so it keeps the scroll
+                                      position the same way.
+                                    {% endcomment %}
                                     <a
                                         href="{{ copy.remove_url }}"
                                         class="btn btn-sm btn-outline-danger"
                                         title="{% translate 'Remove' %}"
+                                        hx-swap="innerHTML show:none"
                                     >
                                         <i class="bi bi-x-lg"></i>
                                         <span class="visually-hidden">

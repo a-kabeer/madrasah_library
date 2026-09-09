@@ -40,7 +40,6 @@ from .. import history
 from .. import inventory
 from ..context_processors import is_main_nav_request
 from ..permissions import (
-    can_edit_library,
     feature_required,
     passes_ceiling,
 )
@@ -530,7 +529,15 @@ def book_list(request):
         # Delete at all. Every one of those views carries the
         # Admin/Librarian ceiling, so an Assistant was being offered five
         # controls that each answered 403.
-        "can_edit": can_edit_library(request.user),
+        #
+        # `passes_ceiling` rather than `can_edit_library`, which predates
+        # SuperAdmin and so does not know about it: the five views are
+        # gated by `feature_required(..., "Admin", "Librarian")`, whose
+        # ceiling test exempts SuperAdmin. Asking the narrower question
+        # here hid all five controls from the one role that may always
+        # reach them - the opposite failure to the Assistant one above.
+        # This is the same call the rest of this module already makes.
+        "can_edit": passes_ceiling(request.user, "Admin", "Librarian"),
         "books": page,
         "paginator": paginator,
         "search": search,

@@ -184,7 +184,20 @@ error_message, chosen, chosen_ids, return_date, notes, today.
                             {% translate "In the return list" %}
                         </span>
                     {% else %}
-                        <a href="{{ loan.add_url }}" class="btn btn-success">
+                        {% comment %}
+                          Boosted like every other link, but this one is not a
+                          navigation: it adds the loan to the return list further
+                          down the same page. htmx scrolls a boosted swap to the
+                          top, which throws someone who has read down to this
+                          card back to the start of it. `show:none` drops that
+                          one step and leaves the scroll position alone; the swap
+                          and the pushed URL are unchanged.
+                        {% endcomment %}
+                        <a
+                            href="{{ loan.add_url }}"
+                            class="btn btn-success"
+                            hx-swap="innerHTML show:none"
+                        >
                             <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
                             {% translate "Add to return list" %}
                         </a>
@@ -265,7 +278,16 @@ error_message, chosen, chosen_ids, return_date, notes, today.
                                         {% endif %}
                                     </td>
                                     <td class="text-end">
-                                        <a href="{{ match.add_url }}" class="btn btn-sm btn-success">
+                                        {% comment %}
+                                          The same in-page edit as the card
+                                          above, so it holds the scroll
+                                          position the same way.
+                                        {% endcomment %}
+                                        <a
+                                            href="{{ match.add_url }}"
+                                            class="btn btn-sm btn-success"
+                                            hx-swap="innerHTML show:none"
+                                        >
                                             <i class="bi bi-plus-lg" aria-hidden="true"></i>
                                             <span class="visually-hidden">
                                                 {% blocktranslate trimmed with copy_code=match.copy.copy_code %}
@@ -341,10 +363,16 @@ error_message, chosen, chosen_ids, return_date, notes, today.
                                             {% endif %}
                                         </span>
                                     </span>
+                                    {% comment %}
+                                      Removing is the same in-page edit as
+                                      Add, so it holds the scroll position
+                                      the same way.
+                                    {% endcomment %}
                                     <a
                                         href="{{ item.remove_url }}"
                                         class="btn btn-sm btn-outline-danger flex-shrink-0"
                                         title="{% translate 'Remove' %}"
+                                        hx-swap="innerHTML show:none"
                                     >
                                         <i class="bi bi-x-lg" aria-hidden="true"></i>
                                         <span class="visually-hidden">

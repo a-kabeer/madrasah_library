@@ -715,6 +715,17 @@
   ===================================================================
 */
 
+/*
+  A tab on the book detail page can be a short overview or a long list of
+  copies, so switching one for another decides whether the page scrolls at
+  all. Without a reserved gutter the scrollbar comes and goes with it, and
+  the whole layout steps sideways by its width on every switch. Reserving
+  the space keeps the measure fixed whether the bar is there or not.
+*/
+html {
+    scrollbar-gutter: stable;
+}
+
 * {
     scrollbar-color: var(--border-strong) transparent;
 }
