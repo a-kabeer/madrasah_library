@@ -158,6 +158,15 @@ LANGUAGE_CODE = "en"
 LANGUAGES = [("en", "English"), ("ur", "اردو"), ("ar", "العربية")]
 LOCALE_PATHS = [BASE_DIR / "locale"]
 FORMAT_MODULE_PATH = ["config.formats"]
+# Wire up config/formats/. The `ur` and `ar` modules there have existed
+# since the app was made translatable - they keep the digits Latin and the
+# date order the same in every language, because a copy code read off a
+# spine has to look the same on screen - but nothing pointed at them, so
+# they had never taken effect: Django only consults format modules named
+# by this setting. The `en` module beside them is what makes a date printed
+# with no `|date` filter match the 37 that carry one.
+FORMAT_MODULE_PATH = ["config.formats"]
+
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
