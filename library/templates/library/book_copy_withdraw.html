@@ -13,9 +13,14 @@
 
 <div class="container-fluid px-0">
 
+    {% comment %}
+      Back to the list, not to the copy: `book_copy_detail` is a
+      dialog-only URL, so asking for it from here opened a dialog on top
+      of this page instead of going anywhere.
+    {% endcomment %}
     <div class="mb-3">
-        <a href="{% url 'book_copy_detail' copy.id %}" data-form-modal hx-get="{% url 'book_copy_detail' copy.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="small text-decoration-none">
-            <i class="bi bi-arrow-left me-1"></i> {% translate "Back to the copy" %}
+        <a href="{% url 'book_copy_list' %}" class="small text-decoration-none">
+            <i class="bi bi-arrow-left me-1"></i> {% translate "Back to Book Copies" %}
         </a>
     </div>
 
@@ -62,15 +67,25 @@
 
                         <div class="d-flex justify-content-center flex-wrap gap-2">
                             {% comment %}
-                              To the return page with this loan already in
-                              the list. `loan_return` on its own is a
-                              dialog now and has no page to land on.
+                              This loan's own return, the same one the
+                              dialog offers. Dialog-first with the href as
+                              the fallback, like every other such link
+                              here; without script it lands on the loan
+                              list, which is where `loan_return` sends a
+                              plain request.
                             {% endcomment %}
-                            <a href="{% url 'circulation_return_lookup' %}?loans={{ active_loan.id }}" class="btn btn-success">
+                            <a
+                                href="{% url 'loan_return' active_loan.id %}"
+                                class="btn btn-success"
+                                data-form-modal
+                                hx-get="{% url 'loan_return' active_loan.id %}?modal=1"
+                                hx-target="#formModal .modal-body"
+                                hx-swap="innerHTML"
+                            >
                                 <i class="bi bi-arrow-return-left me-1"></i> {% translate "Take it back" %}
                             </a>
-                            <a href="{% url 'book_copy_detail' copy.id %}" data-form-modal hx-get="{% url 'book_copy_detail' copy.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-outline-secondary">
-                                {% translate "Back to the copy" %}
+                            <a href="{% url 'book_copy_list' %}" class="btn btn-outline-secondary">
+                                {% translate "Back to Book Copies" %}
                             </a>
                         </div>
 
@@ -124,7 +139,7 @@
                         </ul>
 
                         <div class="d-flex justify-content-center gap-2">
-                            <a href="{% url 'book_copy_detail' copy.id %}" data-form-modal hx-get="{% url 'book_copy_detail' copy.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-outline-secondary">
+                            <a href="{% url 'book_copy_list' %}" class="btn btn-outline-secondary">
                                 <i class="bi bi-x-lg me-1"></i> {% translate "Cancel" %}
                             </a>
                             <form method="post" class="d-inline">

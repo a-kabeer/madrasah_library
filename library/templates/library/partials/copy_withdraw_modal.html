@@ -1,0 +1,205 @@
+{% load i18n %}
+{% comment %}
+Withdraw Copy confirmation, served into #formModal by `book_copy_withdraw`.
+
+The same question the standalone page asked, in the dialog the row's other
+four actions already use. As a page it swapped `#mainContent`, which threw
+away the list it was opened from - the search, the filters, the page and
+the scroll position with it - and its Cancel opened the copy's own dialog
+on top of itself rather than going back. Here there is nothing to go back
+to: the list never left.
+
+Three answers, and only one of them has a button that withdraws:
+
+  * `already` - the copy is already out of circulation, so there is
+    nothing to do and Edit Copy is where its status is changed.
+  * `blocker` - it is out with a borrower. The loan is the record of where
+    the book physically is, and marking it withdrawn underneath an open
+    loan would leave the two disagreeing. Taking it back is offered, in
+    this same dialog.
+  * otherwise - what withdrawing does, then Cancel and Withdraw Copy.
+
+Expected context: copy, blocker, already, active_loan, withdrawn_status,
+loan_count.
+{% endcomment %}
+
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    <i class="bi bi-box-arrow-down me-2" aria-hidden="true"></i>{% translate "Withdraw Copy?" %}
+</h5>
+
+<div id="copyWithdrawBody">
+
+    {% comment %}
+      Which copy, first and in every branch: this dialog is opened from a
+      row in a table of near-identical codes, and the one thing the reader
+      has to be sure of is that it is holding the one they clicked.
+    {% endcomment %}
+    <p class="mb-1">
+        <span class="copy-code fs-5 fw-semibold">{{ copy.copy_code }}</span>
+    </p>
+
+    <p class="text-body-secondary small">
+        {{ copy.volume.book.title }}
+        {% if copy.volume.volume_number != 1 or copy.volume.title %}
+            &middot; {% blocktranslate with number=copy.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}
+        {% endif %}
+        {% if copy.shelf %}
+            &middot; {{ copy.shelf.location.name }} — {{ copy.shelf.shelf_code }}
+        {% else %}
+            &middot; {% translate "unshelved" %}
+        {% endif %}
+    </p>
+
+    {% if already %}
+
+        <div class="alert alert-secondary d-flex align-items-start" role="alert">
+            <i class="bi bi-box-arrow-right me-2 mt-1" aria-hidden="true"></i>
+            <div>
+                {% blocktranslate trimmed with status=copy.status %}
+                    It is already marked {{ status }}, so it is not being
+                    offered for issue and there is nothing to withdraw.
+                {% endblocktranslate %}
+            </div>
+        </div>
+
+        <div class="modal-actions">
+            {% comment %}
+              Edit Copy replaces this dialog's body rather than opening a
+              second dialog over it - the same re-target the borrower
+              dialog uses for its own Edit.
+            {% endcomment %}
+            <a
+                href="{% url 'book_copy_edit' copy.id %}"
+                class="btn btn-outline-secondary"
+                data-form-modal
+                hx-get="{% url 'book_copy_edit' copy.id %}?modal=1"
+                hx-target="#formModal .modal-body"
+                hx-swap="innerHTML"
+            >
+                <i class="bi bi-pencil me-1" aria-hidden="true"></i>
+                {% translate "Change its status" %}
+            </a>
+            <button
+                type="button"
+                class="btn btn-outline-secondary ms-auto"
+                data-bs-dismiss="modal"
+            >
+                {% translate "Close" %}
+            </button>
+        </div>
+
+    {% elif blocker %}
+
+        <div class="alert alert-warning d-flex align-items-start" role="alert">
+            <i class="bi bi-shield-exclamation me-2 mt-1" aria-hidden="true"></i>
+            <div>{{ blocker }}</div>
+        </div>
+
+        <div class="modal-actions">
+            {% if active_loan %}
+                {% comment %}
+                  The return, in this dialog's body. As a page this was a
+                  link to the return lookup, which left the copy list
+                  behind; the return has its own dialog and this is the
+                  one loan in question, so it goes straight there.
+                {% endcomment %}
+                <a
+                    href="{% url 'loan_return' active_loan.id %}"
+                    class="btn btn-success"
+                    data-form-modal
+                    hx-get="{% url 'loan_return' active_loan.id %}?modal=1"
+                    hx-target="#formModal .modal-body"
+                    hx-swap="innerHTML"
+                >
+                    <i class="bi bi-arrow-return-left me-1" aria-hidden="true"></i>
+                    {% translate "Take it back" %}
+                </a>
+            {% endif %}
+            <button
+                type="button"
+                class="btn btn-outline-secondary ms-auto"
+                data-bs-dismiss="modal"
+            >
+                {% translate "Close" %}
+            </button>
+        </div>
+
+    {% else %}
+
+        <p class="text-body-secondary">
+            {% translate "Withdrawing takes it out of circulation and keeps everything on record." %}
+        </p>
+
+        <ul class="list-unstyled small text-body-secondary mb-0">
+            <li class="mb-2">
+                <i class="bi bi-check2 text-success me-2" aria-hidden="true"></i>
+                {% blocktranslate trimmed count n=loan_count %}
+                    The copy and its code stay on record, and so does the
+                    {{ n }} loan against it.
+                {% plural %}
+                    The copy and its code stay on record, and so do all
+                    {{ n }} loans against it.
+                {% endblocktranslate %}
+            </li>
+            <li class="mb-2">
+                <i class="bi bi-x-lg text-danger me-2" aria-hidden="true"></i>
+                {% blocktranslate trimmed %}
+                    It stops being offered for issue and stops counting as
+                    available.
+                {% endblocktranslate %}
+            </li>
+            <li>
+                {% comment %}
+                  Named rather than hidden: the status is one the copy list
+                  and its filters already understand, so nothing about this
+                  copy becomes a special case.
+                {% endcomment %}
+                <i class="bi bi-tag me-2" aria-hidden="true"></i>
+                {% blocktranslate trimmed with status=withdrawn_status %}
+                    Its status becomes {{ status }}, which you can change
+                    again from Edit Copy.
+                {% endblocktranslate %}
+            </li>
+        </ul>
+
+        <div class="modal-actions">
+
+            {% comment %}
+              Targets this dialog's own body, so a refusal that arrives
+              between opening it and pressing the button - the copy issued
+              to somebody in the meantime - is re-rendered here as the
+              blocker above rather than closing on nothing. A save answers
+              204 and nothing is swapped; app.js closes up on the event.
+
+              `hx-disabled-elt` disables the button for the length of the
+              request, so a second click cannot post a second withdrawal.
+            {% endcomment %}
+            <form
+                method="post"
+                action="{% url 'book_copy_withdraw' copy.id %}"
+                hx-post="{% url 'book_copy_withdraw' copy.id %}?modal=1"
+                hx-target="#copyWithdrawBody"
+                hx-swap="outerHTML"
+                hx-disabled-elt="find button[type=submit]"
+                class="d-inline"
+            >
+                {% csrf_token %}
+                <button type="submit" class="btn btn-warning">
+                    <i class="bi bi-box-arrow-down me-1" aria-hidden="true"></i>
+                    {% translate "Withdraw Copy" %}
+                </button>
+            </form>
+
+            <button
+                type="button"
+                class="btn btn-outline-secondary ms-auto"
+                data-bs-dismiss="modal"
+            >
+                {% translate "Cancel" %}
+            </button>
+
+        </div>
+
+    {% endif %}
+
+</div>

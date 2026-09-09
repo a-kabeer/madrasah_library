@@ -2230,6 +2230,28 @@ document.addEventListener(
                 );
             });
 
+
+            /* A copy taken out of circulation. The same two answers - the
+               dialog closes, the list behind it re-requests its own
+               results and so keeps its search, filters, page and scroll
+               position - and the neutral tone rather than the danger one,
+               because nothing was destroyed: the copy and its loans are
+               still there, they are just no longer on offer. (Not
+               `warning`: `showToast` puts a `btn-close-white` on the
+               toast, and white on Bootstrap's yellow is unreadable.) */
+            document.body.addEventListener("copyWithdrawn", function (e) {
+
+                var detail = (e.detail && e.detail.value) || e.detail || {};
+
+                closeFormModal();
+                refreshList();
+                window.showToast(
+                    (detail.code || "The copy")
+                    + " was withdrawn from circulation.",
+                    "secondary"
+                );
+            });
+
         })();
 
 

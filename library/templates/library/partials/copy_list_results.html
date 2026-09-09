@@ -275,18 +275,16 @@ Expected context: everything `book_copy_list` provides.
                                   of them, so there is one place to act
                                   and one place to read.
 
-                                  Edit, Move and Delete are dialogs.
-                                  Print Label and Withdraw are
-                                  navigations: a sheet of labels is a
-                                  page to print, and withdrawing asks
-                                  its own question.
+                                  Edit, Move, Withdraw and Delete are
+                                  dialogs. Only Print Label is a
+                                  navigation: a sheet of labels is a page
+                                  to print.
 
-                                  Print Label and Withdraw need
-                                  `hx-target` named, because the results
-                                  container around them declares one for
-                                  the fragment requests and a navigation
-                                  has to point at the shell's region
-                                  instead.
+                                  Print Label needs `hx-target` named,
+                                  because the results container around it
+                                  declares one for the fragment requests
+                                  and a navigation has to point at the
+                                  shell's region instead.
                                 {% endcomment %}
                                 {% if can_edit %}
                                     <div class="d-inline-flex gap-1" data-row-actions>
@@ -328,7 +326,21 @@ Expected context: everything `book_copy_list` provides.
                                           Only while it is still in
                                           circulation. A withdrawn copy
                                           has nothing left to withdraw,
-                                          and the page would only say so.
+                                          and the dialog would only say
+                                          so.
+
+                                          `hx-push-url="false"`, unlike
+                                          its three sibling dialogs:
+                                          #copyResults declares
+                                          hx-push-url="true" for its own
+                                          fragment requests and that is
+                                          inherited here, so opening this
+                                          dialog would rewrite the address
+                                          bar to the withdraw URL - and
+                                          Cancel, which only closes the
+                                          dialog, would leave the reader
+                                          on a list whose address no
+                                          longer describes it.
                                         {% endcomment %}
                                         {% if copy.status != "Transferred" %}
                                             <a
@@ -336,8 +348,11 @@ Expected context: everything `book_copy_list` provides.
                                                 class="btn btn-sm btn-outline-secondary"
                                                 title="{% translate 'Withdraw' %}"
                                                 aria-label="Withdraw copy {{ copy.copy_code }}"
-                                                hx-target="#mainContent"
+                                                data-form-modal
+                                                hx-get="{% url 'book_copy_withdraw' copy.id %}?modal=1"
+                                                hx-target="#formModal .modal-body"
                                                 hx-swap="innerHTML"
+                                                hx-push-url="false"
                                             >
                                                 <i class="bi bi-box-arrow-down"></i>
                                             </a>

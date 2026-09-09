@@ -55,6 +55,7 @@ from .common import (
     book_saved_response,
     combobox_created_response,
     combobox_options_response,
+    copy_withdrawn_response,
     create_activity_log,
     create_book_copies,
     describe_copies,
@@ -1689,22 +1690,37 @@ def book_copy_withdraw(request, copy_id):
             description="%s withdrawn from circulation" % copy.copy_code,
         )
 
+        # Asked from the dialog: nothing to navigate to. The list it was
+        # opened from is still on screen behind it, and it re-requests its
+        # own results on this event - so the search, the filters, the page
+        # and the scroll position are all still what they were.
+        if is_form_modal_request(request):
+            return copy_withdrawn_response(copy.copy_code)
+
         # The copy's own page is a dialog now, and its URL redirects to
         # the list - so going there took two hops to reach one place.
         return redirect("book_copy_list")
 
-    return render(
-        request,
-        "library/book_copy_withdraw.html",
-        {
-            "copy": copy,
-            "blocker": blocker,
-            "already": already,
-            "active_loan": active_loan,
-            "withdrawn_status": COPY_WITHDRAWN_STATUS,
-            "loan_count": Loan.objects.filter(copy=copy).count(),
-        }
-    )
+    context = {
+        "copy": copy,
+        "blocker": blocker,
+        "already": already,
+        "active_loan": active_loan,
+        "withdrawn_status": COPY_WITHDRAWN_STATUS,
+        "loan_count": Loan.objects.filter(copy=copy).count(),
+    }
+
+    # The question itself, in the dialog the row's other four actions use.
+    # A refused POST lands here too, which is what puts the reason in front
+    # of the reader without the dialog closing.
+    if is_form_modal_request(request):
+        return render(
+            request,
+            "library/partials/copy_withdraw_modal.html",
+            context,
+        )
+
+    return render(request, "library/book_copy_withdraw.html", context)
 
 
 def book_deleted_response(title):

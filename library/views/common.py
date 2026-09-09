@@ -750,6 +750,24 @@ def lookup_deleted_response(name):
     return response
 
 
+def copy_withdrawn_response(code):
+    """The same, for a copy taken out of circulation.
+
+    Its own event rather than `recordSaved` or `recordDeleted`, because
+    neither says what happened: the copy was not deleted - keeping it, and
+    its loans, is the whole point of withdrawing - and "saved" is not what
+    a librarian just did. Everything else is the same contract those two
+    use, so the copy list closes the dialog and re-requests its own
+    results on this exactly as it does on theirs.
+    """
+
+    response = HttpResponse(status=204)
+
+    response["HX-Trigger"] = json.dumps({"copyWithdrawn": {"code": code}})
+
+    return response
+
+
 def lookup_book_counts(queryset):
     """Each lookup row annotated with how many books are filed under it.
 

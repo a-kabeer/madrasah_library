@@ -31,14 +31,22 @@ Expected context: copy, blocker.
 
         <div class="modal-actions">
             {% comment %}
-              A real navigation rather than a second dialog: withdrawing
-              asks its own question, and stacking a modal over this one
-              would trap the reader. Only offered while the copy is
-              still in circulation — a withdrawn copy has nothing left
-              to withdraw.
+              Withdrawing has its own dialog now, and this replaces this
+              dialog's body rather than opening a second one over it -
+              stacking would trap the reader, and navigating away would
+              throw out the list behind. Only offered while the copy is
+              still in circulation: a withdrawn copy has nothing left to
+              withdraw.
             {% endcomment %}
             {% if copy.status != "Transferred" %}
-                <a href="{% url 'book_copy_withdraw' copy.id %}" class="btn btn-warning">
+                <a
+                    href="{% url 'book_copy_withdraw' copy.id %}"
+                    class="btn btn-warning"
+                    data-form-modal
+                    hx-get="{% url 'book_copy_withdraw' copy.id %}?modal=1"
+                    hx-target="#formModal .modal-body"
+                    hx-swap="innerHTML"
+                >
                     <i class="bi bi-box-arrow-down me-1" aria-hidden="true"></i>
                     {% translate "Withdraw instead" %}
                 </a>
