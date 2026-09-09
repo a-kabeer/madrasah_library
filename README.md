@@ -165,6 +165,15 @@ render the English source strings in a right-to-left layout.
 deliberately non-fatal: it needs GNU gettext, and a missing toolchain should
 degrade to untranslated rather than fail a deploy.
 
+## Where the rest of the documentation is
+
+| Document | What is in it |
+|---|---|
+| `docs/DATABASE.md` | The tables, the constraints, the indexing strategy and why each index has the shape it has |
+| `docs/DEPLOYMENT.md` | Render, and the caveats that matter before anything real goes on it |
+| `docs/VENDORED_ASSETS.md` | Where Bootstrap, Bootstrap Icons and htmx come from, and how to upgrade them |
+| `docs/AUDIT.md` | The September 2026 review: what changed, and what is still outstanding |
+
 ## Deployment
 
 `docs/DEPLOYMENT.md`. Read the caveats at the bottom of it before putting
