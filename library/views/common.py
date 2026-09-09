@@ -19,6 +19,7 @@ from PIL import Image, UnidentifiedImageError
 from django.conf import settings
 from django.core.paginator import Paginator
 from django.http import HttpResponse
+from django.contrib import messages
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
@@ -1530,6 +1531,22 @@ def combobox_created_response(entity_type, obj):
     })
 
     return response
+
+
+def modal_refusal(request, message, url):
+    """Say why a POST was refused, for a request with no dialog to say it in.
+
+    The modal endpoints answer a refusal by re-rendering the dialog fragment
+    with the reason inside it, which is right when htmx put that fragment in
+    a dialog and useless otherwise: without JavaScript the browser replaces
+    the whole page with a bare partial that explains nothing. Nothing is lost
+    by redirecting here - a refused delete has no typed input to preserve -
+    so the reason travels as a message instead.
+    """
+
+    messages.error(request, message)
+
+    return redirect(url)
 
 
 def modal_redirect(request, url):

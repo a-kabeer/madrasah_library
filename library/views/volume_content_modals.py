@@ -12,7 +12,9 @@ from .common import (
     BOOK_VOLUME_CACHE_KEY,
     DASHBOARD_CACHE_KEY,
     create_activity_log,
+    is_form_modal_request,
     modal_redirect,
+    modal_refusal,
     safe_redirect_target,
 )
 
@@ -126,6 +128,10 @@ def book_volume_delete_modal(request, volume_id):
         cache.delete(DASHBOARD_CACHE_KEY)
         create_activity_log(user=request.user, action="DELETE", entity_type="BookVolume", entity_id=volume_id_value, description=f"{label} deleted")
         return _redirect_response(request)
+
+    if request.method == "POST" and copies_exist and not is_form_modal_request(request):
+        return modal_refusal(request, error, "book_volume_list")
+
     return render(request, "library/partials/book_volume_delete_modal.html", {"volume": volume, "copies_exist": copies_exist, "error": error if copies_exist else ""})
 
 

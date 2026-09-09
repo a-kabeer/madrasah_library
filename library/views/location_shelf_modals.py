@@ -6,7 +6,7 @@ from django.http import HttpResponse
 
 from ..models import BookCopy, Location, Shelf
 from ..permissions import feature_required
-from .common import create_activity_log, DASHBOARD_CACHE_KEY, LOCATION_CACHE_KEY, modal_redirect, safe_redirect_target, SHELF_CACHE_KEY
+from .common import is_form_modal_request, modal_refusal, create_activity_log, DASHBOARD_CACHE_KEY, LOCATION_CACHE_KEY, modal_redirect, safe_redirect_target, SHELF_CACHE_KEY
 
 
 def _redirect_response(request, fallback):
@@ -66,6 +66,15 @@ def location_delete_modal(request, location_id):
         cache.delete(DASHBOARD_CACHE_KEY)
         create_activity_log(user=request.user, action="DELETE", entity_type="Location", entity_id=deleted_id, description=f"{deleted_name} deleted")
         return _redirect_response(request, "location_list")
+
+    if request.method == "POST" and shelves_exist and not is_form_modal_request(request):
+        return modal_refusal(
+            request,
+            "%s cannot be deleted while it still has shelves. Move or delete "
+            "those shelves first." % location.name,
+            "location_list",
+        )
+
     return render(request, "library/partials/location_delete_modal.html", {"location": location, "shelves_exist": shelves_exist})
 
 
@@ -130,4 +139,13 @@ def shelf_delete_modal(request, shelf_id):
         cache.delete(DASHBOARD_CACHE_KEY)
         create_activity_log(user=request.user, action="DELETE", entity_type="Shelf", entity_id=deleted_id, description=f"{deleted_code} deleted")
         return _redirect_response(request, "shelf_list")
+
+    if request.method == "POST" and copies_exist and not is_form_modal_request(request):
+        return modal_refusal(
+            request,
+            "Shelf %s cannot be deleted while copies are filed on it. Move "
+            "those copies first." % shelf.shelf_code,
+            "shelf_list",
+        )
+
     return render(request, "library/partials/shelf_delete_modal.html", {"shelf": shelf, "copies_exist": copies_exist})
