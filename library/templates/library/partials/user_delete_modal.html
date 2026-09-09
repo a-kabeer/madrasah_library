@@ -62,7 +62,7 @@ Expected context: target_user, blocker.
             {{ blocker }}
         </div>
 
-        <div class="d-flex justify-content-end pt-3">
+        <div class="modal-actions justify-content-end">
             <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                 {% translate "Close" %}
             </button>
@@ -84,7 +84,7 @@ Expected context: target_user, blocker.
         >
             {% csrf_token %}
 
-            <div class="d-flex justify-content-end gap-2">
+            <div class="modal-actions justify-content-end">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                     {% translate "Cancel" %}
                 </button>

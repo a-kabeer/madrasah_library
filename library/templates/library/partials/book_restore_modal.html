@@ -36,7 +36,7 @@
         {% endif %}
     </div>
 
-    <div class="modal-footer">
+    <div class="modal-actions justify-content-end">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% translate "Cancel" %}</button>
         {% if book.is_archived %}
             <form method="post" action="{% url 'book_restore' book.id %}?modal=1" hx-post="{% url 'book_restore' book.id %}?modal=1" hx-swap="none" class="d-inline">
