@@ -6,7 +6,7 @@ from django.urls import reverse
 from library.models import Category, Author, Publisher, Location, Shelf, Borrower, BookCopy
 from library.tests.helpers import (
     make_user, make_category, make_author, make_publisher, make_book,
-    make_location, make_shelf, make_copy, make_volume, make_borrower, make_loan,
+    make_location, make_shelf, make_copy, make_borrower, make_loan,
 )
 
 

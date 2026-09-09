@@ -111,6 +111,23 @@ DATABASES = {
         "TEST": {
             "NAME": config("DB_TEST_NAME", default="madrasah_library_test"),
         },
+        # Keep the connection between requests instead of opening a new one
+        # for each. Django's default is 0 - connect, run the page's handful
+        # of queries, disconnect - which on a managed Postgres adds the TCP
+        # handshake, TLS and authentication to every single request, and
+        # that is usually longer than the queries themselves.
+        #
+        # Safe at this size: the start command runs one Gunicorn worker, so
+        # this is one held connection, not one per worker per dyno. Raise
+        # the worker count and this becomes workers x connections, which is
+        # what to watch against the database's limit.
+        #
+        # CONN_HEALTH_CHECKS makes Django check a reused connection is
+        # still alive at the start of each request and reconnect if not -
+        # without it, a connection the database or a sleeping instance
+        # dropped in between comes back as an error on the next page.
+        "CONN_MAX_AGE": config("CONN_MAX_AGE", default=60, cast=int),
+        "CONN_HEALTH_CHECKS": True,
     }
 }
 

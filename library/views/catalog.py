@@ -2070,7 +2070,7 @@ def book_detail(request, book_id):
 def book_volume_list(request):
 
     search = request.GET.get("search", "").strip()
-    book_id = request.GET.get("book", "").strip()
+    book_id = numeric_param(request, "book")
 
     if search or book_id:
 
@@ -2174,7 +2174,7 @@ def book_volume_detail(request, volume_id):
 def book_content_list(request):
 
     search = request.GET.get("search", "").strip()
-    volume_id = request.GET.get("volume", "").strip()
+    volume_id = numeric_param(request, "volume")
     content_type = request.GET.get("content_type", "").strip()
 
     if search or volume_id or content_type:

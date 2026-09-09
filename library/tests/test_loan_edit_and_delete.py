@@ -11,7 +11,7 @@ The edit also recorded the wrong person: the actor on the activity log was
 change. A log that names the wrong person is worse than one that names nobody.
 """
 
-from datetime import date, timedelta
+from datetime import date
 
 from django.core.cache import cache
 from django.test import TestCase, override_settings

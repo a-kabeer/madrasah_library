@@ -188,7 +188,7 @@ def location_detail(request, location_id):
 def shelf_list(request):
 
     search = request.GET.get("search", "").strip()
-    location_id = request.GET.get("location", "").strip()
+    location_id = numeric_param(request, "location")
 
     # The copy count comes back with the shelves, in the same query, so the
     # list costs the same however many copies the library holds.

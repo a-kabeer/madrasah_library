@@ -43,8 +43,10 @@ from .common import (
     PolicyRefused,
     copy_for_code,
     create_activity_log,
+    date_param,
     describe_loans,
     is_form_modal_request,
+    numeric_param,
     lookup_saved_response,
     page_size_options,
     resolve_page_size,
@@ -181,9 +183,9 @@ def loan_list(request):
 
     search = request.GET.get("search", "").strip()
     status = request.GET.get("status", "").strip()
-    borrower_id = request.GET.get("borrower", "").strip()
-    issue_date = request.GET.get("issue_date", "").strip()
-    due_date = request.GET.get("due_date", "").strip()
+    borrower_id = numeric_param(request, "borrower")
+    issue_date = date_param(request, "issue_date")
+    due_date = date_param(request, "due_date")
 
     loans_query = Loan.objects.select_related(
         "copy__volume__book",
@@ -302,8 +304,8 @@ def loan_list(request):
             "search": search,
             "status": status,
             "borrower_id": borrower_id,
-            "issue_date": issue_date,
-            "due_date": due_date,
+            "issue_date": issue_date.isoformat() if issue_date else "",
+            "due_date": due_date.isoformat() if due_date else "",
 
             "columns": sortable_columns(
                 request,
