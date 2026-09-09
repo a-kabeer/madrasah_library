@@ -6,13 +6,11 @@ from django.http import HttpResponse
 
 from ..models import BookCopy, Location, Shelf
 from ..permissions import feature_required
-from .common import DASHBOARD_CACHE_KEY, LOCATION_CACHE_KEY, SHELF_CACHE_KEY, create_activity_log, safe_redirect_target
+from .common import create_activity_log, DASHBOARD_CACHE_KEY, LOCATION_CACHE_KEY, modal_redirect, safe_redirect_target, SHELF_CACHE_KEY
 
 
 def _redirect_response(request, fallback):
-    response = HttpResponse(status=204)
-    response["HX-Redirect"] = safe_redirect_target(request, fallback)
-    return response
+    return modal_redirect(request, safe_redirect_target(request, fallback))
 
 
 @feature_required("locations", "Admin", "Librarian")

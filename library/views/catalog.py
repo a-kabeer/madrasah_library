@@ -167,7 +167,7 @@ def category_add(request):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="CREATE",
                 entity_type="Category",
                 entity_id=category.id,
@@ -237,7 +237,7 @@ def category_edit(request, category_id):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="UPDATE",
                 entity_type="Category",
                 entity_id=category.id,
@@ -285,7 +285,7 @@ def category_delete(request, category_id):
         cache.delete(DASHBOARD_CACHE_KEY)
 
         create_activity_log(
-            user=None,
+            user=request.user,
             action="DELETE",
             entity_type="Category",
             entity_id=deleted_category_id,
@@ -394,7 +394,7 @@ def author_add(request):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="CREATE",
                 entity_type="Author",
                 entity_id=author.id,
@@ -464,7 +464,7 @@ def author_edit(request, author_id):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="UPDATE",
                 entity_type="Author",
                 entity_id=author.id,
@@ -512,7 +512,7 @@ def author_delete(request, author_id):
         cache.delete(DASHBOARD_CACHE_KEY)
 
         create_activity_log(
-            user=None,
+            user=request.user,
             action="DELETE",
             entity_type="Author",
             entity_id=deleted_author_id,
@@ -631,7 +631,7 @@ def publisher_add(request):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="CREATE",
                 entity_type="Publisher",
                 entity_id=publisher.id,
@@ -706,7 +706,7 @@ def publisher_edit(request, publisher_id):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="UPDATE",
                 entity_type="Publisher",
                 entity_id=publisher.id,
@@ -755,7 +755,7 @@ def publisher_delete(request, publisher_id):
         cache.delete(DASHBOARD_CACHE_KEY)
 
         create_activity_log(
-            user=None,
+            user=request.user,
             action="DELETE",
             entity_type="Publisher",
             entity_id=deleted_publisher_id,
@@ -1297,7 +1297,7 @@ def book_add(request):
                     cache.delete(BOOK_COPY_CACHE_KEY)
 
                 create_activity_log(
-                    user=None,
+                    user=request.user,
                     action="CREATE",
                     entity_type="Book",
                     entity_id=book.id,
@@ -1333,7 +1333,7 @@ def book_add(request):
 
                 for volume in volumes:
                     create_activity_log(
-                        user=None,
+                        user=request.user,
                         action="CREATE",
                         entity_type="BookVolume",
                         entity_id=volume.id,
@@ -1345,7 +1345,7 @@ def book_add(request):
 
                 if copies_made:
                     create_activity_log(
-                        user=None,
+                        user=request.user,
                         action="CREATE",
                         entity_type="Book",
                         entity_id=book.id,
@@ -1492,7 +1492,7 @@ def book_edit(request, book_id):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="UPDATE",
                 entity_type="Book",
                 entity_id=book.id,
@@ -1820,7 +1820,7 @@ def book_delete(request, book_id):
                 cache.delete(BOOK_VOLUME_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="DELETE",
                 entity_type="Book",
                 entity_id=deleted_book_id,
@@ -2284,7 +2284,7 @@ def book_volume_add(request):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="CREATE",
                 entity_type="BookVolume",
                 entity_id=volume.id,
@@ -2408,7 +2408,7 @@ def book_volume_edit(request, volume_id):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="UPDATE",
                 entity_type="BookVolume",
                 entity_id=volume.id,
@@ -2479,7 +2479,7 @@ def book_volume_delete(request, volume_id):
         cache.delete(DASHBOARD_CACHE_KEY)
 
         create_activity_log(
-            user=None,
+            user=request.user,
             action="DELETE",
             entity_type="BookVolume",
             entity_id=deleted_volume_id,
@@ -2746,7 +2746,7 @@ def book_content_add(request):
 
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="CREATE",
                 entity_type="BookContent",
                 entity_id=content.id,
@@ -2933,7 +2933,7 @@ def book_content_delete(request, content_id):
         )
 
         create_activity_log(
-            user=None,
+            user=request.user,
             action="DELETE",
             entity_type="BookContent",
             entity_id=content_id,

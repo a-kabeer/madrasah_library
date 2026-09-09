@@ -17,7 +17,6 @@ Including another URLconf
 
 from django.conf import settings
 from django.conf.urls.static import static
-from django.contrib import admin
 from django.contrib.auth.decorators import login_not_required
 from django.urls import include, path
 from django.views.i18n import set_language
@@ -25,7 +24,14 @@ from django.views.static import serve
 
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    # Django's admin is deliberately not routed. Nothing is registered in
+    # library/admin.py, and `User` is an AbstractBaseUser with no `is_staff`
+    # or `is_superuser`, so no account could ever pass
+    # AdminSite.has_permission. Routing it would only publish a second
+    # sign-in form - one that does not go through `LoginRateLimiter`, since
+    # that is called by this project's own login view rather than by
+    # middleware, and so would accept unlimited attempts against real
+    # usernames.
 
     # The staff application. Everything under here needs a login -
     # `LoginRequiredMiddleware` requires one by default and only the views

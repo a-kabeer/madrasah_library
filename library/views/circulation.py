@@ -1180,7 +1180,7 @@ def loan_delete(request, loan_id):
         cache.delete(DASHBOARD_CACHE_KEY)
 
         create_activity_log(
-            user=None,
+            user=request.user,
             action="DELETE",
             entity_type="Loan",
             entity_id=deleted_loan_id,

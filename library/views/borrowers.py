@@ -472,7 +472,7 @@ def borrower_add(request):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="CREATE",
                 entity_type="Borrower",
                 entity_id=borrower.id,
@@ -649,7 +649,7 @@ def borrower_edit(request, borrower_id):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="UPDATE",
                 entity_type="Borrower",
                 entity_id=borrower.id,
@@ -767,7 +767,7 @@ def borrower_delete(request, borrower_id):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="DELETE",
                 entity_type="Borrower",
                 entity_id=deleted_id,

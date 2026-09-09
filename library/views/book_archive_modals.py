@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from ..models import Book, BookCopy, Loan
 from ..permissions import feature_required
-from .common import BOOK_CACHE_KEY, DASHBOARD_CACHE_KEY, BOOK_COPY_CACHE_KEY, create_activity_log, is_form_modal_request
+from .common import BOOK_CACHE_KEY, DASHBOARD_CACHE_KEY, BOOK_COPY_CACHE_KEY, create_activity_log, is_form_modal_request, modal_redirect
 
 
 def _archive_blocker(book):
@@ -50,11 +50,10 @@ def book_archive_modal(request, book_id):
             description="%s archived" % book.title,
         )
 
-        response = HttpResponse(status=204)
-        response["HX-Redirect"] = request.build_absolute_uri(
-            "/library/books/%s/" % book.id
+        return modal_redirect(
+            request,
+            request.build_absolute_uri("/library/books/%s/" % book.id),
         )
-        return response
 
     context = {
         "book": book,

@@ -9,15 +9,14 @@ from .. import acquisitions, notifications
 from ..models import AcquisitionSuggestion
 from ..permissions import can_edit_library, feature_required
 from .catalog import suggestion_matches
-from .common import create_activity_log, safe_redirect_target
+from .common import create_activity_log, modal_redirect, safe_redirect_target
 
 
 def _redirect_response(request, fallback="suggestion_list"):
-    response = HttpResponse(status=204)
-    response["HX-Redirect"] = request.build_absolute_uri(
-        safe_redirect_target(request, fallback)
+    return modal_redirect(
+        request,
+        request.build_absolute_uri(safe_redirect_target(request, fallback)),
     )
-    return response
 
 
 def _modal(request):

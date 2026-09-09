@@ -4,22 +4,21 @@ from django.core.cache import cache
 from django.core.paginator import Paginator
 from django.db import IntegrityError, models, transaction
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, render
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
 from ..models import Borrower, Loan
 from .. import reservations
 from ..permissions import can_edit_library, feature_required
-from .common import BORROWER_CACHE_KEY, BORROWER_TYPES, DASHBOARD_CACHE_KEY, PAGE_SIZE, create_activity_log
+from .common import is_form_modal_request, BORROWER_CACHE_KEY, BORROWER_TYPES, create_activity_log, DASHBOARD_CACHE_KEY, modal_redirect, PAGE_SIZE
 
 BORROWER_ACTIVITY_FILTERS = ("has_loans", "no_loans", "overdue", "no_overdue")
 
 
-def _redirect_list():
-    response = HttpResponse(status=204)
-    response["HX-Redirect"] = reverse("borrower_list")
-    return response
+def _redirect_list(request):
+    return modal_redirect(request, reverse("borrower_list"))
 
 
 def _form_data(request, borrower=None):
@@ -127,7 +126,7 @@ def borrower_add_modal(request):
                 cache.delete(BORROWER_CACHE_KEY)
                 cache.delete(DASHBOARD_CACHE_KEY)
                 create_activity_log(request.user, "CREATE", "Borrower", borrower.id, f"{borrower.name} added")
-                return _redirect_list()
+                return _redirect_list(request)
     return render(request, "library/partials/borrower_form_modal.html", {"mode": "add", "form_data": data, "error": error, "borrower_types": BORROWER_TYPES})
 
 
@@ -150,7 +149,7 @@ def borrower_edit_modal(request, borrower_id):
                 cache.delete(BORROWER_CACHE_KEY)
                 cache.delete(DASHBOARD_CACHE_KEY)
                 create_activity_log(request.user, "UPDATE", "Borrower", borrower.id, f"{borrower.name} updated")
-                return _redirect_list()
+                return _redirect_list(request)
     return render(request, "library/partials/borrower_form_modal.html", {"mode": "edit", "borrower": borrower, "form_data": data, "error": error, "borrower_types": BORROWER_TYPES})
 
 
@@ -161,9 +160,38 @@ def borrower_delete_modal(request, borrower_id):
     active_count = Loan.objects.filter(borrower_id=borrower.id, return_date__isnull=True).count()
     if request.method == "POST" and loan_count == 0:
         deleted_id, deleted_name = borrower.id, borrower.name
-        borrower.delete()
-        cache.delete(BORROWER_CACHE_KEY)
-        cache.delete(DASHBOARD_CACHE_KEY)
-        create_activity_log(request.user, "DELETE", "Borrower", deleted_id, f"{deleted_name} deleted")
-        return _redirect_list()
+        try:
+            # Counted again inside the transaction that deletes. The count
+            # above is read outside any transaction, so a loan issued in
+            # between would otherwise reach loans.borrower_id - a NO ACTION
+            # foreign key - and raise, which is a 500 where there is a
+            # sentence to say instead.
+            with transaction.atomic():
+                if Loan.objects.filter(borrower_id=borrower.id).exists():
+                    raise IntegrityError("borrower acquired a loan mid-delete")
+                borrower.delete()
+        except IntegrityError:
+            loan_count = Loan.objects.filter(borrower_id=borrower.id).count()
+            active_count = Loan.objects.filter(
+                borrower_id=borrower.id, return_date__isnull=True
+            ).count()
+        else:
+            cache.delete(BORROWER_CACHE_KEY)
+            cache.delete(DASHBOARD_CACHE_KEY)
+            create_activity_log(request.user, "DELETE", "Borrower", deleted_id, f"{deleted_name} deleted")
+            return _redirect_list(request)
+
+    if request.method == "POST" and loan_count and not is_form_modal_request(request):
+        # Only for a refused POST. A GET is a request to show the confirm
+        # dialog and still answers with it. Nothing reads a dialog fragment
+        # when there is no dialog, so without this a scriptless Delete
+        # rendered a bare partial and said nothing about why it refused.
+        messages.error(
+            request,
+            "%s cannot be deleted: %d loan%s on record, and that history "
+            "would go with them. Deactivate them instead."
+            % (borrower.name, loan_count, "" if loan_count == 1 else "s"),
+        )
+        return redirect("borrower_list")
+
     return render(request, "library/partials/borrower_delete_modal.html", {"borrower": borrower, "loan_history_exists": loan_count > 0, "loan_count": loan_count, "active_loan_count": active_count})

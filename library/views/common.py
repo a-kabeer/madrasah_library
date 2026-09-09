@@ -19,7 +19,7 @@ from PIL import Image, UnidentifiedImageError
 from django.conf import settings
 from django.core.paginator import Paginator
 from django.http import HttpResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from django.core.cache import cache
@@ -683,10 +683,10 @@ def lookup_delete_blocker(kind, record_id):
     """Why this author, category or publisher cannot be deleted, or "".
 
     All three are refused on the same ground: books are filed under it.
-    `books.author_id` is NO ACTION, so deleting there would abort the
-    statement and return a 500; category and publisher are SET NULL, so it
-    would silently strip the field from every book that had it. Neither
-    belongs behind a confirm button.
+    All three columns are NO ACTION in Postgres, so letting the delete
+    through would abort the statement and surface as a 500 rather than as
+    anything a librarian could act on. That does not belong behind a
+    confirm button.
 
     Archived books count. They still hold the foreign key, and they still
     come back if the book is restored.
@@ -1532,6 +1532,29 @@ def combobox_created_response(entity_type, obj):
     return response
 
 
+def modal_redirect(request, url):
+    """Send the browser to `url`, whether or not htmx is driving.
+
+    htmx will not follow a 302 raised from inside a dialog - it swaps the
+    redirected page into the dialog body instead - so it is told to navigate
+    with HX-Redirect on an empty 204. A form posted without JavaScript has
+    nothing that reads that header and would simply sit there on a 204, so
+    that case gets an ordinary redirect.
+
+    `book_restore_modals` and `language_set` already branched this way; the
+    other modal endpoints returned 204 unconditionally, which is why a
+    scriptless Delete or Save appeared to do nothing at all. This is that
+    same rule in one place.
+    """
+
+    if request.headers.get("HX-Request") == "true":
+        response = HttpResponse(status=204)
+        response["HX-Redirect"] = url
+        return response
+
+    return redirect(url)
+
+
 def safe_redirect_target(request, fallback):
     next_url = request.POST.get("next") or request.GET.get("next")
 
@@ -1630,12 +1653,26 @@ def describe_loans(loans, today=None):
 
 
 def create_activity_log(
-    user=None,
+    user,
     action="",
     entity_type=None,
     entity_id=None,
     description=None,
 ):
+    """Record one state change against the person who made it.
+
+    `user` is required and has no default on purpose. It used to default to
+    None, and 36 of the 84 call sites - every add, edit and delete of users,
+    borrowers, books, volumes, contents, locations, shelves, copies and the
+    lookup tables - quietly took that default. The log therefore could not
+    answer "who deleted this", which is the one question it exists to
+    answer. Leaving it required means a forgotten actor is a TypeError at
+    the call site rather than an anonymous row in the audit trail.
+
+    `activity_logs.user_id` is still nullable, for a genuinely system-driven
+    entry; pass None deliberately in that case.
+    """
+
     ActivityLog.objects.create(
         user=user,
         action=action,

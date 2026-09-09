@@ -229,7 +229,7 @@ def location_add(request):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="CREATE",
                 entity_type="Location",
                 entity_id=location.id,
@@ -269,7 +269,7 @@ def location_edit(request, location_id):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="UPDATE",
                 entity_type="Location",
                 entity_id=location.id,
@@ -318,7 +318,7 @@ def location_delete(request, location_id):
         cache.delete(DASHBOARD_CACHE_KEY)
 
         create_activity_log(
-            user=None,
+            user=request.user,
             action="DELETE",
             entity_type="Location",
             entity_id=deleted_location_id,
@@ -568,7 +568,7 @@ def shelf_add(request):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="CREATE",
                 entity_type="Shelf",
                 entity_id=shelf.id,
@@ -619,7 +619,7 @@ def shelf_edit(request, shelf_id):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="UPDATE",
                 entity_type="Shelf",
                 entity_id=shelf.id,
@@ -669,7 +669,7 @@ def shelf_delete(request, shelf_id):
         cache.delete(DASHBOARD_CACHE_KEY)
 
         create_activity_log(
-            user=None,
+            user=request.user,
             action="DELETE",
             entity_type="Shelf",
             entity_id=deleted_shelf_id,
@@ -1981,7 +1981,7 @@ def book_copy_add(request):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="CREATE",
                 entity_type="BookCopy",
                 entity_id=copy.id,
@@ -2267,7 +2267,7 @@ def book_copy_delete(request, copy_id):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="DELETE",
                 entity_type="BookCopy",
                 entity_id=deleted_id,

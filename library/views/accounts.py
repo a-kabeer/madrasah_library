@@ -439,7 +439,7 @@ def user_add(request):
             cache.delete(DASHBOARD_CACHE_KEY)
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="CREATE",
                 entity_type="User",
                 entity_id=user.id,
@@ -491,7 +491,7 @@ def user_toggle_active(request, user_id):
         cache.delete(DASHBOARD_CACHE_KEY)
 
         create_activity_log(
-            user=None,
+            user=request.user,
             action="UPDATE",
             entity_type="User",
             entity_id=user.id,
@@ -589,7 +589,7 @@ def user_edit(request, user_id):
             )
 
             create_activity_log(
-                user=None,
+                user=request.user,
                 action="UPDATE",
                 entity_type="User",
                 entity_id=target_user.id,
@@ -673,7 +673,7 @@ def user_delete(request, user_id):
         cache.delete(DASHBOARD_CACHE_KEY)
 
         create_activity_log(
-            user=None,
+            user=request.user,
             action="DELETE",
             entity_type="User",
             entity_id=deleted_user_id,

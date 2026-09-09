@@ -12,16 +12,16 @@ from .common import (
     BOOK_VOLUME_CACHE_KEY,
     DASHBOARD_CACHE_KEY,
     create_activity_log,
+    modal_redirect,
     safe_redirect_target,
 )
 
 
 def _redirect_response(request, fallback="book_volume_list"):
-    response = HttpResponse(status=204)
-    response["HX-Redirect"] = request.build_absolute_uri(
-        safe_redirect_target(request, fallback)
+    return modal_redirect(
+        request,
+        request.build_absolute_uri(safe_redirect_target(request, fallback)),
     )
-    return response
 
 
 def _form_request(request):

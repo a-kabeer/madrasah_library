@@ -31,8 +31,14 @@ CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=not DEBUG, cast=bool)
 X_FRAME_OPTIONS = "DENY"
 
 SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=0, cast=int)
-SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
-SECURE_HSTS_PRELOAD = SECURE_HSTS_SECONDS > 0
+# Kept independent of the max-age rather than derived from it. Turning HSTS
+# on for a host says nothing about its subdomains, and on a shared domain
+# (*.onrender.com) those are not this deployment's to claim; preload is
+# effectively irreversible. Both stay off unless deliberately set.
+SECURE_HSTS_INCLUDE_SUBDOMAINS = config(
+    "SECURE_HSTS_INCLUDE_SUBDOMAINS", default=False, cast=bool
+)
+SECURE_HSTS_PRELOAD = config("SECURE_HSTS_PRELOAD", default=False, cast=bool)
 
 LOGIN_RATE_LIMIT_ENABLED = config("LOGIN_RATE_LIMIT_ENABLED", default=True, cast=bool)
 LOGIN_RATE_LIMIT_WINDOW_SECONDS = config("LOGIN_RATE_LIMIT_WINDOW_SECONDS", default=900, cast=int)

@@ -129,9 +129,13 @@ class Book(models.Model):
         db_column="author_id"
     )
 
+    # DO_NOTHING, not SET_NULL: the column is NO ACTION in Postgres (checked
+    # against information_schema), and `lookup_delete_blocker` refuses the
+    # delete outright while any book is filed here - so SET_NULL described a
+    # path nothing takes and the database does not implement.
     category = models.ForeignKey(
         Category,
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING,
         null=True,
         blank=True,
         db_column="category_id"
@@ -139,7 +143,7 @@ class Book(models.Model):
 
     publisher = models.ForeignKey(
         Publisher,
-        on_delete=models.SET_NULL,
+        on_delete=models.DO_NOTHING,
         null=True,
         blank=True,
         db_column="publisher_id"
