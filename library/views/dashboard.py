@@ -21,13 +21,20 @@ from ..models import (
     Category,
     Loan,
     Publisher,
+    Reservation,
     User,
 )
 
 from .. import analytics as analytics_module
 from .. import features
+from .. import queries
 
-from ..permissions import can_edit_library, feature_required
+from ..permissions import can_edit_library, feature_required, passes_ceiling
+
+# The dashboard's Action Center counts withdrawn stock the same way the
+# condition report and the analytics page do, rather than restating which
+# statuses count as withdrawn.
+from ..reports import CONDITION_STATES, inventory_counts
 
 from .common import (
     ACTIVITY_LOG_CACHE_KEY,
@@ -40,6 +47,19 @@ from .common import (
     numeric_param,
     query_with,
 )
+
+
+# How many rows each Collection Health list shows. Deliberately shorter
+# than analytics.TOP_N: this is a summary that links to the analytics page,
+# not a copy of it.
+DASHBOARD_TOP_N = 5
+
+# At or below this many copies a title counts as thin stock.
+LOW_COPY_THRESHOLD = 2
+
+# How many rows each group of the topbar search shows. Short on purpose:
+# the box points at a record, the list pages are where searching happens.
+GLOBAL_SEARCH_LIMIT = 5
 
 
 def activity_log_filter_options():
@@ -231,6 +251,35 @@ def library_home(request):
             due_today=models.Count("id", filter=models.Q(due_date=today)),
         )
 
+        # Circulation Today. One pass over the loans table for both halves
+        # of the day, in the same shape as the block above: the two are
+        # counts over the same rows with different conditions.
+        today_flow = Loan.objects.aggregate(
+            issued_today=models.Count("id", filter=models.Q(issue_date=today)),
+            returned_today=models.Count(
+                "id", filter=models.Q(return_date=today)
+            ),
+        )
+
+        # Titles the catalogue holds but cannot lend right now - every copy
+        # out, withdrawn or unshelved. `annotate_copy_counts` is the book
+        # list's own definition of "available", so this count and the list
+        # it links to cannot disagree.
+        no_available_titles = queries.annotate_copy_counts(
+            queries.active_books()
+        ).filter(
+            total_copies__gt=0,
+            available_copies=0,
+        ).count()
+
+        # Lost, damaged, missing and transferred, from reports.py's own
+        # tally rather than four more conditions written here.
+        withdrawn = inventory_counts(
+            BookCopy.objects.all(),
+            today,
+            states=CONDITION_STATES,
+        )
+
         dashboard_stats = {
             "total_books": Book.objects.count(),
             "total_authors": Author.objects.count(),
@@ -247,6 +296,22 @@ def library_home(request):
             "active_loans": loans["active"],
             "overdue_loans": loans["overdue"],
             "due_today_loans": loans["due_today"],
+
+            "issued_today": today_flow["issued_today"],
+            "returned_today": today_flow["returned_today"],
+
+            "no_available_titles": no_available_titles,
+
+            "damaged_copies": withdrawn["damaged"],
+            "lost_copies": withdrawn["lost"],
+            "missing_copies": withdrawn["missing"],
+            "transferred_copies": withdrawn["transferred"],
+            "withdrawn_copies": (
+                withdrawn["damaged"]
+                + withdrawn["lost"]
+                + withdrawn["missing"]
+                + withdrawn["transferred"]
+            ),
         }
 
         cache.set(
@@ -310,6 +375,73 @@ def library_home(request):
     dashboard_stats["recent_returns"] = recent_returns
     dashboard_stats["recent_logs"] = recent_logs
 
+    # Everything from here down is per-user and so is assigned after the
+    # `cache.set` above, never into the shared dictionary: DASHBOARD_CACHE_KEY
+    # is one entry for the whole installation, and a figure a role is not
+    # allowed to see must not be able to arrive from another role's page
+    # load. Same reason `recent_logs` and `can_edit` sit out here already.
+
+    # Waiting reservations, for the Action Center. Gated on the feature that
+    # owns the page the count links to, so a role the queue is switched off
+    # for is not offered a number and a button that answers 403.
+    if features.user_has(request.user, "reservations"):
+        dashboard_stats["pending_reservations"] = Reservation.objects.filter(
+            status=Reservation.STATUS_ACTIVE
+        ).count()
+    else:
+        dashboard_stats["pending_reservations"] = None
+
+    # What the last few finished stock checks failed to find. Task 13's own
+    # per-session figures, already bounded to a fixed number of sessions.
+    if features.user_has(request.user, "inventory.sessions"):
+        dashboard_stats["stock_checks"] = (
+            analytics_module.recent_stock_check_findings()
+        )
+    else:
+        dashboard_stats["stock_checks"] = []
+
+    # Collection Health reads the analytics module, so it is held to the
+    # analytics page's own line - the feature toggle *and* the
+    # Admin/Librarian ceiling from its decorator. `passes_ceiling` is the
+    # same test that decorator makes, SuperAdmin included.
+    if (
+        features.user_has(request.user, "analytics")
+        and passes_ceiling(request.user, "Admin", "Librarian")
+    ):
+        period = analytics_module.Period(
+            analytics_module.DEFAULT_PERIOD,
+            timezone.localdate(),
+        )
+
+        dashboard_stats["health_period"] = period
+        dashboard_stats["most_borrowed"] = analytics_module.most_borrowed(
+            period, limit=DASHBOARD_TOP_N
+        )
+        dashboard_stats["never_borrowed"] = (
+            analytics_module.never_borrowed_list(
+                period, limit=DASHBOARD_TOP_N
+            )
+        )
+
+        # Titles running on one or two copies. The book list's own counts
+        # again, ordered so the thinnest stock is read first.
+        dashboard_stats["low_copy_titles"] = queries.annotate_copy_counts(
+            queries.active_books().select_related("author")
+        ).filter(
+            total_copies__gt=0,
+            total_copies__lte=LOW_COPY_THRESHOLD,
+        ).order_by("total_copies", "title", "id")[:DASHBOARD_TOP_N]
+
+        # `-id` because Book records no created date; insertion order is
+        # what the table actually knows about "recently added".
+        dashboard_stats["recently_added"] = queries.active_books(
+        ).select_related("author").order_by("-id")[:DASHBOARD_TOP_N]
+
+        dashboard_stats["collection_health"] = True
+
+    else:
+        dashboard_stats["collection_health"] = False
+
     # Which quick actions to offer. Issuing, returning and adding a borrower
     # are open to all three roles; adding a book is not, so offering it to
     # an Assistant would be offering a 403. The decorators on those views
@@ -320,6 +452,74 @@ def library_home(request):
         request,
         "library/dashboard.html",
         dashboard_stats
+    )
+
+
+@feature_required("dashboard")
+def global_search(request):
+    """What the topbar search box asks: one term, three kinds of record.
+
+    Gated per section on the same features the sidebar reads, so a role a
+    part of the library is switched off for is not offered a result that
+    opens a page it cannot reach. `dashboard` on the decorator because the
+    box lives in the shell every signed-in page renders.
+
+    Each list is bounded in SQL by `GLOBAL_SEARCH_LIMIT`, so the cost is
+    fixed however much the term matches. Nothing is scored or merged: three
+    short groups, each labelled, each linking to the record's own page or
+    dialog - this points at things, it does not replace the list pages that
+    search them properly.
+
+    An empty term answers with the empty state rather than the first few of
+    everything, which would be a list nobody asked for.
+    """
+
+    term = request.GET.get("q", "").strip()
+
+    books = []
+    borrowers = []
+    copies = []
+
+    if term:
+
+        if features.user_has(request.user, "books"):
+            books = list(
+                queries.active_books().select_related("author").filter(
+                    models.Q(title__icontains=term)
+                    | models.Q(author__name__icontains=term)
+                ).order_by("title", "id")[:GLOBAL_SEARCH_LIMIT]
+            )
+
+        if features.user_has(request.user, "borrowers"):
+            borrowers = list(
+                Borrower.objects.filter(
+                    models.Q(name__icontains=term)
+                    | models.Q(phone__icontains=term)
+                    | models.Q(registration_no__icontains=term)
+                ).only(
+                    "id", "name", "phone", "registration_no",
+                ).order_by("name", "id")[:GLOBAL_SEARCH_LIMIT]
+            )
+
+        if features.user_has(request.user, "copies"):
+            copies = list(
+                BookCopy.objects.select_related(
+                    "volume__book"
+                ).filter(
+                    copy_code__icontains=term
+                ).order_by("copy_code", "id")[:GLOBAL_SEARCH_LIMIT]
+            )
+
+    return render(
+        request,
+        "library/partials/global_search_results.html",
+        {
+            "term": term,
+            "results_books": books,
+            "results_borrowers": borrowers,
+            "results_copies": copies,
+            "has_results": bool(books or borrowers or copies),
+        },
     )
 
 

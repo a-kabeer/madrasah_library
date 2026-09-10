@@ -1,0 +1,98 @@
+{% extends "public/base.html" %}
+{% load i18n %}
+{% comment %}
+One page for Authors, Categories and Publishers. They differ only in which
+names they list and which filter their rows lead to, so they share a
+template rather than three that would drift apart.
+
+Read-only throughout: a search box, a page of names, and a link into the
+book list filtered to each. There is no control here that creates, edits or
+removes anything, and the view behind it is a read.
+
+Each row's count is of public books only, so a number here always matches
+the list it opens.
+
+Expected context: rows, paginator, search, browse_title, browse_icon,
+filter_param.
+{% endcomment %}
+
+{% block title %}{{ browse_title }} | {{ branding.display_name }}{% endblock %}
+
+{% block content %}
+
+<h1 class="public-heading">
+    <i class="bi {{ browse_icon }} me-2" aria-hidden="true"></i>{{ browse_title }}
+</h1>
+
+<form method="get" class="public-filters">
+    <div class="public-filter-field public-filter-grow">
+        <label for="browseSearch" class="form-label">{% translate "Search" %}</label>
+        <input
+            type="search"
+            class="form-control"
+            id="browseSearch"
+            name="search"
+            value="{{ search }}"
+            placeholder="{% translate 'Type a name' %}"
+        >
+    </div>
+    <div class="public-filter-actions">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-search me-1" aria-hidden="true"></i>{% translate "Search" %}
+        </button>
+        {% if search %}
+            <a href="?" class="btn btn-outline-secondary">{% translate "Clear" %}</a>
+        {% endif %}
+    </div>
+</form>
+
+<p class="text-body-secondary">
+    {% blocktranslate trimmed count n=paginator.count %}
+        {{ n }} name found.
+    {% plural %}
+        {{ n }} names found.
+    {% endblocktranslate %}
+</p>
+
+{% if rows %}
+
+    <ul class="public-results list-unstyled">
+        {% for row in rows %}
+            <li class="public-result">
+
+                <span class="public-result-cover public-result-nocover" aria-hidden="true">
+                    <i class="bi {{ browse_icon }}"></i>
+                </span>
+
+                <span class="public-result-body">
+                    <a
+                        href="{% url 'public_book_list' %}?{{ filter_param }}={{ row.id }}"
+                        class="public-result-title"
+                    >{{ row.name }}</a>
+                </span>
+
+                <span class="badge text-bg-secondary public-result-availability">
+                    {% blocktranslate trimmed count n=row.book_count %}
+                        {{ n }} book
+                    {% plural %}
+                        {{ n }} books
+                    {% endblocktranslate %}
+                </span>
+
+            </li>
+        {% endfor %}
+    </ul>
+
+    {% include "public/pagination.html" with books=rows %}
+
+{% else %}
+
+    <div class="public-empty">
+        <i class="bi {{ browse_icon }} fs-1 d-block mb-2" aria-hidden="true"></i>
+        <p class="fw-semibold mb-1">{% translate "Nothing matches that." %}</p>
+        <p class="mb-0 small">{% translate "Try a shorter search, or clear it to see them all." %}</p>
+    </div>
+
+{% endif %}
+
+{% endblock %}

@@ -306,127 +306,32 @@ max_total_copies, id_prefix.
 
     <p class="fw-semibold mb-3">{% translate "Where will the copies be kept?" %}</p>
 
-    <div class="mb-3">
+    {% comment %}
+      The same searchable dropdown the Author, Category and Publisher
+      fields use, so all five behave identically: type to search what the
+      library already has, and "Add new" at the foot of the list creates
+      what it does not. Nothing about that UX is new here - these two were
+      the only fields not using it.
 
-        <label for="{{ id_prefix }}Location" class="form-label fw-semibold">
-            {% translate "Location" %}
-        </label>
+      Each posts an id in a hidden input named `location` / `shelf`, which
+      is what `read_copy_plan` reads, so the receiving view is unchanged.
+    {% endcomment %}
 
-        <div class="d-flex gap-2">
-            {% comment %}
-              Changing the location reloads the Shelf options from
-              `shelf_list`, filtered to that location, so no unrelated
-              shelf is ever offered.
-            {% endcomment %}
-            <select
-                class="form-select"
-                id="{{ id_prefix }}Location"
-                name="location"
-                data-location-select
-                hx-get="{% url 'shelf_list' %}"
-                hx-vals='{"options": "1"}'
-                hx-trigger="change"
-                hx-target="#{{ id_prefix }}Shelf"
-                hx-include="this"
-            >
-                {% include "library/partials/location_options.html" with locations=locations selected_id=inventory.location %}
-            </select>
+    {% url 'location_list' as location_search_url %}
+    {% with location_input_id=id_prefix|add:"Location" %}
+        {% include "library/partials/combobox_field.html" with label="Location" field_name="location" input_id=location_input_id entity_label="location" search_url=location_search_url selected_id=inventory.location selected_name=inventory.location_name required=True allow_create=True compact=False submit_on_select=False extra_vals="" clears="shelf" error="" %}
+    {% endwith %}
 
-            <button
-                type="button"
-                class="btn btn-outline-primary flex-shrink-0"
-                data-quick-add-toggle="location"
-            >
-                <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                <span class="d-none d-sm-inline ms-1">{% translate "New" %}</span>
-            </button>
-        </div>
-
-        <div class="quick-add mt-2" data-quick-add="location" hidden>
-            <label class="form-label small mb-1" for="{{ id_prefix }}NewLocation">
-                {% translate "New location name" %}
-            </label>
-            <div class="d-flex gap-2">
-                {% comment %}
-                  Not a <form> — this sits inside the Add Book form and
-                  forms cannot nest. hx-vals names exactly the fields to
-                  send, so nothing else on the page goes with it.
-                {% endcomment %}
-                <input
-                    type="text"
-                    class="form-control form-control-sm"
-                    id="{{ id_prefix }}NewLocation"
-                    data-quick-add-name="location"
-                    placeholder="{% translate 'e.g. Main Hall' %}"
-                >
-                <button
-                    type="button"
-                    class="btn btn-sm btn-primary flex-shrink-0"
-                    hx-post="{% url 'location_add' %}"
-                    hx-vals='js:{options: "1", name: document.getElementById("{{ id_prefix }}NewLocation").value}'
-                    hx-target="#{{ id_prefix }}Location"
-                    hx-swap="innerHTML"
-                >
-                    {% translate "Save" %}
-                </button>
-            </div>
-            <div data-quick-add-error class="form-text text-danger"></div>
-        </div>
-
-    </div>
-
-    <div class="mb-3">
-
-        <label for="{{ id_prefix }}Shelf" class="form-label fw-semibold">
-            {% translate "Shelf" %}
-        </label>
-
-        <div class="d-flex gap-2">
-            <select
-                class="form-select"
-                id="{{ id_prefix }}Shelf"
-                name="shelf"
-                data-shelf-select
-            >
-                {% include "library/partials/shelf_options.html" with shelves=shelves selected_id=inventory.shelf has_location=inventory.location %}
-            </select>
-
-            <button
-                type="button"
-                class="btn btn-outline-primary flex-shrink-0"
-                data-quick-add-toggle="shelf"
-            >
-                <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                <span class="d-none d-sm-inline ms-1">{% translate "New" %}</span>
-            </button>
-        </div>
-
-        <div class="quick-add mt-2" data-quick-add="shelf" hidden>
-            <label class="form-label small mb-1" for="{{ id_prefix }}NewShelf">
-                {% translate "New shelf code, in the location chosen above" %}
-            </label>
-            <div class="d-flex gap-2">
-                <input
-                    type="text"
-                    class="form-control form-control-sm"
-                    id="{{ id_prefix }}NewShelf"
-                    data-quick-add-name="shelf"
-                    placeholder="{% translate 'e.g. A-1' %}"
-                >
-                <button
-                    type="button"
-                    class="btn btn-sm btn-primary flex-shrink-0"
-                    hx-post="{% url 'shelf_add' %}"
-                    hx-vals='js:{options: "1", shelf_code: document.getElementById("{{ id_prefix }}NewShelf").value, location: document.getElementById("{{ id_prefix }}Location").value}'
-                    hx-target="#{{ id_prefix }}Shelf"
-                    hx-swap="innerHTML"
-                >
-                    {% translate "Save" %}
-                </button>
-            </div>
-            <div data-quick-add-error class="form-text text-danger"></div>
-        </div>
-
-    </div>
+    {% comment %}
+      The Shelf list depends on the Location above it, so its search sends
+      whichever one is chosen - `extra_vals` is the hook for exactly that,
+      and the hidden input it reads is the Location box's own. Change the
+      location and the next search returns that location's shelves; a shelf
+      created from here is created under it.
+    {% endcomment %}
+    {% url 'shelf_list' as shelf_search_url %}
+    {% with shelf_input_id=id_prefix|add:"Shelf" %}
+        {% include "library/partials/combobox_field.html" with label="Shelf" field_name="shelf" input_id=shelf_input_id entity_label="shelf" search_url=shelf_search_url selected_id=inventory.shelf selected_name=inventory.shelf_code required=True allow_create=True compact=False submit_on_select=False extra_vals='location: (this.closest("form").querySelector("input[name=location]")||{}).value || ""' error="" %}
+    {% endwith %}
 
 </div>

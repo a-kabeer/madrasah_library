@@ -25,13 +25,18 @@ intercepted in the first place. That is also why no element on these pages
 carries `hx-` anything, and why nothing targets `#mainContent`: the id does
 not exist in this document.
 
-Fixed light theme. The staff shell resolves a theme from a signed-in user's
-stored preference and a localStorage mirror; a visitor has neither, and
-running that script here would mean shipping script to a page that needs
-none.
+Light, Dark and System, chosen by the reader. The staff shell resolves a
+theme from a signed-in user's stored preference and a localStorage mirror,
+both of which need script; a visitor has neither, so this page does it the
+way the switcher note below describes - plain links and a cookie, nothing
+to run.
+
+`auto` is written straight onto the attribute rather than resolved, because
+resolving it is what would need the script. The `prefers-color-scheme`
+block at the end of style.css settles it instead.
 {% endcomment %}
 
-<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}" data-bs-theme="light">
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}" data-bs-theme="{{ public_theme|default:'auto' }}">
 
 <head>
 
@@ -129,7 +134,7 @@ none.
           `dir="rtl" lang="ar"` isolates the Arabic from the Latin so a
           mixed line does not reorder itself.
         {% endcomment %}
-        <a class="public-brand" href="{% url 'public_book_list' %}">
+        <a class="public-brand" href="{% url 'public_dashboard' %}">
 
             {% comment %}
               The glyph, not the uploaded logo. `MEDIA_URL` is served by
@@ -179,16 +184,139 @@ none.
           language their browser asks for.
         {% endcomment %}
 
+        {% comment %}
+          The appearance switcher, built the scriptless, formless way the
+          note above prescribes: three ordinary links carrying the choice
+          in the query string, remembered in a plain cookie rather than a
+          session. No dropdown, because a Bootstrap dropdown here would be
+          a button that cannot open; no form, because a POST would bring a
+          CSRF token this page is built to do without.
+
+          Marked up as the loan list's pills so it reads as part of the
+          same application, and `aria-current` says which is on.
+        {% endcomment %}
+        <nav class="public-theme" aria-label="{% translate 'Appearance' %}">
+            {% for option in theme_links %}
+                <a
+                    href="{{ option.url }}"
+                    class="public-theme-option{% if option.active %} is-active{% endif %}"
+                    {% if option.active %}aria-current="true"{% endif %}
+                    title="{{ option.label }}"
+                >
+                    <i class="bi {{ option.icon }}" aria-hidden="true"></i>
+                    <span>{{ option.label }}</span>
+                </a>
+            {% endfor %}
+        </nav>
+
     </div>
 
 </header>
 
 
-<main class="public-container public-main">
+{% comment %}
+  The catalogue's own navigation, in the shape the staff sidebar uses so
+  the two surfaces read as one library - but with nothing on it that
+  writes. Five read-only destinations and no controls: this file has no
+  Add, Edit, Delete, Import or Export anywhere, and the views behind these
+  links are all `@login_not_required` reads.
 
-    {% block content %}{% endblock %}
+  Collapsible without a line of script, which this page still ships none
+  of. The toggle is a link to `#catalog-nav` and the close is a link back
+  to `#`, so `:target` in style.css opens and shuts it; on a wide screen
+  the sidebar is simply always there and the toggle is hidden. A checkbox
+  would have worked too, but a link needs no form around it and leaves the
+  page's "one GET form and nothing else" property intact.
+{% endcomment %}
+<a class="public-nav-toggle" href="#catalog-nav">
+    <i class="bi bi-list" aria-hidden="true"></i>
+    {% translate "Menu" %}
+</a>
 
-</main>
+<div class="public-shell">
+
+    <nav
+        class="public-sidebar"
+        id="catalog-nav"
+        aria-label="{% translate 'Catalogue sections' %}"
+    >
+
+        <a class="public-nav-close" href="#" aria-label="{% translate 'Close menu' %}">
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </a>
+
+        <p class="public-nav-heading">{% translate "Catalog" %}</p>
+
+        <ul class="public-nav">
+            {% comment %}
+              `aria-current="page"` marks where the reader is, and the same
+              flag drives the highlight - one source for both, so they
+              cannot disagree. Each page sets `nav_section` in its own
+              context.
+            {% endcomment %}
+            <li>
+                <a
+                    href="{% url 'public_dashboard' %}"
+                    class="public-nav-link{% if nav_section == 'dashboard' %} is-active{% endif %}"
+                    {% if nav_section == 'dashboard' %}aria-current="page"{% endif %}
+                >
+                    <i class="bi bi-speedometer2" aria-hidden="true"></i>
+                    {% translate "Dashboard" %}
+                </a>
+            </li>
+            <li>
+                <a
+                    href="{% url 'public_book_list' %}"
+                    class="public-nav-link{% if nav_section == 'books' %} is-active{% endif %}"
+                    {% if nav_section == 'books' %}aria-current="page"{% endif %}
+                >
+                    <i class="bi bi-book" aria-hidden="true"></i>
+                    {% translate "Books" %}
+                </a>
+            </li>
+            <li>
+                <a
+                    href="{% url 'public_author_list' %}"
+                    class="public-nav-link{% if nav_section == 'authors' %} is-active{% endif %}"
+                    {% if nav_section == 'authors' %}aria-current="page"{% endif %}
+                >
+                    <i class="bi bi-person" aria-hidden="true"></i>
+                    {% translate "Authors" %}
+                </a>
+            </li>
+            <li>
+                <a
+                    href="{% url 'public_category_list' %}"
+                    class="public-nav-link{% if nav_section == 'categories' %} is-active{% endif %}"
+                    {% if nav_section == 'categories' %}aria-current="page"{% endif %}
+                >
+                    <i class="bi bi-tags" aria-hidden="true"></i>
+                    {% translate "Categories" %}
+                </a>
+            </li>
+            <li>
+                <a
+                    href="{% url 'public_publisher_list' %}"
+                    class="public-nav-link{% if nav_section == 'publishers' %} is-active{% endif %}"
+                    {% if nav_section == 'publishers' %}aria-current="page"{% endif %}
+                >
+                    <i class="bi bi-building" aria-hidden="true"></i>
+                    {% translate "Publishers" %}
+                </a>
+            </li>
+        </ul>
+
+    </nav>
+
+    <main class="public-main">
+
+        <div class="public-container">
+            {% block content %}{% endblock %}
+        </div>
+
+    </main>
+
+</div>
 
 
 <footer class="public-footer">

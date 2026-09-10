@@ -17,10 +17,33 @@
     </div>
 
     <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-        <a href="?{% if search %}search={{ search|urlencode }}{% endif %}" class="btn btn-sm {% if not status %}btn-primary{% else %}btn-outline-secondary{% endif %}">{% translate "All" %}</a>
-        {% for value, label in statuses %}
-            <a href="?status={{ value|urlencode }}{% if search %}&search={{ search|urlencode }}{% endif %}" class="btn btn-sm {% if status == value %}btn-primary{% else %}btn-outline-secondary{% endif %}">{{ label }}</a>
-        {% endfor %}
+        {% comment %}
+          The status filter, in the loan list's pill markup rather than a
+          row of outlined buttons - two lists side by side should not need
+          two vocabularies to be browsed. Same `nav nav-pills`, same active
+          state, an icon each, and `status_options` from the view has the
+          same shape the loan list's does.
+
+          Real links still, so each is shareable and middle-clickable, and
+          each carries the rest of the query - including the search, which
+          the hand-built hrefs used to repeat by hand. The bare hx-get
+          takes the shell's boost, which swaps the main region.
+        {% endcomment %}
+        <ul class="nav nav-pills" aria-label="{% translate 'Filter suggestions by status' %}">
+            {% for option in status_options %}
+                <li class="nav-item">
+                    <a
+                        href="{{ option.url }}"
+                        hx-get="{{ option.url }}"
+                        class="nav-link {% if option.active %}active{% endif %}"
+                        {% if option.active %}aria-current="page"{% endif %}
+                    >
+                        <i class="bi {{ option.icon }} me-1" aria-hidden="true"></i>
+                        {{ option.label }}
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
         <form method="get" class="d-flex gap-2 ms-auto">
             {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
             <label for="suggestionSearch" class="visually-hidden">{% translate "Search suggestions by title" %}</label>

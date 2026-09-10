@@ -45,10 +45,17 @@ the error and everything already typed.
       a lie.
     {% endcomment %}
     <ol class="book-steps" data-step-list hidden>
-        <li data-step-for="1">{% translate "Book" %}</li>
-        <li data-step-for="2">{% translate "Volumes" %}</li>
-        <li data-step-for="3">{% translate "Copies" %}</li>
-        <li data-step-for="4">{% translate "Location" %}</li>
+        {% comment %}
+          Clickable, so a reader can go back to a step to change something
+          without pressing Back three times. Going forward this way is held
+          to the same rule as the Next button: the steps in between have to
+          validate first, and the click lands on the earliest one that does
+          not. `type="button"` because these sit inside the form.
+        {% endcomment %}
+        <li data-step-for="1"><button type="button">{% translate "Book" %}</button></li>
+        <li data-step-for="2"><button type="button">{% translate "Volumes" %}</button></li>
+        <li data-step-for="3"><button type="button">{% translate "Copies" %}</button></li>
+        <li data-step-for="4"><button type="button">{% translate "Location" %}</button></li>
     </ol>
 
     <div data-book-step="1" class="book-step">

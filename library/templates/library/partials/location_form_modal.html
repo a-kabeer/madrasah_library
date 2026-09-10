@@ -1,9 +1,106 @@
 {% load i18n %}
-<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true"><i class="bi {% if editing %}bi-pencil{% else %}bi-plus-lg{% endif %} me-2" aria-hidden="true"></i>{% if editing %}{% translate "Edit Location" %}{% else %}{% translate "Add Location" %}{% endif %}</h5>
-<form id="locationModalForm" method="post" {% if editing %}action="{% url 'location_edit' location.id %}" hx-post="{% url 'location_edit' location.id %}?modal=1"{% else %}action="{% url 'location_add' %}" hx-post="{% url 'location_add' %}?modal=1"{% endif %} hx-target="#locationModalForm" hx-swap="outerHTML" hx-disabled-elt="find button[type=submit]" hx-disinherit="*">
+{% comment %}
+Add / Edit Location, served into #formModal by `location_add_modal` and
+`location_edit_modal`. One template for both, because the two forms differ
+only in where they post and what the button says.
+
+Laid out like `copy_form_modal.html`: the error alert carries its icon, the
+fields sit in a `row g-3`, a required field is marked with an asterisk, and
+the actions are right-aligned with Cancel first.
+
+`hx-target` is the form itself, so a validation error comes back as this
+same form with the error alert filled in and what was typed still in the
+boxes. `hx-disinherit="*"` stops the shell's boosted target reaching it.
+
+Expected context: editing, location, name, description, error.
+{% endcomment %}
+
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    <i class="bi {% if editing %}bi-pencil{% else %}bi-plus-lg{% endif %} me-2" aria-hidden="true"></i>
+    {% if editing %}{% translate "Edit Location" %}{% else %}{% translate "Add Location" %}{% endif %}
+</h5>
+
+<form
+    id="locationModalForm"
+    method="post"
+    {% if editing %}
+        action="{% url 'location_edit' location.id %}"
+        hx-post="{% url 'location_edit' location.id %}?modal=1"
+    {% else %}
+        action="{% url 'location_add' %}"
+        hx-post="{% url 'location_add' %}?modal=1"
+    {% endif %}
+    hx-target="#locationModalForm"
+    hx-swap="outerHTML"
+    hx-disabled-elt="find button[type=submit]"
+    hx-disinherit="*"
+>
+
     {% csrf_token %}
-    {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
-    <div class="mb-3"><label for="locationName" class="form-label fw-semibold">{% translate "Name" %}</label><input id="locationName" name="name" class="form-control" value="{{ name }}" maxlength="255" required autofocus></div>
-    <div class="mb-3"><label for="locationDescription" class="form-label fw-semibold">{% translate "Description" %} <span class="text-body-secondary fw-normal">({% translate "optional" %})</span></label><textarea id="locationDescription" name="description" class="form-control" rows="3" maxlength="1000">{{ description }}</textarea></div>
-    <div class="modal-actions"><button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>{% if editing %}{% translate "Save Changes" %}{% else %}{% translate "Add Location" %}{% endif %}</button><button type="button" class="btn btn-outline-secondary ms-auto" data-bs-dismiss="modal">{% translate "Cancel" %}</button></div>
+
+    {% comment %}
+      Where to go back to, when the dialog was opened from somewhere that
+      said so - Add Shelf on a location page, for one. Posted back as a
+      hidden field because the form's own action carries only `?modal=1`.
+      `safe_redirect_target` is what checks it is a local path.
+    {% endcomment %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+
+    {% if error %}
+        <div class="alert alert-danger d-flex align-items-start" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2 mt-1" aria-hidden="true"></i>
+            <div>{{ error }}</div>
+        </div>
+    {% endif %}
+
+    <div class="row g-3">
+
+        <div class="col-12">
+            <label for="locationName" class="form-label fw-semibold">
+                {% translate "Name" %} <span class="text-danger">*</span>
+            </label>
+            <input
+                type="text"
+                id="locationName"
+                name="name"
+                class="form-control"
+                value="{{ name }}"
+                maxlength="255"
+                required
+                autofocus
+            >
+            <div class="form-text">
+                {% translate "What the librarians call this place — a room, a hall, a floor. It has to be unique." %}
+            </div>
+        </div>
+
+        <div class="col-12">
+            <label for="locationDescription" class="form-label fw-semibold">
+                {% translate "Description" %}
+                <span class="text-body-secondary fw-normal">({% translate "optional" %})</span>
+            </label>
+            <textarea
+                id="locationDescription"
+                name="description"
+                class="form-control"
+                rows="3"
+                maxlength="1000"
+            >{{ description }}</textarea>
+            <div class="form-text">
+                {% translate "Anything that helps somebody find it." %}
+            </div>
+        </div>
+
+    </div>
+
+    <div class="modal-actions justify-content-end">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            {% translate "Cancel" %}
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
+            {% if editing %}{% translate "Save changes" %}{% else %}{% translate "Add Location" %}{% endif %}
+        </button>
+    </div>
+
 </form>

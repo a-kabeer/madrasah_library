@@ -1,0 +1,115 @@
+{% extends "public/base.html" %}
+{% load i18n %}
+{% comment %}
+The catalogue's front door.
+
+What a visitor arrives wanting: a search box, a sense of how big the
+collection is, what has just come in, and what the library is strongest on.
+
+Nothing here is about running a library. There is no loan, borrower, copy,
+shelf or staff figure on this page, and the view behind it reads none - the
+counts are of books, authors, categories and publishers, which is what a
+catalogue is. Nor is there a control that writes: every element below is a
+link or the search form, and the whole surface is `@login_not_required`
+reads.
+
+Expected context: total_books, total_authors, total_categories,
+total_publishers, recent_books, popular_categories.
+{% endcomment %}
+
+{% block title %}{% translate "Catalogue" %} | {{ branding.display_name }}{% endblock %}
+
+{% block content %}
+
+<h1 class="public-heading">{% translate "Library Catalogue" %}</h1>
+
+<p class="text-body-secondary">
+    {% translate "Search the library's books by title or author, or browse by author, category or publisher." %}
+</p>
+
+{% comment %}
+  The one thing most visitors came to do, so it is first and large. It
+  posts nowhere: an ordinary GET to the book list, which is where every
+  other search on this catalogue already goes.
+{% endcomment %}
+<form method="get" action="{% url 'public_book_list' %}" class="public-hero-search">
+    <label for="catalogueSearch" class="visually-hidden">
+        {% translate "Search books" %}
+    </label>
+    <input
+        type="search"
+        class="form-control form-control-lg"
+        id="catalogueSearch"
+        name="search"
+        placeholder="{% translate 'e.g. Fath al-Bari, or Ibn Hajar' %}"
+    >
+    <button type="submit" class="btn btn-primary btn-lg">
+        <i class="bi bi-search me-1" aria-hidden="true"></i>
+        {% translate "Search" %}
+    </button>
+</form>
+
+<div class="public-stats">
+    <a class="public-stat" href="{% url 'public_book_list' %}">
+        <i class="bi bi-book" aria-hidden="true"></i>
+        <span class="public-stat-number">{{ total_books }}</span>
+        <span class="public-stat-label">{% translate "Books" %}</span>
+    </a>
+    <a class="public-stat" href="{% url 'public_author_list' %}">
+        <i class="bi bi-person" aria-hidden="true"></i>
+        <span class="public-stat-number">{{ total_authors }}</span>
+        <span class="public-stat-label">{% translate "Authors" %}</span>
+    </a>
+    <a class="public-stat" href="{% url 'public_category_list' %}">
+        <i class="bi bi-tags" aria-hidden="true"></i>
+        <span class="public-stat-number">{{ total_categories }}</span>
+        <span class="public-stat-label">{% translate "Categories" %}</span>
+    </a>
+    <a class="public-stat" href="{% url 'public_publisher_list' %}">
+        <i class="bi bi-building" aria-hidden="true"></i>
+        <span class="public-stat-number">{{ total_publishers }}</span>
+        <span class="public-stat-label">{% translate "Publishers" %}</span>
+    </a>
+</div>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4 mb-2">
+    <h2 class="public-section-heading">{% translate "Recently added" %}</h2>
+    <a href="{% url 'public_book_list' %}" class="small">
+        {% translate "All books" %} <i class="bi bi-arrow-right" aria-hidden="true"></i>
+    </a>
+</div>
+
+{% if recent_books %}
+    <ul class="public-results list-unstyled">
+        {% for book in recent_books %}
+            {% include "public/book_card.html" with book=book %}
+        {% endfor %}
+    </ul>
+{% else %}
+    <p class="public-empty">{% translate "Nothing has been catalogued yet." %}</p>
+{% endif %}
+
+{% if popular_categories %}
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4 mb-2">
+        <h2 class="public-section-heading">{% translate "Browse by subject" %}</h2>
+        <a href="{% url 'public_category_list' %}" class="small">
+            {% translate "All categories" %} <i class="bi bi-arrow-right" aria-hidden="true"></i>
+        </a>
+    </div>
+
+    <div class="public-chips">
+        {% for row in popular_categories %}
+            <a
+                class="public-chip"
+                href="{% url 'public_book_list' %}?category={{ row.id }}"
+            >
+                {{ row.name }}
+                <span class="public-chip-count">{{ row.book_count }}</span>
+            </a>
+        {% endfor %}
+    </div>
+
+{% endif %}
+
+{% endblock %}

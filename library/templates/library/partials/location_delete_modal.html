@@ -1,7 +1,119 @@
 {% load i18n %}
-<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true"><i class="bi bi-trash me-2" aria-hidden="true"></i>{% translate "Delete Location" %}</h5>
-<div class="alert {% if shelves_exist %}alert-warning{% else %}alert-danger{% endif %}" role="alert">{% if shelves_exist %}{% translate "This location cannot be deleted because it still contains shelves. Remove or move its shelves first." %}{% else %}{% blocktranslate with name=location.name %}You are about to permanently delete <strong>{{ name }}</strong>. This cannot be undone.{% endblocktranslate %}{% endif %}</div>
-<form method="post" {% if shelves_exist %}action=""{% else %}action="{% url 'location_delete' location.id %}" hx-post="{% url 'location_delete' location.id %}?modal=1"{% endif %} hx-target="#formModal .modal-body" hx-swap="innerHTML" hx-disinherit="*">
-    {% csrf_token %}
-    <div class="modal-actions"><button type="button" class="btn btn-outline-secondary ms-auto" data-bs-dismiss="modal">{% translate "Close" %}</button>{% if not shelves_exist %}<button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>{% translate "Delete Location" %}</button>{% endif %}</div>
-</form>
+{% comment %}
+Delete Location confirmation, served into #formModal by
+`location_delete_modal`.
+
+`shelves_exist` is the guard: a location that still holds shelves cannot
+go, and the dialog says so and offers no Delete button rather than letting
+the click fail. The rule itself lives in the view - this only decides what
+to show for each answer.
+
+Shaped like `copy_delete_modal.html`, which is the same kind of question
+about the same kind of record: warning title, the blocker with a way out,
+or the name being deleted and the sentence that it cannot be undone.
+
+Expected context: location, shelves_exist.
+{% endcomment %}
+
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{% translate "Delete Location?" %}
+</h5>
+
+<div id="locationDeleteBody">
+
+    {% if shelves_exist %}
+
+        <div class="alert alert-warning d-flex align-items-start" role="alert">
+            <i class="bi bi-shield-exclamation me-2 mt-1" aria-hidden="true"></i>
+            <div>
+                {% blocktranslate trimmed with name=location.name %}
+                    {{ name }} cannot be deleted while it still has shelves.
+                    Move or delete those shelves first.
+                {% endblocktranslate %}
+            </div>
+        </div>
+
+        <div class="modal-actions">
+
+            {% comment %}
+              The way out, named the way the blocker names it: the shelves
+              are what has to move, so this opens exactly them. An ordinary
+              link rather than a second dialog - stacking would trap the
+              reader.
+            {% endcomment %}
+            <a
+                href="{% url 'shelf_list' %}?location={{ location.id }}"
+                class="btn btn-warning"
+            >
+                <i class="bi bi-box-seam me-1" aria-hidden="true"></i>
+                {% translate "See its shelves" %}
+            </a>
+
+            <button
+                type="button"
+                class="btn btn-outline-secondary ms-auto"
+                data-bs-dismiss="modal"
+            >
+                {% translate "Close" %}
+            </button>
+
+        </div>
+
+    {% else %}
+
+        <p class="mb-2">{% translate "You are about to delete:" %}</p>
+
+        <p class="fs-5 fw-semibold mb-1">{{ location.name }}</p>
+
+        {% if location.description %}
+            <p class="text-body-secondary small">
+                {{ location.description|truncatechars:120 }}
+            </p>
+        {% endif %}
+
+        <p class="text-body-secondary">
+            {% translate "It holds no shelves, so nothing filed in the library moves or is lost." %}
+        </p>
+
+        <p class="text-danger small mb-0">
+            <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+            {% translate "This cannot be undone." %}
+        </p>
+
+        <div class="modal-actions">
+
+            {% comment %}
+              Targets this dialog's own body, so a refusal that arrives
+              between opening it and pressing the button - a shelf added to
+              this location in the meantime - is re-rendered here as the
+              blocker above rather than closing on an error.
+            {% endcomment %}
+            <form
+                hx-post="{% url 'location_delete' location.id %}?modal=1"
+                hx-target="#locationDeleteBody"
+                hx-swap="outerHTML"
+                hx-disabled-elt="find button[type=submit]"
+                hx-disinherit="*"
+                class="d-inline"
+            >
+                {% csrf_token %}
+                {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash me-1" aria-hidden="true"></i>
+                    {% translate "Delete" %}
+                </button>
+            </form>
+
+            <button
+                type="button"
+                class="btn btn-outline-secondary ms-auto"
+                data-bs-dismiss="modal"
+            >
+                {% translate "Cancel" %}
+            </button>
+
+        </div>
+
+    {% endif %}
+
+</div>

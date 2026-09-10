@@ -34,6 +34,7 @@ from ..models import (
     Book,
     BookCopy,
     Loan,
+    Location,
     Shelf,
 )
 
@@ -41,7 +42,7 @@ from .. import queries
 
 from .. import policy
 from ..context_processors import is_main_nav_request
-from ..permissions import can_edit_library
+from ..permissions import can_edit_library, passes_ceiling
 
 
 PAGE_SIZE = 25
@@ -138,6 +139,27 @@ COPY_SORT_FIELDS = {
 }
 
 COPY_SORT_DEFAULT = "code"
+
+# Locations and shelves sort the same way the copy list does, over the
+# counts their rows already carry - the annotations are in the views, so
+# nothing here needs a second query to order by them.
+LOCATION_SORT_FIELDS = {
+    "name": "name",
+    "shelves": "shelf_count",
+    "copies": "copy_count",
+}
+
+LOCATION_SORT_DEFAULT = "name"
+
+SHELF_SORT_FIELDS = {
+    "shelf": "shelf_code",
+    "location": "location__name",
+    "copies": "copy_count",
+}
+
+# Grouped by location by default, which is the order the shelf list has
+# always come back in.
+SHELF_SORT_DEFAULT = "location"
 
 # Ceilings for the guided Add Book form. They exist so a mistyped quantity
 # cannot ask the database for thousands of rows in one request; they are far
@@ -362,9 +384,7 @@ ACTIVITY_LOG_DETAIL_ROUTES = {
     "BookVolume": "book_volume_detail",
     "Borrower": "borrower_detail",
     "Loan": "loan_detail",
-    "Location": "location_detail",
     "Reservation": "book_detail",
-    "Shelf": "shelf_detail",
 }
 
 
@@ -1444,6 +1464,11 @@ def read_copy_plan(request, rows):
     if code_mode not in ("auto", "manual"):
         code_mode = "auto"
 
+    # Ids. Both controls are the application's searchable dropdown now, the
+    # same one Author, Category and Publisher use: it posts the id of the
+    # record chosen, and its own "Add new" is what creates a location or a
+    # shelf that did not exist - so by the time this runs there is always a
+    # real record behind each id.
     location_id = request.POST.get("location", "").strip()
     shelf_id = request.POST.get("shelf", "").strip()
 
@@ -1559,6 +1584,7 @@ def combobox_options_response(
     search,
     entity_label,
     add_url,
+    create_extra="",
 ):
     """Render the suggestion list for a combobox search."""
 
@@ -1584,9 +1610,21 @@ def combobox_options_response(
             "exact_match": exact_match,
             "entity_label": entity_label,
             "add_url": add_url,
+            # Extra fields the create button must send, for a record that
+            # needs more than a name. "" for every dropdown but Shelf.
+            "create_extra": create_extra,
+            # Whether to offer "Add new" at the foot of the list. Every one
+            # of the five add views this can post to carries the same
+            # `feature_required(..., "Admin", "Librarian")` ceiling, and that
+            # ceiling exempts SuperAdmin - so `passes_ceiling` is the
+            # question to ask. `can_edit_library` predates SuperAdmin and
+            # does not know about it, which is why the one role that may
+            # always create was told "No author found matching ..." instead
+            # of being offered the button. An Assistant still gets nothing,
+            # because they fail the ceiling itself.
             "can_create": (
                 creation_offered
-                and can_edit_library(request.user)
+                and passes_ceiling(request.user, "Admin", "Librarian")
             ),
         }
     )

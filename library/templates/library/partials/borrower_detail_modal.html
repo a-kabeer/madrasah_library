@@ -18,7 +18,7 @@ opened both by a row click (into #globalModal) and by a link on another
 page (into #formModal), and only the one that exists gets swapped.
 
 Expected context: borrower, current_loans, active_count, overdue_count,
-history, history_count, history_preview, history_url, reservations,
+history, history_count, history_preview, reservations,
 can_delete.
 {% endcomment %}
 
@@ -416,15 +416,25 @@ can_delete.
 </div>
 
 {% comment %}
-  One button per thing worth doing, and each appears once. Edit and Delete
-  re-target #formModal deliberately: this dialog may itself be in
+  One button per thing worth doing, and each appears once. Delete
+  re-targets #formModal deliberately: this dialog may itself be in
   #globalModal, and a fragment that replaced its own container would take
   its own trigger with it.
 {% endcomment %}
 <div class="modal-actions">
 
+    {% comment %}
+      The loans list, searched by this borrower's phone number - which is
+      one of the fields `loan_list` already searches, so this is the list's
+      own filter rather than a second way of asking. The rest of the query
+      is the list's default state, so the page opens sorted and sized the
+      way it would if the librarian had gone there and typed the number.
+
+      `history_url` used to be here and no view ever set it, so the button
+      had an empty href and reloaded the dialog's own page.
+    {% endcomment %}
     <a
-        href="{{ history_url }}"
+        href="{% url 'loan_list' %}?status=&sort=issue_date&direction=desc&page_size=25&search={{ borrower.phone|urlencode }}&issue_date=&due_date="
         class="btn btn-sm btn-outline-secondary"
     >
         <i class="bi bi-journals me-1" aria-hidden="true"></i>
@@ -441,22 +451,10 @@ can_delete.
         </a>
     {% endif %}
 
-    <a
-        href="{% url 'borrower_edit' borrower.id %}"
-        class="btn btn-sm btn-outline-warning ms-auto"
-        data-form-modal
-        hx-get="{% url 'borrower_edit' borrower.id %}?modal=1"
-        hx-target="#formModal .modal-body"
-        hx-swap="innerHTML"
-    >
-        <i class="bi bi-pencil me-1" aria-hidden="true"></i>
-        {% translate "Edit" %}
-    </a>
-
     {% if can_delete %}
         <a
             href="{% url 'borrower_delete' borrower.id %}"
-            class="btn btn-sm btn-outline-danger"
+            class="btn btn-sm btn-outline-danger ms-auto"
             data-form-modal
             hx-get="{% url 'borrower_delete' borrower.id %}?modal=1"
             hx-target="#formModal .modal-body"

@@ -1,0 +1,101 @@
+{% load i18n %}
+{% comment %}
+What the topbar search box swaps in: three short labelled groups, or one
+line saying there is nothing.
+
+Rows use each record's own affordance, the same one its list page uses - a
+book goes to its page, a borrower and a copy open their dialogs - so a
+result behaves exactly as it would if it had been clicked from the list it
+belongs to. Nothing here is a table: this points at a record, and the list
+pages remain where searching properly happens.
+
+Each group is present only when the view found something for it, and the
+view only searches the sections the role's features allow, so an absent
+group is either no match or no access and in both cases there is nothing
+to show.
+{% endcomment %}
+
+{% if not term %}
+
+    <div class="p-3 text-body-secondary small">
+        {% translate "Type to search books, borrowers and copy codes." %}
+    </div>
+
+{% elif not has_results %}
+
+    <div class="p-3 text-body-secondary small">
+        {% blocktranslate trimmed with term=term %}
+            Nothing matches &ldquo;{{ term }}&rdquo;.
+        {% endblocktranslate %}
+    </div>
+
+{% else %}
+
+    {% if results_books %}
+
+        <h6 class="dropdown-header">{% translate "Books" %}</h6>
+
+        {% for book in results_books %}
+            <a class="dropdown-item text-wrap" href="{% url 'book_detail' book.id %}">
+                {{ book.title }}
+                {% if book.author %}
+                    <span class="d-block small text-body-secondary">
+                        {{ book.author.name }}
+                    </span>
+                {% endif %}
+            </a>
+        {% endfor %}
+
+    {% endif %}
+
+    {% if results_borrowers %}
+
+        {% if results_books %}<div class="dropdown-divider"></div>{% endif %}
+
+        <h6 class="dropdown-header">{% translate "Borrowers" %}</h6>
+
+        {% for person in results_borrowers %}
+            <a
+                class="dropdown-item text-wrap"
+                href="{% url 'borrower_detail' person.id %}?modal=1"
+                data-form-modal
+                hx-get="{% url 'borrower_detail' person.id %}?modal=1"
+                hx-target="#formModal .modal-body"
+                hx-swap="innerHTML"
+            >
+                {{ person.name }}
+                <span class="d-block small text-body-secondary">
+                    {{ person.registration_no|default:"" }}{% if person.registration_no and person.phone %} · {% endif %}{{ person.phone|default:"" }}
+                </span>
+            </a>
+        {% endfor %}
+
+    {% endif %}
+
+    {% if results_copies %}
+
+        {% if results_books or results_borrowers %}
+            <div class="dropdown-divider"></div>
+        {% endif %}
+
+        <h6 class="dropdown-header">{% translate "Copies" %}</h6>
+
+        {% for copy in results_copies %}
+            <a
+                class="dropdown-item text-wrap"
+                href="{% url 'book_copy_detail' copy.id %}?modal=1"
+                data-form-modal
+                hx-get="{% url 'book_copy_detail' copy.id %}?modal=1"
+                hx-target="#formModal .modal-body"
+                hx-swap="innerHTML"
+            >
+                {{ copy.copy_code }}
+                <span class="d-block small text-body-secondary">
+                    {{ copy.volume.book.title }}
+                </span>
+            </a>
+        {% endfor %}
+
+    {% endif %}
+
+{% endif %}

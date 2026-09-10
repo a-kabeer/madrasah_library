@@ -799,8 +799,85 @@ document.addEventListener(
                 }
 
 
+                /* Dropdowns whose options depend on this one's value. The
+                   Shelf box lists the shelves of the chosen Location, so a
+                   Location that changes or is cleared leaves a shelf behind
+                   that belongs somewhere else - one the server would refuse
+                   on submit, after the reader had already pressed Save.
+
+                   Named on the field with `data-combobox-clears`, a
+                   comma-separated list of the hidden inputs to empty. Only
+                   the Location box carries it; every other dropdown has no
+                   dependants and this does nothing for them. */
+                function clearDependents() {
+
+                    var names = (
+                        root.getAttribute("data-combobox-clears") || ""
+                    ).split(",");
+
+                    var form = root.closest("form");
+
+                    if (!form) {
+                        return;
+                    }
+
+                    names.forEach(function (name) {
+
+                        name = name.trim();
+
+                        if (!name) {
+                            return;
+                        }
+
+                        var other = form.querySelector(
+                            '[data-combobox] [data-combobox-value][name="'
+                            + name + '"]'
+                        );
+
+                        if (!other) {
+                            return;
+                        }
+
+                        var dependant = other.closest("[data-combobox]");
+
+                        other.value = "";
+
+                        var text = dependant.querySelector(
+                            "[data-combobox-input]"
+                        );
+
+                        if (text) {
+                            text.value = "";
+                        }
+
+                        /* The stale list has to go too, or the next focus
+                           shows the old location's shelves until the search
+                           comes back. */
+                        var list = dependant.querySelector(
+                            "[data-combobox-menu]"
+                        );
+
+                        if (list) {
+                            list.innerHTML = "";
+                        }
+
+                        dependant.classList.remove("combobox-open");
+                        dependant.classList.remove("combobox-filled");
+                    });
+                }
+
+
                 /* Commit a selection: what the form will actually post. */
                 function select(id, name) {
+
+                    /* Before the new value lands, so a dependant is cleared
+                       whenever this one moves - not only when it is emptied.
+                       Choosing a different location must not leave the old
+                       location's shelf sitting in the box. */
+                    if (valueInput.value !== String(id)) {
+                        clearDependents();
+                    }
+
                     valueInput.value = id;
                     textInput.value = name;
                     committedText = name;
@@ -838,6 +915,9 @@ document.addEventListener(
 
 
                 function clearSelection(focus) {
+
+                    clearDependents();
+
                     valueInput.value = "";
                     textInput.value = "";
                     committedText = "";
@@ -1608,6 +1688,86 @@ document.addEventListener(
                 }
 
 
+                /* Whether everything this step asks for has been filled in
+                   properly, using the browser's own constraint validation
+                   rather than a second set of rules in here - so `required`,
+                   `maxlength`, `type` and the rest keep meaning exactly what
+                   they mean on submit, and the messages are the ones the form
+                   already shows.
+
+                   Hidden steps are skipped by the caller, never validated:
+                   step 4 does not exist when no copies are being added, and
+                   fields nobody can see must not block anybody. */
+                function stepIsValid(step) {
+
+                    var fields = Array.prototype.slice.call(
+                        step.querySelectorAll("input, select, textarea")
+                    );
+
+                    var bad = null;
+
+                    fields.forEach(function (field) {
+
+                        if (field.disabled || field.type === "hidden") {
+                            return;
+                        }
+
+                        /* offsetParent is null for anything inside a hidden
+                           branch of the step - the manual-code boxes while
+                           codes are automatic, for one. */
+                        if (!field.offsetParent && field.type !== "radio") {
+                            return;
+                        }
+
+                        if (!field.checkValidity() && !bad) {
+                            bad = field;
+                        }
+                    });
+
+                    if (bad) {
+
+                        /* The step has to be on screen before the browser can
+                           focus the field or show its bubble. */
+                        bad.focus();
+                        bad.reportValidity();
+
+                        return false;
+                    }
+
+                    return true;
+                }
+
+
+                /* Every step up to but not including `target` must be good
+                   before the reader can stand on it. Returns the index they
+                   are allowed to reach, which is `target` when all of them
+                   pass and the first bad one when they do not - so a jump
+                   forward lands on the step that needs attention rather than
+                   being silently ignored. */
+                function furthestAllowed(target) {
+
+                    var shown = visibleSteps();
+
+                    for (var i = 0; i < target && i < shown.length; i += 1) {
+
+                        /* Validating a step means showing its messages, and
+                           those are only visible once it is. */
+                        if (!stepIsValid(shown[i])) {
+
+                            if (current !== i) {
+                                current = i;
+                                render();
+                                stepIsValid(shown[i]);
+                            }
+
+                            return i;
+                        }
+                    }
+
+                    return target;
+                }
+
+
                 function render() {
 
                     var shown = visibleSteps();
@@ -1887,6 +2047,15 @@ document.addEventListener(
 
                     if (e.target.closest("[data-step-next]")) {
                         e.preventDefault();
+
+                        /* Sequential: Book before Volumes, Volumes before
+                           Copies, Copies before Location. A step that does
+                           not validate keeps the reader where they are, with
+                           its own messages showing. */
+                        if (!stepIsValid(visibleSteps()[current])) {
+                            return;
+                        }
+
                         current += 1;
                         render();
                         return;
@@ -1894,7 +2063,40 @@ document.addEventListener(
 
                     if (e.target.closest("[data-step-back]")) {
                         e.preventDefault();
+
+                        /* Backwards is always allowed: going to look at
+                           something already filled in is not a mistake, and
+                           blocking it would trap somebody who mistyped on an
+                           earlier step. */
                         current -= 1;
+                        render();
+                        return;
+                    }
+
+                    /* Clicking a step in the indicator jumps to it - forwards
+                       only through steps that already validate, so the same
+                       rule holds whichever way the reader gets there. */
+                    var jump = e.target.closest("[data-step-for]");
+
+                    if (jump && stepList && stepList.contains(jump)) {
+
+                        e.preventDefault();
+
+                        var step = form.querySelector(
+                            '[data-book-step="'
+                            + jump.getAttribute("data-step-for") + '"]'
+                        );
+
+                        var target = visibleSteps().indexOf(step);
+
+                        if (target === -1 || target === current) {
+                            return;
+                        }
+
+                        current = target < current
+                            ? target
+                            : furthestAllowed(target);
+
                         render();
                     }
                 });

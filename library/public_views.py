@@ -65,11 +65,14 @@ know whether they can have the book, not how the stock breaks down.
 
 from django.contrib.auth.decorators import login_not_required
 from django.core.paginator import Paginator
+from django.db import models
 from django.db.models import Q
 from django.shortcuts import render
 
 from .models import Author, BookVolume, Category, Publisher
 from .queries import active_books, annotate_copy_counts
+from django.utils.translation import gettext
+
 from .views import PAGE_SIZE, numeric_param, query_with
 
 
@@ -85,6 +88,87 @@ PUBLIC_AVAILABILITY_LABELS = {
     "available": "On the shelf now",
     "unavailable": "Not on the shelf",
 }
+
+
+# The three the catalogue's appearance control offers. "auto" is not a
+# resolved theme: it is written straight onto `data-bs-theme` and left for
+# the `prefers-color-scheme` block in style.css to settle, because this
+# page has no script to resolve it with.
+PUBLIC_THEMES = ("light", "dark", "auto")
+
+PUBLIC_THEME_DEFAULT = "auto"
+
+# A plain cookie, not the session. The catalogue has no session and wants
+# none - see the base template - and an appearance preference is not worth
+# starting one for. A year, because the next visit should look like the
+# last one; `SameSite=Lax` so it rides an ordinary navigation and nothing
+# else, and no `Secure` flag decision is made here beyond the project's.
+PUBLIC_THEME_COOKIE = "catalogue_theme"
+
+PUBLIC_THEME_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
+
+
+def resolve_public_theme(request):
+    """The appearance this request should render in, and whether it changed.
+
+    Read from `?theme=` first so a plain link can switch it - the catalogue
+    is scriptless and formless by design, so a link in the query string is
+    the whole mechanism - then from the cookie a previous link set, then
+    the default.
+
+    Anything unrecognised falls back rather than raising: this decides a
+    colour, and a mistyped query string should not be an error page.
+    """
+
+    asked = (request.GET.get("theme") or "").strip().casefold()
+
+    if asked in PUBLIC_THEMES:
+        return asked, True
+
+    stored = (request.COOKIES.get(PUBLIC_THEME_COOKIE) or "").strip().casefold()
+
+    if stored in PUBLIC_THEMES:
+        return stored, False
+
+    return PUBLIC_THEME_DEFAULT, False
+
+
+def remember_public_theme(response, theme, changed):
+    """Persist a theme the reader just chose, so it survives navigation."""
+
+    if changed:
+        response.set_cookie(
+            PUBLIC_THEME_COOKIE,
+            theme,
+            max_age=PUBLIC_THEME_COOKIE_MAX_AGE,
+            samesite="Lax",
+        )
+
+    return response
+
+
+def public_theme_links(request, theme):
+    """The appearance switcher's three links, for whichever page is asking.
+
+    Every public page carries the switcher, so the list is built once here
+    rather than repeated per view. `query_with` keeps the rest of the query
+    string, so choosing an appearance never drops a search or a page.
+    """
+
+    return [
+        {
+            "value": value,
+            "label": label,
+            "icon": icon,
+            "active": theme == value,
+            "url": "?" + query_with(request, theme=value),
+        }
+        for value, label, icon in (
+            ("light", gettext("Light"), "bi-sun-fill"),
+            ("dark", gettext("Dark"), "bi-moon-stars-fill"),
+            ("auto", gettext("System"), "bi-circle-half"),
+        )
+    ]
 
 
 def public_books():
@@ -175,6 +259,177 @@ def named(model, pk):
     return row.name if row else ""
 
 
+# How many rows a browse list of names shows at once, and how many books
+# the dashboard puts in front of a visitor. Deliberately small: these are
+# a way in, not a report.
+PUBLIC_BROWSE_SIZE = 24
+
+PUBLIC_DASHBOARD_BOOKS = 8
+
+PUBLIC_DASHBOARD_CATEGORIES = 8
+
+
+def _named_counts(model, search):
+    """Names of one kind, each with how many public books carry it.
+
+    One query. The count is over `active_books()` rather than the whole
+    table, so an archived book does not inflate a number on a page whose
+    whole point is what the library actually holds.
+    """
+
+    rows = model.objects.annotate(
+        book_count=models.Count(
+            "book",
+            filter=models.Q(book__archived_at__isnull=True),
+            distinct=True,
+        )
+    )
+
+    if search:
+        rows = rows.filter(name__icontains=search)
+
+    # Nothing with no public books: a name a visitor cannot follow anywhere
+    # is not a way into the catalogue.
+    return rows.filter(book_count__gt=0).order_by("name")
+
+
+def _browse_page(request, model, template, title, icon, filter_param, nav_section):
+    """One of the three name lists - authors, categories, publishers.
+
+    They differ only in which model they read and which filter their rows
+    link to, so they are one function rather than three that would drift.
+    Read-only by construction: there is nothing here but a search box, a
+    page of names and a link into the book list.
+    """
+
+    search = (request.GET.get("search") or "").strip()
+
+    rows = _named_counts(model, search)
+
+    paginator = Paginator(rows, PUBLIC_BROWSE_SIZE)
+    page = paginator.get_page(request.GET.get("page"))
+
+    theme, theme_changed = resolve_public_theme(request)
+
+    return remember_public_theme(render(
+        request,
+        template,
+        {
+            "rows": page,
+            "paginator": paginator,
+            "search": search,
+            "nav_section": nav_section,
+            "browse_title": title,
+            "browse_icon": icon,
+            "filter_param": filter_param,
+            "pagination_query": query_with(request, page=None),
+            "elided_page_range": list(
+                paginator.get_elided_page_range(
+                    page.number,
+                    on_each_side=1,
+                    on_ends=1,
+                )
+            ),
+            "page_ellipsis": Paginator.ELLIPSIS,
+            "public_theme": theme,
+            "theme_links": public_theme_links(request, theme),
+        },
+    ), theme, theme_changed)
+
+
+@login_not_required
+def public_dashboard(request):
+    """The catalogue's front door.
+
+    What a visitor wants first: a search box, how big the collection is,
+    what has just arrived, and what subjects it is strongest in. Nothing
+    about loans, borrowers, copies or the desk - those are the library's
+    business, not the catalogue's, and none of them is read here.
+
+    The four totals and the two lists are five bounded queries; none grows
+    with the size of the collection beyond the counts themselves.
+    """
+
+    books = active_books()
+
+    theme, theme_changed = resolve_public_theme(request)
+
+    return remember_public_theme(render(
+        request,
+        "public/dashboard.html",
+        {
+            "nav_section": "dashboard",
+            "total_books": books.count(),
+            "total_authors": Author.objects.filter(
+                book__archived_at__isnull=True
+            ).distinct().count(),
+            "total_categories": Category.objects.filter(
+                book__archived_at__isnull=True
+            ).distinct().count(),
+            "total_publishers": Publisher.objects.filter(
+                book__archived_at__isnull=True
+            ).distinct().count(),
+
+            # Newest first. `Book` records no date, so id order is what the
+            # table actually knows about "recently added" - the same proxy
+            # the staff dashboard uses.
+            "recent_books": describe_availability(
+                list(public_books().order_by("-id")[:PUBLIC_DASHBOARD_BOOKS])
+            ),
+
+            # "Popular" here means how much of the collection is on that
+            # subject, which is a fact about the shelves. It deliberately
+            # does not mean how often it is borrowed: that is circulation,
+            # and circulation is not public.
+            "popular_categories": _named_counts(
+                Category, ""
+            ).order_by("-book_count", "name")[:PUBLIC_DASHBOARD_CATEGORIES],
+
+            "public_theme": theme,
+            "theme_links": public_theme_links(request, theme),
+        },
+    ), theme, theme_changed)
+
+
+@login_not_required
+def public_author_list(request):
+    return _browse_page(
+        request,
+        Author,
+        "public/browse_list.html",
+        gettext("Authors"),
+        "bi-person",
+        "author",
+        "authors",
+    )
+
+
+@login_not_required
+def public_category_list(request):
+    return _browse_page(
+        request,
+        Category,
+        "public/browse_list.html",
+        gettext("Categories"),
+        "bi-tags",
+        "category",
+        "categories",
+    )
+
+
+@login_not_required
+def public_publisher_list(request):
+    return _browse_page(
+        request,
+        Publisher,
+        "public/browse_list.html",
+        gettext("Publishers"),
+        "bi-building",
+        "publisher",
+        "publishers",
+    )
+
+
 @login_not_required
 def public_book_list(request):
     """Browse and search the catalogue.
@@ -246,10 +501,20 @@ def public_book_list(request):
 
     describe_availability(page.object_list)
 
-    return render(
+    theme, theme_changed = resolve_public_theme(request)
+
+    return remember_public_theme(render(
         request,
         "public/book_list.html",
         {
+            "public_theme": theme,
+            # The switcher's three links, each carrying the rest of the
+            # query so choosing an appearance never drops a search or a
+            # page. Built here rather than in the template because
+            # `query_with` is where every other link on this page gets its
+            # state from.
+            "theme_links": public_theme_links(request, theme),
+            "nav_section": "books",
             "books": page,
             "paginator": paginator,
             # Everything except `page`, so a filter and a search survive
@@ -289,7 +554,7 @@ def public_book_list(request):
                 or availability
             ),
         },
-    )
+    ), theme, theme_changed)
 
 
 @login_not_required
@@ -324,11 +589,18 @@ def public_book_detail(request, book_id):
         .only("id", "volume_number", "title")
     )
 
-    return render(
+    theme, theme_changed = resolve_public_theme(request)
+
+    return remember_public_theme(render(
         request,
         "public/book_detail.html",
         {
+            "nav_section": "books",
             "book": book,
             "volumes": volumes,
+            "public_theme": theme,
+            # The same three links as the list. This page has no other
+            # query state to carry, so they are the bare parameter.
+            "theme_links": public_theme_links(request, theme),
         },
-    )
+    ), theme, theme_changed)

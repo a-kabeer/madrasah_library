@@ -1,7 +1,117 @@
 {% load i18n %}
-<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true"><i class="bi bi-trash me-2" aria-hidden="true"></i>{% translate "Delete Shelf" %}</h5>
-<div class="alert {% if copies_exist %}alert-warning{% else %}alert-danger{% endif %}" role="alert">{% if copies_exist %}{% translate "This shelf cannot be deleted because it still contains copies. Move or remove the copies first." %}{% else %}{% blocktranslate with code=shelf.shelf_code %}You are about to permanently delete shelf <strong>{{ code }}</strong>. This cannot be undone.{% endblocktranslate %}{% endif %}</div>
-<form method="post" {% if copies_exist %}action=""{% else %}action="{% url 'shelf_delete' shelf.id %}" hx-post="{% url 'shelf_delete' shelf.id %}?modal=1"{% endif %} hx-target="#formModal .modal-body" hx-swap="innerHTML" hx-disinherit="*">
-    {% csrf_token %}
-    <div class="modal-actions"><button type="button" class="btn btn-outline-secondary ms-auto" data-bs-dismiss="modal">{% translate "Close" %}</button>{% if not copies_exist %}<button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i>{% translate "Delete Shelf" %}</button>{% endif %}</div>
-</form>
+{% comment %}
+Delete Shelf confirmation, served into #formModal by `shelf_delete_modal`.
+
+`copies_exist` is the guard: a shelf with copies filed on it cannot go, and
+the dialog says so and offers no Delete button rather than letting the
+click fail. The rule itself lives in the view - this only decides what to
+show for each answer.
+
+Shaped like `copy_delete_modal.html` and `location_delete_modal.html`, so
+the three deletions in this part of the application read the same way.
+
+Expected context: shelf, copies_exist.
+{% endcomment %}
+
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{% translate "Delete Shelf?" %}
+</h5>
+
+<div id="shelfDeleteBody">
+
+    {% if copies_exist %}
+
+        <div class="alert alert-warning d-flex align-items-start" role="alert">
+            <i class="bi bi-shield-exclamation me-2 mt-1" aria-hidden="true"></i>
+            <div>
+                {% blocktranslate trimmed with code=shelf.shelf_code %}
+                    Shelf {{ code }} cannot be deleted while copies are filed
+                    on it. Move those copies first.
+                {% endblocktranslate %}
+            </div>
+        </div>
+
+        <div class="modal-actions">
+
+            {% comment %}
+              The way out, named the way the blocker names it: the copies
+              are what has to move, so this opens exactly them, filtered to
+              this shelf.
+            {% endcomment %}
+            <a
+                href="{% url 'book_copy_list' %}?shelf={{ shelf.id }}"
+                class="btn btn-warning"
+            >
+                <i class="bi bi-list-ul me-1" aria-hidden="true"></i>
+                {% translate "See its copies" %}
+            </a>
+
+            <button
+                type="button"
+                class="btn btn-outline-secondary ms-auto"
+                data-bs-dismiss="modal"
+            >
+                {% translate "Close" %}
+            </button>
+
+        </div>
+
+    {% else %}
+
+        <p class="mb-2">{% translate "You are about to delete:" %}</p>
+
+        <p class="fs-5 fw-semibold mb-1">{{ shelf.shelf_code }}</p>
+
+        <p class="text-body-secondary small">
+            {{ shelf.location.name }}
+            {% if shelf.description %}
+                &middot; {{ shelf.description|truncatechars:80 }}
+            {% endif %}
+        </p>
+
+        <p class="text-body-secondary">
+            {% translate "No copies are filed on it, so nothing on the shelves moves or is lost. The location it belongs to is untouched." %}
+        </p>
+
+        <p class="text-danger small mb-0">
+            <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+            {% translate "This cannot be undone." %}
+        </p>
+
+        <div class="modal-actions">
+
+            {% comment %}
+              Targets this dialog's own body, so a refusal that arrives
+              between opening it and pressing the button - a copy filed
+              here in the meantime - is re-rendered here as the blocker
+              above rather than closing on an error.
+            {% endcomment %}
+            <form
+                hx-post="{% url 'shelf_delete' shelf.id %}?modal=1"
+                hx-target="#shelfDeleteBody"
+                hx-swap="outerHTML"
+                hx-disabled-elt="find button[type=submit]"
+                hx-disinherit="*"
+                class="d-inline"
+            >
+                {% csrf_token %}
+                {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash me-1" aria-hidden="true"></i>
+                    {% translate "Delete" %}
+                </button>
+            </form>
+
+            <button
+                type="button"
+                class="btn btn-outline-secondary ms-auto"
+                data-bs-dismiss="modal"
+            >
+                {% translate "Cancel" %}
+            </button>
+
+        </div>
+
+    {% endif %}
+
+</div>

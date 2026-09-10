@@ -508,7 +508,7 @@
                         {% for place in shelf_summary %}
                             {% if place.shelf_id %}
                                 <a
-                                    href="{% url 'shelf_detail' place.shelf_id %}"
+                                    href="{% url 'book_copy_list' %}?search=&location={{ place.location_id }}&shelf={{ place.shelf_id }}&status=&sort=code&direction=asc&page_size=25"
                                     class="btn btn-sm btn-outline-secondary"
                                 >
                                     {{ place.location }} — {{ place.shelf_code }}

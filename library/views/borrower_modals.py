@@ -11,7 +11,7 @@ from django.utils import timezone
 from ..models import Borrower, Loan
 from .. import reservations
 from ..permissions import can_edit_library, feature_required
-from .common import is_form_modal_request, BORROWER_CACHE_KEY, BORROWER_TYPES, create_activity_log, DASHBOARD_CACHE_KEY, modal_redirect, PAGE_SIZE
+from .common import is_form_modal_request, BORROWER_CACHE_KEY, BORROWER_TYPES, COMBOBOX_LIMIT, combobox_options_response, create_activity_log, DASHBOARD_CACHE_KEY, is_combobox_request, modal_redirect, PAGE_SIZE
 
 BORROWER_ACTIVITY_FILTERS = ("has_loans", "no_loans", "overdue", "no_overdue")
 
@@ -65,6 +65,41 @@ def _validate(data, borrower=None):
 @feature_required("borrowers")
 def borrower_list_modal(request):
     search = request.GET.get("search", "").strip()
+
+    # The searchable borrower dropdowns - the reservation queue on the book
+    # page, the borrower field on Issue Books - ask this view for their
+    # suggestions, the way the book lists do. Answered before the loan
+    # counts and the paging: a suggestion list wants a name and an id, not a
+    # table. Without this branch the combobox asked for options and got a
+    # whole page - `borrower_list_modal.html` extends `layout`, and the
+    # request carries its own `HX-Target` rather than `mainContent`, so
+    # `layout` resolves to the full base template and the entire
+    # application was swapped into the dropdown.
+    if is_combobox_request(request):
+
+        people = Borrower.objects.filter(is_active=True)
+
+        if search:
+            people = people.filter(
+                models.Q(name__icontains=search)
+                | models.Q(phone__icontains=search)
+                | models.Q(registration_no__icontains=search)
+            )
+
+        return combobox_options_response(
+            request,
+            # One over the limit, so the response can tell that there is
+            # more than it is showing and say so.
+            items=list(
+                people.only(
+                    "id", "name", "phone", "registration_no",
+                ).order_by("name")[:COMBOBOX_LIMIT + 1]
+            ),
+            search=search,
+            entity_label="borrower",
+            add_url=reverse("borrower_add"),
+        )
+
     borrower_type = request.GET.get("borrower_type", "").strip()
     active_status = request.GET.get("status", "").strip()
     activity = request.GET.get("activity", "").strip()

@@ -7,6 +7,7 @@ these copies there.
 """
 
 from collections import namedtuple
+from types import SimpleNamespace
 from datetime import date
 import json
 
@@ -40,7 +41,6 @@ from .. import history
 from .. import inventory
 from ..context_processors import is_main_nav_request
 from ..permissions import (
-    can_edit_library,
     feature_required,
     passes_ceiling,
 )
@@ -60,13 +60,20 @@ from .common import (
     DASHBOARD_CACHE_KEY,
     LOAN_CACHE_KEY,
     LOCATION_CACHE_KEY,
+    LOCATION_SORT_DEFAULT,
+    LOCATION_SORT_FIELDS,
     PAGE_SIZE,
     SHELF_CACHE_KEY,
+    SHELF_SORT_DEFAULT,
+    SHELF_SORT_FIELDS,
+    COMBOBOX_LIMIT,
     book_list_fragment,
+    combobox_options_response,
     copy_state_options,
     create_activity_log,
     describe_copies,
     filter_copies_by_state,
+    is_combobox_request,
     is_form_modal_request,
     is_modal_request,
     is_options_request,
@@ -92,6 +99,29 @@ def location_list(request):
 
     search = request.GET.get("search", "").strip()
 
+    # The searchable Location dropdown on the Add / Edit Shelf dialog asks
+    # this view for its suggestions, the way the book lists answer theirs.
+    # Answered before the shelf and copy counts below: a suggestion list
+    # wants a name and an id, not a table of tallies.
+    if is_combobox_request(request):
+
+        matches = Location.objects.all()
+
+        if search:
+            matches = matches.filter(name__icontains=search)
+
+        return combobox_options_response(
+            request,
+            # One over the limit, so the response can tell there is more
+            # than it is showing and say so.
+            items=list(
+                matches.only("id", "name").order_by("name")[:COMBOBOX_LIMIT + 1]
+            ),
+            search=search,
+            entity_label="location",
+            add_url=reverse("location_add"),
+        )
+
     locations_query = Location.objects.all()
 
     if search:
@@ -104,21 +134,48 @@ def location_list(request):
     # Both counts in the one query the list already used. `distinct` is
     # what keeps them honest: the two joins multiply each other's rows, so
     # without it a location's shelves would be counted once per copy.
-    locations = list(
-        locations_query.annotate(
-            shelf_count=models.Count(
-                "shelf",
-                distinct=True
-            ),
-            copy_count=models.Count(
-                "shelf__bookcopy",
-                distinct=True
-            ),
-        ).order_by("name")
+    locations_query = locations_query.annotate(
+        shelf_count=models.Count(
+            "shelf",
+            distinct=True
+        ),
+        copy_count=models.Count(
+            "shelf__bookcopy",
+            distinct=True
+        ),
     )
 
-    paginator = Paginator(locations, PAGE_SIZE)
+    # Sorted and paged through the same helpers the copy list uses, so a
+    # librarian gets one table everywhere. Ordering happens in the database
+    # over the annotations above rather than over a list in Python, which
+    # is what lets it apply across pages instead of only within the page on
+    # screen.
+    sort, direction = resolve_sort(
+        request,
+        LOCATION_SORT_FIELDS,
+        LOCATION_SORT_DEFAULT,
+    )
+
+    locations = locations_query.order_by(
+        *sort_ordering(LOCATION_SORT_FIELDS, sort, direction)
+    )
+
+    page_size = resolve_page_size(request)
+
+    paginator = Paginator(locations, page_size)
     page = paginator.get_page(request.GET.get("page"))
+
+    columns = sortable_columns(
+        request,
+        [
+            ("name", "Location"),
+            ("shelves", "Shelves"),
+            ("copies", "Copies"),
+        ],
+        LOCATION_SORT_FIELDS,
+        sort,
+        direction,
+    )
 
     return render(
         request,
@@ -142,53 +199,81 @@ def location_list(request):
                 )
             ),
             "page_ellipsis": Paginator.ELLIPSIS,
+            "columns": columns,
+            "sort": sort,
+            "direction": direction,
+            "page_size": page_size,
+            "page_size_options": page_size_options(page_size),
+            # Where the rows-per-page control sends its value: the rest of
+            # the table's state, minus `page` so a size change returns to
+            # page 1 and minus `page_size` so the select's own value is the
+            # only one in the query.
+            "page_size_hx_url": "?" + query_with(
+                request,
+                page=None,
+                page_size=None,
+            ),
             "can_edit": passes_ceiling(
                 request.user, "Admin", "Librarian"
             ),
         }
     )
-
-@feature_required("locations")
-def location_detail(request, location_id):
-
-    location = get_object_or_404(
-        Location,
-        id=location_id
-    )
-
-    # Shelf-level only: a location can hold thousands of copies, and
-    # listing them here would make the page grow with the library. Each
-    # shelf carries its own count and opens its own contents.
-    shelves = list(
-        Shelf.objects.filter(
-            location=location
-        ).annotate(
-            copy_count=models.Count("bookcopy")
-        ).order_by("shelf_code")
-    )
-
-    return render(
-        request,
-        "library/location_detail.html",
-        {
-            "location": location,
-            "shelves": shelves,
-            "shelf_count": len(shelves),
-            # Summed from the counts already fetched rather than asked for
-            # again.
-            "copy_count": sum(shelf.copy_count for shelf in shelves),
-            "can_edit": passes_ceiling(
-                request.user, "Admin", "Librarian"
-            ),
-        }
-    )
-
 
 @feature_required("shelves")
 def shelf_list(request):
 
     search = request.GET.get("search", "").strip()
     location_id = numeric_param(request, "location")
+
+    # Sorted and paged through the same helpers the copy list uses, so a
+    # librarian gets one table everywhere.
+    sort, direction = resolve_sort(
+        request,
+        SHELF_SORT_FIELDS,
+        SHELF_SORT_DEFAULT,
+    )
+
+    ordering = sort_ordering(SHELF_SORT_FIELDS, sort, direction)
+
+    # Within a location, keep the shelves in code order - the grouping this
+    # list has always had. `sort_ordering` gives the chosen field plus `id`
+    # as the tiebreaker, and `id` alone would scatter A-01, A-02, A-03
+    # through a location in whatever order they were created. Slotting the
+    # code in front of `id` keeps the reading order and keeps the tiebreak
+    # stable, which is what stops a row appearing on two pages.
+    if sort == "location":
+        ordering = list(ordering[:-1]) + ["shelf_code", ordering[-1]]
+
+    # The Shelf dropdown on Add Book asks this view for its suggestions,
+    # scoped to whichever location is chosen above it - the id rides along
+    # in the search, so no shelf from anywhere else is ever offered. Same
+    # branch the book lists use; answered before the counts and the paging.
+    if is_combobox_request(request):
+
+        matches = Shelf.objects.filter(
+            location_id=location_id
+        ) if location_id else Shelf.objects.none()
+
+        if search:
+            matches = matches.filter(shelf_code__icontains=search)
+
+        return combobox_options_response(
+            request,
+            items=[
+                # `combobox_options_response` reads `.name`, and a shelf's
+                # name is its code.
+                SimpleNamespace(id=row.id, name=row.shelf_code)
+                for row in matches.only(
+                    "id", "shelf_code"
+                ).order_by("shelf_code")[:COMBOBOX_LIMIT + 1]
+            ],
+            search=search,
+            entity_label="shelf",
+            add_url=reverse("shelf_add"),
+            # A shelf cannot exist without a location, so the create button
+            # sends the one chosen above.
+            create_extra='"location": "%s"' % (location_id or ""),
+        )
 
     # The copy count comes back with the shelves, in the same query, so the
     # list costs the same however many copies the library holds.
@@ -197,9 +282,18 @@ def shelf_list(request):
             "location"
         ).annotate(
             copy_count=models.Count("bookcopy")
-        ).order_by("location__name", "shelf_code")
+        ).order_by(*ordering)
 
-    if search or location_id:
+    # The cached list is the whole table in its default order, so it can
+    # only answer a request that asks for exactly that. A search, a
+    # location filter or any other sort goes to the database - ordering a
+    # cached list in Python would be a second implementation of the sort
+    # that could disagree with this one.
+    sorted_by_default = (
+        sort == SHELF_SORT_DEFAULT and direction == "asc"
+    )
+
+    if search or location_id or not sorted_by_default:
         shelves = shelves_with_counts()
 
         if search:
@@ -243,8 +337,22 @@ def shelf_list(request):
 
     locations = Location.objects.all().order_by("name")
 
-    paginator = Paginator(shelves, PAGE_SIZE)
+    page_size = resolve_page_size(request)
+
+    paginator = Paginator(shelves, page_size)
     page = paginator.get_page(request.GET.get("page"))
+
+    columns = sortable_columns(
+        request,
+        [
+            ("shelf", "Shelf"),
+            ("location", "Location"),
+            ("copies", "Copies"),
+        ],
+        SHELF_SORT_FIELDS,
+        sort,
+        direction,
+    )
 
     return render(
         request,
@@ -267,92 +375,21 @@ def shelf_list(request):
                 )
             ),
             "page_ellipsis": Paginator.ELLIPSIS,
+            "columns": columns,
+            "sort": sort,
+            "direction": direction,
+            "page_size": page_size,
+            "page_size_options": page_size_options(page_size),
+            "page_size_hx_url": "?" + query_with(
+                request,
+                page=None,
+                page_size=None,
+            ),
             "can_edit": passes_ceiling(
                 request.user, "Admin", "Librarian"
             ),
         }
     )
-
-@feature_required("shelves")
-def shelf_detail(request, shelf_id):
-    """What is physically on one shelf.
-
-    The end of the Locations -> Location -> Shelf trail. Each copy opens
-    the existing copy detail; each book title opens the existing book
-    page. Nothing about a copy or a book is described here that those
-    pages do not already own.
-    """
-
-    shelf = get_object_or_404(
-        Shelf.objects.select_related(
-            "location"
-        ),
-        id=shelf_id
-    )
-
-    search = request.GET.get("search", "").strip()
-
-    copies = BookCopy.objects.filter(
-        shelf=shelf
-    ).select_related(
-        "volume__book"
-    )
-
-    if search:
-        copies = copies.filter(
-            Q(copy_code__icontains=search)
-            | Q(volume__book__title__icontains=search)
-        )
-
-    copies = copies.order_by("volume__book__title", "copy_code")
-
-    # A shelf can hold a lot; the page should not grow with it.
-    paginator = Paginator(copies, PAGE_SIZE)
-    page = paginator.get_page(request.GET.get("page"))
-
-    # Status for the copies on this page only, from the same helper the
-    # copy list uses, so the word shown is the same word.
-    describe_copies(page.object_list)
-
-    # What titles are on this shelf, and how many of each — one grouped
-    # query rather than a count per book. Unfiltered by the search, since
-    # it describes the shelf rather than the current view.
-    titles = list(
-        BookCopy.objects.filter(
-            shelf=shelf
-        ).values(
-            "volume__book_id",
-            "volume__book__title",
-        ).annotate(
-            copies=models.Count("id")
-        ).order_by("volume__book__title")
-    )
-
-    return render(
-        request,
-        "library/shelf_detail.html",
-        {
-            "shelf": shelf,
-            "copies": page,
-            "paginator": paginator,
-            "search": search,
-            "titles": titles,
-            "title_count": len(titles),
-            "pagination_query": query_with(request, page=None),
-            "elided_page_range": list(
-                paginator.get_elided_page_range(
-                    page.number,
-                    on_each_side=1,
-                    on_ends=1,
-                )
-            ),
-            "page_ellipsis": Paginator.ELLIPSIS,
-            "can_edit": passes_ceiling(
-                request.user, "Admin", "Librarian"
-            ),
-        }
-    )
-
 
 @feature_required("books")
 def book_list(request):
@@ -530,7 +567,16 @@ def book_list(request):
         # Delete at all. Every one of those views carries the
         # Admin/Librarian ceiling, so an Assistant was being offered five
         # controls that each answered 403.
-        "can_edit": can_edit_library(request.user),
+        #
+        # `passes_ceiling` rather than `can_edit_library`, which predates
+        # SuperAdmin and so does not know about it: the five views are
+        # gated by `feature_required(..., "Admin", "Librarian")`, whose
+        # ceiling test exempts SuperAdmin. Asking the narrower question
+        # here hid all five controls from the one role that may always
+        # reach them - the opposite failure to the Assistant one above,
+        # and the reason this page had no buttons at all. This is the same
+        # call the rest of this module already makes.
+        "can_edit": passes_ceiling(request.user, "Admin", "Librarian"),
         "books": page,
         "paginator": paginator,
         "search": search,
@@ -1059,12 +1105,6 @@ def book_copy_list(request):
     )
 
 
-# A sheet of labels is a sheet of paper. Past this many the page has
-# stopped being something anyone is about to print and started being a way
-# to render the whole catalogue by accident.
-LABEL_LIMIT = 200
-
-
 def labelled(copies):
     """Attach the barcode each copy's label will carry.
 
@@ -1137,8 +1177,15 @@ def book_copy_labels(request):
         "shelf__location",
     ).order_by("copy_code")
 
-    total = copies.count()
-    copies = labelled(list(copies[:LABEL_LIMIT]))
+    # Every copy the request describes, however many that is. The sheet
+    # used to stop at 200 and say so, which meant "print labels for all of
+    # them" quietly printed some of them - the one thing a labelling job
+    # must not do, because the gap only shows up as a copy with no label on
+    # a shelf. `select_related` above is what keeps this one query rather
+    # than one per row, and the count comes from the list already built
+    # instead of a second trip to the database.
+    copies = labelled(list(copies))
+    total = len(copies)
 
     return render(
         request,
@@ -1146,9 +1193,7 @@ def book_copy_labels(request):
         {
             "copies": copies,
             "total": total,
-            "shown": len(copies),
-            "capped": total > LABEL_LIMIT,
-            "limit": LABEL_LIMIT,
+            "shown": total,
             "scope": scope,
             "printed_on": timezone.now(),
         },
@@ -1465,7 +1510,7 @@ def book_copy_add(request):
                 action="CREATE",
                 entity_type="BookCopy",
                 entity_id=copy.id,
-                description=f"{copy.copy_code} شامل کی گئی",
+                description=f"{copy.copy_code} added",
             )
 
             if is_form_modal_request(request):
@@ -1568,7 +1613,6 @@ def book_copy_delete(request, copy_id):
         deleted_id = copy.id
         deleted_code = copy.copy_code
         volume_id = copy.volume_id
-        shelf_id = copy.shelf_id
 
         try:
             with transaction.atomic():
@@ -1604,9 +1648,6 @@ def book_copy_delete(request, copy_id):
 
             if is_form_modal_request(request):
                 return lookup_deleted_response(deleted_code)
-
-            if from_page == "shelf" and shelf_id:
-                return redirect("shelf_detail", shelf_id=shelf_id)
 
             if from_page == "volume":
                 return redirect(

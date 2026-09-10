@@ -110,7 +110,8 @@
   ===================================================================
 */
 
-[data-bs-theme="light"] {
+[data-bs-theme="light"],
+[data-bs-theme="auto"] {
     color-scheme: light;
 
     --surface-chrome: var(--slate-100);
@@ -169,6 +170,7 @@
 */
 :root,
 [data-bs-theme="light"],
+[data-bs-theme="auto"],
 [data-bs-theme="dark"] {
     --sidebar-bg: var(--surface-chrome);
     --sidebar-hover: var(--surface-hover);
@@ -224,6 +226,7 @@
 */
 :root,
 [data-bs-theme="light"],
+[data-bs-theme="auto"],
 [data-bs-theme="dark"] {
     --bs-primary: var(--brand-primary);
     --bs-link-color: var(--brand-primary);
@@ -397,6 +400,7 @@
 */
 
 [data-bs-theme="light"],
+[data-bs-theme="auto"],
 [data-bs-theme="dark"] {
     --bs-body-bg: var(--surface-page);
     --bs-body-color: var(--text-primary);
@@ -432,7 +436,8 @@
   kept in step with the surface tokens above, which is what the comment
   on each one is for.
 */
-[data-bs-theme="light"] {
+[data-bs-theme="light"],
+[data-bs-theme="auto"] {
     --bs-body-bg-rgb: 248, 250, 252;        /* --slate-50,  --surface-page */
     --bs-secondary-bg-rgb: 241, 245, 249;   /* --slate-100, --surface-inset */
     --bs-tertiary-bg-rgb: 241, 245, 249;    /* --slate-100, --surface-inset */
@@ -1343,6 +1348,146 @@ body {
     min-width: 1.25em;
 }
 
+/*
+  GLOBAL SEARCH
+
+  Sits in `.topbar-right` beside the bell and takes the same dropdown shell,
+  so this is only the box's own width and the spinner's position.
+*/
+/*
+  A row, not a block. `.form-control` is `display: block` in Bootstrap, so
+  the input claimed a line of its own and the expanded box appeared under
+  the header icons instead of beside the magnifier. `inline-flex` keeps the
+  icon and the box on one line and lets the wrapper size to whichever of
+  the two states it is in, so `.topbar-right`'s own `gap` still does the
+  spacing between this control and the ones either side of it.
+*/
+.global-search {
+    position: relative;
+
+    display: inline-flex;
+    align-items: center;
+}
+
+/* The icon is the whole control until the box is opened, so it carries the
+   pointer rather than the collapsed input behind it. */
+.global-search-icon {
+    cursor: pointer;
+}
+
+/*
+  Collapsed by default: no width, no padding, no border - so the icon beside
+  it is all there is to see. Width and opacity are transitioned rather than
+  `display`, which cannot be animated, and the input is never
+  `display: none` or `visibility: hidden` so it stays in the tab order and
+  can still be reached by keyboard.
+*/
+.global-search-input {
+    width: 0;
+
+    /* Never stretched or squeezed by the flex row - the width below is the
+       whole of the open and shut states, and a shrink would let the topbar
+       reopen the box at some width nobody chose. */
+    flex: none;
+
+    padding-inline: 0;
+    border-color: transparent;
+
+    /* Part of the slide: closed there is no gap between icon and box, so
+       the icon sits where it would if the input were not in the markup. */
+    margin-inline-start: 0;
+
+    opacity: 0;
+
+    transition:
+        width 0.2s ease,
+        padding 0.2s ease,
+        margin 0.2s ease,
+        opacity 0.2s ease;
+}
+
+/*
+  Open on focus - which the icon's `<label for>` gives it on click - and
+  stay open while there is something typed in it, so clicking a result does
+  not snap the box shut on the term that found it. `:placeholder-shown` is
+  false exactly when the box has a value, which is why the placeholder is
+  not optional here.
+*/
+.global-search-input:focus,
+.global-search-input:not(:placeholder-shown) {
+    width: 12rem;
+
+    padding-inline: 0.5rem;
+    border-color: var(--border-strong);
+
+    margin-inline-start: 0.25rem;
+
+    opacity: 1;
+}
+
+/* Narrow screens: the topbar is already tight, so give the box the least
+   it can usefully hold rather than letting it push the user menu off. */
+@media (max-width: 575.98px) {
+
+    .global-search-input:focus,
+    .global-search-input:not(:placeholder-shown) {
+        width: 7.5rem;
+    }
+
+}
+
+.global-search-spinner {
+    position: absolute;
+    top: 50%;
+    inset-inline-end: 0.5rem;
+
+    transform: translateY(-50%);
+
+    /* Above the input's own background, and out of the way of the pointer
+       so it never eats a click on the box behind it. */
+    pointer-events: none;
+}
+
+/*
+  Pinned under the control's trailing edge - which, open, is the box's own
+  trailing edge - so the panel hangs directly below the input rather than
+  over the controls beside it.
+
+  Stated rather than left to the static position: this panel has no Popper
+  instance to place it (there is no `data-bs-toggle` here by design), and
+  the static position of an absolutely-positioned child of a flex container
+  is the container's own corner, not the point after the input in flow. It
+  is `inset-inline-*` rather than left/right so it hangs off the correct
+  edge in Arabic and Urdu as well.
+*/
+.global-search-menu {
+    top: 100%;
+
+    inset-inline-end: 0;
+    inset-inline-start: auto;
+
+    margin-top: 0.25rem;
+
+    width: min(24rem, calc(100vw - 2rem));
+
+    max-height: min(28rem, calc(100vh - var(--topbar-height) - 2rem));
+
+    overflow-y: auto;
+}
+
+/*
+  The panel is open whenever the box, or a result inside it, holds focus -
+  rather than on Bootstrap's click toggle, which on a text input closed the
+  results on the second click. `:focus-within` covers both halves, so
+  tabbing from the box into the results keeps them up, and clicking away
+  puts them down. Outranks `.dropdown-menu { display: none }` on
+  specificity, which is what makes it the switch.
+*/
+.global-search:focus-within .global-search-menu {
+    display: block;
+}
+
+
 .notification-menu {
     width: min(22rem, calc(100vw - 2rem));
 
@@ -1963,6 +2108,25 @@ a.notification-title:hover {
     font-weight: 600;
 }
 
+/* The step labels are buttons now, so a reader can jump between steps
+   rather than only stepping. They should read as the plain text they were:
+   the number bubble beside them already carries the affordance, and turning
+   four of them into visible buttons would compete with Back and Next. */
+.book-steps li button {
+    padding: 0;
+    border: 0;
+    background: none;
+
+    color: inherit;
+    font: inherit;
+
+    cursor: pointer;
+}
+
+.book-steps li button:hover {
+    text-decoration: underline;
+}
+
 .book-steps li.current::before {
     background: var(--brand-primary);
     color: var(--brand-on-primary);
@@ -2240,6 +2404,11 @@ a.notification-title:hover {
 @media (prefers-reduced-motion: reduce) {
 
     .cover-preview {
+        transition: none;
+    }
+
+    /* The box still opens and closes, it just stops sliding. */
+    .global-search-input {
         transition: none;
     }
 
@@ -2593,8 +2762,259 @@ a.notification-title:hover {
     font-size: 0.9rem;
 }
 
-.public-main {
+/*
+  The catalogue's appearance switcher. Three links, shaped like the pills
+  the staff lists use so the two surfaces read as one application, but
+  written here because the public pages load no Bootstrap JavaScript and
+  this is not a dropdown.
+
+  The tagline before it takes `margin-inline-start: auto`, so this sits at
+  the far end of the header row and the brand stays at the start.
+*/
+.public-theme {
+    display: flex;
+    gap: 0.25rem;
+
+    flex-wrap: wrap;
+}
+
+.public-theme-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+
+    padding: 0.35rem 0.7rem;
+    border-radius: 6px;
+
+    color: var(--bs-secondary-color);
+    text-decoration: none;
+
+    font-size: 0.85rem;
+    line-height: 1.2;
+}
+
+.public-theme-option:hover,
+.public-theme-option:focus-visible {
+    background: var(--bs-tertiary-bg);
+    color: var(--bs-body-color);
+}
+
+.public-theme-option.is-active {
+    background: var(--brand-primary, var(--bs-primary));
+    color: #fff;
+}
+
+/* The words are useful where there is room and noise where there is not;
+   the icon and the title attribute carry it on a phone. */
+@media (max-width: 575.98px) {
+    .public-theme-option span {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+    }
+}
+
+
+/*
+  ===================================================================
+  CATALOGUE SIDEBAR
+
+  The public catalogue's navigation, shaped like the staff sidebar so the
+  two surfaces read as one library, but read-only: five links and nothing
+  that writes.
+
+  Collapsible with no script, because this page ships none. On a wide
+  screen the sidebar is always there and the toggle is hidden; below that
+  it slides in when the reader follows the `#catalog-nav` link and out
+  again when they follow the close link. `:target` is what makes that work.
+  ===================================================================
+*/
+/* Inside the shell the column is already bounded, so the container that
+   centres the header and footer must not bound it a second time - that is
+   what squeezed the dashboard into half its width. */
+.public-main .public-container {
+    max-width: none;
+    padding: 0;
+}
+
+/* The dashboard's own pieces. Built from the same tokens and the same
+   card shape as the result rows above, so the front page and the list read
+   as one catalogue. */
+.public-hero-search {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+
+    margin: 1rem 0 1.5rem;
+}
+
+.public-hero-search input {
+    flex: 1 1 18rem;
+    min-width: 0;
+}
+
+.public-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 0.75rem;
+}
+
+.public-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+
+    padding: 0.9rem 1rem;
+
+    border: 1px solid var(--bs-border-color);
+    border-radius: 10px;
+
+    background: var(--surface-card, var(--bs-body-bg));
+    color: var(--bs-body-color);
+    text-decoration: none;
+}
+
+.public-stat:hover,
+.public-stat:focus-visible {
+    border-color: var(--brand-primary, var(--bs-primary));
+}
+
+.public-stat > i {
+    color: var(--bs-secondary-color);
+}
+
+.public-stat-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.public-stat-label {
+    color: var(--bs-secondary-color);
+    font-size: 0.85rem;
+}
+
+.public-section-heading {
+    margin: 0;
+
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.public-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+
+    padding: 0.4rem 0.75rem;
+
+    border: 1px solid var(--bs-border-color);
+    border-radius: 999px;
+
+    color: var(--bs-body-color);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.public-chip:hover,
+.public-chip:focus-visible {
+    border-color: var(--brand-primary, var(--bs-primary));
+}
+
+.public-chip-count {
+    padding: 0 0.4rem;
+
+    border-radius: 999px;
+
+    background: var(--bs-tertiary-bg);
+    color: var(--bs-secondary-color);
+    font-size: 0.78rem;
+}
+
+
+.public-shell {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+
+    /* Bounded exactly like `.public-container`, which is what the header
+       and footer use, so the sidebar's edge lines up with the brand above
+       it and the content's edge with the footer below. */
+    width: 100%;
+    max-width: 60rem;
+
+    margin: 0 auto;
+    padding: 0 1rem;
+
     flex: 1 0 auto;
+}
+
+.public-sidebar {
+    position: sticky;
+    top: 1.5rem;
+
+    flex: 0 0 13rem;
+
+    padding: 1rem;
+
+    border: 1px solid var(--bs-border-color);
+    border-radius: 10px;
+
+    background: var(--surface-card, var(--bs-body-bg));
+}
+
+.public-nav-heading {
+    margin: 0 0 0.5rem;
+
+    color: var(--bs-secondary-color);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.public-nav {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.public-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+
+    padding: 0.5rem 0.65rem;
+    border-radius: 8px;
+
+    color: var(--bs-body-color);
+    text-decoration: none;
+
+    font-size: 0.92rem;
+}
+
+.public-nav-link:hover,
+.public-nav-link:focus-visible {
+    background: var(--bs-tertiary-bg);
+}
+
+.public-nav-link.is-active {
+    background: var(--brand-primary, var(--bs-primary));
+    color: #fff;
+}
+
+/* The toggle and the close are for the narrow layout only. */
+.public-nav-toggle,
+.public-nav-close {
+    display: none;
+}
+
+.public-main {
+    min-width: 0;
+
 
     padding-top: 1.5rem;
     padding-bottom: 3rem;
@@ -3138,4 +3558,270 @@ a.notification-title:hover {
 [lang="ar"] code {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     line-height: 1.5;
+}
+
+
+/*
+  ===================================================================
+  SYSTEM DEFAULT ("auto") — for the public catalogue only
+
+  The staff shell resolves "system" in JavaScript: app.js reads
+  `prefers-color-scheme` and writes a concrete light or dark onto
+  `data-bs-theme`, so the CSS above only ever sees the two real values.
+
+  The public catalogue ships no JavaScript - by design, and a test keeps
+  it that way - so it cannot resolve anything. It writes
+  `data-bs-theme="auto"` instead and lets this block decide, which is the
+  only way to offer System Default there without a script.
+
+  Every rule below is the matching `[data-bs-theme="dark"]` rule above
+  with the attribute swapped, and nothing else. They were generated from
+  those rules rather than retyped, so the two cannot disagree today; if a
+  dark rule is added above, its twin belongs here.
+
+  `auto` appears nowhere in the staff shell, so none of this can affect
+  any page but the catalogue.
+  ===================================================================
+*/
+
+@media (prefers-color-scheme: dark) {
+
+    [data-bs-theme="auto"] {
+        color-scheme: dark;
+
+        /* Chrome and page share a ground here; the border between them and
+           the lighter cards carry the hierarchy instead. Going a step
+           darker than the page for the sidebar would mean near-black on
+           black, which is a difference nobody can see. */
+        --surface-chrome: var(--slate-950);
+        --surface-page: var(--slate-950);
+        --surface-card: var(--slate-900);
+        --surface-raised: var(--slate-800);
+        --surface-inset: var(--slate-800);
+        --surface-hover: var(--slate-800);
+
+        --border-subtle: var(--slate-800);
+        --border-strong: var(--slate-700);
+
+        --text-primary: var(--slate-50);
+        --text-secondary: var(--slate-400);
+        --text-muted: var(--slate-500);
+
+        /* A soft grey shadow is invisible on a dark ground, so both the
+           shadows and the mobile scrim carry more weight here. */
+        --scrim: rgba(0, 0, 0, 0.6);
+        --shadow-soft: rgba(0, 0, 0, 0.4);
+        --shadow-strong: rgba(0, 0, 0, 0.6);
+    }
+
+    :root,
+[data-bs-theme="light"],
+[data-bs-theme="auto"] {
+        --sidebar-bg: var(--surface-chrome);
+        --sidebar-hover: var(--surface-hover);
+        --sidebar-text-strong: var(--text-primary);
+        --sidebar-border: var(--border-subtle);
+
+        --sidebar-text: var(--text-secondary);
+
+        /* The one that cannot alias --text-muted. The sidebar is the only
+           place in the app where muted text is read against --surface-chrome,
+           and there slate-400 came to 2.34:1 in light and slate-500 to 3.95:1
+           in dark - both well under the 4.5 AA wants, and these are 11.2px
+           bold, which is not "large text". That was 170 of the 374 contrast
+           failures on its own, because the sidebar is on every page.
+
+           A consequence worth stating: colour can no longer carry the
+           difference between a section heading and the links under it, because
+           anything quiet enough to read as a heading at 11.2px is too quiet to
+           read at all. The uppercase, the letter-spacing and the size carry
+           it, which is most of what they were already doing.
+
+           Declared here rather than in the theme blocks so that a root
+           carrying no data-bs-theme at all still has a value; the dark block
+           below overrides it. */
+        --sidebar-section: var(--text-secondary);
+    }
+
+    [data-bs-theme="auto"] {
+        --sidebar-section: var(--slate-400);
+    }
+
+    :root,
+[data-bs-theme="light"],
+[data-bs-theme="auto"] {
+        --bs-primary: var(--brand-primary);
+        --bs-link-color: var(--brand-primary);
+        --bs-link-hover-color: var(--brand-primary);
+
+        /* Channels for the default brand colour. base.html overrides this from
+           the configured colour, since CSS cannot split a hex into channels. */
+        --bs-primary-rgb: 79, 70, 229;
+
+        /* And the one that actually reaches a link. Bootstrap 5.3 compiles
+           `a` to
+
+               color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1))
+
+           so the two --bs-link-color lines above were never read by anything:
+           every link in the app was Bootstrap's own #0d6efd whatever colour
+           the organisation had configured. Pointing the channels at the brand
+           is what makes branding reach a link at all - and it fixes a WCAG
+           failure at the same time, since #0d6efd came to 4.30:1 on the public
+           catalogue's page ground. */
+        --bs-link-color-rgb: var(--bs-primary-rgb);
+        --bs-link-hover-color-rgb: var(--bs-primary-rgb);
+
+        /* Kept as an alias of the brand token — it used to be a separate
+           hardcoded colour, which meant the sidebar and Bootstrap disagreed. */
+        --primary: var(--brand-primary);
+    }
+
+    [data-bs-theme="auto"] {
+        /*
+          A link, and the outline buttons that borrow its colour. The brand
+          colour is picked by an administrator looking at a light page; against
+          --slate-950 the default indigo is 2.99:1 where AA wants 4.5.
+          `display_primary_rgb_on_dark` mixes it towards white until it clears
+          that, which keeps it recognisably the same brand rather than
+          substituting another colour. base.html emits it when an installation
+          has configured colours; the fallback here is the same computation for
+          the default indigo.
+        */
+        --bs-link-color-rgb: var(--brand-primary-rgb-on-dark, 132, 126, 237);
+        --bs-link-hover-color-rgb: var(--brand-primary-rgb-on-dark, 132, 126, 237);
+    }
+
+    [data-bs-theme="auto"] .btn-outline-secondary {
+        --bs-btn-color: var(--slate-300);
+        --bs-btn-border-color: var(--border-strong);
+        --bs-btn-hover-bg: var(--slate-300);
+        --bs-btn-hover-border-color: var(--slate-300);
+        --bs-btn-hover-color: var(--slate-950);
+        --bs-btn-active-bg: var(--slate-300);
+        --bs-btn-active-border-color: var(--slate-300);
+        --bs-btn-active-color: var(--slate-950);
+        --bs-btn-disabled-color: var(--text-muted);
+        --bs-btn-disabled-border-color: var(--border-subtle);
+    }
+
+    [data-bs-theme="auto"] .btn-outline-primary {
+        --bs-btn-color: rgb(var(--bs-link-color-rgb));
+        --bs-btn-border-color: rgb(var(--bs-link-color-rgb));
+        --bs-btn-hover-bg: rgb(var(--bs-link-color-rgb));
+        --bs-btn-hover-border-color: rgb(var(--bs-link-color-rgb));
+        --bs-btn-hover-color: var(--slate-950);
+        --bs-btn-active-bg: rgb(var(--bs-link-color-rgb));
+        --bs-btn-active-border-color: rgb(var(--bs-link-color-rgb));
+        --bs-btn-active-color: var(--slate-950);
+    }
+
+    [data-bs-theme="auto"] .btn-outline-danger {
+        --bs-btn-color: var(--bs-danger-text-emphasis);
+        --bs-btn-border-color: var(--bs-danger-text-emphasis);
+        --bs-btn-hover-bg: var(--bs-danger-text-emphasis);
+        --bs-btn-hover-border-color: var(--bs-danger-text-emphasis);
+        --bs-btn-hover-color: var(--slate-950);
+        --bs-btn-active-bg: var(--bs-danger-text-emphasis);
+        --bs-btn-active-border-color: var(--bs-danger-text-emphasis);
+        --bs-btn-active-color: var(--slate-950);
+    }
+
+    [data-bs-theme="auto"] .text-danger {
+        color: var(--bs-danger-text-emphasis) !important;
+    }
+
+    [data-bs-theme="auto"] .text-primary {
+        color: rgb(var(--bs-link-color-rgb)) !important;
+    }
+
+    [data-bs-theme="light"],
+[data-bs-theme="auto"] {
+        --bs-body-bg: var(--surface-page);
+        --bs-body-color: var(--text-primary);
+        --bs-emphasis-color: var(--text-primary);
+        --bs-heading-color: var(--text-primary);
+
+        --bs-secondary-color: var(--text-secondary);
+        --bs-tertiary-color: var(--text-muted);
+
+        --bs-secondary-bg: var(--surface-inset);
+        --bs-tertiary-bg: var(--surface-inset);
+
+        --bs-border-color: var(--border-subtle);
+        --bs-border-color-translucent: var(--border-subtle);
+    }
+
+    [data-bs-theme="auto"] {
+        --bs-body-bg-rgb: 11, 17, 32;           /* --slate-950, --surface-page */
+        --bs-secondary-bg-rgb: 30, 41, 59;      /* --slate-800, --surface-inset */
+        --bs-tertiary-bg-rgb: 30, 41, 59;       /* --slate-800, --surface-inset */
+        --bs-body-color-rgb: 248, 250, 252;     /* --slate-50,  --text-primary */
+        --bs-emphasis-color-rgb: 248, 250, 252; /* --slate-50,  --text-primary */
+    }
+}
+
+
+@media (max-width: 767.98px) {
+
+    .public-shell {
+        display: block;
+    }
+
+    /* Off-canvas until asked for. `left`/`right` cannot be used here
+       because the drawer has to come from the reading edge in both
+       directions, which is what `inset-inline-start` gives. */
+    .public-sidebar {
+        position: fixed;
+        z-index: 1045;
+        top: 0;
+        bottom: 0;
+        inset-inline-start: 0;
+
+        width: 15rem;
+        border-radius: 0;
+
+        transform: translateX(calc(-110% * var(--dir)));
+        transition: transform 0.2s ease;
+
+        overflow-y: auto;
+    }
+
+    .public-sidebar:target {
+        transform: none;
+        box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.5);
+    }
+
+    .public-nav-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+
+        width: 100%;
+        max-width: 60rem;
+        margin: 0.75rem auto 0;
+        padding: 0 1rem;
+
+        color: var(--bs-body-color);
+        text-decoration: none;
+        font-size: 0.92rem;
+    }
+
+    .public-sidebar:target .public-nav-close {
+        display: block;
+
+        margin-inline-start: auto;
+        margin-bottom: 0.5rem;
+        width: max-content;
+
+        color: var(--bs-secondary-color);
+        text-decoration: none;
+    }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .public-sidebar {
+        transition: none;
+    }
 }

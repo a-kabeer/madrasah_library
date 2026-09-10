@@ -1,10 +1,134 @@
 {% load i18n %}
-<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true"><i class="bi {% if editing %}bi-pencil{% else %}bi-plus-lg{% endif %} me-2" aria-hidden="true"></i>{% if editing %}{% translate "Edit Shelf" %}{% else %}{% translate "Add Shelf" %}{% endif %}</h5>
-<form id="shelfModalForm" method="post" {% if editing %}action="{% url 'shelf_edit' shelf.id %}" hx-post="{% url 'shelf_edit' shelf.id %}?modal=1"{% else %}action="{% url 'shelf_add' %}" hx-post="{% url 'shelf_add' %}?modal=1"{% endif %} hx-target="#shelfModalForm" hx-swap="outerHTML" hx-disabled-elt="find button[type=submit]" hx-disinherit="*">
+{% comment %}
+Add / Edit Shelf, served into #formModal by `shelf_add_modal` and
+`shelf_edit_modal`. One template for both, because the two forms differ
+only in where they post and what the button says.
+
+Laid out like `copy_form_modal.html`: the error alert carries its icon, the
+fields sit in a `row g-3`, required fields are marked with an asterisk, and
+the actions are right-aligned with Cancel first.
+
+Location is the first field and is marked required, because a shelf only
+means anything inside one - which is also why Add Shelf from a location
+page arrives with `?location=` already chosen.
+
+`hx-target` is the form itself, so a validation error - including the
+duplicate-code check, which is per location - comes back as this same form
+with what was typed still in the boxes.
+
+Expected context: editing, shelf, locations, location_id, shelf_code,
+description, error.
+{% endcomment %}
+
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    <i class="bi {% if editing %}bi-pencil{% else %}bi-plus-lg{% endif %} me-2" aria-hidden="true"></i>
+    {% if editing %}{% translate "Edit Shelf" %}{% else %}{% translate "Add Shelf" %}{% endif %}
+</h5>
+
+<form
+    id="shelfModalForm"
+    method="post"
+    {% if editing %}
+        action="{% url 'shelf_edit' shelf.id %}"
+        hx-post="{% url 'shelf_edit' shelf.id %}?modal=1"
+    {% else %}
+        action="{% url 'shelf_add' %}"
+        hx-post="{% url 'shelf_add' %}?modal=1"
+    {% endif %}
+    hx-target="#shelfModalForm"
+    hx-swap="outerHTML"
+    hx-disabled-elt="find button[type=submit]"
+    hx-disinherit="*"
+>
+
     {% csrf_token %}
-    {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
-    <div class="mb-3"><label for="shelfLocationModal" class="form-label fw-semibold">{% translate "Location" %}</label><select id="shelfLocationModal" name="location" class="form-select" required autofocus><option value="">{% translate "Choose a location" %}</option>{% for location in locations %}<option value="{{ location.id }}" {% if location_id == location.id|stringformat:"s" %}selected{% endif %}>{{ location.name }}</option>{% endfor %}</select></div>
-    <div class="mb-3"><label for="shelfCodeModal" class="form-label fw-semibold">{% translate "Shelf Code" %}</label><input id="shelfCodeModal" name="shelf_code" class="form-control" value="{{ shelf_code }}" maxlength="100" required></div>
-    <div class="mb-3"><label for="shelfDescriptionModal" class="form-label fw-semibold">{% translate "Description" %} <span class="text-body-secondary fw-normal">({% translate "optional" %})</span></label><textarea id="shelfDescriptionModal" name="description" class="form-control" rows="3" maxlength="1000">{{ description }}</textarea></div>
-    <div class="modal-actions"><button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>{% if editing %}{% translate "Save Changes" %}{% else %}{% translate "Add Shelf" %}{% endif %}</button><button type="button" class="btn btn-outline-secondary ms-auto" data-bs-dismiss="modal">{% translate "Cancel" %}</button></div>
+
+    {% comment %}
+      Where to go back to, when the dialog was opened from somewhere that
+      said so - Add Shelf on a location page, for one. Posted back as a
+      hidden field because the form's own action carries only `?modal=1`.
+      `safe_redirect_target` is what checks it is a local path.
+    {% endcomment %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+
+    {% if error %}
+        <div class="alert alert-danger d-flex align-items-start" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2 mt-1" aria-hidden="true"></i>
+            <div>{{ error }}</div>
+        </div>
+    {% endif %}
+
+    <div class="row g-3">
+
+        {% comment %}
+          The same searchable dropdown the book forms and Issue Books use,
+          over `location_list` - which answers combobox searches the way the
+          catalogue lists do. A library with dozens of rooms is a long
+          <select> to scroll; this one is typed at.
+
+          It posts an id in a hidden input named `location`, exactly what
+          the plain <select> posted before, so the view is unchanged. On an
+          edit `selected_id`/`selected_name` arrive filled in, so the shelf's
+          current location shows in the box and stays changeable - picking
+          another simply replaces it.
+
+          `allow_create` is off: a shelf form is not where a room gets
+          invented. `submit_on_select` is off too - choosing a location must
+          not submit a form that still needs a shelf code.
+        {% endcomment %}
+        <div class="col-12">
+            {% url 'location_list' as location_search_url %}
+            {% include "library/partials/combobox_field.html" with label="Location" field_name="location" input_id="shelfLocationModal" entity_label="location" search_url=location_search_url selected_id=location_id selected_name=location_name required=True allow_create=False compact=True submit_on_select=False error="" %}
+            <div class="form-text">
+                {% translate "Which place in the library this shelf stands in. Type to search." %}
+            </div>
+        </div>
+
+        <div class="col-12">
+            <label for="shelfCodeModal" class="form-label fw-semibold">
+                {% translate "Shelf Code" %} <span class="text-danger">*</span>
+            </label>
+            <input
+                type="text"
+                id="shelfCodeModal"
+                name="shelf_code"
+                class="form-control"
+                value="{{ shelf_code }}"
+                maxlength="100"
+                required
+            >
+            <div class="form-text">
+                {% translate "What is written on the shelf itself. It has to be unique within its location, not across the whole library." %}
+            </div>
+        </div>
+
+        <div class="col-12">
+            <label for="shelfDescriptionModal" class="form-label fw-semibold">
+                {% translate "Description" %}
+                <span class="text-body-secondary fw-normal">({% translate "optional" %})</span>
+            </label>
+            <textarea
+                id="shelfDescriptionModal"
+                name="description"
+                class="form-control"
+                rows="3"
+                maxlength="1000"
+            >{{ description }}</textarea>
+            <div class="form-text">
+                {% translate "Anything that helps somebody find it — which wall, which side." %}
+            </div>
+        </div>
+
+    </div>
+
+    <div class="modal-actions justify-content-end">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            {% translate "Cancel" %}
+        </button>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1" aria-hidden="true"></i>
+            {% if editing %}{% translate "Save changes" %}{% else %}{% translate "Add Shelf" %}{% endif %}
+        </button>
+    </div>
+
 </form>

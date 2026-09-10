@@ -70,6 +70,30 @@ def reservation_list(request):
             "pagination_query": query_with(request, page=None),
             "status": status,
             "statuses": Reservation.STATUS_CHOICES,
+            # Shaped exactly like the loan list's `status_options`, so this
+            # page can use that page's pill markup unchanged rather than a
+            # second filter control that looks like nothing else. Same keys,
+            # same `query_with` so a status keeps the rest of the query and
+            # returns to page 1; the labels are still the model's own.
+            "status_options": [
+                {
+                    "value": value,
+                    "label": label,
+                    "icon": icon,
+                    "active": status == value,
+                    "url": "?" + query_with(
+                        request, status=value, page=None
+                    ),
+                }
+                for (value, label), icon in zip(
+                    Reservation.STATUS_CHOICES,
+                    (
+                        "bi-hourglass-split",
+                        "bi-check2-circle",
+                        "bi-x-circle",
+                    ),
+                )
+            ],
             "active_total": Reservation.objects.filter(
                 status=Reservation.STATUS_ACTIVE
             ).count(),

@@ -140,53 +140,7 @@
     <ul class="public-results list-unstyled">
 
         {% for book in books %}
-            <li class="public-result">
-
-                {% comment %}
-                  No cover image. `MEDIA_URL` is served by
-                  `django.views.static.serve`, which is an ordinary view and
-                  therefore behind `LoginRequiredMiddleware` like every
-                  other one - so an `<img src="/media/...">` here would
-                  redirect a visitor to the sign-in page and render as a
-                  broken image. Widening the authentication exemption to
-                  cover uploaded files is a decision about what the
-                  installation publishes, not part of building a catalogue,
-                  so this shows the same glyph a book with no cover has
-                  always shown.
-                {% endcomment %}
-                <span class="public-result-cover public-result-nocover"
-                      aria-hidden="true">
-                    <i class="bi bi-book"></i>
-                </span>
-
-                <span class="public-result-body">
-
-                    <a
-                        href="{% url 'public_book_detail' book.id %}"
-                        class="public-result-title"
-                    >{{ book.title }}</a>
-
-                    <span class="public-result-meta">
-                        {{ book.author.name }}
-                        {% if book.publisher %}
-                            · {{ book.publisher.name }}
-                        {% endif %}
-                        {% if book.category %}
-                            · {{ book.category.name }}
-                        {% endif %}
-                    </span>
-
-                </span>
-
-                {% comment %}
-                  Counted by the query that fetched the row, not by a
-                  query of its own — see `annotate_copy_counts`.
-                {% endcomment %}
-                <span class="badge text-bg-{{ book.availability.tone }} public-result-availability">
-                    {{ book.availability.label }}
-                </span>
-
-            </li>
+            {% include "public/book_card.html" with book=book %}
         {% endfor %}
 
     </ul>

@@ -872,6 +872,98 @@
                     {% include "library/partials/notification_bell.html" %}
                 {% endif %}
 
+                {% comment %}
+                  Global search, immediately after the bell. Signed-in only,
+                  for the same reason: the login page renders this shell's
+                  head and has nothing to search.
+
+                  Wired like the comboboxes - `input changed delay:250ms` so
+                  it asks as you type - and it borrows the bell's dropdown
+                  *styling* without Bootstrap's dropdown behaviour, so it
+                  needs no new JavaScript. Three things are load bearing:
+
+                    * `hx-target` is stated explicitly. The whole shell is
+                      inside `hx-boost="true" hx-target="#mainContent"`, and
+                      htmx takes the nearest target it can find - without
+                      this the results would replace the page.
+
+                    * `hx-swap="innerHTML"` for the same reason: an
+                      inherited swap from the shell must not reach this.
+
+                    * No `data-bs-toggle`. Bootstrap's dropdown toggles on
+                      every click, so on a text box a second click - or a
+                      double click to select what you typed - shut the
+                      results. The panel is revealed by `:focus-within` in
+                      style.css instead, which opens it whenever the box or
+                      a result inside it holds focus and closes it when
+                      focus leaves. That also keeps the keyboard working:
+                      tabbing into the results does not dismiss them.
+                {% endcomment %}
+                {% if request.user.is_authenticated %}
+                    <div class="global-search">
+
+                        {% comment %}
+                          The collapsed state: an icon and nothing else,
+                          until it is asked for.
+
+                          A `<label for>` rather than a button, because
+                          clicking a label focuses the input it names - so
+                          the icon opens the box with no JavaScript at all,
+                          and the box widens on `:focus` in style.css. The
+                          input keeps its own `aria-label`, which takes
+                          precedence over this label's contents, so the
+                          accessible name stays the sentence rather than
+                          becoming the icon.
+                        {% endcomment %}
+                        <label
+                            for="globalSearch"
+                            class="btn theme-toggle global-search-icon"
+                            title="{% translate 'Search' %}"
+                        >
+                            <i class="bi bi-search" aria-hidden="true"></i>
+                        </label>
+
+                        <input
+                            type="search"
+                            class="form-control form-control-sm global-search-input"
+                            id="globalSearch"
+                            name="q"
+                            autocomplete="off"
+                            placeholder="{% translate 'Search' %}"
+                            aria-label="{% translate 'Search books, borrowers and copies' %}"
+                            hx-get="{% url 'global_search' %}"
+                            hx-trigger="input changed delay:250ms, focus"
+                            hx-target="#globalSearchResults"
+                            hx-swap="innerHTML"
+                            hx-indicator="#globalSearchSpinner"
+                        >
+
+                        <span
+                            id="globalSearchSpinner"
+                            class="htmx-indicator global-search-spinner"
+                            aria-hidden="true"
+                        >
+                            <span class="spinner-border spinner-border-sm"
+                                  role="status"></span>
+                        </span>
+
+                        <div class="dropdown-menu dropdown-menu-end global-search-menu p-0">
+                            <div id="globalSearchResults">
+                                {% comment %}
+                                  The same empty state the endpoint answers a
+                                  blank term with, so the panel reads the same
+                                  before the first request as after a cleared
+                                  box.
+                                {% endcomment %}
+                                <div class="p-3 text-body-secondary small">
+                                    {% translate "Type to search books, borrowers and copy codes." %}
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                {% endif %}
+
                 {% include "library/partials/language_selector.html" %}
 
                 {% include "library/partials/theme_selector.html" %}

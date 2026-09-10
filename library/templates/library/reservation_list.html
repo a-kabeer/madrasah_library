@@ -21,22 +21,40 @@
     </div>
 
     {% comment %}
-      The status filter, as plain links rather than a form: there are
-      three of them and they are the whole control.
+      The status filter, in the loan list's pill markup rather than a row
+      of outlined buttons - two lists side by side should not need two
+      vocabularies to be browsed. Same `nav nav-pills`, same active state,
+      an icon each, and `status_options` from the view has the same shape
+      the loan list's does.
+
+      Real links still, so each is shareable and middle-clickable, and each
+      carries the rest of the query. The bare hx-get takes the shell's
+      boost, which swaps the main region.
     {% endcomment %}
     <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-        {% for value, label in statuses %}
-            <a
-                href="?status={{ value }}"
-                class="btn btn-sm {% if status == value %}btn-primary{% else %}btn-outline-secondary{% endif %}"
-            >{{ label }}</a>
-        {% endfor %}
+
+        <ul class="nav nav-pills" aria-label="{% translate 'Filter reservations by status' %}">
+            {% for option in status_options %}
+                <li class="nav-item">
+                    <a
+                        href="{{ option.url }}"
+                        hx-get="{{ option.url }}"
+                        class="nav-link {% if option.active %}active{% endif %}"
+                        {% if option.active %}aria-current="page"{% endif %}
+                    >
+                        <i class="bi {{ option.icon }} me-1" aria-hidden="true"></i>
+                        {{ option.label }}
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
 
         <span class="text-body-secondary small ms-2">
-                                                         {% blocktranslate trimmed %}
-                                                             {{ active_total }} waiting in all.
-                                                         {% endblocktranslate %}
-                                                     </span>
+            {% blocktranslate trimmed %}
+                {{ active_total }} waiting in all.
+            {% endblocktranslate %}
+        </span>
+
     </div>
 
     {% if reservations %}

@@ -1214,7 +1214,7 @@ def loan_delete(request, loan_id):
             entity_type="Loan",
             entity_id=deleted_loan_id,
             description=(
-                f"{deleted_copy_code} کا loan "
+                f"Loan for {deleted_copy_code} "
                 f"({deleted_borrower_name}) deleted"
             ),
         )
@@ -1413,7 +1413,7 @@ def record_return(loan, return_date, notes, user):
             entity_id=locked.copy_id,
             description=(
                 f"{loan.copy.copy_code} "
-                f"{loan.borrower.name} سے واپس وصول کی گئی"
+                f"returned by {loan.borrower.name}"
             ),
         )
 

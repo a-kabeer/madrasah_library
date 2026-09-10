@@ -99,6 +99,38 @@ def suggestion_list(request):
             "status": status,
             "search": search,
             "statuses": AcquisitionSuggestion.STATUS_CHOICES,
+            # Shaped exactly like the loan list's `status_options`, so this
+            # page can use that page's pill markup unchanged rather than a
+            # second filter control that looks like nothing else. Same keys,
+            # and `query_with` so choosing a status keeps the search and
+            # returns to page 1 - which the hand-built links here did by
+            # repeating the search parameter in each href.
+            "status_options": [
+                {
+                    "value": value,
+                    "label": label,
+                    "icon": icon,
+                    "active": status == value,
+                    "url": "?" + query_with(
+                        request, status=value or None, page=None
+                    ),
+                }
+                for value, label, icon in (
+                    [("", gettext("All"), "bi-list-ul")]
+                    + [
+                        (value, label, icon)
+                        for (value, label), icon in zip(
+                            AcquisitionSuggestion.STATUS_CHOICES,
+                            (
+                                "bi-hourglass-split",
+                                "bi-check2-circle",
+                                "bi-x-circle",
+                                "bi-bag-check",
+                            ),
+                        )
+                    ]
+                )
+            ],
             "can_review": can_review_suggestions(request.user),
         },
     )

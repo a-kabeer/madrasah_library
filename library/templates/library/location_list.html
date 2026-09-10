@@ -9,16 +9,71 @@
         <div><h2 class="fw-bold mb-1">{% translate "Locations" %}</h2><p class="text-body-secondary mb-0">{% translate "Where the library keeps its books. Open a location to see its shelves." %}</p></div>
         {% if can_edit %}<a href="{% url 'location_add' %}" data-form-modal hx-get="{% url 'location_add' %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>{% translate "Add Location" %}</a>{% endif %}
     </div>
-    <div class="card shadow-sm border-0 mb-4"><div class="card-body"><form method="get" class="d-flex flex-wrap gap-2"><input type="search" class="form-control" name="search" value="{{ search }}" placeholder="{% translate 'Search locations...' %}" style="max-width:26rem" aria-label="{% translate 'Search locations' %}"><button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>{% translate "Search" %}</button>{% if search %}<a href="{% url 'location_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg me-1"></i>{% translate "Clear" %}</a>{% endif %}</form></div></div>
+    <div class="card shadow-sm border-0 mb-4"><div class="card-body">{% comment %}
+              Labelled and laid out like the Shelves filter card and the
+              Book Copies one, which is the only difference this page had
+              from its own siblings: the box was unlabelled.
+            {% endcomment %}
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-12 col-lg-6">
+                    <label for="locationSearch" class="form-label fw-semibold">{% translate "Search" %}</label>
+                    <input type="search" class="form-control" id="locationSearch" name="search" value="{{ search }}" placeholder="{% translate 'Location name or description...' %}">
+                </div>
+                <div class="col-12 col-lg-6 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-search me-1"></i>{% translate "Search" %}</button>
+                    {% if search %}<a href="{% url 'location_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg me-1"></i>{% translate "Clear" %}</a>{% endif %}
+                </div>
+            </form></div></div>
     {% if unshelved_count %}<a href="{% url 'book_copy_list' %}?status=unshelved" class="alert alert-warning d-flex align-items-center gap-2 text-decoration-none mb-4"><i class="bi bi-inbox" aria-hidden="true"></i><span>{% blocktranslate trimmed count n=unshelved_count %}<strong>{{ n }}</strong> copy has arrived but is not on a shelf yet.{% plural %}<strong>{{ n }}</strong> copies have arrived but are not on a shelf yet.{% endblocktranslate %}</span><i class="bi bi-chevron-right ms-auto" aria-hidden="true"></i></a>{% endif %}
-    <p class="text-body-secondary mb-3">{% blocktranslate trimmed count n=paginator.count %}Found <strong>{{ n }}</strong> location.{% plural %}Found <strong>{{ n }}</strong> locations.{% endblocktranslate %}</p>
-    <div class="card shadow-sm border-0"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-secondary"><tr><th>{% translate "Location" %}</th><th>{% translate "Shelves" %}</th><th>{% translate "Copies" %}</th><th class="text-end">{% translate "Actions" %}</th></tr></thead><tbody>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <p class="text-body-secondary  mb-0">{% blocktranslate trimmed count n=paginator.count %}Found <strong>{{ n }}</strong> location.{% plural %}Found <strong>{{ n }}</strong> locations.{% endblocktranslate %}</p>
+        <div class="d-flex align-items-center gap-2">
+            <label for="locationPageSize" class="text-body-secondary small mb-0">
+                {% translate "Show" %}
+            </label>
+            {% comment %}
+              Same control as the copy list: `page_size_hx_url` carries the
+              current search, filters and sorting with `page` dropped, so a
+              size change returns to page 1 keeping everything else, and
+              HTMX appends the chosen size from this select's own name.
+            {% endcomment %}
+            <select
+                class="form-select form-select-sm w-auto"
+                id="locationPageSize"
+                hx-get="{{ page_size_hx_url }}"
+                hx-trigger="change"
+                hx-include="this"
+                hx-push-url="true"
+                name="page_size"
+                aria-label="{% translate 'Rows per page' %}"
+            >
+                {% for option in page_size_options %}
+                    <option value="{{ option.value }}" {% if option.active %}selected{% endif %}>{{ option.value }}</option>
+                {% endfor %}
+            </select>
+            <span class="text-body-secondary small">{% translate "per page" %}</span>
+        </div>
+    </div>
+    <div class="card shadow-sm border-0"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-secondary"><tr>
+                        {% for column in columns %}
+                            <th {% if column.active %}aria-sort="{% if column.direction == 'asc' %}ascending{% else %}descending{% endif %}"{% endif %}>
+                                <a href="{{ column.url }}" hx-get="{{ column.url }}" hx-push-url="true" class="table-sort">
+                                    {{ column.label }}
+                                    {% if column.active %}
+                                        <i class="bi {% if column.direction == 'asc' %}bi-sort-up{% else %}bi-sort-down{% endif %}" aria-hidden="true"></i>
+                                    {% else %}
+                                        <i class="bi bi-arrow-down-up table-sort-idle" aria-hidden="true"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                        {% endfor %}
+                        <th class="text-end">{% translate "Actions" %}</th>
+                    </tr></thead><tbody>
     {% for location in locations %}
-        <tr class="book-row" data-row-url="{% url 'location_detail' location.id %}">
-            <td><span class="fw-semibold">{{ location.name }}</span>{% if location.description %}<span class="d-block small text-body-secondary">{{ location.description|truncatechars:80 }}</span>{% endif %}</td>
+        <tr class="book-row" data-row-url="{% url 'book_copy_list' %}?search=&location={{ location.id }}&shelf=&status=&sort=code&direction=asc&page_size=25">
+            <td><a href="{% url 'book_copy_list' %}?search=&location={{ location.id }}&shelf=&status=&sort=code&direction=asc&page_size=25" class="fw-semibold text-decoration-none" data-row-primary>{{ location.name }}</a>{% if location.description %}<span class="d-block small text-body-secondary">{{ location.description|truncatechars:80 }}</span>{% endif %}</td>
             <td><span class="badge text-bg-secondary">{{ location.shelf_count }}</span></td><td><span class="badge text-bg-secondary">{{ location.copy_count }}</span></td>
             <td class="text-end"><div class="d-inline-flex gap-1" data-row-actions>
-                <a href="{% url 'location_detail' location.id %}" data-row-primary class="btn btn-sm btn-outline-secondary" title="{% translate 'Open' %}" aria-label="Open {{ location.name }}"><i class="bi bi-box-arrow-up-right"></i></a>
                 {% if can_edit %}
                     <a href="{% url 'location_edit' location.id %}?modal=1" data-form-modal hx-get="{% url 'location_edit' location.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-sm btn-outline-warning" title="{% translate 'Edit' %}" aria-label="Edit {{ location.name }}"><i class="bi bi-pencil"></i></a>
                     <a href="{% url 'location_delete' location.id %}?modal=1" data-form-modal hx-get="{% url 'location_delete' location.id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML" class="btn btn-sm btn-outline-danger" title="{% translate 'Delete' %}" aria-label="Delete {{ location.name }}"><i class="bi bi-trash"></i></a>

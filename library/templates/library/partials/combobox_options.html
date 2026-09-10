@@ -64,7 +64,13 @@ existing one it matched, so nothing is ever duplicated).
             data-combobox-option
             data-combobox-create
             hx-post="{{ add_url }}"
-            hx-vals='{"name": "{{ search|escapejs }}", "combobox": "1"}'
+            {% comment %}
+              `create_extra` is for a record that needs more than a name to
+              exist - a shelf belongs to a location, so the Shelf box sends
+              which one. Empty for every other dropdown, which sends exactly
+              what it always did.
+            {% endcomment %}
+            hx-vals='{"name": "{{ search|escapejs }}", "combobox": "1"{% if create_extra %}, {{ create_extra }}{% endif %}}'
             hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
             hx-swap="none"
             hx-disabled-elt="this"

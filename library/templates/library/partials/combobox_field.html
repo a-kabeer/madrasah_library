@@ -30,6 +30,15 @@ Expected context:
                 the rest - an omitted one would inherit whatever the
                 surrounding page happens to call `error`, which on the Add
                 and Edit pages is the form-wide alert.
+  clears        Optional. Comma-separated field names whose dropdowns must be
+                emptied when this one changes or is cleared. The Location box
+                clears "shelf", so a shelf from the old location cannot be
+                left behind and submitted.
+  extra_vals    Optional. A JavaScript object fragment - "key: expr" - merged
+                into the search's hx-vals, for a dropdown whose suggestions
+                depend on something else on the form. The Shelf box uses it
+                to send the chosen location. Omit it and the search sends
+                exactly what it always did.
   submit_on_select
                 Optional. True makes picking an option submit the
                 surrounding form, which is how the book list filters
@@ -58,6 +67,12 @@ whatever the surrounding page happens to have.
         data-entity="{{ entity_label }}"
         {% if required %}data-combobox-required="true"{% endif %}
         {% if submit_on_select %}data-combobox-submit{% endif %}
+        {% comment %}
+          Dropdowns to empty whenever this one's value changes or is
+          cleared - see `clearDependents` in app.js. Only the Location box
+          on Add Book sets it; omit it and nothing happens.
+        {% endcomment %}
+        {% if clears %}data-combobox-clears="{{ clears }}"{% endif %}
     >
 
         <input
@@ -102,7 +117,7 @@ whatever the surrounding page happens to have.
                   first search deletes the menu it was aiming at.
                 {% endcomment %}
                 hx-swap="innerHTML"
-                hx-vals='js:{search: this.value, combobox: "1", partial: "", allow_create: "{{ allow_create|yesno:"1,0" }}"}'
+                hx-vals='js:{search: this.value, combobox: "1", partial: "", allow_create: "{{ allow_create|yesno:"1,0" }}"{% if extra_vals %}, {{ extra_vals }}{% endif %}}'
                 hx-indicator="#{{ input_id }}Spinner"
             >
 

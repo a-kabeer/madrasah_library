@@ -26,6 +26,7 @@ from ..models import (
     Loan,
     Location,
     Publisher,
+    Shelf,
 )
 
 from .. import acquisitions
@@ -170,7 +171,7 @@ def category_add(request):
                 action="CREATE",
                 entity_type="Category",
                 entity_id=category.id,
-                description=f"{category.name} شامل کی گئی",
+                description=f"{category.name} added",
             )
 
             if from_combobox:
@@ -397,7 +398,7 @@ def author_add(request):
                 action="CREATE",
                 entity_type="Author",
                 entity_id=author.id,
-                description=f"{author.name} شامل کیے گئے",
+                description=f"{author.name} added",
             )
 
             if from_combobox:
@@ -634,7 +635,7 @@ def publisher_add(request):
                 action="CREATE",
                 entity_type="Publisher",
                 entity_id=publisher.id,
-                description=f"{publisher.name} شامل کیا گیا",
+                description=f"{publisher.name} added",
             )
 
             if from_combobox:
@@ -1155,7 +1156,9 @@ def book_add(request):
         "copies_mode": "skip",
         "code_mode": "auto",
         "location": "",
+        "location_name": "",
         "shelf": "",
+        "shelf_code": "",
         "codes": [],
     }
 
@@ -1184,7 +1187,13 @@ def book_add(request):
             "copies_mode": copy_raw["mode"],
             "code_mode": copy_raw["code_mode"],
             "location": copy_raw["location"],
+            "location_name": selected_name(Location, copy_raw["location"]),
             "shelf": copy_raw["shelf"],
+            "shelf_code": getattr(
+                Shelf.objects.filter(id=copy_raw["shelf"] or 0).first(),
+                "shelf_code",
+                "",
+            ),
             "codes": copy_raw["codes"],
         }
 
@@ -1300,7 +1309,7 @@ def book_add(request):
                     action="CREATE",
                     entity_type="Book",
                     entity_id=book.id,
-                    description=f"{book.title} شامل کی گئی",
+                    description=f"{book.title} added",
                 )
 
                 # This book was added through a particular approved
@@ -1338,7 +1347,7 @@ def book_add(request):
                         entity_id=volume.id,
                         description=(
                             f"{book.title} "
-                            f"(Volume {volume.volume_number}) شامل کی گئی"
+                            f"(Volume {volume.volume_number}) added"
                         ),
                     )
 
@@ -1365,6 +1374,8 @@ def book_add(request):
         "form_data": form_data,
         "inventory": inventory,
         "locations": Location.objects.order_by("name"),
+        # Kept for the template's other callers; the two combo boxes fetch
+        # their own suggestions from `location_list` and `shelf_list`.
         "shelves": shelf_options_for(inventory["location"]),
         "max_copies_per_volume": MAX_COPIES_PER_VOLUME,
         "max_total_copies": MAX_TOTAL_COPIES,
@@ -2005,6 +2016,9 @@ def book_detail(request, book_id):
         if key not in placements:
             placements[key] = {
                 "shelf_id": key,
+                # The id as well as the name: the link from here opens the
+                # copy list filtered to this location and shelf.
+                "location_id": copy.shelf.location_id if copy.shelf else "",
                 "location": copy.shelf.location.name if copy.shelf else "",
                 "shelf_code": copy.shelf.shelf_code if copy.shelf else "",
                 "count": 0,
