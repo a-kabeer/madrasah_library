@@ -63,7 +63,7 @@ error_message, chosen, chosen_ids, return_date, notes, today.
             <form method="get" action="{% url 'circulation_return_lookup' %}" class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-body">
                     <h3 class="h5 mb-0 fw-bold">
-                        <i class="bi bi-upc-scan me-2" aria-hidden="true"></i>{% translate "1. Find the book" %}
+                        <i class="bi bi-person me-2" aria-hidden="true"></i>{% translate "1. Who is returning?" %}
                     </h3>
                 </div>
                 <div class="card-body">
@@ -71,6 +71,31 @@ error_message, chosen, chosen_ids, return_date, notes, today.
                     {% for item in chosen %}
                         <input type="hidden" name="loans" value="{{ item.id }}">
                     {% endfor %}
+
+                    {% comment %}
+                      The usual job at the desk starts with the person: they
+                      hand over a stack, and what the librarian wants is
+                      their outstanding loans to tick off. So the cursor
+                      starts here, and picking somebody reloads the page with
+                      `?borrower=` - which lists exactly their books below
+                      and moves the cursor down to the scan box.
+
+                      `allow_create` is off: a return is not where a borrower
+                      gets invented. Not marked required either, because the
+                      code field beneath still works on its own - a drop-box
+                      shelf is nobody's in particular.
+                    {% endcomment %}
+                    {% url 'borrower_list' as borrower_search_url %}
+                    {% include "library/partials/combobox_field.html" with label="Find borrower" field_name="borrower" input_id="returnBorrower" entity_label="borrower" search_url=borrower_search_url selected_id=borrower.id selected_name=borrower_name required=False allow_create=False compact=True submit_on_select=True autofocus=focus_borrower extra_vals="" clears="" error="" %}
+                    <div class="form-text">
+                        {% translate "Search by name, phone or registration number. Their books appear below." %}
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h3 class="h5 mb-3 fw-bold">
+                        <i class="bi bi-upc-scan me-2" aria-hidden="true"></i>{% translate "2. Or scan a label" %}
+                    </h3>
 
                     <label for="copy_code" class="form-label fw-semibold">
                         {% translate "Scan copy code, or search by book, author or borrower" %}
@@ -87,11 +112,16 @@ error_message, chosen, chosen_ids, return_date, notes, today.
                             value="{{ copy_code }}"
                             placeholder="{% translate 'LIB-000001, a book, an author or a borrower' %}"
                             {% comment %}
-                              Where a scanner types, so the cursor starts
-                              here and app.js puts it back after each
-                              lookup.
+                              Where a scanner types, so app.js puts the
+                              cursor back here after each lookup.
+
+                              It only claims focus once a borrower is chosen,
+                              though: before that the cursor belongs in the
+                              box above. Scanning without choosing anybody
+                              still works - the field is never disabled - it
+                              just is not where the page starts.
                             {% endcomment %}
-                            autofocus
+                            {% if not focus_borrower %}autofocus{% endif %}
                             autocomplete="off"
                         >
                         <button class="btn btn-primary" type="submit">{% translate "Find" %}</button>
@@ -126,6 +156,114 @@ error_message, chosen, chosen_ids, return_date, notes, today.
               already leads to both pages, and two competing sets of links
               on one card was the odd part.
             {% endcomment %}
+            {% comment %}
+              What this borrower still holds - the whole of step 2 when the
+              desk starts with the person rather than a label.
+
+              Only their outstanding loans, and only the ones not already in
+              the return list, so the table shrinks as books are ticked off.
+              Every column the librarian checks against the pile in front of
+              them: the title, the code on the label, when it went out, when
+              it was due, and how late it is. Ordered by due date, so the
+              overdue ones are read first.
+
+              "Add all" is here because somebody handing back everything they
+              hold is the common case at the end of a term, and clicking five
+              rows for it is five clicks too many.
+            {% endcomment %}
+            {% if borrower %}
+                <div class="card shadow-sm border-0 mb-4">
+
+                    <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <h3 class="h5 mb-0 fw-bold">
+                            <i class="bi bi-journals me-2" aria-hidden="true"></i>
+                            {% blocktranslate trimmed with name=borrower.name %}
+                                Out with {{ name }}
+                            {% endblocktranslate %}
+                        </h3>
+                        {% if borrower_loans %}
+                            <a href="{{ add_all_url }}" class="btn btn-sm btn-success">
+                                <i class="bi bi-check-all me-1" aria-hidden="true"></i>
+                                {% blocktranslate trimmed count n=borrower_loans|length %}
+                                    Add the {{ n }} book
+                                {% plural %}
+                                    Add all {{ n }}
+                                {% endblocktranslate %}
+                            </a>
+                        {% endif %}
+                    </div>
+
+                    {% if borrower_loans %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-secondary">
+                                    <tr>
+                                        <th>{% translate "Copy Code" %}</th>
+                                        <th>{% translate "Book" %}</th>
+                                        <th>{% translate "Issued" %}</th>
+                                        <th>{% translate "Due" %}</th>
+                                        <th>{% translate "Status" %}</th>
+                                        <th class="text-end">{% translate "Add" %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in borrower_loans %}
+                                        <tr>
+                                            <td><span class="copy-code">{{ item.copy.copy_code }}</span></td>
+                                            <td>
+                                                {{ item.copy.volume.book.title }}
+                                                <span class="d-block small text-body-secondary">
+                                                    {{ item.copy.volume.book.author.name }}
+                                                    {% if item.copy.volume.volume_number != 1 or item.copy.volume.title %}
+                                                        &mdash; {% blocktranslate with number=item.copy.volume.volume_number %}Volume {{ number }}{% endblocktranslate %}{% if item.copy.volume.title %} &middot; {{ item.copy.volume.title }}{% endif %}
+                                                    {% endif %}
+                                                </span>
+                                            </td>
+                                            <td class="small">{{ item.issue_date|date:"j M Y" }}</td>
+                                            <td class="small">{{ item.due_date|date:"j M Y" }}</td>
+                                            <td>
+                                                {% if item.days_overdue %}
+                                                    <span class="badge text-bg-danger">
+                                                        {% blocktranslate trimmed count n=item.days_overdue %}
+                                                            {{ n }} day late
+                                                        {% plural %}
+                                                            {{ n }} days late
+                                                        {% endblocktranslate %}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge text-bg-success">
+                                                        {% translate "On time" %}
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end">
+                                                <a href="{{ item.add_url }}" class="btn btn-sm btn-success">
+                                                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                                                    <span class="visually-hidden">
+                                                        {% blocktranslate trimmed with copy_code=item.copy.copy_code %}
+                                                            Add {{ copy_code }}
+                                                        {% endblocktranslate %}
+                                                    </span>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="card-body text-body-secondary">
+                            {% if chosen %}
+                                {% translate "Everything they had out is in the return list." %}
+                            {% else %}
+                                {% translate "This borrower has nothing out at the moment." %}
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
+                </div>
+            {% endif %}
+
             {% if loan %}
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header bg-body d-flex flex-wrap justify-content-between align-items-center gap-2">

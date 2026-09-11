@@ -581,6 +581,50 @@ def loan_add(request):
     active_policy = policy.load()
     default_due_date = active_policy.due_date_for(today).isoformat()
 
+    # What the desk needs to know about this borrower before handing
+    # anything over: how much they are already holding, how much of it is
+    # late, and how much more the policy allows. Read from `policy` rather
+    # than counted here, so this says the same thing the refusal at the end
+    # of the form would say - the two cannot drift.
+    #
+    # One aggregate, and only when somebody is chosen: the page before that
+    # has nobody to describe.
+    borrower_summary = None
+    borrower_phone = ""
+
+    if borrower_id and str(borrower_id).isdigit():
+
+        borrower_phone = getattr(
+            Borrower.objects.filter(id=borrower_id).only("phone").first(),
+            "phone",
+            "",
+        ) or ""
+
+        counts = policy.loan_counts(borrower_id, today)
+
+        remaining = None
+
+        if active_policy.limits_active_loans:
+            remaining = max(
+                active_policy.max_active_loans - counts["active"], 0
+            )
+
+        borrower_summary = {
+            "active": counts["active"],
+            "overdue": counts["overdue"],
+            "limit": (
+                active_policy.max_active_loans
+                if active_policy.limits_active_loans
+                else None
+            ),
+            "remaining": remaining,
+            # The policy can refuse on an overdue book alone, separately
+            # from any count - so say which rule is in force.
+            "blocked_by_overdue": (
+                active_policy.block_when_overdue and counts["overdue"] > 0
+            ),
+        }
+
     if request.method == "POST":
 
         borrower_id = request.POST.get("borrower", "").strip()
@@ -837,6 +881,17 @@ def loan_add(request):
             "query": query,
             "borrower_id": borrower_id,
             "borrower_name": borrower_name,
+            "borrower_summary": borrower_summary,
+            # Which field the cursor starts in. Borrower first, because the
+            # usual job begins with the person; once one is chosen the scan
+            # box takes it so a stack of books goes through on the scanner
+            # alone. A real boolean, not a template expression - `yesno`
+            # hands back the *string* "False", which any `{% if %}` reads as
+            # true, and both fields ended up claiming focus.
+            "focus_borrower": borrower_summary is None,
+            # For the "Their loans" link, which searches the loan list by
+            # phone the way the borrower dialog does.
+            "borrower_phone": borrower_phone,
             "error_message": error_message,
             "default_issue_date": today.isoformat(),
             "default_due_date": default_due_date,
@@ -1486,6 +1541,59 @@ def loan_return_lookup(request):
 
     term = request.GET.get("copy_code", "").strip()
 
+    # Who brought the books back. The usual job at the desk starts with the
+    # person, not with a code: they hand over a stack, and what the
+    # librarian needs is that borrower's outstanding loans to tick off. The
+    # code field below still works on its own - a drop-box shelf is not one
+    # person's - so this is the default way in, not the only one.
+    borrower_id = request.GET.get("borrower", "").strip()
+
+    borrower = (
+        Borrower.objects.filter(id=borrower_id).only("id", "name").first()
+        if borrower_id.isdigit()
+        else None
+    )
+
+    borrower_name = borrower.name if borrower else ""
+    borrower_loans = []
+
+    if borrower:
+
+        # Only what is still out, and only theirs. `describe_loans` attaches
+        # the overdue rule the loan and copy lists already apply, so "late"
+        # here means what it means everywhere else.
+        borrower_loans = describe_loans(
+            Loan.objects.filter(
+                borrower=borrower,
+                return_date__isnull=True,
+            ).select_related(
+                "copy__volume__book__author",
+                "borrower",
+            ).order_by("due_date", "copy__copy_code"),
+            today,
+        )
+
+        # What is already in the return list is not offered twice.
+        borrower_loans = [
+            item for item in borrower_loans if item.id not in chosen_ids
+        ]
+
+        for item in borrower_loans:
+            item.add_url = selection_url(
+                request, "loans", chosen_ids + [item.id]
+            )
+
+        # One click for somebody returning everything they hold, which is
+        # the common case at the end of a term.
+        add_all_url = selection_url(
+            request,
+            "loans",
+            chosen_ids + [item.id for item in borrower_loans],
+        )
+
+    else:
+        add_all_url = ""
+
     loan = None
     matches = []
     more_matches = False
@@ -1578,6 +1686,16 @@ def loan_return_lookup(request):
         "library/loan_return_lookup.html",
         {
             "copy_code": term,
+            "borrower": borrower,
+            "borrower_name": borrower_name,
+            "borrower_loans": borrower_loans,
+            "add_all_url": add_all_url,
+            # Which field the cursor starts in. The borrower box until
+            # somebody is chosen, then the scan box - so a stack goes
+            # through on the scanner alone. A real boolean, because `yesno`
+            # hands back the string "False" and every `{% if %}` reads that
+            # as true.
+            "focus_borrower": borrower is None,
             "loan": loan,
             "matches": matches,
             "more_matches": more_matches,

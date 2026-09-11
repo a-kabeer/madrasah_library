@@ -71,10 +71,101 @@
                       one and the Issue button below stays disabled.
                     {% endcomment %}
                     {% url 'borrower_list' as borrower_search_url %}
-                    {% include "library/partials/combobox_field.html" with label="Issue to" field_name="borrower" input_id="borrower" entity_label="borrower" search_url=borrower_search_url selected_id=borrower_id selected_name=borrower_name required=False allow_create=False compact=True submit_on_select=True error="" %}
+                    {% comment %}
+                      The cursor starts here, not on the copy search below:
+                      the usual job is "this person wants these books", so
+                      the borrower is the first thing typed. Once one is
+                      chosen the cursor moves down to the scan box - see the
+                      note on it - and this field stops claiming focus, so
+                      returning here is a deliberate click.
+                    {% endcomment %}
+                    {% include "library/partials/combobox_field.html" with label="Issue to" field_name="borrower" input_id="borrower" entity_label="borrower" search_url=borrower_search_url selected_id=borrower_id selected_name=borrower_name required=False allow_create=False compact=True submit_on_select=True autofocus=focus_borrower error="" %}
                     <div class="form-text">
                         {% translate "Search by name, phone or registration number. Only borrowers who are still active appear. Needed before you can issue." %}
                     </div>
+
+                    {% comment %}
+                      What the desk should know before handing anything
+                      over, shown the moment somebody is chosen rather than
+                      as a refusal at the end of the form: how much they are
+                      already holding, how much of it is late, and how much
+                      more the policy allows.
+
+                      The numbers come from `policy` - the same module that
+                      decides the refusal on submit - so this cannot say one
+                      thing and the Issue button another. Overdue is drawn in
+                      the warning colour because it is the one a librarian
+                      acts on; the rest are facts.
+
+                      A limit only appears when the installation set one:
+                      `limit` is None when it did not, and a limit nobody
+                      chose is not worth a line on the page.
+                    {% endcomment %}
+                    {% if borrower_summary %}
+                        <div class="d-flex flex-wrap gap-2 mt-3" aria-label="{% translate 'Borrower standing' %}">
+
+                            <span class="badge text-bg-secondary">
+                                {% blocktranslate trimmed count n=borrower_summary.active %}
+                                    {{ n }} book out
+                                {% plural %}
+                                    {{ n }} books out
+                                {% endblocktranslate %}
+                            </span>
+
+                            {% if borrower_summary.overdue %}
+                                <span class="badge text-bg-danger">
+                                    <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
+                                    {% blocktranslate trimmed count n=borrower_summary.overdue %}
+                                        {{ n }} overdue
+                                    {% plural %}
+                                        {{ n }} overdue
+                                    {% endblocktranslate %}
+                                </span>
+                            {% else %}
+                                <span class="badge text-bg-success">
+                                    {% translate "Nothing overdue" %}
+                                </span>
+                            {% endif %}
+
+                            {% if borrower_summary.limit %}
+                                <span class="badge text-bg-secondary">
+                                    {% blocktranslate trimmed with limit=borrower_summary.limit %}
+                                        Limit {{ limit }}
+                                    {% endblocktranslate %}
+                                </span>
+                                <span class="badge {% if borrower_summary.remaining %}text-bg-secondary{% else %}text-bg-warning{% endif %}">
+                                    {% blocktranslate trimmed count n=borrower_summary.remaining %}
+                                        {{ n }} more allowed
+                                    {% plural %}
+                                        {{ n }} more allowed
+                                    {% endblocktranslate %}
+                                </span>
+                            {% endif %}
+
+                            <a
+                                href="{% url 'loan_list' %}?status=&sort=issue_date&direction=desc&page_size=25&search={{ borrower_phone|urlencode }}&issue_date=&due_date="
+                                class="badge text-bg-light text-decoration-none"
+                            >
+                                {% translate "Their loans" %} <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                            </a>
+
+                        </div>
+
+                        {% comment %}
+                          Said plainly, not only as a colour: the policy
+                          refuses this issue outright while anything is
+                          overdue, and the librarian should read that before
+                          picking books rather than after.
+                        {% endcomment %}
+                        {% if borrower_summary.blocked_by_overdue %}
+                            <div class="alert alert-warning d-flex align-items-start mt-3 mb-0" role="alert">
+                                <i class="bi bi-shield-exclamation me-2 mt-1" aria-hidden="true"></i>
+                                <div>
+                                    {% translate "Nothing can be issued while this borrower has an overdue book. Take the late one back first." %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endif %}
 
                     <hr class="my-4">
 
@@ -110,8 +201,17 @@
                               first; app.js repeats it after a swap, which
                               is what the second one amounts to now that
                               the page does not reload.
+
+                              Only once a borrower is chosen, though. Before
+                              that the cursor belongs in the borrower box
+                              above, and picking somebody reloads this page
+                              with `?borrower=` - which is the swap that
+                              lands the cursor here, ready for the first
+                              scan. From then on every added copy re-renders
+                              the page and brings it back, so a stack of
+                              books goes through on the scanner alone.
                             {% endcomment %}
-                            autofocus
+                            {% if borrower_summary %}autofocus{% endif %}
                         >
                         <button type="submit" class="btn btn-primary">
                             <i class="bi bi-search me-1"></i> {% translate "Find" %}

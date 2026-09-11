@@ -30,6 +30,8 @@ Expected context:
                 the rest - an omitted one would inherit whatever the
                 surrounding page happens to call `error`, which on the Add
                 and Edit pages is the form-wide alert.
+  autofocus     Optional. True to put the cursor in this box on arrival.
+                One field per page at most - the last one wins otherwise.
   clears        Optional. Comma-separated field names whose dropdowns must be
                 emptied when this one changes or is cleared. The Location box
                 clears "shelf", so a shelf from the old location cannot be
@@ -91,6 +93,13 @@ whatever the surrounding page happens to have.
                 value="{{ selected_name|default_if_none:'' }}"
                 placeholder="{% if allow_create %}Search or add {{ entity_label }}...{% else %}Any {{ entity_label }}{% endif %}"
                 autocomplete="off"
+                {% comment %}
+                  Opt-in, and off everywhere it is not asked for. Issue
+                  Books puts the cursor here on arrival so a borrower can be
+                  found by typing alone; app.js re-applies it after a swap,
+                  which is what carries it across this page's own reloads.
+                {% endcomment %}
+                {% if autofocus %}autofocus{% endif %}
                 role="combobox"
                 aria-expanded="false"
                 aria-autocomplete="list"
