@@ -2,22 +2,6 @@ document.addEventListener(
     "DOMContentLoaded",
     function () {
 
-        const menuToggle =
-            document.getElementById(
-                "menuToggle"
-            );
-
-        const sidebar =
-            document.getElementById(
-                "sidebar"
-            );
-
-        const sidebarOverlay =
-            document.getElementById(
-                "sidebarOverlay"
-            );
-
-
         /* =========================
            ARRIVING CONTENT
 
@@ -85,20 +69,60 @@ document.addEventListener(
 
         /* =========================
            MOBILE SIDEBAR
+
+           Every element is looked up when an event fires, never held in a
+           variable, and every listener is on `document`. That is the
+           delegation the note above describes, and here it is not a style
+           preference - it is what makes the drawer survive the Back button.
+
+           htmx has no `hx-history-elt` in this shell, so its history
+           snapshot is the whole `<body>`. An ordinary boosted navigation
+           swaps only `#mainContent` and leaves the drawer, its overlay and
+           its button alone; a history restore replaces the body's contents
+           and so replaces all three with fresh nodes. References captured
+           once at DOMContentLoaded then pointed at detached elements, and
+           the button that was now on the page had no listener at all: the
+           sidebar worked until you pressed Back, and never again.
            ========================= */
+
+        function sidebarEl() {
+            return document.getElementById("sidebar");
+        }
+
+
+        function sidebarOverlayEl() {
+            return document.getElementById("sidebarOverlay");
+        }
+
+
+        function menuToggleEl() {
+            return document.getElementById("menuToggle");
+        }
+
+
+        function sidebarIsOpen() {
+            var sidebar = sidebarEl();
+
+            return !!sidebar && sidebar.classList.contains("show");
+        }
+
 
         function openSidebar() {
 
-            sidebar.classList.add(
-                "show"
-            );
+            var sidebar = sidebarEl();
+            var overlay = sidebarOverlayEl();
+            var toggle = menuToggleEl();
 
-            sidebarOverlay.classList.add(
-                "show"
-            );
+            if (sidebar) {
+                sidebar.classList.add("show");
+            }
 
-            if (menuToggle) {
-                menuToggle.setAttribute("aria-expanded", "true");
+            if (overlay) {
+                overlay.classList.add("show");
+            }
+
+            if (toggle) {
+                toggle.setAttribute("aria-expanded", "true");
             }
 
         }
@@ -106,81 +130,77 @@ document.addEventListener(
 
         function closeSidebar() {
 
-            sidebar.classList.remove(
-                "show"
-            );
+            var sidebar = sidebarEl();
+            var overlay = sidebarOverlayEl();
+            var toggle = menuToggleEl();
 
-            sidebarOverlay.classList.remove(
-                "show"
-            );
+            if (sidebar) {
+                sidebar.classList.remove("show");
+            }
 
-            if (menuToggle) {
-                menuToggle.setAttribute("aria-expanded", "false");
+            if (overlay) {
+                overlay.classList.remove("show");
+            }
+
+            if (toggle) {
+                toggle.setAttribute("aria-expanded", "false");
             }
 
         }
 
 
-        if (menuToggle) {
+        document.addEventListener("click", function (e) {
 
-            menuToggle.addEventListener(
-                "click",
-                function () {
+            if (!e.target.closest) {
+                return;
+            }
 
-                    if (sidebar.classList.contains("show")) {
-                        closeSidebar();
-                    } else {
-                        openSidebar();
-                    }
+            if (e.target.closest("#menuToggle")) {
 
+                if (sidebarIsOpen()) {
+                    closeSidebar();
+                } else {
+                    openSidebar();
                 }
-            );
 
-        }
+                return;
+            }
 
+            if (e.target.closest("#sidebarOverlay")) {
+                closeSidebar();
+                return;
+            }
 
-        if (sidebarOverlay) {
+            /* Picking a destination closes the drawer.
 
-            sidebarOverlay.addEventListener(
-                "click",
-                closeSidebar
-            );
+               On a narrow screen the sidebar is an overlay, and it used to
+               be dismissed by the page load that followed the click. A
+               converted link swaps the main content instead, so nothing
+               reloads and the drawer would be left sitting on top of the
+               page just asked for. Keyed off the link's place in the
+               sidebar rather than off htmx, so it behaves the same
+               whichever kind of link was picked. */
+            if (e.target.closest("#sidebar a[href]")) {
+                closeSidebar();
+            }
 
-        }
+        });
 
 
         /* Close sidebar on Escape key */
-        document.addEventListener(
-            "keydown",
-            function (e) {
+        document.addEventListener("keydown", function (e) {
 
-                if (e.key === "Escape" && sidebar.classList.contains("show")) {
-                    closeSidebar();
-                }
-
+            if (e.key === "Escape" && sidebarIsOpen()) {
+                closeSidebar();
             }
-        );
+
+        });
 
 
-        /* Picking a destination closes the drawer.
-
-           On a narrow screen the sidebar is an overlay, and it used to be
-           dismissed by the page load that followed the click. A converted
-           link swaps the main content instead, so nothing reloads and the
-           drawer would be left sitting on top of the page just asked for.
-           Bound to the nav rather than to htmx, so it behaves the same
-           whichever kind of link was picked. */
-        if (sidebar) {
-
-            sidebar.addEventListener("click", function (e) {
-
-                if (e.target.closest && e.target.closest("a[href]")) {
-                    closeSidebar();
-                }
-
-            });
-
-        }
+        /* A restore brings back whatever markup was cached, which may have
+           been cached with the drawer open. Shut it so a Back never lands
+           on a page with an overlay over it. */
+        document.body.addEventListener("htmx:historyRestore", closeSidebar);
 
 
         /* =========================
