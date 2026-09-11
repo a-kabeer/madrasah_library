@@ -2718,6 +2718,105 @@ document.addEventListener(
 
 
         /* =========================
+           NAVIGATION SCROLL POSITION
+
+           A page arrived by a sidebar link should start where a page
+           loaded by the browser starts: at the top, header and all.
+
+           htmx's own answer for a boosted link is `show:top` on the
+           target, and the target here is `#mainContent`, which begins
+           below the header. So it scrolled the header off rather than to
+           it, and a click while part-way down a long list settled a little
+           way into the new page instead of at its start - close enough to
+           the top to read as a jump rather than as a fresh page.
+
+           Its scroll is turned off and the window is moved instead, which
+           is the only element a navigation should move. Turned off rather
+           than left to fight with: two things scrolling one viewport in
+           one frame is what produced the shift on the way out.
+
+           What a navigation is, exactly, and what is left alone:
+
+             - the swap has to land in `#mainContent`. Every fragment with
+               a target of its own - a table reloading, a modal body, a
+               combobox menu, the notification panel - is another element
+               and is not this.
+
+             - it has to be boosted: a link or a form that navigates. An
+               `hx-get` on a control is a widget refreshing itself.
+
+             - `show:` on the triggering element wins. That is already how
+               a control says where the viewport should go, and the lists
+               use `show:none` to hold a filter or a page change still;
+               honouring it here keeps that working and keeps the answer in
+               one place.
+
+             - a link to an anchor is left to the anchor, which is htmx's
+               own rule for its `show:top` and is why in-page links and the
+               tabbed pages are unaffected.
+
+           Back and Forward are not this either: htmx restores those from
+           its history cache without an `htmx:afterSwap`, so the position
+           the browser remembers is the position that is restored.
+           ========================= */
+
+        (function () {
+
+            if (window.htmx && htmx.config) {
+                htmx.config.scrollIntoViewOnBoost = false;
+            }
+
+            function saysWhereToShow(elt) {
+
+                var declared = elt.closest ? elt.closest("[hx-swap]") : null;
+
+                return !!declared
+                    && declared.getAttribute("hx-swap").indexOf("show:") >= 0;
+            }
+
+            function leadsToAnAnchor(elt, detail) {
+
+                var href = elt.getAttribute ? elt.getAttribute("href") : "";
+
+                return (!!href && href.indexOf("#") >= 0)
+                    || !!(detail.pathInfo && detail.pathInfo.anchor);
+            }
+
+            document.body.addEventListener("htmx:afterSwap", function (e) {
+
+                var detail = e.detail || {};
+
+                if (!e.target || e.target.id !== "mainContent") {
+                    return;
+                }
+
+                if (!detail.boosted) {
+                    return;
+                }
+
+                var elt = detail.requestConfig && detail.requestConfig.elt;
+
+                if (!elt) {
+                    return;
+                }
+
+                if (saysWhereToShow(elt) || leadsToAnAnchor(elt, detail)) {
+                    return;
+                }
+
+                /* `instant` because Bootstrap's reboot sets
+                   `scroll-behavior: smooth` on the root, and a page that
+                   animates its way up to the top is a page that did not
+                   start there. htmx's own scrolling says the same thing
+                   the same way, via `htmx.config.scrollBehavior`. */
+                window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+
+            });
+
+        })();
+
+
+        /* =========================
            MODAL SCROLL POSITION
 
            The dialogs keep their box between one record and the next: the
