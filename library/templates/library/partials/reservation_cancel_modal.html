@@ -1,0 +1,124 @@
+{% load i18n %}
+{% comment %}
+Cancel confirmation for one reservation, served into #formModal.
+
+Shaped like `lookup_delete_modal.html`, which is the same kind of question
+about the same kind of record, and opened the same way — a `[data-form-modal]`
+link in the row whose href is the real endpoint, so it stays
+middle-clickable and a reader without JavaScript still gets somewhere
+sensible.
+
+It names the borrower, the book and their place in the queue, because the
+list it is opened from is a column of near-identical rows and the row that
+was clicked is no longer on screen once the dialog is over it. The place
+matters most at #1: cancelling the front of a queue hands the next copy to
+somebody else.
+
+The confirm posts to the same URL the row's link points at — GET asks, POST
+does, which is what that view already did. `next` rides along so the
+librarian lands back on the list they were reading rather than on the
+borrower, and the answer to the POST is the list itself, swapped into
+#mainContent. `data-bs-dismiss` on the button closes the dialog on the way
+out: this fragment is in the shell, outside the swapped region, so nothing
+else would.
+
+Expected context: reservation, action, next, position.
+{% endcomment %}
+
+<h5 class="modal-title" id="formModalLabel" hx-swap-oob="true">
+    <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{% translate "Cancel this reservation?" %}
+</h5>
+
+<div id="reservationCancelBody">
+
+    <p class="mb-2">{% translate "You are about to take this borrower out of the queue:" %}</p>
+
+    <p class="fs-5 fw-semibold mb-1">{{ reservation.borrower.name }}</p>
+
+    <p class="mb-3">
+        {{ reservation.book.title }}
+        {% if reservation.book.author %}
+            <span class="d-block small text-body-secondary">
+                {{ reservation.book.author.name }}
+            </span>
+        {% endif %}
+    </p>
+
+    <dl class="row mb-3 small">
+
+        <dt class="col-5 col-sm-4 text-body-secondary fw-normal">
+            {% translate "Waiting since" %}
+        </dt>
+        <dd class="col-7 col-sm-8 mb-1">
+            {{ reservation.created_at|date:"j M Y" }}
+        </dd>
+
+        {% if position %}
+            <dt class="col-5 col-sm-4 text-body-secondary fw-normal">
+                {% translate "Place in the queue" %}
+            </dt>
+            <dd class="col-7 col-sm-8 mb-0">
+                {% blocktranslate trimmed with number=position %}
+                    #{{ number }}
+                {% endblocktranslate %}
+            </dd>
+        {% endif %}
+
+    </dl>
+
+    {% if position == 1 %}
+        <div class="alert alert-warning d-flex align-items-start" role="alert">
+            <i class="bi bi-shield-exclamation me-2 mt-1" aria-hidden="true"></i>
+            <div>
+                {% translate "They are first in the queue. Cancelling moves everybody behind them up, and the next copy in goes to whoever is then at the front." %}
+            </div>
+        </div>
+    {% endif %}
+
+    <p class="text-danger small mb-0">
+        <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+        {% translate "This cannot be undone. Rejoining the queue would put them at the back of it." %}
+    </p>
+
+    <div class="modal-actions">
+
+        {% comment %}
+          The list comes back as the answer, so the reader sees the queue
+          they have just changed - with the message on it - rather than a
+          dialog closing over a stale table.
+        {% endcomment %}
+        <form
+            method="post"
+            action="{{ action }}"
+            hx-post="{{ action }}"
+            hx-target="#mainContent"
+            hx-swap="innerHTML"
+            hx-disabled-elt="find button[type=submit]"
+            hx-disinherit="*"
+            class="d-inline"
+        >
+            {% csrf_token %}
+
+            <input type="hidden" name="next" value="{{ next }}">
+
+            <button
+                type="submit"
+                class="btn btn-danger"
+                data-bs-dismiss="modal"
+            >
+                <i class="bi bi-x-circle me-1" aria-hidden="true"></i>
+                {% translate "Cancel the reservation" %}
+            </button>
+        </form>
+
+        <button
+            type="button"
+            class="btn btn-outline-secondary ms-auto"
+            data-bs-dismiss="modal"
+        >
+            {% translate "Keep it" %}
+        </button>
+
+    </div>
+
+</div>

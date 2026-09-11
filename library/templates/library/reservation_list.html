@@ -57,27 +57,137 @@
 
     </div>
 
+    {% comment %}
+      Search, in the loan list's card and shape - one field, the status
+      riding along hidden so searching inside a status stays inside it,
+      and a Clear that keeps the status for the same reason.
+
+      One field rather than three, because the three things a librarian
+      has at the counter - a name, a phone number, a title - are all
+      "who is this about", and asking them to pick which is which before
+      typing is asking them to do the query planner's job.
+    {% endcomment %}
+    <div class="card mb-3">
+        <div class="card-body">
+
+            <form method="get" class="row g-2 align-items-end">
+
+                <input type="hidden" name="status" value="{{ status }}">
+
+                <div class="col-12 col-lg">
+                    <label for="search" class="form-label small fw-semibold">
+                        {% translate "Search" %}
+                    </label>
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="search"
+                        name="search"
+                        value="{{ search }}"
+                        placeholder="{% translate 'Borrower, phone, book title...' %}"
+                    >
+                </div>
+
+                <div class="col-12 col-lg-auto d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1" aria-hidden="true"></i>
+                        {% translate "Search" %}
+                    </button>
+
+                    {% if search %}
+                        <a
+                            href="?{% if status %}status={{ status }}{% endif %}"
+                            class="btn btn-outline-secondary"
+                        >
+                            <i class="bi bi-x-lg me-1" aria-hidden="true"></i>
+                            {% translate "Clear" %}
+                        </a>
+                    {% endif %}
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
     {% if reservations %}
         <div class="card shadow-sm border-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
+                    {% comment %}
+                      Six columns is more than a phone has room for, so two
+                      of them fold: "Asked" and the queue number are
+                      repeated inside the Borrower cell below `md`, where
+                      they read as a line under the name rather than as
+                      columns off the right-hand edge. Nothing is dropped -
+                      the table still scrolls sideways in its
+                      `.table-responsive`, and the two most important
+                      cells, what is on the shelf and what to do about it,
+                      keep their place at every width.
+                    {% endcomment %}
                     <thead class="table-secondary">
                         <tr>
-                            <th>{% translate "Borrower" %}</th>
-                            <th>{% translate "Book" %}</th>
-                            <th>{% translate "Asked" %}</th>
-                            <th>{% translate "Status" %}</th>
+                            {% if is_active_list %}
+                                <th class="d-none d-md-table-cell" style="width: 1%">
+                                    <span class="visually-hidden">{% translate "Place in the queue" %}</span>
+                                    #
+                                </th>
+                            {% endif %}
+                            <th style="min-width: 9rem">{% translate "Borrower" %}</th>
+                            <th style="min-width: 11rem">{% translate "Book" %}</th>
+                            <th class="d-none d-md-table-cell">{% translate "Asked" %}</th>
+                            <th>
+                                {% if is_active_list %}
+                                    {% translate "On the shelf" %}
+                                {% else %}
+                                    {% translate "Status" %}
+                                {% endif %}
+                            </th>
                             <th class="text-end">{% translate "Actions" %}</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for reservation in reservations %}
                             <tr>
+                                {% if is_active_list %}
+                                    {% comment %}
+                                      The front of a queue is the only row
+                                      on this page anybody can act on, so
+                                      it is the only number that is filled
+                                      in.
+                                    {% endcomment %}
+                                    <td class="d-none d-md-table-cell">
+                                        <span class="badge {% if reservation.position == 1 %}text-bg-primary{% else %}text-bg-light border{% endif %}">
+                                            #{{ reservation.position }}
+                                        </span>
+                                    </td>
+                                {% endif %}
                                 <td>
                                     <a href="{% url 'borrower_detail' reservation.borrower_id %}" data-form-modal hx-get="{% url 'borrower_detail' reservation.borrower_id %}?modal=1" hx-target="#formModal .modal-body" hx-swap="innerHTML"
                                        class="fw-semibold text-decoration-none">
                                         {{ reservation.borrower.name }}
                                     </a>
+                                    {% if reservation.borrower.phone %}
+                                        <span class="d-block small text-body-secondary">
+                                            {{ reservation.borrower.phone }}
+                                        </span>
+                                    {% endif %}
+                                    {% comment %}
+                                      What the two folded columns said,
+                                      for the widths that do not have
+                                      them.
+                                    {% endcomment %}
+                                    <span class="d-block d-md-none small text-body-secondary">
+                                        {% if is_active_list %}
+                                            {% blocktranslate trimmed with number=reservation.position %}
+                                                #{{ number }} in the queue
+                                            {% endblocktranslate %}
+                                            &middot;
+                                        {% endif %}
+                                        {% blocktranslate trimmed with asked=reservation.created_at|date:"j M Y" %}
+                                            asked {{ asked }}
+                                        {% endblocktranslate %}
+                                    </span>
                                 </td>
                                 <td>
                                     <a href="{% url 'book_detail' reservation.book_id %}?tab=reservations"
@@ -90,39 +200,102 @@
                                         </span>
                                     {% endif %}
                                 </td>
-                                <td class="text-body-secondary">
+                                <td class="text-body-secondary d-none d-md-table-cell">
                                     {{ reservation.created_at|date:"j M Y" }}
                                 </td>
                                 <td>
                                     {% if reservation.is_active %}
-                                        <span class="badge text-bg-info">{% translate "Waiting" %}</span>
+                                        {% comment %}
+                                          Both halves of "can this be dealt
+                                          with now": how many copies are in,
+                                          and - only for the person at the
+                                          front, since nobody else may be
+                                          handed one - that one of them is
+                                          theirs to take.
+                                        {% endcomment %}
+                                        {% if reservation.ready %}
+                                            <span class="badge text-bg-success">
+                                                <i class="bi bi-check2-circle me-1" aria-hidden="true"></i>
+                                                {% translate "Ready to collect" %}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge text-bg-info">{% translate "Waiting" %}</span>
+                                        {% endif %}
+                                        <span class="d-block small text-body-secondary">
+                                            {% if reservation.available %}
+                                                {% blocktranslate trimmed count n=reservation.available %}
+                                                    {{ n }} on the shelf
+                                                {% plural %}
+                                                    {{ n }} on the shelf
+                                                {% endblocktranslate %}
+                                            {% else %}
+                                                {% translate "None in" %}
+                                            {% endif %}
+                                        </span>
                                     {% elif reservation.status == "Fulfilled" %}
                                         <span class="badge text-bg-success">{% translate "Fulfilled" %}</span>
                                     {% else %}
                                         <span class="badge text-bg-secondary">{% translate "Cancelled" %}</span>
                                     {% endif %}
                                 </td>
-                                <td class="text-end">
+                                <td class="text-end text-nowrap">
                                     {% if reservation.is_active %}
-                                        {% comment %}
-                                          A POST, because it changes the
-                                          queue. The `next` brings the
-                                          librarian back to this list
-                                          rather than to the borrower.
-                                        {% endcomment %}
-                                        <form
-                                            method="post"
-                                            action="{% url 'reservation_cancel' reservation.id %}"
-                                            class="d-inline"
-                                        >
-                                            {% csrf_token %}
-                                            <input type="hidden" name="next"
-                                                   value="{{ request.get_full_path }}">
-                                            <button type="submit"
-                                                    class="btn btn-sm btn-outline-danger">
+                                        <div class="d-inline-flex flex-wrap gap-1 justify-content-end">
+
+                                            {% comment %}
+                                              The queue decides who, and
+                                              the issue form does the rest:
+                                              this is a link into it with
+                                              the borrower already chosen
+                                              and the book already
+                                              searched for, not a second
+                                              way of writing a loan. Every
+                                              rule it meets there is the
+                                              one it would have met
+                                              anyway - including
+                                              `refuse_issue`, which is why
+                                              the link is offered to the
+                                              front of the queue and to
+                                              nobody behind them.
+                                            {% endcomment %}
+                                            {% if reservation.position == 1 %}
+                                                <a
+                                                    href="{% url 'circulation_issue' %}?borrower={{ reservation.borrower_id }}&q={{ reservation.book.title|urlencode }}"
+                                                    class="btn btn-sm {% if reservation.ready %}btn-success{% else %}btn-outline-secondary{% endif %}"
+                                                    {% if not reservation.ready %}
+                                                        title="{% translate 'No copy is on the shelf right now.' %}"
+                                                    {% endif %}
+                                                >
+                                                    <i class="bi bi-box-arrow-right me-1" aria-hidden="true"></i>
+                                                    {% translate "Issue" %}
+                                                </a>
+                                            {% endif %}
+
+                                            {% comment %}
+                                              GET asks, POST does. The link
+                                              opens the confirmation in
+                                              #formModal and its href is
+                                              the same endpoint, so it is
+                                              still a real link; the
+                                              dialog's button is what
+                                              posts. The `next` brings the
+                                              librarian back to this list
+                                              rather than to the borrower.
+                                            {% endcomment %}
+                                            <a
+                                                href="{% url 'reservation_cancel' reservation.id %}"
+                                                class="btn btn-sm btn-outline-danger"
+                                                aria-label="{% blocktranslate trimmed with name=reservation.borrower.name %}Cancel the reservation for {{ name }}{% endblocktranslate %}"
+                                                data-form-modal
+                                                hx-get="{% url 'reservation_cancel' reservation.id %}?modal=1&next={{ request.get_full_path|urlencode }}"
+                                                hx-target="#formModal .modal-body"
+                                                hx-swap="innerHTML"
+                                                hx-push-url="false"
+                                            >
                                                 {% translate "Cancel" %}
-                                            </button>
-                                        </form>
+                                            </a>
+
+                                        </div>
                                     {% else %}
                                         <span class="text-body-secondary small">
                                             {{ reservation.closed_at|date:"j M Y" }}

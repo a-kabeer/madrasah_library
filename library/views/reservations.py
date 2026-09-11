@@ -6,12 +6,15 @@ not here.
 """
 
 from django.contrib import messages
+from django.db import models
 from django.utils.translation import gettext
 from django.core.paginator import Paginator
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 
 from ..permissions import feature_required
+
+from .. import queries
 
 from ..models import (
     Book,
@@ -25,6 +28,7 @@ from .. import reservations
 from .common import (
     PAGE_SIZE,
     create_activity_log,
+    is_form_modal_request,
     query_with,
     safe_redirect_target,
 )
@@ -39,12 +43,57 @@ from .common import (
 # ==========================================================================
 
 
+def describe_availability(page, status):
+    """Attach "how many are in" and "can this one be handed over" to a page.
+
+    One query for the whole page rather than one per row, and the count is
+    `annotate_copy_counts`' own - the figure the book list and the
+    catalogue already show - so "2 on the shelf" here means what it means
+    there. A copy that is out, or withdrawn, or shelved nowhere is not on
+    the shelf.
+
+    `ready` is the pair of conditions `announce_ready` uses to decide the
+    same thing for the notification: somebody is at the front *and* there
+    is a copy to give them. Neither alone is news.
+
+    Nothing is attached to a closed reservation. What was on the shelf on
+    the day somebody cancelled is not a question the list is asked.
+    """
+
+    if status != Reservation.STATUS_ACTIVE:
+        return
+
+    book_ids = {reservation.book_id for reservation in page}
+
+    on_shelf = {
+        book.id: book.available_copies
+        for book in queries.annotate_copy_counts(
+            Book.objects.filter(id__in=book_ids)
+        )
+    } if book_ids else {}
+
+    for reservation in page:
+
+        reservation.available = on_shelf.get(reservation.book_id, 0)
+
+        reservation.ready = (
+            getattr(reservation, "position", None) == 1
+            and reservation.available > 0
+        )
+
+
 @feature_required("reservations")
 def reservation_list(request):
     """Everyone currently waiting, and what for.
 
     Grouped by nothing: it is one list, oldest first, because the question
     a librarian brings to it is "who has been waiting longest".
+
+    Three things are worked out for the active list, all of them readings
+    of what is already there rather than anything new the queue obeys:
+    each row's place in its own book's queue, whether a copy of that book
+    is on the shelf, and - the pair of those - whether the person at the
+    front can be handed one right now.
     """
 
     status = (request.GET.get("status") or "").strip()
@@ -52,14 +101,34 @@ def reservation_list(request):
     if status not in dict(Reservation.STATUS_CHOICES):
         status = Reservation.STATUS_ACTIVE
 
-    waiting = Reservation.objects.filter(
-        status=status
-    ).select_related(
+    # Who is waiting and what for, which is what the desk is asked at the
+    # counter: a name, a number half-remembered from a phone, or a title.
+    search = (request.GET.get("search") or "").strip()
+
+    waiting = Reservation.objects.filter(status=status)
+
+    if search:
+        waiting = waiting.filter(
+            models.Q(borrower__name__icontains=search)
+            | models.Q(borrower__phone__icontains=search)
+            | models.Q(book__title__icontains=search)
+        )
+
+    waiting = waiting.select_related(
         "borrower", "book__author"
     ).order_by("created_at", "id")
 
+    # Counted over every active reservation, not over the ones the search
+    # left behind, so #1 means the front of the queue rather than the
+    # first row on screen. Only for the active list: a cancelled
+    # reservation has no place in a queue it is no longer in.
+    if status == Reservation.STATUS_ACTIVE:
+        waiting = reservations.with_position(waiting)
+
     paginator = Paginator(waiting, PAGE_SIZE)
     page = paginator.get_page(request.GET.get("page"))
+
+    describe_availability(page, status)
 
     return render(
         request,
@@ -69,6 +138,10 @@ def reservation_list(request):
             "paginator": paginator,
             "pagination_query": query_with(request, page=None),
             "status": status,
+            "search": search,
+            # The active list is a queue and shows one; the other two are
+            # records of queues that have ended and show the other.
+            "is_active_list": status == Reservation.STATUS_ACTIVE,
             "statuses": Reservation.STATUS_CHOICES,
             # Shaped exactly like the loan list's `status_options`, so this
             # page can use that page's pill markup unchanged rather than a
@@ -177,6 +250,33 @@ def reservation_cancel(request, reservation_id):
     )
 
     if request.method != "POST":
+
+        # Ask first. Cancelling is one click in a table of near-identical
+        # rows and it cannot be undone - the queue has no "put them back",
+        # because rejoining it would put them at the end. So the question
+        # goes into #formModal, where Delete and Withdraw already ask
+        # theirs, and it names the borrower, the book and their place in
+        # the queue.
+        #
+        # A plain GET is unchanged: without the dialog there is nothing to
+        # confirm with, and this URL has always answered one by sending
+        # the reader back where they came from.
+        if is_form_modal_request(request):
+            return render(
+                request,
+                "library/partials/reservation_cancel_modal.html",
+                {
+                    "reservation": reservation,
+                    "action": reverse(
+                        "reservation_cancel", args=[reservation.id]
+                    ),
+                    "next": safe_redirect_target(
+                        request, reverse("reservation_list")
+                    ),
+                    "position": reservations.position_of(reservation),
+                },
+            )
+
         return landing
 
     if reservations.close(

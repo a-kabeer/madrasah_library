@@ -95,6 +95,68 @@ def active_for_borrower(borrower):
     ).select_related("book__author").order_by("-created_at", "-id")
 
 
+def with_position(queryset):
+    """Annotate each reservation with its place in its own book's queue.
+
+    For the reservation list, which shows many books at once and which the
+    librarian may have searched or paged. `active_for_book` can use a
+    window function because it reads one whole queue; here a window would
+    count over the rows the filter happened to leave behind, so searching
+    for a borrower would renumber every queue they are in.
+
+    This asks the question that does not depend on the caller's filter:
+    per row, how many active reservations for the same book came first.
+    The same correlated count `active_for_borrower` uses, plus one, so the
+    front of a queue is #1 rather than #0.
+
+    It describes the queue; it does not decide anything. Who may be handed
+    a copy is still `refuse_issue`, from `queue_front`, on the server.
+    """
+
+    earlier = Reservation.objects.filter(
+        book_id=models.OuterRef("book_id"),
+        status=Reservation.STATUS_ACTIVE,
+    ).filter(
+        models.Q(created_at__lt=models.OuterRef("created_at"))
+        | models.Q(
+            created_at=models.OuterRef("created_at"),
+            id__lt=models.OuterRef("id"),
+        )
+    ).values("book_id").annotate(
+        total=models.Count("*")
+    ).values("total")
+
+    return queryset.annotate(
+        position=models.functions.Coalesce(
+            models.Subquery(earlier, output_field=models.IntegerField()), 0
+        ) + models.Value(1),
+    )
+
+
+def position_of(reservation):
+    """Where one reservation stands in its book's queue, or None.
+
+    For the cancel dialog, which is about a single row and so cannot use
+    the list's annotation. Same rule, same order, one count.
+
+    None for a closed reservation: it is not in the queue, so it has no
+    place in it - which is a different answer from "last".
+    """
+
+    if reservation.status != Reservation.STATUS_ACTIVE:
+        return None
+
+    ahead = Reservation.objects.filter(
+        book_id=reservation.book_id,
+        status=Reservation.STATUS_ACTIVE,
+    ).filter(
+        models.Q(created_at__lt=reservation.created_at)
+        | models.Q(created_at=reservation.created_at, id__lt=reservation.id)
+    ).count()
+
+    return ahead + 1
+
+
 def queue_front(book):
     """The reservation at the head of this book's queue, or None."""
 
